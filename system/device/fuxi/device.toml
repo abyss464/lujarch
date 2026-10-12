@@ -1,0 +1,14 @@
+codename = "fuxi"
+market_name = "Xiaomi 13"
+soc = "SM8550"
+
+[display]
+width = 1080
+height = 2400
+density = 420
+refresh_hz = 120
+
+[update]
+ab = true
+virtual_ab = true
+compression = false

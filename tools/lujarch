@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+"""The Lujarch repository's command line.
+
+  lujarch check            check the repository against process/; exit 1 on any finding
+  lujarch status [--list]  progress of the target: items, items covered by tests, items verified
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TARGET = ROOT / "target"
+ITEMLESS = {"terms.md"}
+
+ITEM_RE = re.compile(r"^### ([A-Z]{2,5})-(\d+) \S")
+FIELDS = ("Home", "Switch", "Default", "Verify")
+VERIFY_VALUES = {"vm", "phone"}
+ID_RE = r"[A-Z]{2,5}-\d+"
+VERIFIES_RE = re.compile(rf"verifies:\s*({ID_RE}(?:\s*,\s*{ID_RE})*)")
+
+FORBIDDEN_IN_TARGET = [
+    (re.compile(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b"), "date"),
+    (re.compile(r"\bD-\d{3}\b"), "decision reference"),
+    (re.compile(r"\b(?:TODO|TBD|FIXME)\b"), "unfinished marker"),
+]
+LEGACY = [re.compile(r"fuxi-?os", re.IGNORECASE), re.compile(r"\bFuxi[A-Z]")]
+CJK_RE = re.compile(r"[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]")
+RECORD_RE = re.compile(
+    r"^(?:plans?|pending|state|status|decisions?|changelog|changes|history|todo|roadmap|"
+    r"known[-_]issues|notes|journal|releases)$",
+    re.IGNORECASE,
+)
+
+
+def git(*args):
+    return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True)
+
+
+def repo_files():
+    """Every file of the worktree that git would track."""
+    if (ROOT / ".git").exists():
+        out = git("ls-files", "-z", "--cached", "--others", "--exclude-standard")
+        if out.returncode == 0:
+            return sorted(ROOT / p for p in out.stdout.split("\0") if p and (ROOT / p).is_file())
+    files = []
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [d for d in dirnames if d != ".git"]
+        files += [Path(dirpath) / f for f in filenames]
+    return sorted(files)
+
+
+def read_text(path):
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if b"\0" in data:
+        return None
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def rel(path):
+    return path.relative_to(ROOT).as_posix()
+
+
+class Findings:
+    def __init__(self):
+        self.items = []
+
+    def add(self, path, line, message):
+        self.items.append((rel(path) if isinstance(path, Path) else path, line, message))
+
+    def report(self):
+        for path, line, message in sorted(self.items):
+            print(f"{path}:{line}: {message}" if line else f"{path}: {message}")
+        return len(self.items)
+
+
+def target_files():
+    if not TARGET.is_dir():
+        return []
+    return sorted(p for p in TARGET.glob("*.md") if p.name not in ITEMLESS)
+
+
+def parse_target(path, findings=None):
+    """Items of one target file as (id, verify, line). Format problems go to findings."""
+    def bad(line, message):
+        if findings is not None:
+            findings.add(path, line, message)
+
+    lines = path.read_text(encoding="utf-8").split("\n")
+    items = []
+    codes = set()
+    in_fence = False
+    seen_title = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        n = i + 1
+        if line.startswith("```"):
+            in_fence = not in_fence
+            i += 1
+            continue
+        if in_fence:
+            i += 1
+            continue
+        for pattern, what in FORBIDDEN_IN_TARGET:
+            if pattern.search(line):
+                bad(n, f"{what} in the target")
+        if line.startswith("#"):
+            if line.startswith("# "):
+                if seen_title or items:
+                    bad(n, "a second title")
+                seen_title = True
+            elif line.startswith("## "):
+                pass
+            elif line.startswith("### "):
+                m = ITEM_RE.match(line)
+                if not m:
+                    bad(n, "item heading is not '### <CODE>-<n> <title>'")
+                else:
+                    code, number = m.group(1), int(m.group(2))
+                    codes.add(code)
+                    expected = len(items) + 1
+                    if number != expected:
+                        bad(n, f"item number {number}, expected {expected}")
+                    verify = None
+                    j = i + 1
+                    while j < len(lines) and not lines[j].strip():
+                        j += 1
+                    for field in FIELDS:
+                        prefix = f"- {field}: "
+                        if j < len(lines) and lines[j].startswith(prefix):
+                            if field == "Verify":
+                                verify = lines[j][len(prefix):].strip()
+                                if verify not in VERIFY_VALUES:
+                                    bad(j + 1, f"Verify is '{verify}', not vm or phone")
+                            j += 1
+                        else:
+                            bad(j + 1, f"missing or misplaced field '{field}'")
+                            break
+                    items.append((f"{code}-{number}", verify, n))
+            else:
+                bad(n, "heading outside the target format")
+        elif not seen_title and line.strip():
+            bad(n, "the file does not start with '# <title>'")
+            seen_title = True
+        i += 1
+    if len(codes) > 1:
+        bad(0, "more than one item prefix: " + ", ".join(sorted(codes)))
+    return items, codes
+
+
+def check_target(findings):
+    owners = {}
+    ids = set()
+    for path in target_files():
+        items, codes = parse_target(path, findings)
+        for code in codes:
+            if code in owners:
+                findings.add(path, 0, f"prefix {code} is also used by {owners[code]}")
+            owners.setdefault(code, rel(path))
+        ids.update(item_id for item_id, _, _ in items)
+    features = ROOT / "system" / "features"
+    if features.is_dir():
+        for feature in sorted(p for p in features.iterdir() if p.is_dir()):
+            if not (TARGET / f"{feature.name}.md").exists():
+                findings.add(feature, 0, f"no target/{feature.name}.md")
+            meta = feature / "feature.toml"
+            if meta.exists():
+                prefix = tomllib.loads(meta.read_text(encoding="utf-8")).get("prefix")
+                if prefix and owners.get(prefix) not in (None, f"target/{feature.name}.md"):
+                    findings.add(meta, 0, f"prefix {prefix} belongs to {owners[prefix]}")
+    return ids
+
+
+def check_files(findings):
+    for path in repo_files():
+        name = rel(path)
+        if path.suffix.lower() in (".md", ".txt") and RECORD_RE.match(path.stem):
+            findings.add(path, 0, "a record file; the repository holds only the target")
+        text = read_text(path)
+        if text is None:
+            continue
+        cjk_allowed = (
+            name == "README.md"
+            or name == "target/terms.md"
+            or "/res/values-zh-rCN/" in f"/{name}"
+            or "/res/values-ja/" in f"/{name}"
+        )
+        for n, line in enumerate(text.split("\n"), 1):
+            for pattern in LEGACY:
+                if pattern.search(line):
+                    findings.add(path, n, "legacy name; the system is Lujarch")
+                    break
+            if not cjk_allowed and CJK_RE.search(line):
+                findings.add(path, n, "Chinese or Japanese text outside README.md and terms.md")
+
+
+def check_references(findings, ids):
+    for path in repo_files():
+        parts = rel(path).split("/")
+        if not ("tests" in parts or parts[0] == "test" or path.name == "settings.toml"):
+            continue
+        text = read_text(path)
+        if text is None:
+            continue
+        for n, line in enumerate(text.split("\n"), 1):
+            for m in VERIFIES_RE.finditer(line):
+                for item_id in re.findall(ID_RE, m.group(1)):
+                    if item_id not in ids:
+                        findings.add(path, n, f"{item_id} is not a target item")
+        if path.name == "settings.toml":
+            try:
+                entries = tomllib.loads(text)
+            except tomllib.TOMLDecodeError as e:
+                findings.add(path, 0, f"not valid TOML: {e}")
+                continue
+            for key, entry in entries.items():
+                item_id = entry.get("item") if isinstance(entry, dict) else None
+                if item_id not in ids:
+                    findings.add(path, 0, f"switch {key}: item {item_id} is not a target item")
+
+
+def check_lock(findings):
+    path = ROOT / "lock.toml"
+    if not path.exists():
+        findings.add("lock.toml", 0, "missing")
+        return
+    try:
+        lock = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as e:
+        findings.add(path, 0, f"not valid TOML: {e}")
+        return
+    for section, key in (("upstream", "manifest"), ("upstream", "branch"),
+                         ("upstream", "aosp"), ("build", "variant")):
+        if key not in lock.get(section, {}):
+            findings.add(path, 0, f"missing {section}.{key}")
+
+
+def check_order(findings):
+    system = ROOT / "system"
+    with_patches = set()
+    for kind in ("features", "device"):
+        base = system / kind
+        if base.is_dir():
+            with_patches |= {f"{kind}/{p.name}" for p in base.iterdir() if (p / "patches").is_dir()}
+    path = system / "order"
+    listed = []
+    if path.exists():
+        for n, line in enumerate(path.read_text(encoding="utf-8").split("\n"), 1):
+            entry = line.strip()
+            if not entry:
+                continue
+            if entry in listed:
+                findings.add(path, n, f"{entry} listed twice")
+            elif entry not in with_patches:
+                findings.add(path, n, f"{entry} has no patches/ directory")
+            listed.append(entry)
+    for entry in sorted(with_patches - set(listed)):
+        findings.add("system/order", 0, f"{entry} has patches but is not listed")
+
+
+def check_approvals(findings):
+    if not (ROOT / ".git").exists() or git("rev-parse", "--verify", "-q", "refs/heads/main").returncode:
+        return
+    out = git("log", "main", "--first-parent", "--format=%H%x1f%B%x1e", "--", "target")
+    for record in out.stdout.split("\x1e"):
+        if not record.strip():
+            continue
+        commit, _, body = record.strip().partition("\x1f")
+        if not re.search(r"^Approved-by: \S", body, re.MULTILINE):
+            findings.add("target/", 0, f"commit {commit[:12]} on main changes the target without Approved-by")
+
+
+def cmd_check(_args):
+    findings = Findings()
+    ids = check_target(findings)
+    check_files(findings)
+    check_references(findings, ids)
+    check_lock(findings)
+    check_order(findings)
+    check_approvals(findings)
+    count = findings.report()
+    print(f"lujarch check: {count} finding{'s' if count != 1 else ''}", file=sys.stderr)
+    return 1 if count else 0
+
+
+def host_config():
+    path = os.environ.get("LUJARCH_HOST")
+    if not path:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        path = os.path.join(base, "lujarch", "host.toml")
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+
+
+def test_results():
+    out_dir = host_config().get("paths", {}).get("out")
+    head = git("rev-parse", "HEAD")
+    if not out_dir or head.returncode:
+        return {}
+    path = Path(os.path.expanduser(out_dir)) / "test" / head.stdout.strip() / "results.json"
+    try:
+        items = json.loads(path.read_text(encoding="utf-8")).get("items", {})
+    except (OSError, ValueError):
+        return {}
+    return {item_id for item_id, result in items.items() if result == "pass"}
+
+
+def cmd_status(args):
+    covered = set()
+    for path in repo_files():
+        parts = rel(path).split("/")
+        if "tests" in parts or parts[0] == "test":
+            text = read_text(path)
+            if text:
+                for m in VERIFIES_RE.finditer(text):
+                    covered.update(re.findall(ID_RE, m.group(1)))
+    verified = test_results()
+    rows = []
+    totals = [0, 0, 0, 0, 0]
+    for path in target_files():
+        items, _ = parse_target(path)
+        vm = sum(1 for _, v, _ in items if v == "vm")
+        phone = sum(1 for _, v, _ in items if v == "phone")
+        cov = [i for i, _, _ in items if i in covered]
+        ver = [i for i, _, _ in items if i in verified]
+        row = [len(items), vm, phone, len(cov), len(ver)]
+        totals = [a + b for a, b in zip(totals, row)]
+        rows.append((path.stem, row, [i for i, _, _ in items if i not in covered]))
+    print(f"{'file':<16}{'items':>7}{'vm':>6}{'phone':>7}{'tested':>8}{'verified':>10}")
+    for name, row, _ in rows:
+        print(f"{name:<16}" + "".join(f"{v:>{w}}" for v, w in zip(row, (7, 6, 7, 8, 10))))
+    print(f"{'total':<16}" + "".join(f"{v:>{w}}" for v, w in zip(totals, (7, 6, 7, 8, 10))))
+    if args.list:
+        for name, _, missing in rows:
+            if missing:
+                print(f"\n{name}: no test for " + ", ".join(missing))
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="lujarch", description=__doc__.split("\n")[0])
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("check", help="check the repository against process/")
+    status = sub.add_parser("status", help="progress of the target")
+    status.add_argument("--list", action="store_true", help="list the items without a test")
+    args = parser.parse_args()
+    return {"check": cmd_check, "status": cmd_status}[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
