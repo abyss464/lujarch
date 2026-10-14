@@ -706,6 +706,7 @@ m -j{jobs} {modules}
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
         "GOGC": "50",
     })
+    env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
     command = ["bash", "-c", script]
     cpus = host.get("build", "cpus")
     if cpus:
