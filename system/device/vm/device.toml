@@ -1,0 +1,9 @@
+codename = "vm"
+product = "lineage_cf_phone_x86_64"
+platform = "cuttlefish"
+arch = "x86_64"
+display_of = "fuxi"
+
+[update]
+ab = true
+virtual_ab = true
