@@ -784,9 +784,10 @@ def vm_paths(host):
     # are the user's own group.
     group = base / "group"
     gid = os.getgid()
-    lines = [l for l in Path("/etc/group").read_text().split("\n") if l.strip()]
-    names = {l.split(":", 1)[0] for l in lines}
-    lines += [f"{name}:x:{gid}:" for name in ("cvdnetwork", "kvm") if name not in names]
+    own = ("cvdnetwork", "kvm")
+    lines = [l for l in Path("/etc/group").read_text().split("\n")
+             if l.strip() and l.split(":", 1)[0] not in own]
+    lines += [f"{name}:x:{gid}:" for name in own]
     group.write_text("\n".join(lines) + "\n")
     return info, host_package(host, host.tree), home, common
 
