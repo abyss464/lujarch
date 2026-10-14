@@ -689,7 +689,8 @@ def cmd_build(args):
     info.parent.mkdir(parents=True, exist_ok=True)
     product_out_file = info.with_suffix(".product_out")
 
-    script = f"""
+    def script(jobs):
+        return f"""
 set +eu
 cd {shlex.quote(str(tree))}
 source build/envsetup.sh >/dev/null || exit 1
@@ -707,13 +708,14 @@ m -j{jobs} {modules}
         "GOGC": "50",
     })
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
-    command = ["bash", "-c", script]
-    cpus = host.get("build", "cpus")
-    if cpus:
-        command = ["taskset", "-c", cpus, *command]
-    command = ["systemd-run", "--user", "--scope", "--quiet", "--collect",
-               "-p", f"MemoryHigh={mem_high}", "-p", f"MemoryMax={mem_max}",
-               "-p", "MemorySwapMax=0", "-p", "CPUWeight=20", "-p", "IOWeight=20", *command]
+    def command(jobs):
+        cmd = ["bash", "-c", script(jobs)]
+        cpus = host.get("build", "cpus")
+        if cpus:
+            cmd = ["taskset", "-c", cpus, *cmd]
+        return ["systemd-run", "--user", "--scope", "--quiet", "--collect",
+                "-p", f"MemoryHigh={mem_high}", "-p", f"MemoryMax={mem_max}",
+                "-p", "MemorySwapMax=0", "-p", "CPUWeight=20", "-p", "IOWeight=20", *cmd]
     try:
         with open("/proc/self/oom_score_adj", "w") as f:
             f.write("1000")
@@ -723,7 +725,16 @@ m -j{jobs} {modules}
         f"{jobs} jobs, memory cap {mem_max}; log {logfile}")
     start = time.monotonic()
     with open(logfile, "w") as f:
-        run = subprocess.run(command, cwd=tree, env=env, stdout=f, stderr=subprocess.STDOUT)
+        run = subprocess.run(command(jobs), cwd=tree, env=env, stdout=f, stderr=subprocess.STDOUT)
+    if run.returncode < 0 or run.returncode in (137, 143):
+        # The scope's memory cap killed the build. siso keeps about 26 GB and every R8 job,
+        # which no job pool limits, up to 4 GB: the build goes on from where it stopped with
+        # as many jobs as fit.
+        fewer = max(4, (int(mem_max.rstrip("G")) - 26) // 4)
+        log(f"the build hit its memory cap (exit {run.returncode}); continuing with {fewer} jobs")
+        with open(logfile, "a") as f:
+            run = subprocess.run(command(fewer), cwd=tree, env=env, stdout=f,
+                                 stderr=subprocess.STDOUT)
     minutes = int((time.monotonic() - start) // 60)
     if run.returncode:
         tail = logfile.read_text(errors="replace").split("\n")[-40:]
