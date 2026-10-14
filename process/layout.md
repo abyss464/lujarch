@@ -88,7 +88,7 @@ the series twice changes nothing.
 
 The tools read the computer's own settings from `$LUJARCH_HOST`, or from
 `$XDG_CONFIG_HOME/lujarch/host.toml` (`~/.config/lujarch/host.toml`). Nothing host-specific is in
-this repository.
+this repository. A relative path in it is relative to the file's real location.
 
 ```toml
 [paths]
@@ -112,4 +112,9 @@ jobs = 0              # 0: derived from memory
 memory_high = ""      # empty: derived from free memory
 memory_max = ""
 highmem_jobs = 3
+lock = "..."          # one lock for every Android build on the computer
+
+[vm]
+cpus = 4              # the virtual device's CPUs and memory
+memory_mb = 8192
 ```
