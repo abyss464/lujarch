@@ -55,6 +55,8 @@ RECORD_RE = re.compile(
 
 ADB_PORT = 6520
 WEBRTC_URL = "https://localhost:8443"
+VM_CONTAINER = "lujarch-vm"
+VM_PORTS = ("6520", "8443", "15550-15599/tcp", "15550-15599/udp")
 
 
 def log(message):
@@ -761,23 +763,38 @@ def host_package(host, tree):
     return target
 
 
-def vm_env(host):
-    tree = host.tree
+def vm_paths(host):
+    """The vm build, its unpacked host tools, the runtime home and the host-capability stand-in."""
     info_path = device_info_path(host, "vm")
     if not info_path.is_file():
         die("no vm build: lujarch build vm")
     info = json.loads(info_path.read_text())
-    home = host.out / "vm" / "home"
+    base = host.out / "vm"
+    home = base / "home"
     home.mkdir(parents=True, exist_ok=True)
-    host_out = host_package(host, tree)
-    env = dict(os.environ)
-    env.update({
-        "HOME": str(home),
-        "ANDROID_HOST_OUT": str(host_out),
-        "ANDROID_PRODUCT_OUT": info["product_out"],
-        "PATH": f"{host_out / 'bin'}:{env.get('PATH', '')}",
-    })
-    return env, host_out, info
+    # Cuttlefish asks Debian's cuttlefish-common package whether the host can run its VM
+    # managers; the container provides everything that package would.
+    common = base / "cuttlefish-common"
+    query = common / "capability_query.py"
+    if not query.is_file():
+        common.mkdir(parents=True, exist_ok=True)
+        query.write_text("#!/bin/sh\nexit 0\n")
+        query.chmod(0o755)
+    # Cuttlefish gives its files to the groups Debian's package creates; in the container they
+    # are the user's own group.
+    group = base / "group"
+    gid = os.getgid()
+    lines = [l for l in Path("/etc/group").read_text().split("\n") if l.strip()]
+    names = {l.split(":", 1)[0] for l in lines}
+    lines += [f"{name}:x:{gid}:" for name in ("cvdnetwork", "kvm") if name not in names]
+    group.write_text("\n".join(lines) + "\n")
+    return info, host_package(host, host.tree), home, common
+
+
+def container_state():
+    out = subprocess.run(["docker", "inspect", "-f", "{{.State.Status}}", VM_CONTAINER],
+                         capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else None
 
 
 def adb_binary(host_out):
@@ -802,23 +819,45 @@ def booted(host_out):
 
 def cmd_vm(args):
     host = Host()
-    env, host_out, info = vm_env(host)
+    info, host_out, home, common = vm_paths(host)
+    state = container_state()
     if args.action == "stop":
-        run = subprocess.run([str(host_out / "bin" / "stop_cvd")], env=env)
-        return run.returncode
+        if state is None:
+            log("the virtual device is not running")
+            return 0
+        if state == "running":
+            subprocess.run(["docker", "exec", VM_CONTAINER, "/cf/host/bin/stop_cvd"],
+                           capture_output=True, timeout=120)
+        return subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True).returncode
     if args.action == "status":
-        state = "booted" if booted(host_out) else "not booted"
-        print(f"vm: {state}; build {info['commit']} ({info['built']}); screen {WEBRTC_URL}")
-        return 0 if state == "booted" else 1
+        up = "booted" if state == "running" and booted(host_out) else (state or "not running")
+        print(f"vm: {up}; build {info['commit']} ({info['built']}); adb 127.0.0.1:{ADB_PORT}; "
+              f"screen {WEBRTC_URL}")
+        return 0 if up == "booted" else 1
+    if state == "running":
+        die("the virtual device is already running (lujarch vm stop)")
+    if state is not None:
+        subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True)
     vm = device_config("vm")
     display = device_config(vm["display_of"])["display"] if vm.get("display_of") else {}
     command = [
-        str(host_out / "bin" / "launch_cvd"), "--daemon",
-        "--report_anonymous_usage_stats=n", "--resume=false",
-        "--enable_tap_devices=false",
-        f"--system_image_dir={info['product_out']}",
-        f"--cpus={host.get('vm', 'cpus', 4)}",
-        f"--memory_mb={host.get('vm', 'memory_mb', 8192)}",
+        "docker", "run", "-d", "--name", VM_CONTAINER,
+        "--user", f"{os.getuid()}:{os.getgid()}",
+        "-v", "/etc/passwd:/etc/passwd:ro", "-v", f"{host.out / 'vm' / 'group'}:/etc/group:ro",
+        "--device", "/dev/kvm", "--device", "/dev/vhost-vsock", "--device", "/dev/vhost-net",
+        "-v", f"{host_out}:/cf/host:ro", "-v", f"{info['product_out']}:/cf/images",
+        "-v", f"{home}:/cf/home", "-v", f"{common}:/usr/lib/cuttlefish-common/bin:ro",
+        "-e", "HOME=/cf/home", "-e", "ANDROID_HOST_OUT=/cf/host",
+        "-e", "ANDROID_PRODUCT_OUT=/cf/images", "-w", "/cf/home",
+    ]
+    for port in VM_PORTS:
+        ports, _, proto = port.partition("/")
+        command += ["-p", f"127.0.0.1:{ports}:{ports}" + (f"/{proto}" if proto else "")]
+    command += [
+        host.get("vm", "image", "debian:trixie-slim"),
+        "/cf/host/bin/launch_cvd", "--report_anonymous_usage_stats=n", "--resume=false",
+        "--enable_tap_devices=false", "--system_image_dir=/cf/images",
+        f"--cpus={host.get('vm', 'cpus', 4)}", f"--memory_mb={host.get('vm', 'memory_mb', 8192)}",
     ]
     if display:
         command += [f"--x_res={display['width']}", f"--y_res={display['height']}",
@@ -826,18 +865,26 @@ def cmd_vm(args):
     logfile = host.out / "logs" / f"vm-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.log"
     logfile.parent.mkdir(parents=True, exist_ok=True)
     log(f"starting the virtual device from {info['product_out']}; log {logfile}")
-    with open(logfile, "w") as f:
-        run = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT,
-                             stdin=subprocess.DEVNULL)
+    run = subprocess.run(command, capture_output=True, text=True)
     if run.returncode:
-        print("\n".join(logfile.read_text(errors="replace").split("\n")[-30:]), file=sys.stderr)
-        die(f"launch_cvd failed (exit {run.returncode}); log {logfile}")
+        die(f"docker run failed: {run.stderr.strip()}")
+
+    def save_log():
+        out = subprocess.run(["docker", "logs", VM_CONTAINER], capture_output=True, text=True)
+        logfile.write_text(out.stdout + out.stderr)
+
     deadline = time.monotonic() + args.timeout
     while time.monotonic() < deadline:
+        if container_state() != "running":
+            save_log()
+            print("\n".join(logfile.read_text(errors="replace").split("\n")[-30:]), file=sys.stderr)
+            die(f"the virtual device stopped while booting; log {logfile}")
         if booted(host_out):
+            save_log()
             log(f"booted; adb 127.0.0.1:{ADB_PORT}; screen {WEBRTC_URL}")
             return 0
         time.sleep(10)
+    save_log()
     die(f"not booted after {args.timeout} s; log {logfile}")
 
 
