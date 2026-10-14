@@ -849,6 +849,8 @@ def cmd_vm(args):
         # Docker's default seccomp and AppArmor profiles refuse AF_VSOCK sockets, Cuttlefish's
         # channel to the guest; outside a container Cuttlefish runs without either profile.
         "--security-opt", "seccomp=unconfined", "--security-opt", "apparmor=unconfined",
+        # crosvm opens more files than a container's default soft limit of 1024.
+        "--ulimit", "nofile=524288:524288",
         "-v", f"{host_out}:/cf/host:ro", "-v", f"{info['product_out']}:/cf/images",
         "-v", f"{home}:/cf/home", "-v", f"{common}:/usr/lib/cuttlefish-common/bin:ro",
         "-e", "HOME=/cf/home", "-e", "ANDROID_HOST_OUT=/cf/host",
