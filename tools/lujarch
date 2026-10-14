@@ -846,6 +846,9 @@ def cmd_vm(args):
         "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", "/etc/passwd:/etc/passwd:ro", "-v", f"{host.out / 'vm' / 'group'}:/etc/group:ro",
         "--device", "/dev/kvm", "--device", "/dev/vhost-vsock", "--device", "/dev/vhost-net",
+        # Docker's default seccomp profile refuses AF_VSOCK sockets, Cuttlefish's channel to the
+        # guest; outside a container Cuttlefish runs without a profile.
+        "--security-opt", "seccomp=unconfined",
         "-v", f"{host_out}:/cf/host:ro", "-v", f"{info['product_out']}:/cf/images",
         "-v", f"{home}:/cf/home", "-v", f"{common}:/usr/lib/cuttlefish-common/bin:ro",
         "-e", "HOME=/cf/home", "-e", "ANDROID_HOST_OUT=/cf/host",
