@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -633,13 +634,13 @@ def build_budget(host):
     gb = mem_available_gb()
     mem_max = host.get("build", "memory_max") or ""
     if not mem_max:
-        cap = min(gb - 12, 52)
-        if cap < 38:
-            die(f"only {gb} GB of memory free: a build needs at least 50 "
+        # Android 17's soong_build analysis peaks above 52 GB with Go's default heap growth
+        # (GOGC below keeps it lower); squeezed under its peak it stalls for hours.
+        cap = min(gb - 12, 60)
+        if cap < 44:
+            die(f"only {gb} GB of memory free: a build needs at least 56 "
                 "(or set build.memory_max in host.toml)")
         mem_max = f"{cap}G"
-    # Android 17's soong_build holds about 45 GB while it analyses the tree; pressure below
-    # that stalls it for hours, so the pressure point sits just under the hard cap.
     mem_high = host.get("build", "memory_high") or f"{int(mem_max.rstrip('G')) - 1}G"
     jobs = int(host.get("build", "jobs", 0) or 0) or min(int(mem_max.rstrip("G")) // 3, 26)
     return mem_max, mem_high, jobs
@@ -664,7 +665,7 @@ def cmd_build(args):
     variant = lock_file()["build"]["variant"]
     lunch = f"{device['product']}-{release_config(tree)}-{variant}"
     if not args.modules and device.get("platform") == "cuttlefish":
-        args.modules = ["droid", "cvd-host_package"]
+        args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
     modules = " ".join(shlex.quote(m) for m in args.modules)
 
     lock_path = host.path_of("build", "lock")
@@ -701,6 +702,7 @@ m -j{jobs} {modules}
         "CCACHE_EXEC": "/usr/bin/ccache",
         "CCACHE_DIR": str(host.path_of("paths", "ccache")),
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
+        "GOGC": "50",
     })
     command = ["bash", "-c", script]
     cpus = host.get("build", "cpus")
@@ -739,6 +741,26 @@ m -j{jobs} {modules}
 # Virtual device
 
 
+def host_package(host, tree):
+    """The Cuttlefish host tools, unpacked from the vm build's cvd-host_package.tar.gz."""
+    package = tree / "out" / "host" / "linux-x86" / "cvd-host_package.tar.gz"
+    if not package.is_file():
+        die(f"no {package}: lujarch build vm")
+    target = host.out / "vm" / "host"
+    stamp = target / ".package-mtime"
+    mtime = str(package.stat().st_mtime_ns)
+    if stamp.is_file() and stamp.read_text() == mtime:
+        return target
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    log(f"unpacking the Cuttlefish host tools into {target}")
+    if subprocess.run(["tar", "-xzf", str(package), "-C", str(target)]).returncode:
+        die(f"could not unpack {package}")
+    stamp.write_text(mtime)
+    return target
+
+
 def vm_env(host):
     tree = host.tree
     info_path = device_info_path(host, "vm")
@@ -747,9 +769,7 @@ def vm_env(host):
     info = json.loads(info_path.read_text())
     home = host.out / "vm" / "home"
     home.mkdir(parents=True, exist_ok=True)
-    host_out = tree / "out" / "host" / "linux-x86"
-    if (host_out / "cvd-host_package" / "bin" / "launch_cvd").is_file():
-        host_out = host_out / "cvd-host_package"
+    host_out = host_package(host, tree)
     env = dict(os.environ)
     env.update({
         "HOME": str(home),
