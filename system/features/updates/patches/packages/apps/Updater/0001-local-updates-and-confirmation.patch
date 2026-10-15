@@ -49,6 +49,48 @@ index bb6bc873b05d718bb818a24d0e6a59325f6a35c0..f89e7adccfd5d5028be5c88f6bbf5856
          UpdatesCheck(
              model = model,
              uiState = updatesCheckUiState,
+diff --git a/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt b/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
+index 0ef23216e7fcdeb2ff16245f60be46a1aa24d9ed..d3f2bcd299836873a9e3c1c03ccf6ccbd7060170 100644
+--- a/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
++++ b/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
+@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.onEach
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
+ import org.lineageos.updater.data.Update
++import org.lineageos.updater.deviceinfo.DeviceInfoUtils
+ import org.lineageos.updater.updatescheck.UpdatesCheckModel
+ import org.lineageos.updater.updatescheck.UpdatesCheckState
+ 
+@@ -32,22 +33,26 @@ class UpdatesViewModel(
+         val updates: List<Update> = emptyList(),
+         val isCheckingForUpdates: Boolean = false,
+         val isOnline: Boolean = true,
++        // Without an update server the network does not matter: a check asks nothing.
++        val hasServer: Boolean = true,
+         val lastCheckedTimestamp: Long = 0L,
+         val hasUpdateCheckFailed: Boolean = false,
+     ) {
+         val updatesCheckModel = UpdatesCheckModel(
+             state = when {
+                 isCheckingForUpdates -> UpdatesCheckState.Checking
+-                !isOnline -> UpdatesCheckState.NoInternet
++                !isOnline && hasServer -> UpdatesCheckState.NoInternet
+                 hasUpdateCheckFailed -> UpdatesCheckState.Error
+                 else -> UpdatesCheckState.Idle
+             },
+             lastCheckedTimestamp = lastCheckedTimestamp,
+-            canCheckForUpdates = isOnline && !isCheckingForUpdates,
++            canCheckForUpdates = (isOnline || !hasServer) && !isCheckingForUpdates,
+         )
+     }
+ 
+-    private val _uiState = MutableStateFlow(UiState())
++    private val _uiState = MutableStateFlow(
++        UiState(hasServer = DeviceInfoUtils.hasUpdateServer(application))
++    )
+     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+     val uiStateLive: LiveData<UiState> = _uiState.asLiveData()
+ 
 diff --git a/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt b/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt
 index c9e2350df8dfed5c65778c2dd00d1cbb3103bd10..7949b505a224c9dc822b0aeacf34da8e1916ce4f 100644
 --- a/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt
