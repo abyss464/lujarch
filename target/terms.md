@@ -141,3 +141,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Services | 服务 | サービス |
 | System | 系统 | システム |
 | Modes | 模式 | モード |
+| Status bar | 状态栏 | ステータスバー |
+| Status bar items | 状态栏项目 | ステータスバーの項目 |
+| Privacy indicators | 隐私指示器 | プライバシー インジケーター |
+| Lyrics | 歌词 | 歌詞 |
