@@ -1,0 +1,14 @@
+// The pages of Lujarch's permissions in Lujarch Settings.
+android_library {
+    name: "LujarchPermissionsSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "androidx.preference_preference",
+        "SettingsLibCollapsingToolbarBaseActivity",
+        "SettingsLibFooterPreference",
+        "SettingsLibSettingsTheme",
+    ],
+}

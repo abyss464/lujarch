@@ -77,7 +77,7 @@ readings. Don't allow: the app cannot open them.
 ### PERM-5 Clipboard
 
 - Home: Settings > Security & privacy > Privacy controls > Permission manager > Clipboard
-- Switch: Allow, Ask every time, Return empty data, Don't allow
+- Switch: Allow, Ask every time, Return empty data
 - Default: Allow
 - Verify: vm
 
@@ -94,7 +94,9 @@ own "Show clipboard access" message stays as it is.
 Covers which other apps an app sees: the app list, and the accounts, keyboards, accessibility
 services and notification listeners that reveal them. Return empty data: the app sees the apps
 that come with the system and itself, and none the user installed. Don't allow: the app sees only
-itself; features that rely on another app (sharing, sign-in through another app) can fail.
+itself and the system parts every app needs (Google Play services, the WebView, the keyboard and
+the home app); features that rely on another app (sharing, sign-in through another app) can fail.
+
 
 ### PERM-7 Device identifiers
 
@@ -111,7 +113,7 @@ Don't allow: the read is refused where Android refuses a missing permission, and
 ### PERM-8 Device info
 
 - Home: Settings > Security & privacy > Privacy controls > Permission manager > Device info
-- Switch: Allow, Ask every time, Return empty data, Don't allow
+- Switch: Allow, Ask every time, Return empty data
 - Default: Allow
 - Verify: vm
 
@@ -132,7 +134,8 @@ and build from system properties, and the processor and graphics names from the 
 Covers what the system's interfaces tell about the networks: IP addresses, DNS servers, the
 proxy, whether a VPN is on, Wi-Fi signal and link details, data totals, and whether Bluetooth and
 NFC are on. Return empty data: these read as empty, a VPN as absent, Bluetooth and NFC as off;
-the app's own connections keep working. The footer says that an app's own native code still reads
+the app's own connections keep working, and an app allowed Nearby devices still sees whether
+Bluetooth is on. The footer says that an app's own native code still reads
 the addresses of the phone's network interfaces from the kernel, and that any server the app
 talks to sees the phone's public address.
 
@@ -280,13 +283,13 @@ A shorter choice asks first, since the older records are deleted.
 
 ### PERM-21 The reason an app stopped
 
-- Home: the "has stopped" dialog; Settings > Security & privacy > Privacy controls > Permission manager > menu > Explain why apps stop
+- Home: the "has stopped" dialog; Settings > Security & privacy > Privacy controls > Permission manager > Explain why apps stop
 - Switch: Explain why apps stop: on, off
 - Default: on
 - Verify: vm
 
 When an app stops within a few seconds after a choice of the user's returned empty data to it or
 refused it, Android's "has stopped" dialog appears, also on the app's first stop. It names each
-such permission and choice, and offers a button per permission that changes it one step toward
-Allow, and a button to the app's permissions. Nothing changes without a tap. When the phone is not
+such permission and choice, and offers a button per permission that sets it to Allow, and a button
+to the app's permissions. Nothing changes without a tap. When the phone is not
 in use, a notification says the same.

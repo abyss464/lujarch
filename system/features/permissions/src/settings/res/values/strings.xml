@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="lujarch_new_app_defaults">Defaults for new apps</string>
+    <string name="lujarch_not_changed">Not changed</string>
+    <string name="lujarch_choice_allow">Allow</string>
+    <string name="lujarch_choice_foreground">Allow only while using the app</string>
+    <string name="lujarch_choice_ask">Ask every time</string>
+    <string name="lujarch_choice_empty">Return empty data</string>
+    <string name="lujarch_choice_deny">Don\u2019t allow</string>
+    <string name="lujarch_basic_phone_info">Basic phone info</string>
+    <string name="lujarch_basic_phone_info_only">Basic phone info only</string>
+    <string name="lujarch_autostart">Autostart</string>
+    <string name="lujarch_new_app_network">Mobile data &amp; Wi\u2011Fi</string>
+    <string name="lujarch_new_app_no_network">Without network access</string>
+    <string name="lujarch_new_app_no_wifi">Without Wi\u2011Fi data</string>
+    <string name="lujarch_new_app_no_mobile">Without mobile data</string>
+    <string name="lujarch_new_app_no_vpn">Without VPN data</string>
+    <string name="lujarch_list_separator">", "</string>
+    <string name="lujarch_new_app_defaults_footer">An app you install starts with these choices before it first runs. Apps that come with the system, and updates, keep their choices. An app is not asked about what its role needs: the default home app about Installed apps, the default SMS app about Autostart and basic phone info, the default phone app about basic phone info, and an app with a VPN service about Network info.</string>
+</resources>

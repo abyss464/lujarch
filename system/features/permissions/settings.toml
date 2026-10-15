@@ -1,0 +1,73 @@
+# Ask every time is 3, Allow 0, Return empty data 1, Don't allow 2, Not changed -1.
+
+[history_days]
+table = "global"
+type = "int"
+default = 7
+item = "PERM-20"
+
+[explain_crashes]
+table = "global"
+type = "bool"
+default = true
+item = "PERM-21"
+
+[install_wait_minutes]
+table = "global"
+type = "int"
+default = 10
+item = "PERM-12"
+
+[new_app_sensors]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_clipboard]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_installed_apps]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_device_ids]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_device_info]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_network_info]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_phone_info]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_autostart]
+table = "secure"
+type = "int"
+default = 3
+item = "PERM-18"
+
+[new_app_network]
+table = "secure"
+type = "int"
+default = 0
+item = "PERM-18"
