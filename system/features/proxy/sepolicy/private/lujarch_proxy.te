@@ -1,0 +1,51 @@
+# lujarch_proxy: the proxy daemon. It runs the core (lujarch_proxy_core) and the manager
+# (lujarch_proxy_manager), sets the IPv6 block, and serves Lujarch Settings and the status bar.
+type lujarch_proxy, domain, coredomain;
+type lujarch_proxy_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_proxy)
+net_domain(lujarch_proxy)
+
+type lujarch_proxy_data_file, file_type, data_file_type, core_data_file_type;
+type lujarch_proxy_service, service_manager_type;
+system_internal_prop(lujarch_proxy_prop)
+
+# Its interface; the state goes back to listeners.
+binder_use(lujarch_proxy)
+add_service(lujarch_proxy, lujarch_proxy_service)
+allow platform_app_all lujarch_proxy_service:service_manager find;
+binder_call(platform_app_all, lujarch_proxy)
+binder_call(lujarch_proxy, platform_app_all)
+# Callers by packages.list; the switches' mirror; its state.
+allow lujarch_proxy packages_list_file:file r_file_perms;
+get_prop(lujarch_proxy, lujarch_setting_prop)
+set_prop(lujarch_proxy, lujarch_proxy_prop)
+get_prop(platform_app_all, lujarch_proxy_prop)
+
+# A stream's socket, and the pipes of the manager's input and of an export, made by Lujarch
+# Settings.
+allow platform_app_all lujarch_proxy:fd use;
+allow platform_app_all lujarch_proxy:unix_stream_socket { read write getattr shutdown };
+allow lujarch_proxy platform_app_all:fd use;
+allow lujarch_proxy platform_app_all:fifo_file { read write getattr };
+
+# Its data, the configuration and the core's output.
+allow lujarch_proxy system_data_file:dir search;
+allow lujarch_proxy lujarch_proxy_data_file:dir rw_dir_perms;
+allow lujarch_proxy lujarch_proxy_data_file:file { create_file_perms watch };
+allow lujarch_proxy lujarch_proxy_data_file:dir watch;
+
+# The core and the manager in their own domains; the daemon stops them.
+domain_auto_trans(lujarch_proxy, lujarch_proxy_core_exec, lujarch_proxy_core)
+domain_auto_trans(lujarch_proxy, lujarch_proxy_manager_exec, lujarch_proxy_manager)
+allow lujarch_proxy { lujarch_proxy_core lujarch_proxy_manager }:process { sigkill signal };
+allow lujarch_proxy { lujarch_proxy_core lujarch_proxy_manager }:fd use;
+
+# The capability set of the service (lujarch_proxy.rc), which the core inherits.
+allow lujarch_proxy self:global_capability_class_set { net_admin net_raw net_bind_service };
+# The IPv6 block: policy rules over rtnetlink.
+allow lujarch_proxy self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read nlmsg_write };
+# The watchdog: the interface (/proc/net/dev), the controller's port (/proc/net/tcp), the
+# controller and the probes.
+allow lujarch_proxy proc_net:file r_file_perms;
+allow lujarch_proxy proc_net_tcp_udp:file r_file_perms;
+allow lujarch_proxy self:tcp_socket { create_stream_socket_perms };

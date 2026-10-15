@@ -1,0 +1,4 @@
+/system_ext/bin/lujarch_proxy            u:object_r:lujarch_proxy_exec:s0
+/system_ext/bin/lujarch_proxy_core       u:object_r:lujarch_proxy_core_exec:s0
+/system_ext/bin/lujarch_proxy_manager    u:object_r:lujarch_proxy_manager_exec:s0
+/data/lujarch/proxy(/.*)?                u:object_r:lujarch_proxy_data_file:s0

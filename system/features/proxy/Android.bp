@@ -1,0 +1,76 @@
+// The interface of lujarch_proxy, for Lujarch Settings and the status bar.
+aidl_interface {
+    name: "lujarch_proxy_aidl",
+    srcs: ["src/daemon/aidl/org/lujarch/proxy/*.aidl"],
+    local_include_dir: "src/daemon/aidl",
+    unstable: true,
+    system_ext_specific: true,
+    backend: {
+        java: {
+            platform_apis: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+    },
+}
+
+// The proxy daemon: it runs the core and the manager.
+cc_binary {
+    name: "lujarch_proxy",
+    srcs: ["src/daemon/*.cpp"],
+    static_libs: [
+        "liblujarch_daemon",
+        "lujarch_proxy_aidl-ndk",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "libjsoncpp",
+        "liblog",
+    ],
+    init_rc: ["src/daemon/lujarch_proxy.rc"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+}
+
+// The proxy core and its manager, built outside the tree (feature.toml, components).
+cc_prebuilt_binary {
+    name: "lujarch_proxy_core",
+    compile_multilib: "64",
+    arch: {
+        arm64: {
+            srcs: ["prebuilt/arm64/lujarch_proxy_core"],
+        },
+        x86_64: {
+            srcs: ["prebuilt/x86_64/lujarch_proxy_core"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+    system_ext_specific: true,
+}
+
+cc_prebuilt_binary {
+    name: "lujarch_proxy_manager",
+    compile_multilib: "64",
+    arch: {
+        arm64: {
+            srcs: ["prebuilt/arm64/lujarch_proxy_manager"],
+        },
+        x86_64: {
+            srcs: ["prebuilt/x86_64/lujarch_proxy_manager"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+    system_ext_specific: true,
+}

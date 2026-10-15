@@ -1,0 +1,11 @@
+on post-fs-data
+    mkdir /data/lujarch 0711 root root
+    mkdir /data/lujarch/proxy 0700 root root
+
+service lujarch_proxy /system_ext/bin/lujarch_proxy
+    class main
+    user root
+    # No DAC bypass in the capability set, so files go by groups: vpn for /dev/tun, system for
+    # the core's /data/system/packages.xml, package_info for the callers' packages.list.
+    group root inet net_admin net_raw vpn system package_info
+    capabilities NET_ADMIN NET_RAW NET_BIND_SERVICE

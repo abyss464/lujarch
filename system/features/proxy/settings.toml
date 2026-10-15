@@ -1,0 +1,17 @@
+[enabled]
+table = "global"
+type = "bool"
+default = false
+item = "PRX-1"
+
+[repair]
+table = "global"
+type = "bool"
+default = true
+item = "PRX-4"
+
+[ipv6_block]
+table = "global"
+type = "bool"
+default = true
+item = "PRX-5"

@@ -247,3 +247,21 @@ index 4531ef04434f863c92e079085a2e388045b22c02..e7942ae6186f112cb8e863e2fa70aa8e
          assert_eq!(l.core_bin, PathBuf::from(ANDROID_CORE_BIN));
          assert!(l.android_service);
      }
+diff --git a/src/settings.rs b/src/settings.rs
+index c71a970cf485cfc901d32ee9e35d29ea27e36c2c..0d335d0a3489d4e72ed191024eb72098fd23bd75 100644
+--- a/src/settings.rs
++++ b/src/settings.rs
+@@ -1026,9 +1026,11 @@ pub fn installed(layout: &Layout) -> Json {
+ /// The launcher's settings (`launcher.conf` in the runtime dir: `key=value` lines) for
+ /// the Android profile: `ipv6-block=1|0` and `tun=1|0`. The launcher reads it at every
+ /// core start; it prohibits global IPv6 only while the core captures traffic, so a core
+-/// without its TUN (the owner's choice, D-024 round 3) leaves IPv6 alone.
++/// without its TUN (the owner's choice, D-024 round 3) leaves IPv6 alone. On a device
++/// with the proxy daemon there is no launcher: the IPv6 block is a switch of the system
++/// and the daemon reads the TUN from the installed configuration.
+ pub fn write_launcher(layout: &Layout, cfg: &Config) -> Result<Option<PathBuf>> {
+-    if layout.profile != Profile::Android {
++    if layout.profile != Profile::Android || layout.android_service {
+         return Ok(None);
+     }
+     let block = cfg.android.as_ref().and_then(|a| a.ipv6_block).unwrap_or(true);
