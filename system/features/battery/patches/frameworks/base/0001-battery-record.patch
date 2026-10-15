@@ -1,0 +1,57 @@
+diff --git a/services/core/java/com/android/server/am/BatteryStatsService.java b/services/core/java/com/android/server/am/BatteryStatsService.java
+index 891e3050554c768f03d0bb039b0378e072ce700e..76609b2d7d6cc2d429d1aea2330576cca7c83580 100644
+--- a/services/core/java/com/android/server/am/BatteryStatsService.java
++++ b/services/core/java/com/android/server/am/BatteryStatsService.java
+@@ -42,6 +42,7 @@ import android.content.ContentResolver;
+ import android.content.Context;
+ import android.content.pm.ApplicationInfo;
+ import android.content.pm.PackageManager;
++import android.database.ContentObserver;
+ import android.hardware.Sensor;
+ import android.hardware.SensorManager;
+ import android.hardware.power.stats.PowerEntity;
+@@ -173,6 +174,8 @@ public final class BatteryStatsService extends IBatteryStats.Stub
+         BatteryStatsImpl.EnergyStatsRetriever,
+         Watchdog.Monitor {
+     static final String TAG = "BatteryStatsService";
++    /** Settings.Global: 1 (or no value) records the full battery history, 0 does not. */
++    static final String LUJARCH_FULL_HISTORY_SETTING = "lujarch_battery_full_history";
+     static final String TRACE_TRACK_WAKEUP_REASON = "wakeup_reason";
+     static final boolean DBG = false;
+ 
+@@ -565,9 +568,35 @@ public final class BatteryStatsService extends IBatteryStats.Stub
+         dataConnectionStats.startMonitoring();
+ 
+         registerStatsCallbacks();
++        // Lujarch: Full battery history (BAT-2, Settings.Global lujarch_battery_full_history)
++        // applies at boot and when it changes.
++        applyLujarchFullHistory();
++        mContext.getContentResolver().registerContentObserver(
++                Settings.Global.getUriFor(LUJARCH_FULL_HISTORY_SETTING), false,
++                new ContentObserver(mHandler) {
++                    @Override
++                    public void onChange(boolean selfChange) {
++                        applyLujarchFullHistory();
++                    }
++                });
+         mSystemReady.open();
+     }
+ 
++    /**
++     * Lujarch: records the additional history events (alarms, every wake lock, processes) when
++     * Settings.Global {@link #LUJARCH_FULL_HISTORY_SETTING} is not 0, as {@code dumpsys
++     * batterystats --enable full-history} does. No value is on.
++     */
++    private void applyLujarchFullHistory() {
++        final boolean enable = Settings.Global.getInt(mContext.getContentResolver(),
++                LUJARCH_FULL_HISTORY_SETTING, 1) != 0;
++        mHandler.post(() -> {
++            synchronized (mStats) {
++                mStats.setRecordAllHistoryLocked(enable);
++            }
++        });
++    }
++
+     /**
+      * Notifies BatteryStatsService that the system server is ready.
+      */

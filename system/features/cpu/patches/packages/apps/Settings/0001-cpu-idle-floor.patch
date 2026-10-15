@@ -1,0 +1,131 @@
+diff --git a/res/values-ja/lujarch_cpu_strings.xml b/res/values-ja/lujarch_cpu_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..e9a57a2e53ef3d4b8215f18f786eaaa1feaa8988
+--- /dev/null
++++ b/res/values-ja/lujarch_cpu_strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_cpu_idle_floor_title">アイドル時は最低の CPU 周波数</string>
++    <string name="lujarch_cpu_idle_floor_summary">アイドル状態のコアをチップの最低周波数まで下げます。タップやアプリ起動時のブーストは変わりません</string>
++    <string name="lujarch_cpu_idle_floor_keywords">CPU, プロセッサ, 周波数, アイドル, バッテリー</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_cpu_strings.xml b/res/values-zh-rCN/lujarch_cpu_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..9a92e4aa9413290ea9604b97deb711ac24baaec7
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_cpu_strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_cpu_idle_floor_title">空闲时使用最低频率</string>
++    <string name="lujarch_cpu_idle_floor_summary">空闲的处理器核心降到芯片支持的最低频率，触控和启动应用时的加速不变</string>
++    <string name="lujarch_cpu_idle_floor_keywords">CPU, 处理器, 频率, 空闲, 省电</string>
++</resources>
+diff --git a/res/values/lujarch_cpu_strings.xml b/res/values/lujarch_cpu_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f3251feeb7cb4c5013e315f14fb11155baf0408
+--- /dev/null
++++ b/res/values/lujarch_cpu_strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_cpu_idle_floor_title">Lowest CPU frequency when idle</string>
++    <string name="lujarch_cpu_idle_floor_summary">Idle cores drop to the lowest frequency the chip has; touch and app launch boosts are unchanged</string>
++    <string name="lujarch_cpu_idle_floor_keywords">CPU, processor, frequency, idle, battery</string>
++</resources>
+diff --git a/res/xml/power_usage_summary.xml b/res/xml/power_usage_summary.xml
+index 950ca2de9e9143e43788486a33a5062ab32efa96..8a682e9270defff88bcb84ec3f1d23fe75b01312 100644
+--- a/res/xml/power_usage_summary.xml
++++ b/res/xml/power_usage_summary.xml
+@@ -92,6 +92,16 @@
+             settings:requiresService="lineagehealth" />
+     </com.android.settingslib.widget.UntitledPreferenceCategory>
+ 
++    <com.android.settingslib.widget.UntitledPreferenceCategory
++        android:key="lujarch_cpu_category">
++        <SwitchPreferenceCompat
++            android:key="lujarch_cpu_idle_floor"
++            android:title="@string/lujarch_cpu_idle_floor_title"
++            android:summary="@string/lujarch_cpu_idle_floor_summary"
++            settings:keywords="@string/lujarch_cpu_idle_floor_keywords"
++            settings:controller="com.android.settings.lujarch.LujarchCpuIdleFloorController" />
++    </com.android.settingslib.widget.UntitledPreferenceCategory>
++
+     <com.android.settingslib.widget.UntitledPreferenceCategory
+         android:key="percentage_category">
+         <SwitchPreferenceCompat
+diff --git a/src/com/android/settings/lujarch/LujarchCpuIdleFloorController.java b/src/com/android/settings/lujarch/LujarchCpuIdleFloorController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..b9d5f21c4c61502578cd06dca959d65ac005774d
+--- /dev/null
++++ b/src/com/android/settings/lujarch/LujarchCpuIdleFloorController.java
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.lujarch;
++
++import android.content.Context;
++import android.os.SystemProperties;
++import android.provider.Settings;
++import android.util.Log;
++
++import com.android.settings.R;
++import com.android.settings.core.TogglePreferenceController;
++
++/**
++ * Settings > Battery > Lowest CPU frequency when idle (CPU-1): the switch lujarch_cpu_idle_floor,
++ * on devices whose build writes the floor (ro.lujarch.cpu.idle_floor).
++ */
++public class LujarchCpuIdleFloorController extends TogglePreferenceController {
++    private static final String TAG = "LujarchCpuIdleFloor";
++    private static final String SETTING = "lujarch_cpu_idle_floor";
++    private static final String SUPPORTED = "ro.lujarch.cpu.idle_floor";
++
++    public LujarchCpuIdleFloorController(Context context, String preferenceKey) {
++        super(context, preferenceKey);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return SystemProperties.getBoolean(SUPPORTED, false) ? AVAILABLE : UNSUPPORTED_ON_DEVICE;
++    }
++
++    @Override
++    public boolean isChecked() {
++        return Settings.Global.getInt(mContext.getContentResolver(), SETTING, 1) != 0;
++    }
++
++    @Override
++    public boolean setChecked(boolean isChecked) {
++        if (!Settings.Global.putInt(mContext.getContentResolver(), SETTING, isChecked ? 1 : 0)) {
++            Log.e(TAG, "cannot write " + SETTING);
++            return false;
++        }
++        return true;
++    }
++
++    @Override
++    public int getSliceHighlightMenuRes() {
++        return R.string.menu_key_battery;
++    }
++
++    @Override
++    public boolean isSliceable() {
++        return false;
++    }
++}

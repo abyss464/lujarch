@@ -1,0 +1,11 @@
+[record]
+table = "global"
+type = "bool"
+default = true
+item = "BAT-1"
+
+[full_history]
+table = "global"
+type = "bool"
+default = true
+item = "BAT-2"

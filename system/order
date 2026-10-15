@@ -4,3 +4,5 @@ features/permissions
 features/updates
 features/proxy
 features/root
+features/battery
+features/cpu

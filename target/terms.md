@@ -129,3 +129,8 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Music | 音乐 | 音楽 |
 | App Store | 应用商店 | アプリストア |
 | Choose again | 重新选择 | 選択し直す |
+| Battery | 电池 | バッテリー |
+| Battery usage | 电池使用情况 | バッテリー使用量 |
+| Record battery usage | 记录电池用量 | バッテリー使用量を記録 |
+| Full battery history | 完整电池历史 | バッテリーの完全な履歴 |
+| Lowest CPU frequency when idle | 空闲时使用最低频率 | アイドル時は最低の CPU 周波数 |
