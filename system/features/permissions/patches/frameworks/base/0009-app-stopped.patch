@@ -1,0 +1,639 @@
+diff --git a/core/java/com/android/internal/notification/SystemNotificationChannels.java b/core/java/com/android/internal/notification/SystemNotificationChannels.java
+index 415aaa0243a7af300b7b309d2aa344b422bbf1b1..970d564c9634188d58d1f4339c7a202968054db6 100644
+--- a/core/java/com/android/internal/notification/SystemNotificationChannels.java
++++ b/core/java/com/android/internal/notification/SystemNotificationChannels.java
+@@ -73,6 +73,7 @@ public class SystemNotificationChannels {
+     public static final String ACCESSIBILITY_SECURITY_POLICY = "ACCESSIBILITY_SECURITY_POLICY";
+     public static final String ABUSIVE_BACKGROUND_APPS = "ABUSIVE_BACKGROUND_APPS";
+     public static final String PARENTAL_CONTROLS = "PARENTAL_CONTROLS";
++    public static final String LUJARCH_APP_STOPPED = "LUJARCH_APP_STOPPED";
+ 
+     @VisibleForTesting
+     static final String OBSOLETE_DO_NOT_DISTURB = "DO_NOT_DISTURB";
+@@ -232,6 +233,12 @@ public class SystemNotificationChannels {
+                 NotificationManager.IMPORTANCE_LOW);
+         channelsList.add(abusiveBackgroundAppsChannel);
+ 
++        channelsList.add(new NotificationChannel(
++                LUJARCH_APP_STOPPED,
++                context.getString(R.string.notification_channel_lujarch_app_stopped),
++                NotificationManager.IMPORTANCE_DEFAULT));
++
++
+         if (enableSupervisionManagerPolicyApis()) {
+             final NotificationChannel parentalControlsChannel =
+                     new NotificationChannel(
+diff --git a/core/res/res/values-ja/strings.xml b/core/res/res/values-ja/strings.xml
+index c85d23da472b45b69305ff8355a554a963801621..32e47c7bc42920835ed569d7f49040d4a17c6404 100644
+--- a/core/res/res/values-ja/strings.xml
++++ b/core/res/res/values-ja/strings.xml
+@@ -2732,4 +2732,14 @@
+     <string name="lujarch_permgroupdesc_device_info">"このスマートフォンのモデル、システム ビルド、バッテリーなどの情報の読み取り"</string>
+     <string name="lujarch_permgrouplab_network_info">"ネットワーク情報"</string>
+     <string name="lujarch_permgroupdesc_network_info">"ネットワーク アドレス、VPN、Wi-Fi の詳細、データ使用量の合計の読み取り"</string>
++    <string name="lujarch_permission_choice_empty">"空のデータを返す"</string>
++    <string name="lujarch_permission_choice_deny">"許可しない"</string>
++    <string name="lujarch_permission_choice_foreground">"アプリの使用中のみ許可"</string>
++    <string name="lujarch_app_stopped">"「%1$s」が停止しました"</string>
++    <string name="lujarch_app_stopped_reason">"停止する直前に、次の設定で拒否されました：%1$s。"</string>
++    <string name="lujarch_app_stopped_item">"%1$s（%2$s）"</string>
++    <string name="lujarch_list_separator">"、"</string>
++    <string name="lujarch_app_stopped_allow">"%1$sを許可する"</string>
++    <string name="lujarch_app_permissions">"アプリの権限"</string>
++    <string name="notification_channel_lujarch_app_stopped">"アプリが停止した理由"</string>
+ </resources>
+diff --git a/core/res/res/values-zh-rCN/strings.xml b/core/res/res/values-zh-rCN/strings.xml
+index c4edcd8d52f0ac1e85f99eb0667812a1146948c3..4826d5311b1e8c1b679283e3438c357f325ef34a 100644
+--- a/core/res/res/values-zh-rCN/strings.xml
++++ b/core/res/res/values-zh-rCN/strings.xml
+@@ -2732,4 +2732,14 @@
+     <string name="lujarch_permgroupdesc_device_info">"读取这部手机的型号、系统版本、电池等信息"</string>
+     <string name="lujarch_permgrouplab_network_info">"网络信息"</string>
+     <string name="lujarch_permgroupdesc_network_info">"读取网络地址、VPN、WLAN 详情和数据流量总量"</string>
++    <string name="lujarch_permission_choice_empty">"返回空数据"</string>
++    <string name="lujarch_permission_choice_deny">"不允许"</string>
++    <string name="lujarch_permission_choice_foreground">"仅在使用该应用时允许"</string>
++    <string name="lujarch_app_stopped">"“%1$s”已停止运行"</string>
++    <string name="lujarch_app_stopped_reason">"停止运行前的几秒内，它被以下设置拒绝：%1$s。"</string>
++    <string name="lujarch_app_stopped_item">"%1$s（%2$s）"</string>
++    <string name="lujarch_list_separator">"、"</string>
++    <string name="lujarch_app_stopped_allow">"将%1$s改为允许"</string>
++    <string name="lujarch_app_permissions">"应用权限"</string>
++    <string name="notification_channel_lujarch_app_stopped">"应用停止运行的原因"</string>
+ </resources>
+diff --git a/core/res/res/values/strings.xml b/core/res/res/values/strings.xml
+index e8998d2c005d2bb38335616e684aeaa2adce9ce2..ba28a0bc03ba7e30cc0cd94147e172e101ac31c5 100644
+--- a/core/res/res/values/strings.xml
++++ b/core/res/res/values/strings.xml
+@@ -7334,4 +7334,14 @@
+     <string name="lujarch_permgroupdesc_device_info">read the model, system build, battery and other details of this phone</string>
+     <string name="lujarch_permgrouplab_network_info">Network info</string>
+     <string name="lujarch_permgroupdesc_network_info">read network addresses, VPN, Wi\u2011Fi details and data totals</string>
++    <string name="lujarch_permission_choice_empty">Return empty data</string>
++    <string name="lujarch_permission_choice_deny">Don\u2019t allow</string>
++    <string name="lujarch_permission_choice_foreground">Allow only while using the app</string>
++    <string name="lujarch_app_stopped">%1$s stopped</string>
++    <string name="lujarch_app_stopped_reason">In the seconds before it stopped, it was refused by %1$s.</string>
++    <string name="lujarch_app_stopped_item">%1$s (%2$s)</string>
++    <string name="lujarch_list_separator">", "</string>
++    <string name="lujarch_app_stopped_allow">Allow %1$s</string>
++    <string name="lujarch_app_permissions">App permissions</string>
++    <string name="notification_channel_lujarch_app_stopped">Why apps stopped</string>
+ </resources>
+diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
+index f20a2b6a0e74fe8155c33d73ff446a4c47273f80..fe9ca9ba557bd6d6eb80517c638119ede3a16eec 100644
+--- a/core/res/res/values/symbols.xml
++++ b/core/res/res/values/symbols.xml
+@@ -6626,4 +6626,17 @@
+   <java-symbol type="drawable" name="ic_cross_device_sync_airplane" />
+   <!-- Disable the Video Capability over IWLAN when Wi-Fi Calling is turned off  -->
+   <java-symbol type="bool" name="config_disable_video_capability_when_wfc_off" />
+-  </resources>
++  
++  <!-- Lujarch's permissions -->
++  <java-symbol type="string" name="lujarch_permission_choice_empty" />
++  <java-symbol type="string" name="lujarch_permission_choice_deny" />
++  <java-symbol type="string" name="lujarch_permission_choice_foreground" />
++  <java-symbol type="string" name="lujarch_app_stopped" />
++  <java-symbol type="string" name="lujarch_app_stopped_reason" />
++  <java-symbol type="string" name="lujarch_app_stopped_item" />
++  <java-symbol type="string" name="lujarch_list_separator" />
++  <java-symbol type="string" name="lujarch_app_stopped_allow" />
++  <java-symbol type="string" name="lujarch_app_permissions" />
++  <java-symbol type="string" name="notification_channel_lujarch_app_stopped" />
++  <java-symbol type="style" name="aerr_list_item" />
++</resources>
+diff --git a/proto/src/system_messages.proto b/proto/src/system_messages.proto
+index 1a8ae674b897910e099b376b19041ad60eea4295..a021b381b3d41f39d6399dcecba0d62e3b204c58 100644
+--- a/proto/src/system_messages.proto
++++ b/proto/src/system_messages.proto
+@@ -438,5 +438,10 @@ message SystemMessage {
+     // authorized at the login screen (or before-first-unlock).
+     // Package: android
+     NOTE_USB_AUTH_FINISH_LOGGING_IN_REMINDER = 1015;
++
++    // Name the permissions that refused an app just before it stopped.
++    // Package: android
++    NOTE_LUJARCH_APP_STOPPED = 1016;
+   }
++
+ }
+diff --git a/services/core/java/com/android/server/am/AppErrorDialog.java b/services/core/java/com/android/server/am/AppErrorDialog.java
+index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2aec400d58 100644
+--- a/services/core/java/com/android/server/am/AppErrorDialog.java
++++ b/services/core/java/com/android/server/am/AppErrorDialog.java
+@@ -28,8 +28,11 @@ import android.provider.Settings;
+ import android.text.BidiFormatter;
+ import android.view.LayoutInflater;
+ import android.view.View;
++import android.view.ViewGroup;
+ import android.view.WindowManager;
++import android.widget.Button;
+ import android.widget.FrameLayout;
++import android.widget.LinearLayout;
+ import android.widget.TextView;
+ 
+ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListener {
+@@ -53,6 +56,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+     static final int TIMEOUT = 6;
+     static final int CANCEL = 7;
+     static final int APP_INFO = 8;
++    static final int LUJARCH_APP_PERMISSIONS = 9;
+ 
+     // 5-minute timeout, then we automatically dismiss the crash dialog
+     static final long DISMISS_TIMEOUT = 1000 * 60 * 5;
+@@ -87,6 +91,10 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+                     bidi.unicodeWrap(name.toString())));
+         }
+ 
++        if (data.lujarchNotice != null) {
++            setMessage(LujarchCrashNotice.reason(context, data.lujarchNotice));
++        }
++
+         setCancelable(true);
+         setCancelMessage(mHandler.obtainMessage(CANCEL));
+ 
+@@ -134,9 +142,41 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+         mute.setOnClickListener(this);
+         mute.setVisibility(showMute ? View.VISIBLE : View.GONE);
+ 
++        final LujarchCrashNotice.Notice notice = mData.lujarchNotice;
++        if (notice != null) {
++            final LinearLayout list = (LinearLayout) frame.getChildAt(0);
++            for (int i = 0; i < notice.ops().length; i++) {
++                final int index = i;
++                list.addView(lujarchButton(context,
++                        context.getString(com.android.internal.R.string.lujarch_app_stopped_allow,
++                                notice.labels()[i]),
++                        com.android.internal.R.drawable.ic_lock_open, v -> {
++                            LujarchCrashNotice.allow(context, notice, index);
++                            mHandler.obtainMessage(FORCE_QUIT).sendToTarget();
++                        }), i);
++            }
++            list.addView(lujarchButton(context,
++                    context.getString(com.android.internal.R.string.lujarch_app_permissions),
++                    com.android.internal.R.drawable.ic_settings_24dp,
++                    v -> mHandler.obtainMessage(LUJARCH_APP_PERMISSIONS).sendToTarget()),
++                    notice.ops().length);
++        }
++
+         findViewById(com.android.internal.R.id.customPanel).setVisibility(View.VISIBLE);
+     }
+ 
++    private static Button lujarchButton(Context context, CharSequence text, int icon,
++            View.OnClickListener listener) {
++        final Button button = new Button(context, null, 0,
++                com.android.internal.R.style.aerr_list_item);
++        button.setText(text);
++        button.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
++        button.setOnClickListener(listener);
++        button.setLayoutParams(new LinearLayout.LayoutParams(
++                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
++        return button;
++    }
++
+     private final Handler mHandler = new Handler() {
+         public void handleMessage(Message msg) {
+             setResult(msg.what);
+@@ -205,5 +245,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+         boolean repeating;
+         ProcessRecord proc;
+         boolean isRestartableForService;
++        LujarchCrashNotice.Notice lujarchNotice;
+     }
++
+ }
+diff --git a/services/core/java/com/android/server/am/AppErrors.java b/services/core/java/com/android/server/am/AppErrors.java
+index 245a64e98f5d2aa716dcdc36da7716568cf0a757..fce3376e240ec0993ee15684849fd55f34867744 100644
+--- a/services/core/java/com/android/server/am/AppErrors.java
++++ b/services/core/java/com/android/server/am/AppErrors.java
+@@ -89,6 +89,8 @@ class AppErrors {
+     private final Context mContext;
+     private final PackageWatchdog mPackageWatchdog;
+ 
++    private final LujarchCrashNotice mLujarchCrashNotice;
++
+     @GuardedBy("mBadProcessLock")
+     private ArraySet<String> mAppsNotReportingCrashes;
+ 
+@@ -154,6 +156,7 @@ class AppErrors {
+         mProcLock = service.mProcLock;
+         mContext = context;
+         mPackageWatchdog = watchdog;
++        mLujarchCrashNotice = new LujarchCrashNotice(context);
+     }
+ 
+     /** Resets the current state but leaves the constructor-provided fields unchanged. */
+@@ -662,6 +665,9 @@ class AppErrors {
+         final int relaunchReason = r != null
+                 ? r.getWindowProcessController().computeRelaunchReason() : RELAUNCH_REASON_NONE;
+ 
++        // Read before taking ActivityManager's lock.
++        final LujarchCrashNotice.Notice lujarchNotice = mLujarchCrashNotice.find(r, timeMillis);
++
+         AppErrorResult result = new AppErrorResult();
+         int taskId;
+         synchronized (mService) {
+@@ -696,10 +702,15 @@ class AppErrors {
+             AppErrorDialog.Data data = new AppErrorDialog.Data();
+             data.result = result;
+             data.proc = r;
++            data.lujarchNotice = lujarchNotice != null && mLujarchCrashNotice.claim(lujarchNotice)
++                    ? lujarchNotice : null;
+ 
+             // If we can't identify the process or it's already exceeded its crash quota,
+             // quit right away without showing a crash dialog.
+             if (r == null || !makeAppCrashingLocked(r, shortMsg, longMsg, stackTrace, data)) {
++                if (data.lujarchNotice != null) {
++                    mLujarchCrashNotice.notify(data.lujarchNotice);
++                }
+                 return;
+             }
+ 
+@@ -761,6 +772,12 @@ class AppErrors {
+                 appErrorIntent.setData(Uri.parse("package:" + r.info.packageName));
+                 appErrorIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                 break;
++            case AppErrorDialog.LUJARCH_APP_PERMISSIONS:
++                appErrorIntent = new Intent(Intent.ACTION_MANAGE_APP_PERMISSIONS)
++                        .putExtra(Intent.EXTRA_PACKAGE_NAME, r.info.packageName)
++                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++                break;
++
+             case AppErrorDialog.FORCE_QUIT_AND_REPORT:
+                 synchronized (mProcLock) {
+                     appErrorIntent = createAppErrorIntentLOSP(r, timeMillis, crashInfo);
+@@ -1084,6 +1101,9 @@ class AppErrors {
+                     Settings.Secure.ANR_SHOW_BACKGROUND, 0, visibleUserId) != 0;
+             if (isBackground && !showBackground && !isVisibleUser) {
+                 Slog.w(TAG, "Skipping crash dialog of " + proc + ": background");
++                if (data.lujarchNotice != null) {
++                    mLujarchCrashNotice.notify(data.lujarchNotice);
++                }
+                 if (res != null) {
+                     res.set(AppErrorDialog.BACKGROUND_USER);
+                 }
+@@ -1111,7 +1131,8 @@ class AppErrors {
+                         && now < crashShowErrorTime + ActivityManagerConstants.MIN_CRASH_INTERVAL;
+                 if ((mService.mAtmInternal.canShowErrorDialogs(visibleUserId) || showBackground)
+                         && !crashSilenced && !shouldThottle
+-                        && (showFirstCrash || showFirstCrashDevOption || data.repeating)) {
++                        && (showFirstCrash || showFirstCrashDevOption || data.repeating
++                                || data.lujarchNotice != null)) {
+                     Slog.i(TAG, "Showing crash dialog for package " + packageName + " u" + userId);
+                     errState.getDialogController().showCrashDialogs(data);
+                     if (!proc.isolated) {
+@@ -1120,6 +1141,9 @@ class AppErrors {
+                 } else {
+                     // The device is asleep, so just pretend that the user
+                     // saw a crash dialog and hit "force quit".
++                    if (data.lujarchNotice != null) {
++                        mLujarchCrashNotice.notify(data.lujarchNotice);
++                    }
+                     if (res != null) {
+                         res.set(AppErrorDialog.CANT_SHOW);
+                     }
+diff --git a/services/core/java/com/android/server/am/LujarchCrashNotice.java b/services/core/java/com/android/server/am/LujarchCrashNotice.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..53fd08e03cc991bd30f4f315bb1cb43097faca8a
+--- /dev/null
++++ b/services/core/java/com/android/server/am/LujarchCrashNotice.java
+@@ -0,0 +1,338 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.am;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.app.Notification;
++import android.app.NotificationManager;
++import android.app.PendingIntent;
++import android.content.Context;
++import android.content.Intent;
++import android.content.pm.PackageManager;
++import android.content.pm.PermissionGroupInfo;
++import android.content.pm.PermissionInfo;
++import android.content.pm.VersionedPackage;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.permission.PermissionControllerManager;
++import android.provider.Settings;
++import android.text.TextUtils;
++import android.util.Slog;
++import android.util.SparseArray;
++import android.util.SparseLongArray;
++
++import com.android.internal.R;
++import com.android.internal.annotations.GuardedBy;
++import com.android.internal.messages.nano.SystemMessageProto.SystemMessage;
++import com.android.internal.notification.SystemNotificationChannels;
++import com.android.internal.os.BackgroundThread;
++import com.android.server.pm.AppsFilterBase;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.TimeUnit;
++
++/**
++ * The reason an app stopped: the permissions the user restricted for the app that refused it in
++ * the seconds before it stopped. Android's crash dialog names them and offers to allow each; when
++ * the dialog does not show, a notification names them.
++ *
++ * <p>A permission counts when the app's package mode on it is a restriction (ignored, errored or
++ * allowed only while in use) other than the op's default, which only a choice of the user writes,
++ * and AppOps recorded a rejection of the app on it within {@link #WINDOW_MS} before the crash.
++ * Installed apps adds the moment AppsFilter last hid a package from the app, since its note is
++ * kept once a minute.
++ */
++final class LujarchCrashNotice {
++    private static final String TAG = "lujarch_permissions";
++
++    /** Settings.Global: 0 turns the explanation off; absent or 1, on. */
++    static final String SETTING = "lujarch_permissions_explain_crashes";
++
++    /** A refusal counts when it is at most this long before the crash. */
++    static final long WINDOW_MS = 3_000;
++    /** At most one explanation per uid in this interval. */
++    static final long MIN_INTERVAL_MS = 30_000;
++    private static final long LABEL_TIMEOUT_MS = 1_000;
++
++    /** The restricted permissions that refused one crashing app, newest refusal first. */
++    record Notice(int uid, @NonNull String packageName, @NonNull int[] ops,
++            @NonNull int[] modes, @NonNull CharSequence[] labels) {}
++
++    private final Context mContext;
++    @GuardedBy("mLastClaimed")
++    private final SparseLongArray mLastClaimed = new SparseLongArray();
++
++    LujarchCrashNotice(Context context) {
++        mContext = context;
++    }
++
++    /**
++     * The permissions that refused the crashing app within {@link #WINDOW_MS} before
++     * [crashTime], or null. Reads AppOps, settings and the permission controller: called with no
++     * ActivityManager lock held.
++     */
++    @Nullable
++    Notice find(@Nullable ProcessRecord r, long crashTime) {
++        if (r == null || r.info == null) {
++            return null;
++        }
++        // An isolated process runs for its app: the app's uid has the modes.
++        final int uid = r.info.uid;
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return null;
++        }
++        try {
++            if (Settings.Global.getInt(mContext.getContentResolver(), SETTING, 1) == 0) {
++                return null;
++            }
++            final AppOpsManager appOps = mContext.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return null;
++            }
++            // Per permission (switch op): its mode and latest refusal across the process's
++            // packages.
++            final SparseArray<long[]> found = new SparseArray<>();
++            for (VersionedPackage vp : r.getPackageListWithVersionCode()) {
++                final List<AppOpsManager.PackageOps> pkgOps =
++                        appOps.getOpsForPackage(uid, vp.getPackageName(), (int[]) null);
++                for (AppOpsManager.PackageOps po : pkgOps) {
++                    for (AppOpsManager.OpEntry e : po.getOps()) {
++                        final int op = AppOpsManager.opToSwitch(e.getOp());
++                        final int mode = e.getMode();
++                        if (!isRestriction(mode) || mode == AppOpsManager.opToDefaultMode(op)) {
++                            continue;
++                        }
++                        long refused = e.getLastRejectTime(AppOpsManager.OP_FLAGS_ALL);
++                        if (op == AppOpsManager.OP_LUJARCH_INSTALLED_APPS) {
++                            refused = Math.max(refused, AppsFilterBase.lujarchLastHiddenAt(uid));
++                        }
++                        if (refused <= 0 || crashTime - refused > WINDOW_MS) {
++                            continue;
++                        }
++                        final long[] prev = found.get(op);
++                        if (prev == null || prev[1] < refused) {
++                            found.put(op, new long[] {mode, refused});
++                        }
++                    }
++                }
++            }
++            if (found.size() == 0) {
++                return null;
++            }
++            final ArrayList<Integer> order = new ArrayList<>();
++            for (int i = 0; i < found.size(); i++) {
++                order.add(i);
++            }
++            order.sort((a, b) -> Long.compare(found.valueAt(b)[1], found.valueAt(a)[1]));
++            final int n = order.size();
++            final int[] ops = new int[n];
++            final int[] modes = new int[n];
++            final CharSequence[] labels = new CharSequence[n];
++            for (int i = 0; i < n; i++) {
++                final int at = order.get(i);
++                ops[i] = found.keyAt(at);
++                modes[i] = (int) found.valueAt(at)[0];
++                labels[i] = permissionLabel(ops[i]);
++            }
++            final Notice notice = new Notice(uid, r.info.packageName, ops, modes, labels);
++            Slog.i(TAG, r.info.packageName + " (" + uid + ") stopped after refusals of "
++                    + TextUtils.join(", ", labels));
++            return notice;
++        } catch (RuntimeException e) {
++            Slog.e(TAG, "stop of " + r.info.packageName + " (" + uid + ") not checked", e);
++            return null;
++        }
++    }
++
++    /** Whether [notice] is explained: at most once per {@link #MIN_INTERVAL_MS} per uid. */
++    boolean claim(@NonNull Notice notice) {
++        final long now = SystemClock.elapsedRealtime();
++        synchronized (mLastClaimed) {
++            final long last = mLastClaimed.get(notice.uid(), -1);
++            if (last >= 0 && now - last < MIN_INTERVAL_MS) {
++                return false;
++            }
++            mLastClaimed.put(notice.uid(), now);
++        }
++        return true;
++    }
++
++    /** The explanation as a notification, for a stop the dialog does not show. */
++    void notify(@NonNull Notice notice) {
++        BackgroundThread.getHandler().post(() -> postNotification(notice));
++    }
++
++    private void postNotification(@NonNull Notice notice) {
++        final UserHandle user = UserHandle.getUserHandleForUid(notice.uid());
++        try {
++            final PackageManager pm = mContext.getPackageManager();
++            final CharSequence app = pm.getApplicationInfoAsUser(notice.packageName(), 0, user)
++                    .loadLabel(pm);
++            final Intent intent = new Intent(Intent.ACTION_MANAGE_APP_PERMISSIONS)
++                    .putExtra(Intent.EXTRA_PACKAGE_NAME, notice.packageName())
++                    .putExtra(Intent.EXTRA_USER, user)
++                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++            final PendingIntent open = PendingIntent.getActivityAsUser(mContext, notice.uid(),
++                    intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT,
++                    null, user);
++            final CharSequence text = reason(mContext, notice);
++            final Notification n = new Notification.Builder(mContext,
++                    SystemNotificationChannels.LUJARCH_APP_STOPPED)
++                    .setSmallIcon(R.drawable.stat_sys_warning)
++                    .setContentTitle(mContext.getString(R.string.lujarch_app_stopped, app))
++                    .setContentText(text)
++                    .setStyle(new Notification.BigTextStyle().bigText(text))
++                    .setContentIntent(open)
++                    .setAutoCancel(true)
++                    .setColor(mContext.getColor(R.color.system_notification_accent_color))
++                    .build();
++            mContext.getSystemService(NotificationManager.class).notifyAsUser(
++                    notice.packageName(), SystemMessage.NOTE_LUJARCH_APP_STOPPED, n, user);
++        } catch (PackageManager.NameNotFoundException | RuntimeException e) {
++            Slog.e(TAG, "stop of " + notice.packageName() + " (" + notice.uid()
++                    + ") not explained", e);
++        }
++    }
++
++    /** "Clipboard (Return empty data), Location (Return empty data)", in the user's language. */
++    @NonNull
++    static CharSequence reason(@NonNull Context context, @NonNull Notice notice) {
++        final ArrayList<String> items = new ArrayList<>();
++        for (int i = 0; i < notice.ops().length; i++) {
++            items.add(context.getString(R.string.lujarch_app_stopped_item, notice.labels()[i],
++                    context.getString(choiceLabel(notice.modes()[i]))));
++        }
++        return context.getString(R.string.lujarch_app_stopped_reason,
++                String.join(context.getString(R.string.lujarch_list_separator), items));
++    }
++
++    /** Sets the [i]th permission of [notice] to Allow. Never throws. */
++    static void allow(@NonNull Context context, @NonNull Notice notice, int i) {
++        final int op = notice.ops()[i];
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            // A runtime permission's own grant decides once its restriction is cleared.
++            final int mode = AppOpsManager.opToPermission(op) != null
++                    ? AppOpsManager.opToDefaultMode(op) : AppOpsManager.MODE_ALLOWED;
++            appOps.setMode(op, notice.uid(), notice.packageName(), mode);
++            Slog.i(TAG, notice.packageName() + " (" + notice.uid() + ") allowed "
++                    + AppOpsManager.opToPublicName(op) + " from the crash dialog");
++        } catch (RuntimeException e) {
++            Slog.e(TAG, AppOpsManager.opToPublicName(op) + " of " + notice.packageName()
++                    + " not allowed", e);
++        }
++    }
++
++    /** The choice a restrictive mode shows as. */
++    static int choiceLabel(int mode) {
++        switch (mode) {
++            case AppOpsManager.MODE_ERRORED:
++                return R.string.lujarch_permission_choice_deny;
++            case AppOpsManager.MODE_FOREGROUND:
++                return R.string.lujarch_permission_choice_foreground;
++            default:
++                return R.string.lujarch_permission_choice_empty;
++        }
++    }
++
++    /**
++     * The name of an op's permission as the permission manager shows it: Lujarch's permissions
++     * and the platform group of a runtime permission, else the permission's own label, else the
++     * op's name.
++     */
++    @NonNull
++    private CharSequence permissionLabel(int op) {
++        final String group = lujarchGroup(op);
++        if (group != null) {
++            final CharSequence label = groupLabel(group);
++            if (label != null) {
++                return label;
++            }
++        }
++        final String permission = AppOpsManager.opToPermission(op);
++        if (permission != null) {
++            final CompletableFuture<String> future = new CompletableFuture<>();
++            try {
++                mContext.getSystemService(PermissionControllerManager.class)
++                        .getGroupOfPlatformPermission(permission, BackgroundThread.getExecutor(),
++                                future::complete);
++                final String platformGroup =
++                        future.get(LABEL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
++                final CharSequence label = platformGroup != null ? groupLabel(platformGroup)
++                        : null;
++                if (label != null) {
++                    return label;
++                }
++            } catch (Exception e) {
++                Slog.w(TAG, "group of " + permission + " not found", e);
++            }
++            try {
++                final PackageManager pm = mContext.getPackageManager();
++                final PermissionInfo info = pm.getPermissionInfo(permission, 0);
++                return info.loadLabel(pm);
++            } catch (PackageManager.NameNotFoundException e) {
++                Slog.w(TAG, permission + " not found", e);
++            }
++        }
++        return AppOpsManager.opToPublicName(op);
++    }
++
++    @Nullable
++    private CharSequence groupLabel(@NonNull String group) {
++        try {
++            final PackageManager pm = mContext.getPackageManager();
++            final PermissionGroupInfo info = pm.getPermissionGroupInfo(group, 0);
++            return info.loadLabel(pm);
++        } catch (PackageManager.NameNotFoundException e) {
++            Slog.w(TAG, group + " not found", e);
++            return null;
++        }
++    }
++
++    @Nullable
++    private static String lujarchGroup(int op) {
++        switch (op) {
++            case AppOpsManager.OP_LUJARCH_SENSORS:
++                return "android.permission-group.LUJARCH_SENSORS";
++            case AppOpsManager.OP_READ_CLIPBOARD:
++                return "android.permission-group.LUJARCH_CLIPBOARD";
++            case AppOpsManager.OP_LUJARCH_INSTALLED_APPS:
++                return "android.permission-group.LUJARCH_INSTALLED_APPS";
++            case AppOpsManager.OP_LUJARCH_DEVICE_IDS:
++                return "android.permission-group.LUJARCH_DEVICE_IDS";
++            case AppOpsManager.OP_LUJARCH_DEVICE_INFO:
++                return "android.permission-group.LUJARCH_DEVICE_INFO";
++            case AppOpsManager.OP_LUJARCH_NETWORK_INFO:
++                return "android.permission-group.LUJARCH_NETWORK_INFO";
++            case AppOpsManager.OP_LUJARCH_PHONE_INFO:
++                return android.Manifest.permission_group.PHONE;
++            default:
++                return null;
++        }
++    }
++
++    /** A mode that refuses the app at least sometimes. */
++    private static boolean isRestriction(int mode) {
++        return mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED
++                || mode == AppOpsManager.MODE_FOREGROUND;
++    }
++}

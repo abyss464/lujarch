@@ -1,0 +1,247 @@
+diff --git a/service/java/com/android/server/wifi/LujarchNetworkInfo.java b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..1e58d1fd26a17eda5c96a098630f68226bc44476
+--- /dev/null
++++ b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
+@@ -0,0 +1,154 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.wifi;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.Log;
++
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * The network info permission ({@link #OP} 
++ * "Information permissions") for the reads the Wi-Fi service answers.
++ *
++ * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
++ * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
++ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
++ * window), and at once when the stored mode differs from the one last noted; in between only
++ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * lookup allows (logged). A framework that does not know the op (an image older than the op)
++ * throws for its name, which allows (logged once).
++ */
++public final class LujarchNetworkInfo {
++
++    private static final String TAG = "LujarchNetworkInfo";
++
++    /** The op's public name. */
++    public static final String OP = "android:lujarch_network_info";
++
++    private static final long NOTE_INTERVAL_MS = 60_000L;
++    private static final long REFUSED_NOTE_INTERVAL_MS = 2_000L;
++
++    /** Last note per uid: elapsed realtime and the stored mode then. */
++    private static final ConcurrentHashMap<Integer, long[]> sLastNote = new ConcurrentHashMap<>();
++
++    private static volatile boolean sUnknownOpLogged;
++
++    private LujarchNetworkInfo() {
++    }
++
++    /**
++     * The permission's mode for this read: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (answer with empty data) or
++     * {@link AppOpsManager#MODE_ERRORED} (throw where the API can, else empty data).
++     * Never throws.
++     *
++     * @param uid the reading app's uid
++     * @param packageName its package as the API verified it, or null to take the uid's first
++     * @param attributionTag its attribution tag, if known
++     */
++    public static int decide(@NonNull Context context, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final String pkg = packageName != null ? packageName : firstPackage(context, uid);
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(OP, uid, pkg);
++            final long now = SystemClock.elapsedRealtime();
++            final long[] last = sLastNote.get(uid);
++            // Foreground-only needs a note to be resolved against the uid's state.
++            final long interval = raw == AppOpsManager.MODE_ALLOWED
++                    || raw == AppOpsManager.MODE_DEFAULT
++                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
++            if (last != null && last[1] == raw && now - last[0] < interval
++                    && raw != AppOpsManager.MODE_FOREGROUND) {
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++            }
++            sLastNote.put(uid, new long[] {now, raw});
++            final int mode = appOps.noteOpNoThrow(OP, uid, pkg, attributionTag, null);
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++        } catch (RuntimeException e) {
++            if (isUnknownOp(e)) {
++                if (!sUnknownOpLogged) {
++                    sUnknownOpLogged = true;
++                    Log.w(TAG, OP + " is not an op of this system; network info allowed", e);
++                }
++            } else {
++                Log.w(TAG, OP + " of uid " + uid + " not decided; allowed", e);
++            }
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /** {@link #decide} is anything but {@link AppOpsManager#MODE_ALLOWED}. */
++    public static boolean refuses(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, uid, packageName, attributionTag) != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * {@link #refuses} for a getter that throws for a missing permission: errored (deny)
++     * throws {@link SecurityException} as that getter does.
++     */
++    public static boolean refusesOrThrows(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        final int mode = decide(context, uid, packageName, attributionTag);
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            throw new SecurityException("uid " + uid + " is denied network info (" + OP + ")");
++        }
++        return mode != AppOpsManager.MODE_ALLOWED;
++    }
++
++    private static boolean isUnknownOp(RuntimeException e) {
++        return e instanceof IllegalArgumentException && e.getMessage() != null
++                && e.getMessage().startsWith("Unknown operation string");
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        final PackageManager pm = context.getPackageManager();
++        if (pm == null) {
++            return null;
++        }
++        // The caller may not see packages by uid (package visibility); the system does.
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final String[] packages = pm.getPackagesForUid(uid);
++            return packages != null && packages.length > 0 ? packages[0] : null;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++}
+diff --git a/service/java/com/android/server/wifi/WifiServiceImpl.java b/service/java/com/android/server/wifi/WifiServiceImpl.java
+index 72f8aa719012fe92d522fdc39bf71be17d9d1bc9..396750ad63812b377b6c8f9d3306e7e35e181c18 100644
+--- a/service/java/com/android/server/wifi/WifiServiceImpl.java
++++ b/service/java/com/android/server/wifi/WifiServiceImpl.java
+@@ -154,6 +154,7 @@ import android.net.wifi.SoftApCapability;
+ import android.net.wifi.SoftApConfiguration;
+ import android.net.wifi.SoftApInfo;
+ import android.net.wifi.SoftApState;
++import android.net.wifi.SupplicantState;
+ import android.net.wifi.WifiAnnotations.WifiStandard;
+ import android.net.wifi.WifiAvailableChannel;
+ import android.net.wifi.WifiBands;
+@@ -1972,6 +1973,10 @@ public class WifiServiceImpl extends IWifiManager.Stub {
+     @Override
+     public int getWifiEnabledState() {
+         enforceAccessPermission();
++        // Wi-Fi on/off is the network info permission's.
++        if (LujarchNetworkInfo.refusesOrThrows(mContext, Binder.getCallingUid(), null, null)) {
++            return WifiManager.WIFI_STATE_UNKNOWN;
++        }
+         int state = mActiveModeWarden.getWifiState();
+         // If the wifi is enabling, call it on the wifi handler to get the state after wifi enabled.
+         // This is only needed for pre-T.
+@@ -5267,6 +5272,8 @@ public class WifiServiceImpl extends IWifiManager.Stub {
+             mLog.info("getConnectionInfo uid=%").c(uid).flush();
+         }
+         mWifiPermissionsUtil.checkPackage(uid, callingPackage);
++        final boolean lujarchRefused = LujarchNetworkInfo.refusesOrThrows(
++                mContext, uid, callingPackage, callingFeatureId);
+         if (mActiveModeWarden.getWifiState() != WIFI_STATE_ENABLED) {
+             return new WifiInfo();
+         }
+@@ -5283,6 +5290,13 @@ public class WifiServiceImpl extends IWifiManager.Stub {
+             // If no caller
+             wifiInfo = mActiveModeWarden.getConnectionInfo();
+         }
++        if (lujarchRefused) {
++            // Before the permission checks, so a refused read notes no location access.
++            // Connected or not is connectivity and stays; anything short of connected reads
++            // as Wi-Fi off, as getWifiState's unknown does not tell on from off.
++            return wifiInfo.getSupplicantState() == SupplicantState.COMPLETED
++                    ? lujarchBlankWifiInfo(wifiInfo) : new WifiInfo();
++        }
+         long ident = Binder.clearCallingIdentity();
+         try {
+             long redactions = wifiInfo.getApplicableRedactions();
+@@ -5320,6 +5334,29 @@ public class WifiServiceImpl extends IWifiManager.Stub {
+         }
+     }
+ 
++    /**
++     * The network info permission ( 
++     * Permissions"). A refused app gets the WifiInfo an app without location, local MAC and
++     * settings permissions gets, without the link: RSSI invalid, link speeds, frequency and
++     * Wi-Fi standard unknown, no IP address, security type and MLO links. The supplicant
++     * state stays: whether Wi-Fi is connected is connectivity, which stays readable.
++     */
++    private static WifiInfo lujarchBlankWifiInfo(@NonNull WifiInfo wifiInfo) {
++        final WifiInfo blank = wifiInfo.makeCopy(wifiInfo.getApplicableRedactions());
++        blank.setRssi(WifiInfo.INVALID_RSSI);
++        blank.setLinkSpeed(WifiInfo.LINK_SPEED_UNKNOWN);
++        blank.setTxLinkSpeedMbps(WifiInfo.LINK_SPEED_UNKNOWN);
++        blank.setRxLinkSpeedMbps(WifiInfo.LINK_SPEED_UNKNOWN);
++        blank.setMaxSupportedTxLinkSpeedMbps(WifiInfo.LINK_SPEED_UNKNOWN);
++        blank.setMaxSupportedRxLinkSpeedMbps(WifiInfo.LINK_SPEED_UNKNOWN);
++        blank.setFrequency(WifiInfo.UNKNOWN_FREQUENCY);
++        blank.setWifiStandard(ScanResult.WIFI_STANDARD_UNKNOWN);
++        blank.setInetAddress(null);
++        blank.clearCurrentSecurityType();
++        blank.resetMultiLinkInfo();
++        return blank;
++    }
++
+     private boolean isCurrentRequestWsContainsCaller(int uid, String callingPackage) {
+         Set<WorkSource> requestWs = mActiveModeWarden.getSecondaryRequestWs();
+         for (WorkSource ws : requestWs) {
+@@ -5878,6 +5915,10 @@ public class WifiServiceImpl extends IWifiManager.Stub {
+         if (mVerboseLoggingEnabled) {
+             mLog.info("getDhcpInfo uid=%").c(callingUid).flush();
+         }
++        // DHCP addresses are the network info permission's.
++        if (LujarchNetworkInfo.refusesOrThrows(mContext, callingUid, packageName, null)) {
++            return new DhcpInfo();
++        }
+         DhcpResultsParcelable dhcpResults = mWifiThreadRunner.call(
+                 () -> getClientModeManagerIfSecondaryCmmRequestedByCallerPresent(
+                         callingUid, packageName)

@@ -1,0 +1,1606 @@
+diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
+index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a35b1b6f1 100644
+--- a/core/java/android/app/ActivityThread.java
++++ b/core/java/android/app/ActivityThread.java
+@@ -247,6 +247,7 @@ import com.android.internal.R;
+ import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.app.IVoiceInteractor;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.content.ReferrerIntent;
+ import com.android.internal.os.ApplicationSharedMemory;
+ import com.android.internal.os.BackgroundThread;
+@@ -7128,8 +7129,11 @@ public final class ActivityThread extends ClientTransactionHandler
+         // Apply the ContextThemeWrapper override if necessary.
+         // NOTE: Make sure the configurations are not modified, as they are treated as immutable
+         // in many places.
+-        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(newConfig,
+-                contextThemeWrapperOverrideConfig);
++        // Without mcc and mnc when the process's phone
++        // Info permission refuses (a copy; mCurrentConfig and the created configuration reported
++        // to the window manager keep the real values).
++        final Configuration configToReport = Configuration.lujarchForApp(
++                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
+ 
+         if (movedToDifferentDisplay) {
+             activity.dispatchMovedToDisplay(displayId, configToReport);
+@@ -7319,6 +7323,9 @@ public final class ActivityThread extends ClientTransactionHandler
+      */
+     private void handleWindowingModeChangeIfNeeded(ActivityClientRecord r,
+             Configuration newConfiguration) {
++        // The activity's callbacks get no mcc and mnc
++        // When the process's phone info permission refuses.
++        newConfiguration = Configuration.lujarchForApp(newConfiguration);
+         final Activity activity = r.activity;
+         final int newWindowingMode = newConfiguration.windowConfiguration.getWindowingMode();
+         final int oldWindowingMode = r.mLastReportedWindowingMode;
+@@ -7969,6 +7976,46 @@ public final class ActivityThread extends ClientTransactionHandler
+         return insInfo.nativeLibraryDir;
+     }
+ 
++    /**
++     * What the system hands the app's process
++     * Itself is decided once per process, at bind;
++     * A change of the user's choice applies from the app's next start. Uids below 10000 are
++     * never touched (LujarchInfo). Isolated and SDK sandbox processes are not decided: their
++     * uid is not the app's.
++     * <ul>
++     * <li>Device info ({@link LujarchInfo#decide}, one note, an ask asks): when it refuses, the
++     * build identity reads as unknown and the process keeps UTC until it ends.
++     * <li>Phone info ({@link LujarchInfo#peek}, no note and no question at every start: the
++     * app did not ask for its configuration): when it refuses, every configuration the app
++     * reads and its resources have mcc and mnc 0, so no carrier-specific values.
++     * </ul>
++     */
++    private void lujarchDecideInfo(AppBindData data) {
++        if (Process.isIsolated() || Process.isSdkSandbox()) {
++            return;
++        }
++        final int uid = Process.myUid();
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return;
++        }
++        final Context context = getSystemContext();
++        final String packageName = data.appInfo.packageName;
++        final int phoneMode = LujarchInfo.peek(context, LujarchInfo.PHONE, uid, packageName);
++        if (phoneMode != AppOpsManager.MODE_ALLOWED) {
++            Configuration.lujarchHideOperator();
++            Slog.i(TAG, "lujarch_phone_info: mcc and mnc hidden for " + packageName
++                    + " (mode " + phoneMode + ")");
++        }
++        final int deviceMode = LujarchInfo.decide(context, LujarchInfo.DEVICE, uid, packageName,
++                null);
++        if (deviceMode != AppOpsManager.MODE_ALLOWED) {
++            Build.lujarchHideIdentity();
++            RuntimeInit.lujarchHideDeviceInfo();
++            Slog.i(TAG, "lujarch_device_info: build identity and time zone hidden for "
++                    + packageName + " (mode " + deviceMode + ")");
++        }
++    }
++
+     @UnsupportedAppUsage
+     @RavenwoodThrow(comment = "See ActivityThread_ravenwood for initialization on Ravenwood")
+     private void handleBindApplication(AppBindData data) {
+@@ -8078,6 +8125,11 @@ public final class ActivityThread extends ClientTransactionHandler
+             }
+         }
+ 
++        // Before the bind configuration reaches any
++        // resources and before the app's code can run (its class loader and component factory
++        // come with the package info below).
++        lujarchDecideInfo(data);
++
+         synchronized (mResourcesManager) {
+             /*
+              * Update the system configuration since its preloaded and might not
+diff --git a/core/java/android/app/ConfigurationController.java b/core/java/android/app/ConfigurationController.java
+index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..0f2d4f1e34090c9032daed6121f5716b3bb9dcf5 100644
+--- a/core/java/android/app/ConfigurationController.java
++++ b/core/java/android/app/ConfigurationController.java
+@@ -256,8 +256,10 @@ class ConfigurationController {
+         // Apply the ContextThemeWrapper override if necessary.
+         // NOTE: Make sure the configurations are not modified, as they are treated as immutable
+         // in many places.
+-        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(
+-                newConfig, contextThemeWrapperOverrideConfig);
++        // Without mcc and mnc when the process's phone
++        // Info permission refuses (a copy; this controller keeps the real configuration).
++        final Configuration configToReport = Configuration.lujarchForApp(
++                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
+         cb.onConfigurationChanged(configToReport);
+     }
+ 
+diff --git a/core/java/android/content/res/Configuration.java b/core/java/android/content/res/Configuration.java
+index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..483473df89320dfa9d9d58c39941b9624851f4f1 100644
+--- a/core/java/android/content/res/Configuration.java
++++ b/core/java/android/content/res/Configuration.java
+@@ -1043,6 +1043,57 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+      * ARE SURE.*/
+     public static final int NATIVE_CONFIG_GRAMMATICAL_GENDER = 0x20000;
+ 
++    /**
++     * The phone info permission refuses this app
++     * process (decided once at bind), so the configurations its app reads carry no mcc and
++     * mnc (0, undefined) and its resources pick no carrier-specific values.
++     */
++    private static volatile boolean sLujarchHideOperator;
++
++    /**
++     * Lujarch: from now on this process's app reads no mcc and mnc. Called by
++     * ActivityThread at bind, before any configuration reaches the app's resources.
++     *
++     * @hide
++     */
++    public static void lujarchHideOperator() {
++        sLujarchHideOperator = true;
++    }
++
++    /**
++     * Lujarch: clears {@code config}'s mcc and mnc in place when this process hides
++     * the operator; returns whether anything changed.
++     *
++     * @hide
++     */
++    public static boolean lujarchClearOperator(@Nullable Configuration config) {
++        if (!sLujarchHideOperator || config == null || (config.mcc == 0 && config.mnc == 0)) {
++            return false;
++        }
++        config.mcc = 0;
++        config.mnc = 0;
++        return true;
++    }
++
++    /**
++     * Lujarch: {@code config} as it is handed to this process's app: a copy without
++     * mcc and mnc when the process hides the operator, else {@code config} itself. The
++     * process's own records keep the real values (ConfigurationController, the created
++     * configuration an activity reports back to the window manager): a reported mcc of 0
++     * would read there as a configuration change and relaunch the activity.
++     *
++     * @hide
++     */
++    public static Configuration lujarchForApp(@Nullable Configuration config) {
++        if (!sLujarchHideOperator || config == null || (config.mcc == 0 && config.mnc == 0)) {
++            return config;
++        }
++        final Configuration copy = new Configuration(config);
++        copy.mcc = 0;
++        copy.mnc = 0;
++        return copy;
++    }
++
+     /**
+      * <p>Construct an invalid Configuration. This state is only suitable for constructing a
+      * Configuration delta that will be applied to some valid Configuration object. In order to
+diff --git a/core/java/android/content/res/ResourcesImpl.java b/core/java/android/content/res/ResourcesImpl.java
+index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..5b3e9eb1a8b733340488913d873e3002e7262288 100644
+--- a/core/java/android/content/res/ResourcesImpl.java
++++ b/core/java/android/content/res/ResourcesImpl.java
+@@ -681,6 +681,12 @@ public class ResourcesImpl {
+         }
+ 
+         mTmpConfig.setTo(config);
++        // No mcc and mnc for an app process whose phone
++        // Info permission refuses, so no carrier-specific resources and none in the
++        // configuration the app reads; a stale value from before the decision is dropped.
++        Configuration.lujarchClearOperator(mTmpConfig);
++        final @Config int lujarchChanges = Configuration.lujarchClearOperator(mConfiguration)
++                ? ActivityInfo.CONFIG_MCC | ActivityInfo.CONFIG_MNC : 0;
+         int density = config.densityDpi;
+         if (density == Configuration.DENSITY_DPI_UNDEFINED) {
+             density = mMetrics.noncompatDensityDpi;
+@@ -691,7 +697,7 @@ public class ResourcesImpl {
+         if (mTmpConfig.getLocales().isEmpty()) {
+             mTmpConfig.setLocales(LocaleList.getDefault());
+         }
+-        return mConfiguration.updateFrom(mTmpConfig);
++        return lujarchChanges | mConfiguration.updateFrom(mTmpConfig);
+     }
+ 
+     /**
+diff --git a/core/java/android/os/Build.java b/core/java/android/os/Build.java
+index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34d41c5f5f 100644
+--- a/core/java/android/os/Build.java
++++ b/core/java/android/os/Build.java
+@@ -46,6 +46,7 @@ import dalvik.system.VMRuntime;
+ 
+ import java.lang.annotation.Retention;
+ import java.lang.annotation.RetentionPolicy;
++import java.lang.reflect.Field;
+ import java.util.ArrayList;
+ import java.util.List;
+ import java.util.Objects;
+@@ -1863,6 +1864,10 @@ public class Build {
+     @NonNull
+     public static List<Partition> getFingerprintedPartitions() {
+         ArrayList<Partition> partitions = new ArrayList();
++        if (sLujarchIdentityHidden) {
++            // Lujarch: the partitions' fingerprints are the build identity too.
++            return partitions;
++        }
+ 
+         String[] names = new String[] {
+                 Partition.PARTITION_NAME_BOOTIMAGE,
+@@ -1961,9 +1966,55 @@ public class Build {
+      * null (if, for instance, the radio is not currently on).
+      */
+     public static String getRadioVersion() {
++        if (sLujarchIdentityHidden) {
++            return null;
++        }
+         return joinListOrElse(TelephonyProperties.baseband_version(), null);
+     }
+ 
++    /**
++     * The device info permission refused this
++     * process at bind, so its build identity reads as {@link #UNKNOWN}.
++     */
++    private static volatile boolean sLujarchIdentityHidden;
++
++    /**
++     * Hides this process's build identity because its
++     * Device info permission refuses it. Called once by
++     * ActivityThread at bind, before the app's code runs. The identity fields become
++     * {@link #UNKNOWN} ({@link #TIME} 0), {@link #getRadioVersion} returns null and
++     * {@link #getFingerprintedPartitions} is empty. What the framework's own code in the
++     * process acts on (TYPE, TAGS, IS_DEBUGGABLE, the VERSION SDK levels, release and codename,
++     * the ABIs, the attestation properties) keeps its value.
++     *
++     * <p>The fields are static finals computed in zygote; they are set the way zygote itself
++     * reloads them for an app compat property override (ReloadBuildJavaConstants), here by
++     * reflection, which ART allows for android.os.Build and Build.VERSION on this release.
++     *
++     * @hide
++     */
++    public static void lujarchHideIdentity() {
++        sLujarchIdentityHidden = true;
++        for (String name : new String[] {"ID", "DISPLAY", "PRODUCT", "DEVICE", "BOARD",
++                "MANUFACTURER", "BRAND", "MODEL", "SOC_MANUFACTURER", "SOC_MODEL", "BOOTLOADER",
++                "RADIO", "HARDWARE", "SKU", "ODM_SKU", "FINGERPRINT", "USER", "HOST"}) {
++            lujarchSet(Build.class, name, UNKNOWN);
++        }
++        lujarchSet(Build.class, "TIME", 0L);
++        lujarchSet(VERSION.class, "INCREMENTAL", UNKNOWN);
++    }
++
++    private static void lujarchSet(Class<?> owner, String name, Object value) {
++        try {
++            final Field field = owner.getDeclaredField(name);
++            field.setAccessible(true);
++            field.set(null, value);
++        } catch (ReflectiveOperationException | RuntimeException e) {
++            Slog.w(TAG, "lujarch_device_info: " + owner.getSimpleName() + "." + name
++                    + " not hidden", e);
++        }
++    }
++
+     @UnsupportedAppUsage
+     private static String getString(String property) {
+         return SystemProperties.get(property, UNKNOWN);
+diff --git a/core/java/android/window/WindowTokenClient.java b/core/java/android/window/WindowTokenClient.java
+index e8c59a5d7286db6c4947d687169154771dfeb5d0..e45ee087a45078e3941b968f768c1ee2b2c9d714 100644
+--- a/core/java/android/window/WindowTokenClient.java
++++ b/core/java/android/window/WindowTokenClient.java
+@@ -209,7 +209,9 @@ public class WindowTokenClient extends Binder {
+                 // Updating resources implies some fields of configuration are updated despite they
+                 // are public or not.
+                 if (dispatcher.shouldReportPrivateChanges() || publicDiff != 0) {
+-                    dispatcher.dispatchConfigurationChanged(newConfig);
++                    // Without mcc and mnc when the
++                    // Process's phone info permission refuses.
++                    dispatcher.dispatchConfigurationChanged(Configuration.lujarchForApp(newConfig));
+                 }
+             }
+ 
+diff --git a/core/java/com/android/internal/app/LujarchInfo.java b/core/java/com/android/internal/app/LujarchInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8415c93d79027ede11b8f598c2bdeb3a27d6a390
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchInfo.java
+@@ -0,0 +1,182 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.Log;
++
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * The decision of an information permission (phone, network or device info) for one read.
++ * Callers in system_server, the phone process and the app's own process ask {@link #decide}
++ * where the information leaves, and answer with the API's own "not known" value unless it
++ * returns {@link AppOpsManager#MODE_ALLOWED}.
++ *
++ * <p>The op is noted at most once a minute per uid and op while it allows, every two seconds
++ * while it refuses (the crash explanation looks three seconds back), and at once when the stored
++ * mode changed since the last note; in between only the mode is checked. Uids below 10000 pass,
++ * and a failed lookup allows (logged).
++ */
++public final class LujarchInfo {
++
++    private static final String TAG = "LujarchInfo";
++
++    /** Basic phone info: carrier, SIM state, signal, network type, data and call state. */
++    public static final String PHONE = "android:lujarch_phone_info";
++    /** Network info: addresses, DNS, proxy, VPN, Wi-Fi link, traffic, radio switches. */
++    public static final String NETWORK = "android:lujarch_network_info";
++    /** Device info: Build identity, battery, USB and audio devices, time zone, device state. */
++    public static final String DEVICE = "android:lujarch_device_info";
++
++    private static final long NOTE_INTERVAL_MS = 60_000L;
++    private static final long REFUSED_NOTE_INTERVAL_MS = 2_000L;
++
++    /** Packages verified to belong to their uid ("uid/package"); a package keeps its uid. */
++    private static final ConcurrentHashMap<String, Boolean> sVerified = new ConcurrentHashMap<>();
++
++    /** Last note per op and uid: elapsed realtime and the stored mode then. */
++    private static final ConcurrentHashMap<String, long[]> sLastNote = new ConcurrentHashMap<>();
++
++    private LujarchInfo() {
++    }
++
++    /**
++     * The permission's mode for this read: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (answer with empty data) or
++     * {@link AppOpsManager#MODE_ERRORED} (throw where the API can, else empty
++     * data). Never throws.
++     *
++     * @param op one of {@link #PHONE}, {@link #NETWORK}, {@link #DEVICE}
++     * @param uid the reading app's uid
++     * @param packageName its package, or null to take the uid's first package
++     * @param attributionTag its attribution tag, if known
++     */
++    public static int decide(@NonNull Context context, @NonNull String op, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        if (Process.isSdkSandboxUid(uid)) {
++            // An app's SDK sandbox reads for the app.
++            uid = Process.getAppUidForSdkSandboxUid(uid);
++            packageName = null;
++        }
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final String pkg = verifiedPackage(context, appOps, uid, packageName);
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(op, uid, pkg);
++            final String key = op + '/' + uid;
++            final long now = SystemClock.elapsedRealtime();
++            final long[] last = sLastNote.get(key);
++            // Foreground-only needs a note to be resolved against the uid's state.
++            final long interval = raw == AppOpsManager.MODE_ALLOWED
++                    || raw == AppOpsManager.MODE_DEFAULT
++                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
++            if (last != null && last[1] == raw && now - last[0] < interval
++                    && raw != AppOpsManager.MODE_FOREGROUND) {
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++            }
++            sLastNote.put(key, new long[] {now, raw});
++            final int mode = appOps.noteOpNoThrow(op, uid, pkg, attributionTag, null);
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++        } catch (RuntimeException e) {
++            Log.w(TAG, op + " of uid " + uid + " not decided; allowed", e);
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /**
++     * The permission's stored mode for {@code uid} without noting, for information the system
++     * hands an app without the app asking (its Configuration's mcc and mnc). Ask reads as
++     * refused. Never throws.
++     */
++    public static int peek(@NonNull Context context, @NonNull String op, int uid,
++            @Nullable String packageName) {
++        if (Process.isSdkSandboxUid(uid)) {
++            uid = Process.getAppUidForSdkSandboxUid(uid);
++            packageName = null;
++        }
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            final String pkg = appOps != null ? verifiedPackage(context, appOps, uid, packageName)
++                    : null;
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(op, uid, pkg);
++            return raw == AppOpsManager.MODE_DEFAULT || raw == AppOpsManager.MODE_FOREGROUND
++                    ? AppOpsManager.MODE_ALLOWED : raw;
++        } catch (RuntimeException e) {
++            Log.w(TAG, op + " of uid " + uid + " not read; allowed", e);
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /** {@link #decide} is anything but {@link AppOpsManager#MODE_ALLOWED}. */
++    public static boolean refuses(@NonNull Context context, @NonNull String op, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, op, uid, packageName, attributionTag) != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * {@code packageName} when it belongs to {@code uid}, else the uid's first
++     * package: AppOps checks a package of another uid against the op's default
++     * (allowed), so a caller's unverified name must not decide.
++     */
++    @Nullable
++    private static String verifiedPackage(Context context, AppOpsManager appOps, int uid,
++            @Nullable String packageName) {
++        if (packageName != null) {
++            final String key = uid + "/" + packageName;
++            if (sVerified.containsKey(key)) {
++                return packageName;
++            }
++            try {
++                appOps.checkPackage(uid, packageName);
++                sVerified.put(key, Boolean.TRUE);
++                return packageName;
++            } catch (SecurityException e) {
++                // Not the uid's: decide by the uid's own package.
++            }
++        }
++        return firstPackage(context, uid);
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        final PackageManager pm = context.getPackageManager();
++        final String[] packages = pm != null ? pm.getPackagesForUid(uid) : null;
++        return packages != null && packages.length > 0 ? packages[0] : null;
++    }
++}
+diff --git a/core/java/com/android/internal/os/RuntimeInit.java b/core/java/com/android/internal/os/RuntimeInit.java
+index 1c6371e732e5a8d19f6694b9ff7cedcdf9ccd5cd..0af59401389f5ecd997b3b2105f1b5df8c02a8af 100644
+--- a/core/java/com/android/internal/os/RuntimeInit.java
++++ b/core/java/com/android/internal/os/RuntimeInit.java
+@@ -33,6 +33,8 @@ import android.os.Trace;
+ import android.ravenwood.annotation.RavenwoodIgnore;
+ import android.ravenwood.annotation.RavenwoodKeep;
+ import android.ravenwood.annotation.RavenwoodKeepPartialClass;
++import android.system.ErrnoException;
++import android.system.Os;
+ import android.util.Log;
+ import android.util.Slog;
+ 
+@@ -47,6 +49,7 @@ import java.lang.reflect.InvocationTargetException;
+ import java.lang.reflect.Method;
+ import java.lang.reflect.Modifier;
+ import java.util.Objects;
++import java.util.TimeZone;
+ import java.util.logging.LogManager;
+ 
+ /**
+@@ -243,9 +246,11 @@ public class RuntimeInit {
+         Thread.setDefaultUncaughtExceptionHandler(new KillApplicationHandler(loggingHandler));
+ 
+         /*
+-         * Install a time zone supplier that uses the Android persistent time zone system property.
++         * Install a time zone supplier that uses the Android persistent time zone system property
++         * (UTC once the device info permission refuses the process, see lujarchHideDeviceInfo).
+          */
+-        RuntimeHooks.setTimeZoneIdSupplier(() -> SystemProperties.get("persist.sys.timezone"));
++        RuntimeHooks.setTimeZoneIdSupplier(() -> sLujarchUtc
++                ? "UTC" : SystemProperties.get("persist.sys.timezone"));
+ 
+         /*
+          * Sets handler for java.util.logging to use Android log facilities.
+@@ -271,6 +276,30 @@ public class RuntimeInit {
+         initialized = true;
+     }
+ 
++    /** Lujarch: the device info permission refuses this process; its time zone is UTC. */
++    private static volatile boolean sLujarchUtc;
++
++    /**
++     * The device info permission refuses this
++     * process (decided once at bind, after {@code Build.lujarchHideIdentity}). Its time zone
++     * becomes UTC for Java (the default TimeZone, which ICU follows) and native code (TZ), and
++     * stays UTC when the system time zone changes: ActivityThread's time zone update and any
++     * {@code TimeZone.setDefault(null)} read the zone from the supplier above. The default HTTP
++     * user agent, built from the model and build id, is made again from the hidden values.
++     *
++     * @hide
++     */
++    public static void lujarchHideDeviceInfo() {
++        sLujarchUtc = true;
++        try {
++            Os.setenv("TZ", "UTC", true);
++        } catch (ErrnoException e) {
++            Slog.w(TAG, "lujarch_device_info: TZ not set", e);
++        }
++        TimeZone.setDefault(null);
++        System.setProperty("http.agent", getDefaultUserAgent());
++    }
++
+     /**
+      * Returns an HTTP user agent of the form
+      * "Dalvik/1.1.0 (Linux; U; Android Eclair Build/MAIN)".
+diff --git a/services/core/java/com/android/server/BatteryService.java b/services/core/java/com/android/server/BatteryService.java
+index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792490a690b 100644
+--- a/services/core/java/com/android/server/BatteryService.java
++++ b/services/core/java/com/android/server/BatteryService.java
+@@ -81,6 +81,7 @@ import android.util.proto.ProtoOutputStream;
+ 
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.app.IBatteryStats;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.logging.MetricsLogger;
+ import com.android.internal.os.SomeArgs;
+ import com.android.internal.util.DumpUtils;
+@@ -1907,6 +1908,10 @@ public final class BatteryService extends SystemService {
+                     }
+                     break;
+             }
++            if (LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
++                    null, null)) {
++                return -1;
++            }
+ 
+             return mHealthServiceWrapper.getProperty(id, prop);
+         }
+diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
+index ee20dde909221ec2968b308d829e46bc296400af..fb7098a26b30fd624b32845faa6e620c2a5852e1 100644
+--- a/services/core/java/com/android/server/TelephonyRegistry.java
++++ b/services/core/java/com/android/server/TelephonyRegistry.java
+@@ -108,6 +108,7 @@ import com.android.internal.telephony.IOnSubscriptionsChangedListener;
+ import com.android.internal.telephony.IPhoneStateListener;
+ import com.android.internal.telephony.ISatelliteStateChangeListener;
+ import com.android.internal.telephony.ITelephonyRegistry;
++import com.android.internal.telephony.LujarchPhoneInfo;
+ import com.android.internal.telephony.TelephonyPermissions;
+ import com.android.internal.telephony.flags.Flags;
+ import com.android.internal.telephony.util.TelephonyUtils;
+@@ -595,6 +596,57 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                 || events.contains(TelephonyCallback.EVENT_OUTGOING_EMERGENCY_SMS);
+     }
+ 
++    /**
++     * The events of the phone info permission ( 
++     * "Information permissions") an app can listen to without READ_PHONE_STATE: service state,
++     * signal strength(s), call state and the active data subscription (both without a permission
++     * up to target SDK 30), data connection state and activity, carrier network change, data
++     * activation state, the user's mobile data switch and display info.
++     */
++    private static final Set<Integer> LUJARCH_PHONE_INFO_EVENTS = Set.of(
++            TelephonyCallback.EVENT_SERVICE_STATE_CHANGED,
++            TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED,
++            TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED,
++            TelephonyCallback.EVENT_CALL_STATE_CHANGED,
++            TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED,
++            TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED,
++            TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED,
++            TelephonyCallback.EVENT_CARRIER_NETWORK_CHANGED,
++            TelephonyCallback.EVENT_DATA_ACTIVATION_STATE_CHANGED,
++            TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED,
++            TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED,
++            TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED);
++
++    /**
++     * Whether the phone info permission lets this listener receive events of
++     * {@link #LUJARCH_PHONE_INFO_EVENTS}. A refused listener stays registered and gets none of
++     * them (ignored and errored alike: a callback cannot throw); it gets every other event as
++     * stock. Decided at registration and at every delivery, so an answer applies from the next
++     * event; LujarchInfo notes at most once a minute per app and checks the mode in between.
++     * An app holding the Phone permission is not refused (LujarchPhoneInfo).
++     */
++    private boolean lujarchPhoneInfo(Record r) {
++        // Notifiers (the phone process, a carrier app) call in with their own identity; the
++        // decision is about the listener, and system_server notes on its behalf.
++        final long identity = Binder.clearCallingIdentity();
++        try {
++            return LujarchPhoneInfo.decide(mContext, r.callerPid, r.callerUid, r.callingPackage,
++                    r.callingFeatureId) == AppOpsManager.MODE_ALLOWED;
++        } finally {
++            Binder.restoreCallingIdentity(identity);
++        }
++    }
++
++    /** {@link #lujarchPhoneInfo} for a listener of any of {@code events}. */
++    private boolean lujarchPhoneInfo(Record r, Set<Integer> events) {
++        for (int event : LUJARCH_PHONE_INFO_EVENTS) {
++            if (events.contains(event)) {
++                return lujarchPhoneInfo(r);
++            }
++        }
++        return true;
++    }
++
+     private boolean isPrivilegedPhoneStatePermissionRequired(Set<Integer> events) {
+         return events.contains(TelephonyCallback.EVENT_SRVCC_STATE_CHANGED)
+                 || events.contains(TelephonyCallback.EVENT_VOICE_ACTIVATION_STATE_CHANGED)
+@@ -1247,12 +1299,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             r.subId = subscriptionId;
+             r.phoneId = phoneId;
+             r.eventList = events;
++            // Decided (and noted) at registration, so the user is asked at
++            // The first listener; the initial values of the permission's events follow it.
++            final boolean lujarchPhoneInfo = lujarchPhoneInfo(r, events);
+ 
+             if (DBG) {
+                 log("listen:  Register r=" + r + " r.subId=" + r.subId + " r.phoneId=" + r.phoneId);
+             }
+             if (notifyNow && validatePhoneId(r.phoneId)) {
+-                if (events.contains(TelephonyCallback.EVENT_SERVICE_STATE_CHANGED)){
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_SERVICE_STATE_CHANGED)) {
+                     try {
+                         if (VDBG) log("listen: call onSSC state=" + mServiceState[r.phoneId]);
+                         ServiceState rawSs = new ServiceState(mServiceState[r.phoneId]);
+@@ -1269,7 +1325,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)) {
+                     try {
+                         if (mSignalStrength[r.phoneId] != null) {
+                             int gsmSignalStrength = mSignalStrength[r.phoneId]
+@@ -1312,7 +1369,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)) {
+                     try {
+                         r.callback.onLegacyCallStateChanged(mCallState[r.phoneId],
+                                 getCallIncomingNumber(r, r.phoneId));
+@@ -1320,14 +1378,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_CALL_STATE_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_CALL_STATE_CHANGED)) {
+                     try {
+                         r.callback.onCallStateChanged(mCallState[r.phoneId]);
+                     } catch (RemoteException ex) {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)) {
++                if (lujarchPhoneInfo && events.contains(
++                        TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)) {
+                     try {
+                         r.callback.onDataConnectionStateChanged(mDataConnectionState[r.phoneId],
+                                 mDataConnectionNetworkType[r.phoneId]);
+@@ -1335,14 +1395,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)) {
+                     try {
+                         r.callback.onDataActivity(mDataActivity[r.phoneId]);
+                     } catch (RemoteException ex) {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)) {
+                     try {
+                         if (mSignalStrength[r.phoneId] != null) {
+                             r.callback.onSignalStrengthsChanged(mSignalStrength[r.phoneId]);
+@@ -1402,7 +1464,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_CARRIER_NETWORK_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_CARRIER_NETWORK_CHANGED)) {
+                     try {
+                         r.callback.onCarrierNetworkChange(mCarrierNetworkChangeState[r.phoneId]);
+                     } catch (RemoteException ex) {
+@@ -1417,21 +1480,24 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_DATA_ACTIVATION_STATE_CHANGED)) {
++                if (lujarchPhoneInfo && events.contains(
++                        TelephonyCallback.EVENT_DATA_ACTIVATION_STATE_CHANGED)) {
+                     try {
+                         r.callback.onDataActivationStateChanged(mDataActivationState[r.phoneId]);
+                     } catch (RemoteException ex) {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)) {
++                if (lujarchPhoneInfo && events.contains(
++                        TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)) {
+                     try {
+                         r.callback.onUserMobileDataStateChanged(mUserMobileDataState[r.phoneId]);
+                     } catch (RemoteException ex) {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)) {
++                if (lujarchPhoneInfo
++                        && events.contains(TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)) {
+                     try {
+                         if (mTelephonyDisplayInfos[r.phoneId] != null) {
+                             r.callback.onDisplayInfoChanged(mTelephonyDisplayInfos[r.phoneId]);
+@@ -1454,7 +1520,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         remove(r.binder);
+                     }
+                 }
+-                if (events.contains(
++                if (lujarchPhoneInfo && events.contains(
+                         TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED)) {
+                     try {
+                         r.callback.onActiveDataSubIdChanged(mActiveDataSubId);
+@@ -1789,7 +1855,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+         synchronized (mRecords) {
+             for (Record r : mRecords) {
+                 if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)
+-                        && (r.subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)) {
++                        && (r.subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)
++                        && lujarchPhoneInfo(r)) {
+                     try {
+                         // Ensure the listener has read call log permission; if they do not return
+                         // an empty phone number.
+@@ -1802,7 +1869,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                 }
+ 
+                 if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_CALL_STATE_CHANGED)
+-                        && (r.subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)) {
++                        && (r.subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)
++                        && lujarchPhoneInfo(r)) {
+                     try {
+                         // The new callback does NOT provide the phone number.
+                         r.callback.onCallStateChanged(state);
+@@ -1837,7 +1905,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)
+                             && (r.subId == subId)
+-                            && (r.subId != SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)) {
++                            && (r.subId != SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             // Only the legacy PhoneStateListener receives the phone number.
+                             String incomingNumberOrEmpty = getCallIncomingNumber(r, phoneId);
+@@ -1848,7 +1917,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     }
+                     if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_CALL_STATE_CHANGED)
+                             && (r.subId == subId)
+-                            && (r.subId != SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)) {
++                            && (r.subId != SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             // The phone number is not included in the new call state changed
+                             // listener.
+@@ -1895,7 +1965,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                             }
+                             if (r.matchTelephonyCallbackEvent(
+                                     TelephonyCallback.EVENT_SERVICE_STATE_CHANGED)
+-                                    && idMatch(r, subId, phoneId)) {
++                                    && idMatch(r, subId, phoneId)
++                                    && lujarchPhoneInfo(r)) {
+ 
+                                 try {
+                                     ServiceState stateToSend;
+@@ -1975,7 +2046,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                         if ((activationType == SIM_ACTIVATION_TYPE_DATA)
+                                 && r.matchTelephonyCallbackEvent(
+                                         TelephonyCallback.EVENT_DATA_ACTIVATION_STATE_CHANGED)
+-                                && idMatch(r, subId, phoneId)) {
++                                && idMatch(r, subId, phoneId)
++                                && lujarchPhoneInfo(r)) {
+                             if (DBG) {
+                                 log("notifyDataActivationStateForPhoneId: callback.onDASC r=" + r
+                                         + " subId=" + subId + " phoneId=" + phoneId
+@@ -2015,7 +2087,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     }
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             if (DBG) {
+                                 log("notifySignalStrengthForPhoneId: callback.onSsS r=" + r
+@@ -2029,7 +2102,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     }
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             int gsmSignalStrength = signalStrength.getGsmSignalStrength();
+                             int ss = (gsmSignalStrength == 99 ? -1 : gsmSignalStrength);
+@@ -2093,7 +2167,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             for (Record r : mRecords) {
+                 if (r.matchTelephonyCallbackEvent(
+                         TelephonyCallback.EVENT_CARRIER_NETWORK_CHANGED)
+-                        && idMatch(r, subId, phoneId)) {
++                        && idMatch(r, subId, phoneId)
++                        && lujarchPhoneInfo(r)) {
+                     try {
+                         r.callback.onCarrierNetworkChange(active);
+                     } catch (RemoteException ex) {
+@@ -2192,7 +2267,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                 for (Record r : mRecords) {
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             r.callback.onUserMobileDataStateChanged(state);
+                         } catch (RemoteException ex) {
+@@ -2231,7 +2307,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                 for (Record r : mRecords) {
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             if (!mConfigurationProvider.isDisplayInfoNrAdvancedSupported(
+                                     r.callingPackage, Binder.getCallingUserHandle())) {
+@@ -2322,7 +2399,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     // Notify by correct subId.
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             r.callback.onDataActivity(state);
+                         } catch (RemoteException ex) {
+@@ -2355,7 +2433,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                 for (Record r : mRecords) {
+                     if (r.matchTelephonyCallbackEvent(
+                             TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)
+-                            && idMatch(r, subId, phoneId)) {
++                            && idMatch(r, subId, phoneId)
++                            && lujarchPhoneInfo(r)) {
+                         try {
+                             r.callback.onDataActivity(state);
+                         } catch (RemoteException ex) {
+@@ -2465,7 +2544,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+                     for (Record r : mRecords) {
+                         if (r.matchTelephonyCallbackEvent(
+                                 TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)
+-                                && idMatch(r, subId, phoneId)) {
++                                && idMatch(r, subId, phoneId)
++                                && lujarchPhoneInfo(r)) {
+                             try {
+                                 if (DBG) {
+                                     log("Notify data connection state changed on sub: " + subId);
+@@ -2853,7 +2933,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+         synchronized (mRecords) {
+             for (Record r : mRecords) {
+                 if (r.matchTelephonyCallbackEvent(
+-                        TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED)) {
++                        TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED)
++                        && lujarchPhoneInfo(r)) {
+                     try {
+                         r.callback.onActiveDataSubIdChanged(activeDataSubId);
+                     } catch (RemoteException ex) {
+@@ -4909,8 +4990,10 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             log("checkPossibleMissNotify: events = null.");
+             return;
+         }
++        // The permission's events follow the listener's phone info permission.
++        final boolean lujarchPhoneInfo = lujarchPhoneInfo(r, events);
+ 
+-        if ((events.contains(TelephonyCallback.EVENT_SERVICE_STATE_CHANGED))) {
++        if (lujarchPhoneInfo && events.contains(TelephonyCallback.EVENT_SERVICE_STATE_CHANGED)) {
+             try {
+                 if (VDBG) log("checkPossibleMissNotify: onServiceStateChanged state=" +
+                         mServiceState[phoneId]);
+@@ -4929,7 +5012,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             }
+         }
+ 
+-        if (events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)) {
++        if (lujarchPhoneInfo
++                && events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)) {
+             try {
+                 if (mSignalStrength[phoneId] != null) {
+                     SignalStrength signalStrength = mSignalStrength[phoneId];
+@@ -4944,7 +5028,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             }
+         }
+ 
+-        if (events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)) {
++        if (lujarchPhoneInfo
++                && events.contains(TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)) {
+             try {
+                 if (mSignalStrength[phoneId] != null) {
+                     int gsmSignalStrength = mSignalStrength[phoneId]
+@@ -4976,7 +5061,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             }
+         }
+ 
+-        if (events.contains(TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)) {
++        if (lujarchPhoneInfo
++                && events.contains(TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)) {
+             try {
+                 if (VDBG) {
+                     log("checkPossibleMissNotify: onUserMobileDataStateChanged phoneId="
+@@ -4988,7 +5074,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             }
+         }
+ 
+-        if (events.contains(TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)) {
++        if (lujarchPhoneInfo && events.contains(TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)) {
+             try {
+                 if (VDBG) {
+                     log("checkPossibleMissNotify: onDisplayInfoChanged phoneId="
+@@ -5055,7 +5141,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+             }
+         }
+ 
+-        if (events.contains(TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)) {
++        if (lujarchPhoneInfo
++                && events.contains(TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)) {
+             try {
+                 if (DBG) {
+                     log("checkPossibleMissNotify: onDataConnectionStateChanged(mDataConnectionState"
+diff --git a/services/core/java/com/android/server/am/BatteryStatsService.java b/services/core/java/com/android/server/am/BatteryStatsService.java
+index c81c8271da531b4722db5207a495880561341f53..4cde1fe1e23b362db53c98dd80787add9a4b3c63 100644
+--- a/services/core/java/com/android/server/am/BatteryStatsService.java
++++ b/services/core/java/com/android/server/am/BatteryStatsService.java
+@@ -107,6 +107,7 @@ import com.android.internal.R;
+ import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.app.IBatteryStats;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.os.Clock;
+ import com.android.internal.os.CpuScalingPolicies;
+ import com.android.internal.os.CpuScalingPolicyReader;
+@@ -1314,9 +1315,21 @@ public final class BatteryStatsService extends IBatteryStats.Stub
+         }
+     }
+ 
++    /**
++     * The device info permission of the binder caller
++     * refuses, so the charging state and time estimates read as not known (false, -1).
++     */
++    private boolean lujarchRefusesBattery() {
++        return LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
++                null, null);
++    }
++
+     @Override
+     @RequiresNoPermission
+     public boolean isCharging() {
++        if (lujarchRefusesBattery()) {
++            return false;
++        }
+         synchronized (mStats) {
+             return mStats.isCharging();
+         }
+@@ -1325,6 +1338,9 @@ public final class BatteryStatsService extends IBatteryStats.Stub
+     @Override
+     @RequiresNoPermission
+     public long computeBatteryTimeRemaining() {
++        if (lujarchRefusesBattery()) {
++            return -1;
++        }
+         synchronized (mStats) {
+             long time = mStats.computeBatteryTimeRemaining(mClock.elapsedRealtime());
+             return time >= 0 ? (time/1000) : time;
+@@ -1334,6 +1350,9 @@ public final class BatteryStatsService extends IBatteryStats.Stub
+     @Override
+     @RequiresNoPermission
+     public long computeChargeTimeRemaining() {
++        if (lujarchRefusesBattery()) {
++            return -1;
++        }
+         synchronized (mStats) {
+             long time = mStats.computeChargeTimeRemaining(mClock.elapsedRealtime());
+             return time >= 0 ? (time/1000) : time;
+diff --git a/services/core/java/com/android/server/am/BroadcastController.java b/services/core/java/com/android/server/am/BroadcastController.java
+index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..93fd8aeee598b68a016161bb0ecec1388cc17b53 100644
+--- a/services/core/java/com/android/server/am/BroadcastController.java
++++ b/services/core/java/com/android/server/am/BroadcastController.java
+@@ -285,8 +285,13 @@ class BroadcastController {
+             int flags) {
+         traceRegistrationBegin(receiverId, receiver, filter, userId);
+         try {
+-            return registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
+-                    receiverId, receiver, filter, permission, userId, flags);
++            // The sticky intent without extras when
++            // The caller's permission for its action refuses (the caller's package was checked
++            // against its process).
++            return LujarchInfoBroadcasts.forStickyCaller(mContext,
++                    registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
++                            receiverId, receiver, filter, permission, userId, flags),
++                    callerPackage, callerFeatureId);
+         } finally {
+             traceRegistrationEnd();
+         }
+diff --git a/services/core/java/com/android/server/am/BroadcastQueueImpl.java b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+index 9a270af7373921d2b0fda1e0da5a4c2cf3f2b941..6ecf1d67c49b66f7ff77eb3803e1ef0c2ba1b47b 100644
+--- a/services/core/java/com/android/server/am/BroadcastQueueImpl.java
++++ b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+@@ -1180,7 +1180,8 @@ class BroadcastQueueImpl extends BroadcastQueue {
+             final String skipReason = shouldSkipReceiver(queue, r, index, receiverIntent);
+             if (skipReason == null) {
+                 final boolean isBlockingDispatch = dispatchReceivers(queue, r, index,
+-                        receiverIntent);
++                        LujarchInfoBroadcasts.forReceiver(mService.mContext, receiverIntent,
++                                receiver));
+                 if (isBlockingDispatch) {
+                     traceEnd(cookie);
+                     return false;
+diff --git a/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7a7659af0
+--- /dev/null
++++ b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
+@@ -0,0 +1,214 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.am;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.app.BroadcastStickyCache;
++import android.content.Context;
++import android.content.Intent;
++import android.content.pm.ResolveInfo;
++import android.os.Binder;
++import android.os.Bundle;
++import android.os.Process;
++import android.os.UserHandle;
++import android.util.ArrayMap;
++import android.util.Slog;
++
++import com.android.internal.app.LujarchInfo;
++
++/**
++ * The system broadcasts that carry phone,
++ * network or device information to any app that registers for them, delivered without
++ * Extras to an app whose permission refuses. The
++ * broadcast itself still arrives, so an app that waits for it keeps working; a sticky one
++ * is still returned by {@code registerReceiver(null, filter)}, and {@code getIntExtra}
++ * answers its default.
++ *
++ * <p>The decision is per receiving app, where the intent is handed over: the broadcast
++ * queue's delivery to a registered or manifest receiver (sticky replays to a new receiver
++ * included) and the sticky intent {@code registerReceiver} returns. Actions outside the
++ * table cost one map lookup; uids below 10000 are never touched.
++ */
++final class LujarchInfoBroadcasts {
++
++    private static final String TAG = "LujarchInfo";
++
++    /** Action to the permission that guards its extras. */
++    private static final ArrayMap<String, String> OPS = new ArrayMap<>();
++
++    static {
++        // Phone info: SIM state, operator names, network country, carrier identity and the
++        // default subscriptions.
++        OPS.put(Intent.ACTION_SIM_STATE_CHANGED, LujarchInfo.PHONE); // sticky
++        OPS.put("android.telephony.action.SERVICE_PROVIDERS_UPDATED", LujarchInfo.PHONE);
++        OPS.put("android.telephony.action.NETWORK_COUNTRY_CHANGED", LujarchInfo.PHONE);
++        OPS.put("android.telephony.action.SUBSCRIPTION_CARRIER_IDENTITY_CHANGED",
++                LujarchInfo.PHONE);
++        OPS.put("android.telephony.action.SUBSCRIPTION_SPECIFIC_CARRIER_IDENTITY_CHANGED",
++                LujarchInfo.PHONE);
++        OPS.put("android.telephony.action.DEFAULT_SUBSCRIPTION_CHANGED", LujarchInfo.PHONE);
++        OPS.put("android.telephony.action.DEFAULT_SMS_SUBSCRIPTION_CHANGED", LujarchInfo.PHONE);
++        OPS.put("android.intent.action.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED",
++                LujarchInfo.PHONE);
++        OPS.put("android.intent.action.ACTION_DEFAULT_VOICE_SUBSCRIPTION_CHANGED",
++                LujarchInfo.PHONE);
++        // Network info: connectivity (the legacy NetworkInfo extras), Wi-Fi, hotspot and
++        // tethering, Bluetooth, NFC and airplane mode state.
++        OPS.put("android.net.conn.CONNECTIVITY_CHANGE", LujarchInfo.NETWORK); // sticky
++        OPS.put("android.net.wifi.WIFI_STATE_CHANGED", LujarchInfo.NETWORK); // sticky
++        OPS.put("android.net.wifi.STATE_CHANGE", LujarchInfo.NETWORK); // sticky
++        OPS.put("android.net.wifi.supplicant.STATE_CHANGE", LujarchInfo.NETWORK); // sticky
++        OPS.put("android.net.wifi.RSSI_CHANGED", LujarchInfo.NETWORK);
++        OPS.put("android.net.wifi.WIFI_AP_STATE_CHANGED", LujarchInfo.NETWORK);
++        OPS.put("android.net.conn.TETHER_STATE_CHANGED", LujarchInfo.NETWORK); // sticky
++        OPS.put("android.bluetooth.adapter.action.STATE_CHANGED", LujarchInfo.NETWORK);
++        OPS.put("android.nfc.action.ADAPTER_STATE_CHANGED", LujarchInfo.NETWORK);
++        OPS.put(Intent.ACTION_AIRPLANE_MODE_CHANGED, LujarchInfo.NETWORK);
++        // Device info: battery, USB and headset state, and the new time zone's id (a refused
++        // app keeps UTC, ActivityThread).
++        OPS.put(Intent.ACTION_BATTERY_CHANGED, LujarchInfo.DEVICE); // sticky
++        OPS.put("android.hardware.usb.action.USB_STATE", LujarchInfo.DEVICE); // sticky
++        OPS.put("android.intent.action.HEADSET_PLUG", LujarchInfo.DEVICE); // sticky
++        OPS.put(Intent.ACTION_TIMEZONE_CHANGED, LujarchInfo.DEVICE);
++    }
++
++    private static volatile boolean sWatching;
++
++    private LujarchInfoBroadcasts() {
++    }
++
++    /**
++     * The intent the broadcast queue hands to {@code receiver} (a {@link BroadcastFilter} or
++     * a manifest receiver's {@link ResolveInfo}): {@code intent} itself, or a copy without
++     * Extras when the receiving app's permission for the action refuses.
++     */
++    @Nullable
++    static Intent forReceiver(@NonNull Context context, @Nullable Intent intent,
++            @NonNull Object receiver) {
++        final String op = opOf(intent);
++        if (op == null) {
++            return intent;
++        }
++        try {
++            final int uid;
++            final String packageName;
++            final String attributionTag;
++            if (receiver instanceof BroadcastFilter) {
++                final BroadcastFilter filter = (BroadcastFilter) receiver;
++                uid = filter.owningUid;
++                packageName = filter.packageName;
++                attributionTag = filter.featureId;
++            } else {
++                final ResolveInfo info = (ResolveInfo) receiver;
++                uid = info.activityInfo.applicationInfo.uid;
++                packageName = info.activityInfo.packageName;
++                attributionTag = null;
++            }
++            return decided(context, op, intent, uid, packageName, attributionTag);
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "broadcast " + intent.getAction() + " not decided; delivered", e);
++            return intent;
++        }
++    }
++
++    /**
++     * The sticky intent {@code registerReceiver} returns to its binder caller (identified by
++     * {@link Binder#getCallingUid}; the package was checked against the calling process).
++     */
++    @Nullable
++    static Intent forStickyCaller(@NonNull Context context, @Nullable Intent sticky,
++            @Nullable String callerPackage, @Nullable String callerFeatureId) {
++        final String op = opOf(sticky);
++        if (op == null) {
++            return sticky;
++        }
++        try {
++            return decided(context, op, sticky, Binder.getCallingUid(), callerPackage,
++                    callerFeatureId);
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "sticky " + sticky.getAction() + " not decided; returned", e);
++            return sticky;
++        }
++    }
++
++    @Nullable
++    private static String opOf(@Nullable Intent intent) {
++        final String action = intent != null ? intent.getAction() : null;
++        return action != null ? OPS.get(action) : null;
++    }
++
++    @NonNull
++    private static Intent decided(@NonNull Context context, @NonNull String op,
++            @NonNull Intent intent, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return intent;
++        }
++        watchModes(context);
++        if (LujarchInfo.decide(context, op, uid, packageName, attributionTag)
++                == AppOpsManager.MODE_ALLOWED) {
++            return intent;
++        }
++        final Intent stripped = new Intent(intent);
++        stripped.replaceExtras((Bundle) null);
++        return stripped;
++    }
++
++    /**
++     * Apps keep sticky intents in a per-process cache ({@link BroadcastStickyCache}) that is
++     * Refreshed only when the sticky broadcast is sent again; a change of a permission's mode
++     * drops the cached intents of its actions, so the app's next registerReceiver asks again
++     * and gets the intent its new mode allows.
++     */
++    private static void watchModes(@NonNull Context context) {
++        if (sWatching) {
++            return;
++        }
++        synchronized (OPS) {
++            if (sWatching) {
++                return;
++            }
++            sWatching = true;
++            final long identity = Binder.clearCallingIdentity();
++            try {
++                final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++                // One listener per op (capturing it, so the instances differ): AppOps keeps
++                // the ops a listener is notified of from its first registration.
++                for (String watched : new String[] {
++                        LujarchInfo.PHONE, LujarchInfo.NETWORK, LujarchInfo.DEVICE}) {
++                    appOps.startWatchingMode(watched, null,
++                            (op, packageName) -> invalidateStickyCaches(watched));
++                }
++            } catch (RuntimeException e) {
++                Slog.w(TAG, "sticky broadcast caches not watched", e);
++            } finally {
++                Binder.restoreCallingIdentity(identity);
++            }
++        }
++    }
++
++    private static void invalidateStickyCaches(@NonNull String op) {
++        for (int i = OPS.size() - 1; i >= 0; i--) {
++            if (OPS.valueAt(i).equals(op)) {
++                // Ignores the actions the cache does not keep.
++                BroadcastStickyCache.invalidateCache(OPS.keyAt(i));
++            }
++        }
++    }
++}
+diff --git a/services/core/java/com/android/server/power/PowerManagerService.java b/services/core/java/com/android/server/power/PowerManagerService.java
+index cac2b761fb9ace853853f3aa21e460d09bc86900..6f439c25e5304b95aca49be36c289a5c70062ae2 100644
+--- a/services/core/java/com/android/server/power/PowerManagerService.java
++++ b/services/core/java/com/android/server/power/PowerManagerService.java
+@@ -137,6 +137,7 @@ import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.SystemServerLock;
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.app.IBatteryStats;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.display.BrightnessSynchronizer;
+ import com.android.internal.os.BackgroundThread;
+ import com.android.internal.util.DumpUtils;
+@@ -7279,6 +7280,12 @@ public final class PowerManagerService extends SystemService
+ 
+         @Override // Binder call
+         public ParcelDuration getBatteryDischargePrediction() {
++            // No prediction for an app whose device
++            // Info permission refuses.
++            if (LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
++                    null, null)) {
++                return null;
++            }
+             final long ident = Binder.clearCallingIdentity();
+             try {
+                 synchronized (mLock) {
+diff --git a/services/usb/java/com/android/server/usb/UsbService.java b/services/usb/java/com/android/server/usb/UsbService.java
+index ba7b776420f450fd640c1b0236f583e5bd59a2c4..493aca4f03a0d7297d6170e9e1969964446b978e 100644
+--- a/services/usb/java/com/android/server/usb/UsbService.java
++++ b/services/usb/java/com/android/server/usb/UsbService.java
+@@ -78,6 +78,7 @@ import android.util.proto.ProtoOutputStream;
+ 
+ import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.VisibleForTesting;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.content.PackageMonitor;
+ import com.android.internal.os.BackgroundThread;
+ import com.android.internal.util.DumpUtils;
+@@ -445,11 +446,21 @@ public class UsbService extends IUsbManager.Stub {
+     /* Returns a list of all currently attached USB devices (host mdoe) */
+     @Override
+     public void getDeviceList(Bundle devices) {
++        // No attached devices for an app whose device
++        // Info permission refuses.
++        if (lujarchRefusesUsb()) {
++            return;
++        }
+         if (mHostManager != null) {
+             mHostManager.getDeviceList(devices);
+         }
+     }
+ 
++    private boolean lujarchRefusesUsb() {
++        return LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(), null,
++                null);
++    }
++
+     /* Opens the specified USB device (host mode) */
+     @Override
+     public ParcelFileDescriptor openDevice(String deviceName, String packageName) {
+@@ -484,6 +495,11 @@ public class UsbService extends IUsbManager.Stub {
+     /* returns the currently attached USB accessory (device mode) */
+     @Override
+     public UsbAccessory getCurrentAccessory() {
++        // No attached accessory for an app whose device
++        // Info permission refuses.
++        if (lujarchRefusesUsb()) {
++            return null;
++        }
+         if (mDeviceManager != null) {
+             return mDeviceManager.getCurrentAccessory();
+         } else {
+diff --git a/telephony/common/com/android/internal/telephony/LujarchPhoneInfo.java b/telephony/common/com/android/internal/telephony/LujarchPhoneInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6b04fcbd36de29563107a137cb405746f739021d
+--- /dev/null
++++ b/telephony/common/com/android/internal/telephony/LujarchPhoneInfo.java
+@@ -0,0 +1,149 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.telephony;
++
++import static android.content.pm.PackageManager.PERMISSION_GRANTED;
++
++import android.Manifest;
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.ActivityThread;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.UserHandle;
++import android.util.Log;
++
++import com.android.internal.app.LujarchInfo;
++
++/**
++ * Basic phone info ({@link LujarchInfo#PHONE}) for the telephony reads an app reaches without
++ * READ_PHONE_STATE: carrier, its country and code, SIM state, signal strength, network type, data
++ * state and switches, subscription ids, carrier id and name, call state (target SDK 30 or lower)
++ * and the listeners that carry them.
++ *
++ * <p>An app allowed the Phone permission reads as stock: READ_PRIVILEGED_PHONE_STATE, or
++ * READ_PHONE_STATE or READ_PHONE_NUMBERS granted with its op allowed. The permission includes
++ * basic phone info; an app holding it as granted with its op ignored (Return empty data) is
++ * decided by {@link LujarchInfo#PHONE}.
++ *
++ * <p>Callers answer with the API's own "not known" value unless {@link #decide} returns
++ * {@link AppOpsManager#MODE_ALLOWED}; {@link AppOpsManager#MODE_ERRORED} throws only where the
++ * API throws for a missing permission. Uids below 10000 pass, and a failed lookup allows
++ * (logged).
++ */
++public final class LujarchPhoneInfo {
++
++    private static final String TAG = "LujarchPhoneInfo";
++
++    private LujarchPhoneInfo() {
++    }
++
++    /**
++     * The mode for a read by the binder caller. Call before
++     * {@link Binder#clearCallingIdentity()}.
++     *
++     * @param packageName the caller's package as the surrounding code verified it against the
++     *        calling uid, or null to take the uid's first package (never an unverified name:
++     *        AppOps answers a package of another uid with the op's default mode)
++     */
++    public static int decideCaller(@NonNull Context context, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        return decide(context, Binder.getCallingPid(), Binder.getCallingUid(), packageName,
++                attributionTag);
++    }
++
++    /**
++     * The mode for a read inside the app's own process (TelephonyManager's getters
++     * over telephony system properties), attributed to the context's op package and tag.
++     *
++     * @param context the reading context, or null to take the process's application
++     */
++    public static int decideSelf(@Nullable Context context) {
++        final int uid = Process.myUid();
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        final Context ctx = context != null ? context : ActivityThread.currentApplication();
++        if (ctx == null) {
++            Log.w(TAG, "uid " + uid + " read phone info without a context; allowed");
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        return decide(ctx, Process.myPid(), uid, ctx.getOpPackageName(),
++                ctx.getAttributionTag());
++    }
++
++    /** The mode for a read by {@code uid} (listeners decide per delivery). */
++    public static int decide(@NonNull Context context, int pid, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        final String pkg = packageName != null ? packageName : firstPackage(context, uid);
++        if (holdsPhonePermission(context, pid, uid, pkg)) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        return LujarchInfo.decide(context, LujarchInfo.PHONE, uid, pkg, attributionTag);
++    }
++
++    /**
++     * READ_PRIVILEGED_PHONE_STATE, or READ_PHONE_STATE or READ_PHONE_NUMBERS granted with its
++     * op allowed. Checked without noting: the read is not the permission's access.
++     */
++    private static boolean holdsPhonePermission(Context context, int pid, int uid,
++            @Nullable String pkg) {
++        try {
++            if (context.checkPermission(Manifest.permission.READ_PRIVILEGED_PHONE_STATE, pid,
++                    uid) == PERMISSION_GRANTED) {
++                return true;
++            }
++            final boolean state = context.checkPermission(Manifest.permission.READ_PHONE_STATE,
++                    pid, uid) == PERMISSION_GRANTED;
++            final boolean numbers = context.checkPermission(
++                    Manifest.permission.READ_PHONE_NUMBERS, pid, uid) == PERMISSION_GRANTED;
++            if ((!state && !numbers) || pkg == null) {
++                return false;
++            }
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return false;
++            }
++            return (state && appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_READ_PHONE_STATE,
++                    uid, pkg) == AppOpsManager.MODE_ALLOWED)
++                    || (numbers && appOps.unsafeCheckOpNoThrow(
++                            AppOpsManager.OPSTR_READ_PHONE_NUMBERS, uid, pkg)
++                            == AppOpsManager.MODE_ALLOWED);
++        } catch (RuntimeException e) {
++            Log.w(TAG, "Phone permission of uid " + uid + " not checked", e);
++            return false;
++        }
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        try {
++            final PackageManager pm = context.getPackageManager();
++            final String[] packages = pm != null ? pm.getPackagesForUid(uid) : null;
++            return packages != null && packages.length > 0 ? packages[0] : null;
++        } catch (RuntimeException e) {
++            Log.w(TAG, "Packages of uid " + uid + " not found", e);
++            return null;
++        }
++    }
++}
+diff --git a/telephony/java/android/telephony/TelephonyManager.java b/telephony/java/android/telephony/TelephonyManager.java
+index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..7501ef5021e1977ec21ee1fe22c950a63bb21154 100644
+--- a/telephony/java/android/telephony/TelephonyManager.java
++++ b/telephony/java/android/telephony/TelephonyManager.java
+@@ -45,6 +45,7 @@ import android.annotation.SystemApi;
+ import android.annotation.SystemService;
+ import android.annotation.TestApi;
+ import android.annotation.WorkerThread;
++import android.app.AppOpsManager;
+ import android.app.PendingIntent;
+ import android.app.PropertyInvalidatedCache;
+ import android.app.role.RoleManager;
+@@ -134,6 +135,7 @@ import com.android.internal.telephony.ISub;
+ import com.android.internal.telephony.ITelephony;
+ import com.android.internal.telephony.IUpdateAvailableNetworksCallback;
+ import com.android.internal.telephony.IccLogicalChannelRequest;
++import com.android.internal.telephony.LujarchPhoneInfo;
+ import com.android.internal.telephony.OperatorInfo;
+ import com.android.internal.telephony.PhoneConstants;
+ import com.android.internal.telephony.RILConstants;
+@@ -2805,6 +2807,9 @@ public class TelephonyManager {
+      */
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
+     public String getNetworkOperatorName(int subId) {
++        if (lujarchRefusesPhoneInfo(mContext)) {
++            return "";
++        }
+         int phoneId = SubscriptionManager.getPhoneId(subId);
+         return getTelephonyProperty(phoneId, TelephonyProperties.operator_alpha(), "");
+     }
+@@ -2840,10 +2845,25 @@ public class TelephonyManager {
+      **/
+     @UnsupportedAppUsage
+     public String getNetworkOperatorForPhone(int phoneId) {
++        if (lujarchRefusesPhoneInfo(mContext)) {
++            return "";
++        }
+         return getTelephonyProperty(phoneId, TelephonyProperties.operator_numeric(), "");
+     }
+ 
+ 
++    /**
++     * Whether the phone info permission ( 
++     * Permissions") refuses the app a getter over the telephony system properties (network and SIM
++     * operator, SIM country, roaming). Decided in the app's own process for its own uid
++     * ({@link LujarchPhoneInfo#decideSelf}); the getters answer "" (false for roaming) in every
++     * refused mode, as they never throw. The properties themselves stay readable to the app's
++     * Native code.
++     */
++    private static boolean lujarchRefusesPhoneInfo(@Nullable Context context) {
++        return LujarchPhoneInfo.decideSelf(context) != AppOpsManager.MODE_ALLOWED;
++    }
++
+     /**
+      * Returns the network specifier of the subscription ID pinned to the TelephonyManager. The
+      * network specifier is used by {@link
+@@ -2909,6 +2929,9 @@ public class TelephonyManager {
+      */
+     @UnsupportedAppUsage
+     public boolean isNetworkRoaming(int subId) {
++        if (lujarchRefusesPhoneInfo(mContext)) {
++            return false;
++        }
+         int phoneId = SubscriptionManager.getPhoneId(subId);
+         return getTelephonyProperty(phoneId, TelephonyProperties.operator_is_roaming(), false);
+     }
+@@ -4015,6 +4038,9 @@ public class TelephonyManager {
+      */
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
+     public String getSimOperatorNumericForPhone(int phoneId) {
++        if (lujarchRefusesPhoneInfo(mContext)) {
++            return "";
++        }
+         return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
+     }
+ 
+@@ -4053,6 +4079,9 @@ public class TelephonyManager {
+      */
+     @UnsupportedAppUsage
+     public String getSimOperatorNameForPhone(int phoneId) {
++        if (lujarchRefusesPhoneInfo(mContext)) {
++            return "";
++        }
+         return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+     }
+ 
+@@ -4087,6 +4116,10 @@ public class TelephonyManager {
+      */
+     @UnsupportedAppUsage
+     public static String getSimCountryIsoForPhone(int phoneId) {
++        // A static getter: the process's application stands for the reading context.
++        if (lujarchRefusesPhoneInfo(null)) {
++            return "";
++        }
+         return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+     }
+ 

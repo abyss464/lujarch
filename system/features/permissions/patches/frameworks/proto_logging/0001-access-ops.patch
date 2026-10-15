@@ -1,0 +1,17 @@
+diff --git a/stats/enums/app_shared/app_op_enums.proto b/stats/enums/app_shared/app_op_enums.proto
+index b55444bdb07429ae311c42feb4dcb240ae0ca795..59ae057ff8d45608ed710763f582c309ac4c9f8c 100644
+--- a/stats/enums/app_shared/app_op_enums.proto
++++ b/stats/enums/app_shared/app_op_enums.proto
+@@ -203,4 +203,12 @@ enum AppOpEnum {
+     APP_OP_READ_RESTRICTED_MESSAGES = 176;
+     APP_OP_WRITE_RESTRICTED_MESSAGES = 177;
+     APP_OP_ACCESS_HID = 178;
++    APP_OP_LUJARCH_SENSORS = 179;
++    APP_OP_LUJARCH_INSTALLED_APPS = 180;
++    APP_OP_LUJARCH_DEVICE_IDS = 181;
++    APP_OP_LUJARCH_AUTOSTART = 182;
++    APP_OP_LUJARCH_INSTALL = 183;
++    APP_OP_LUJARCH_PHONE_INFO = 184;
++    APP_OP_LUJARCH_NETWORK_INFO = 185;
++    APP_OP_LUJARCH_DEVICE_INFO = 186;
+ }

@@ -1,0 +1,90 @@
+diff --git a/src/com/android/server/telecom/TelecomServiceImpl.java b/src/com/android/server/telecom/TelecomServiceImpl.java
+index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c202df5ab 100644
+--- a/src/com/android/server/telecom/TelecomServiceImpl.java
++++ b/src/com/android/server/telecom/TelecomServiceImpl.java
+@@ -53,6 +53,7 @@ import android.os.Binder;
+ import android.os.Build;
+ import android.os.Bundle;
+ import android.os.OutcomeReceiver;
++import android.os.Parcel;
+ import android.os.ParcelFileDescriptor;
+ import android.os.Process;
+ import android.os.RemoteException;
+@@ -84,6 +85,7 @@ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.telecom.ICallControl;
+ import com.android.internal.telecom.ICallEventCallback;
+ import com.android.internal.telecom.ITelecomService;
++import com.android.internal.telephony.LujarchPhoneInfo;
+ import com.android.modules.utils.ParceledListSlice;
+ import com.android.server.telecom.callsequencing.voip.VoipCallMonitor;
+ import com.android.server.telecom.components.UserCallIntentProcessorFactory;
+@@ -225,8 +227,45 @@ public class TelecomServiceImpl {
+         return uid;
+     }
+ 
++    /**
++     * The ITelecomService method another process is calling on this thread
++     * ({@code onTransact} below); null on calls system_server makes to Telecom in-process, at
++     * times with an app's identity still on the thread, which keep their stock answers.
++     */
++    private static final ThreadLocal<String> sLujarchIncoming = new ThreadLocal<>();
++
++    /**
++     * Whether the phone info permission ( 
++     * Permissions") refuses the call state an app reads through {@code method} without
++     * READ_PHONE_STATE (target SDK 30 or lower); refused in any mode, idle, as these getters
++     * never throw there. An app holding the Phone permission and uids below 10000 are never
++     * refused (LujarchPhoneInfo).
++     *
++     * @param verifiedPackage the caller's package as the method verified it, else null
++     */
++    private boolean lujarchRefusesCallState(@NonNull String method, String verifiedPackage,
++            String featureId) {
++        if (!method.equals(sLujarchIncoming.get())) {
++            return false;
++        }
++        return LujarchPhoneInfo.decideCaller(mContext, verifiedPackage,
++                verifiedPackage != null ? featureId : null) != AppOpsManager.MODE_ALLOWED;
++    }
++
+     private final ITelecomService.Stub mBinderImpl = new ITelecomService.Stub() {
+ 
++        @Override
++        public boolean onTransact(int code, @NonNull Parcel data, Parcel reply, int flags)
++                throws RemoteException {
++            final String outer = sLujarchIncoming.get();
++            sLujarchIncoming.set(ITelecomService.Stub.getDefaultTransactionName(code));
++            try {
++                return super.onTransact(code, data, reply, flags);
++            } finally {
++                sLujarchIncoming.set(outer);
++            }
++        }
++
+         @Override
+         public boolean hasForegroundServiceDelegation(
+                 PhoneAccountHandle handle,
+@@ -1584,6 +1623,11 @@ public class TelecomServiceImpl {
+                     throw new SecurityException("This method can only be used for applications "
+                             + "targeting API version 30 or less.");
+                 }
++                // Without READ_PHONE_STATE the call state is the phone info
++                // Permission's; refused, idle.
++                if (lujarchRefusesCallState("getCallState", null, null)) {
++                    return TelephonyManager.CALL_STATE_IDLE;
++                }
+                 event.setResult(ApiStats.RESULT_NORMAL);
+                 synchronized (mLock) {
+                     return mCallsManager.getCallState();
+@@ -1627,6 +1671,11 @@ public class TelecomServiceImpl {
+                         throw new SecurityException("getCallState API requires READ_PHONE_STATE"
+                                 + " for API version 31+");
+                     }
++                } else if (lujarchRefusesCallState("getCallStateUsingPackage", callingPackage,
++                        callingFeatureId)) {
++                    // Up to target SDK 30 the call state needs no permission;
++                    // It is the phone info permission's (refused: idle).
++                    return TelephonyManager.CALL_STATE_IDLE;
+                 }
+                 event.setResult(ApiStats.RESULT_NORMAL);
+                 synchronized (mLock) {

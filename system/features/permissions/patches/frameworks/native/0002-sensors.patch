@@ -1,0 +1,264 @@
+diff --git a/services/sensorservice/SensorDirectConnection.cpp b/services/sensorservice/SensorDirectConnection.cpp
+index 00daa9b15625df79913e7cc1e262f3def1cbca37..f6de21ce574667c018216d0846d3a6c0a3fde49c 100644
+--- a/services/sensorservice/SensorDirectConnection.cpp
++++ b/services/sensorservice/SensorDirectConnection.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include "SensorDirectConnection.h"
++#include <utils/Timers.h>  // systemTime, SYSTEM_TIME_MONOTONIC (Lujarch note throttle)
+ #include <android/util/ProtoOutputStream.h>
+ #include <frameworks/base/core/proto/android/service/sensor_service.proto.h>
+ #include <hardware/sensors.h>
+@@ -178,6 +179,20 @@ int32_t SensorService::SensorDirectConnection::configureChannel(int handle, int
+     }
+ 
+     const Sensor& s = si->getSensor();
++    // Cover direct channels too. A direct channel
++    // is written by the HAL straight into the app's shared memory, and a
++    // successful configuration must return a live HAL report token, so it
++    // cannot be fed empty: MODE_IGNORED and MODE_ERRORED both refuse the
++    // configuration. The refused attempt is noted so it lands in history; an
++    // allowed configuration is noted once it succeeds (below).
++    if (rateLevel != SENSOR_DIRECT_RATE_STOP
++            && SensorService::noteLujarchSensorRefusal(s, mUid, mOpPackageName,
++                    "Direct sensor channel")) {
++        ALOGW("%s: direct channel for sensor (%s) refused by lujarch_sensors",
++              String8(mOpPackageName).c_str(), s.getName().c_str());
++        return PERMISSION_DENIED;
++    }
++
+     if (!mService->canAccessSensor(s, "config direct channel", mOpPackageName)) {
+         return PERMISSION_DENIED;
+     }
+@@ -215,6 +230,16 @@ int32_t SensorService::SensorDirectConnection::configureChannel(int handle, int
+     } else {
+         if (ret > 0) {
+             mActivated[handle] = rateLevel;
++            // The HAL now writes this sensor into the
++            // app's memory, a use of the sensor: noted at most once per
++            // kLujarchNoteIntervalNs per connection, as event delivery is.
++            const nsecs_t now = systemTime(SYSTEM_TIME_MONOTONIC);
++            if (mLujarchNoteTime == 0
++                    || now - mLujarchNoteTime >= SensorService::kLujarchNoteIntervalNs) {
++                mLujarchNoteTime = now;
++                SensorService::noteLujarchSensorUse(s, mUid, mOpPackageName,
++                        "Direct sensor channel");
++            }
+             if (mService->isSensorInCappedSet(s.getType())) {
+                 // Back up the rates that the app is allowed to have if the mic toggle is off
+                 // This is used in the uncapRates() function.
+diff --git a/services/sensorservice/SensorDirectConnection.h b/services/sensorservice/SensorDirectConnection.h
+index 9f21731fa97de3428026bffcf0bf7528aa50addc..2a338f7e176eac95a250cef1768bd2192e7c2e74 100644
+--- a/services/sensorservice/SensorDirectConnection.h
++++ b/services/sensorservice/SensorDirectConnection.h
+@@ -111,6 +111,10 @@ private:
+     std::unordered_map<int, int> mActivated;
+     std::unordered_map<int, int> mActivatedBackup;
+     std::unordered_map<int, int> mMicRateBackup;
++    // Monotonic time of the last OP_LUJARCH_SENSORS
++    // note of an allowed configuration (configureChannel); 0 before the first.
++    // Guarded by mConnectionLock.
++    nsecs_t mLujarchNoteTime = 0;
+ 
+     mutable Mutex mDestroyLock;
+     bool mDestroyed;
+diff --git a/services/sensorservice/SensorEventConnection.cpp b/services/sensorservice/SensorEventConnection.cpp
+index 05790a04e8f6da4d7344a5a6a354bf0f42cd1f6a..09b0f449599e45acebb5c90dca4a26ffa2d22b8e 100644
+--- a/services/sensorservice/SensorEventConnection.cpp
++++ b/services/sensorservice/SensorEventConnection.cpp
+@@ -17,6 +17,7 @@
+ #include <log/log.h>
+ #include <sys/socket.h>
+ #include <utils/threads.h>
++#include <utils/Timers.h>  // systemTime, SYSTEM_TIME_MONOTONIC (Lujarch note throttle)
+ 
+ #include <android/util/ProtoOutputStream.h>
+ #include <frameworks/base/core/proto/android/service/sensor_service.proto.h>
+@@ -489,9 +490,29 @@ bool SensorService::SensorEventConnection::noteOpIfRequired(const sensors_event_
+         if ((event.type == SENSOR_TYPE_STEP_COUNTER || event.type == SENSOR_TYPE_STEP_DETECTOR) &&
+             mTargetSdk > 0 && mTargetSdk <= __ANDROID_API_P__) {
+             success = true;
+-        } else if (mUid == AID_SYSTEM) {
+-            // Allow access if it is requested from system.
++        } else if (mUid == AID_SYSTEM || mUid == AID_ROOT) {
++            // Allow access if it is requested from the system or root.
+             success = true;
++        } else if (iter->second == AppOpsManager::OP_LUJARCH_SENSORS) {
++            // MODE_IGNORED feeds empty (drop the
++            // event), MODE_ERRORED denies; MODE_ALLOWED and MODE_DEFAULT deliver
++            // as stock. The op is noted (and the cached mode refreshed) at most
++            // once per kLujarchNoteIntervalNs, but the delivery decision uses
++            // the cached mode on every event, so a mode change takes effect
++            // within that interval without re-registration.
++            const nsecs_t now = systemTime(SYSTEM_TIME_MONOTONIC);
++            if (mLujarchModeTime == 0
++                    || now - mLujarchModeTime >= SensorService::kLujarchNoteIntervalNs) {
++                int32_t sensorHandle = event.sensor;
++                String16 noteMsg("Sensor event (");
++                noteMsg.append(String16(mService->getSensorStringType(sensorHandle)));
++                noteMsg.append(String16(")"));
++                mLujarchMode = mService->sAppOpsManager.noteOp(iter->second, mUid,
++                        mOpPackageName, mAttributionTag, noteMsg);
++                mLujarchModeTime = now;
++            }
++            success = (mLujarchMode != AppOpsManager::MODE_IGNORED
++                    && mLujarchMode != AppOpsManager::MODE_ERRORED);
+         } else {
+             int32_t sensorHandle = event.sensor;
+             String16 noteMsg("Sensor event (");
+diff --git a/services/sensorservice/SensorEventConnection.h b/services/sensorservice/SensorEventConnection.h
+index 0654648cfc4a5a9f0bfc723489cd62a3d60cbe67..59af355ae5ef17e37cbb065448be999ae15c4e64 100644
+--- a/services/sensorservice/SensorEventConnection.h
++++ b/services/sensorservice/SensorEventConnection.h
+@@ -240,6 +240,12 @@ private:
+     // Store a mapping of sensor handles to required AppOp for a sensor. This map only contains a
+     // valid mapping for sensors that require a permission in order to reduce the lookup time.
+     std::unordered_map<int32_t, int32_t> mHandleToAppOp;
++    // Cached OP_LUJARCH_SENSORS mode (0 ==
++    // AppOpsManager::MODE_ALLOWED) and the monotonic time it was last noted, so
++    // the op is noted at most once per second instead of per delivered event.
++    // See noteOpIfRequired.
++    int32_t mLujarchMode = 0;
++    nsecs_t mLujarchModeTime = 0;
+     // Mapping of sensor handles to its rate before being capped by the mic toggle.
+     std::unordered_map<int, nsecs_t> mMicSamplingPeriodBackup
+         GUARDED_BY(mConnectionLock);
+diff --git a/services/sensorservice/SensorService.cpp b/services/sensorservice/SensorService.cpp
+index 912d5cb1dc0164faf9d7ff319a3a4be26af64828..ac5642b28c965741f08b5165e4fa630e3f43b616 100644
+--- a/services/sensorservice/SensorService.cpp
++++ b/services/sensorservice/SensorService.cpp
+@@ -2246,6 +2246,14 @@ status_t SensorService::enable(const sp<SensorEventConnection>& connection,
+     std::shared_ptr<SensorInterface> sensor = getSensorInterfaceFromHandle(handle);
+     if (sensor == nullptr ||
+         !canAccessSensor(sensor->getSensor(), "Tried enabling", opPackageName)) {
++        // A registration refused by lujarch_sensors
++        // is noted here (not in canAccessSensor, which also serves sensor-list
++        // enumeration) so the denied attempt lands in history.
++        if (sensor != nullptr) {
++            noteLujarchSensorRefusal(sensor->getSensor(),
++                    IPCThreadState::self()->getCallingUid(), opPackageName,
++                    "Sensor registration");
++        }
+         return BAD_VALUE;
+     }
+ 
+@@ -2368,6 +2376,12 @@ status_t SensorService::enable(const sp<SensorEventConnection>& connection,
+         if (sensor->getSensor().getRequiredPermission().size() > 0 &&
+                 sensor->getSensor().getRequiredAppOp() >= 0) {
+             connection->mHandleToAppOp[handle] = sensor->getSensor().getRequiredAppOp();
++        } else if (sensor->getSensor().getRequiredPermission().size() == 0) {
++            // Gate sensors with no permission on
++            // OP_LUJARCH_SENSORS at delivery so MODE_IGNORED feeds empty. Exempt
++            // uids (root/system/audio server) are short-circuited in
++            // SensorEventConnection::noteOpIfRequired.
++            connection->mHandleToAppOp[handle] = AppOpsManager::OP_LUJARCH_SENSORS;
+         }
+     }
+ 
+@@ -2514,6 +2528,21 @@ bool SensorService::canAccessSensor(const Sensor& sensor, const char* operation,
+ 
+     // Check if a permission is required for this sensor
+     if (sensor.getRequiredPermission().length() <= 0) {
++        // Sensors Android has no permission for are
++        // gated by OP_LUJARCH_SENSORS. MODE_ERRORED refuses registration, as a
++        // missing permission does. getSensorList does not come through here on
++        // Android 16, so the sensors stay in the caller's list; the dynamic and
++        // runtime sensor lists, which do, leave them out. MODE_IGNORED lets
++        // registration succeed and events are dropped at delivery
++        // (SensorEventConnection::noteOpIfRequired).
++        // Direct channels refuse both modes in
++        // SensorDirectConnection::configureChannel. Anything else is stock.
++        if (lujarchSensorMode(sensor, IPCThreadState::self()->getCallingUid(), opPackageName)
++                == AppOpsManager::MODE_ERRORED) {
++            ALOGW("%s %s a sensor (%s): denied by lujarch_sensors",
++                  String8(opPackageName).c_str(), operation, sensor.getName().c_str());
++            return false;
++        }
+         return true;
+     }
+ 
+@@ -2552,6 +2581,48 @@ bool SensorService::canAccessSensor(const Sensor& sensor, const char* operation,
+     return canAccess;
+ }
+ 
++int32_t SensorService::lujarchSensorMode(const Sensor& sensor, uid_t uid,
++        const String16& opPackageName) {
++    // Only sensors without a required permission are gated here; permissioned
++    // sensors (body sensors, heart rate, step counter/detector) keep their
++    // stock permission + AppOp checks.
++    if (sensor.getRequiredPermission().length() > 0) {
++        return AppOpsManager::MODE_ALLOWED;
++    }
++    // Guard rails: never restrict root, the system server or the audio server.
++    if (uid == AID_ROOT || isAudioServerOrSystemServerUid(uid)) {
++        return AppOpsManager::MODE_ALLOWED;
++    }
++    // checkOp never throws; a null AppOps service returns MODE_IGNORED. We only
++    // act on an explicit MODE_IGNORED/MODE_ERRORED and treat everything else as
++    // MODE_ALLOWED, so any lookup failure leaves sensors working (fail open).
++    int32_t mode = sAppOpsManager.checkOp(AppOpsManager::OP_LUJARCH_SENSORS, uid, opPackageName);
++    if (mode == AppOpsManager::MODE_IGNORED || mode == AppOpsManager::MODE_ERRORED) {
++        return mode;
++    }
++    return AppOpsManager::MODE_ALLOWED;
++}
++
++void SensorService::noteLujarchSensorUse(const Sensor& sensor, uid_t uid,
++        const String16& opPackageName, const char* message) {
++    if (sensor.getRequiredPermission().length() > 0 || uid == AID_ROOT
++            || isAudioServerOrSystemServerUid(uid)) {
++        return;
++    }
++    sAppOpsManager.noteOp(AppOpsManager::OP_LUJARCH_SENSORS, uid, opPackageName,
++            std::optional<String16>(), String16(message));
++}
++
++bool SensorService::noteLujarchSensorRefusal(const Sensor& sensor, uid_t uid,
++        const String16& opPackageName, const char* message) {
++    if (lujarchSensorMode(sensor, uid, opPackageName) == AppOpsManager::MODE_ALLOWED) {
++        return false;
++    }
++    sAppOpsManager.noteOp(AppOpsManager::OP_LUJARCH_SENSORS, uid, opPackageName,
++            std::optional<String16>(), String16(message));
++    return true;
++}
++
+ bool SensorService::hasPermissionForSensor(const Sensor& sensor) {
+     bool hasPermission = false;
+     const String8& requiredPermission = sensor.getRequiredPermission();
+diff --git a/services/sensorservice/SensorService.h b/services/sensorservice/SensorService.h
+index 1438853f1d34ce6ef71750b0edf2d24cc8c3afe7..d1c05aaa199e4c4aaef2b331f138585151fb3fba 100644
+--- a/services/sensorservice/SensorService.h
++++ b/services/sensorservice/SensorService.h
+@@ -525,6 +525,30 @@ private:
+             sensors_event_t const* buffer, const int count);
+     bool canAccessSensor(const Sensor& sensor, const char* operation,
+             const String16& opPackageName);
++    // OP_LUJARCH_SENSORS gates the sensors Android
++    // has no permission for (accelerometer, gyroscope, magnetometer, barometer,
++    // light, proximity, ...). Returns the effective op mode, or MODE_ALLOWED
++    // when the sensor is permissioned (body/heart-rate/step keep their stock
++    // checks), the caller is exempt (root, system or audio server), or the
++    // AppOps lookup fails, so any failure keeps sensors working (fail open).
++    static int32_t lujarchSensorMode(const Sensor& sensor, uid_t uid,
++            const String16& opPackageName);
++    // If lujarch_sensors restricts this caller for this sensor
++    // (MODE_IGNORED or MODE_ERRORED), note the op so the refused attempt lands
++    // in history and return true; otherwise return false without noting.
++    static bool noteLujarchSensorRefusal(const Sensor& sensor, uid_t uid,
++            const String16& opPackageName, const char* message);
++    // Note an allowed use of a sensor without a permission
++    // (a direct channel configured) so it lands in history. Permissioned
++    // sensors and exempt callers (root, system, audio server) are not noted.
++    static void noteLujarchSensorUse(const Sensor& sensor, uid_t uid,
++            const String16& opPackageName, const char* message);
++    // Minimum interval between OP_LUJARCH_SENSORS notes of
++    // one connection, for event delivery and direct channels alike. Motion and
++    // environment sensors deliver up to hundreds of events per second; noting
++    // each would put a binder call on every event. The per-access history keeps
++    // one-minute buckets, so one note per second loses no timeline detail.
++    static constexpr nsecs_t kLujarchNoteIntervalNs = 1000000000;  // 1 s
+     void addSensorIfAccessible(const String16& opPackageName, const Sensor& sensor,
+             Vector<Sensor>& accessibleSensorList);
+     static bool hasPermissionForSensor(const Sensor& sensor);

@@ -1,0 +1,59 @@
+diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
+index 4c63493439e274e7df270bd63fa3c1f2c31d7290..3079cdefcf7bb73c422ccd37b6725e0a52c72189 100644
+--- a/services/core/java/com/android/server/pm/VerifyingSession.java
++++ b/services/core/java/com/android/server/pm/VerifyingSession.java
+@@ -330,6 +330,11 @@ final class VerifyingSession {
+             }
+         }
+ 
++        if (!requiredVerifierPackagesOverridden) {
++            lujarchKeepVerifiersHoldingAgentPermission(snapshot, requiredVerifierPackages,
++                    verifierUserId);
++        }
++
+         for (String requiredVerifierPackage : requiredVerifierPackages) {
+             final int requiredUid = snapshot.getPackageUid(requiredVerifierPackage,
+                     MATCH_DEBUG_TRIAGED_MISSING, verifierUserId);
+@@ -602,6 +607,42 @@ final class VerifyingSession {
+      *
+      * @return true if verification should be performed
+      */
++    /**
++     * Only required verifiers that hold
++     * PACKAGE_VERIFICATION_AGENT count. The verification broadcast goes out
++     * with that receiver permission, so a required verifier without it never
++     * receives the request and its turn ends only at the verifier timeout
++     * (verifier_timeout, then verifier_default_response). Play is such a
++     * verifier here (patches/vendor/gapps/0002 denies it the permission), and
++     * The permission controller answers instead. This runs per session, where grants are
++     * final: PackageManagerService picks the required verifiers in its
++     * constructor, before an OTA boot grants the permission to a new package,
++     * so filtering there would leave no verifier on the first boot of an image.
++     * The list is left as is when no verifier holds the permission (an empty
++     * list leaves the session without a timeout), and on any failure.
++     */
++    private static void lujarchKeepVerifiersHoldingAgentPermission(@NonNull Computer snapshot,
++            @NonNull List<String> requiredVerifierPackages, int userId) {
++        try {
++            final List<String> holding = new ArrayList<>();
++            for (String pkg : requiredVerifierPackages) {
++                final int uid = snapshot.getPackageUid(pkg, MATCH_DEBUG_TRIAGED_MISSING, userId);
++                if (uid >= 0 && snapshot.checkUidPermission(
++                        android.Manifest.permission.PACKAGE_VERIFICATION_AGENT, uid)
++                        == PackageManager.PERMISSION_GRANTED) {
++                    holding.add(pkg);
++                }
++            }
++            if (!holding.isEmpty() && holding.size() < requiredVerifierPackages.size()) {
++                Slog.i(TAG, "Required verifiers without PACKAGE_VERIFICATION_AGENT are not"
++                        + " waited for; verifying with " + holding);
++                requiredVerifierPackages.retainAll(holding);
++            }
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "lujarch: verifier permission filter failed, keeping all verifiers", e);
++        }
++    }
++
+     private boolean isVerificationEnabled(PackageInfoLite pkgInfoLite, int userId,
+             List<String> requiredVerifierPackages) {
+         if (!DEFAULT_VERIFY_ENABLE) {

@@ -1,0 +1,313 @@
+diff --git a/src/java/com/android/internal/telephony/SmsController.java b/src/java/com/android/internal/telephony/SmsController.java
+index db70ce534115d43f0bdbeb1b21425580e32f6015..e5d29cf0de1eec7b52fd0464cc48807e2bd02b6b 100644
+--- a/src/java/com/android/internal/telephony/SmsController.java
++++ b/src/java/com/android/internal/telephony/SmsController.java
+@@ -37,6 +37,8 @@ import android.os.BaseBundle;
+ import android.os.Binder;
+ import android.os.Build;
+ import android.os.Bundle;
++import android.os.Parcel;
++import android.os.RemoteException;
+ import android.os.SystemProperties;
+ import android.os.TelephonyServiceManager.ServiceRegisterer;
+ import android.os.UserHandle;
+@@ -106,6 +108,39 @@ public class SmsController extends ISmsImplBase {
+                 "ro.vendor.api_level", Build.VERSION.DEVICE_INITIAL_SDK_INT);
+     }
+ 
++    /**
++     * The ISms method another process is calling on this thread
++     * ({@link #onTransact}); null on the phone process's own calls (SmsManager inside the
++     * phone process, with an app's identity still on the thread at times).
++     */
++    private static final ThreadLocal<String> sLujarchIncoming = new ThreadLocal<>();
++
++    @Override
++    public boolean onTransact(int code, @NonNull Parcel data, @Nullable Parcel reply, int flags)
++            throws RemoteException {
++        final String outer = sLujarchIncoming.get();
++        sLujarchIncoming.set(ISms.Stub.getDefaultTransactionName(code));
++        try {
++            return super.onTransact(code, data, reply, flags);
++        } finally {
++            sLujarchIncoming.set(outer);
++        }
++    }
++
++    /**
++     * Whether the phone info permission ( 
++     * Permissions") refuses what the binder caller reads through {@code method}; refused in any
++     * mode, the getter answers its "not known" value, as these getters never throw. An app
++     * holding the Phone permission and uids below 10000 are never refused (LujarchPhoneInfo).
++     */
++    private boolean lujarchRefusesPhoneInfo(@NonNull String method) {
++        if (!method.equals(sLujarchIncoming.get())) {
++            return false;
++        }
++        return LujarchPhoneInfo.decideCaller(mContext, null, null)
++                != AppOpsManager.MODE_ALLOWED;
++    }
++
+     private Phone getPhone(int subId) {
+         Phone phone = PhoneFactory.getPhone(SubscriptionManager.getPhoneId(subId));
+         if (phone == null) {
+@@ -650,6 +685,10 @@ public class SmsController extends ISmsImplBase {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     @Override
+     public boolean isImsSmsSupportedForSubscriber(int subId) {
++        // IMS SMS support follows the network, the phone info permission's.
++        if (lujarchRefusesPhoneInfo("isImsSmsSupportedForSubscriber")) {
++            return false;
++        }
+         IccSmsInterfaceManager iccSmsIntMgr = getIccSmsInterfaceManager(subId);
+         if (iccSmsIntMgr != null) {
+             return iccSmsIntMgr.isImsSmsSupported();
+@@ -675,6 +714,12 @@ public class SmsController extends ISmsImplBase {
+ 
+         enforceTelephonyFeatureWithException(getCallingPackage(), "isSmsSimPickActivityNeeded");
+ 
++        // The answer tells whether more than one SIM is active, the phone
++        // Info permission's; refused, no SIM pick (SmsManager then sends on the default phone).
++        if (lujarchRefusesPhoneInfo("isSmsSimPickActivityNeeded")) {
++            return false;
++        }
++
+         TelephonyManager telephonyManager =
+                 (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+         if (mFlags.enforceSubscriptionUserFilter()) {
+@@ -731,6 +776,11 @@ public class SmsController extends ISmsImplBase {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     @Override
+     public String getImsSmsFormatForSubscriber(int subId) {
++        // The IMS SMS format (3GPP or 3GPP2) names the network's family, the
++        // Phone info permission's; refused, unknown.
++        if (lujarchRefusesPhoneInfo("getImsSmsFormatForSubscriber")) {
++            return SmsConstants.FORMAT_UNKNOWN;
++        }
+         IccSmsInterfaceManager iccSmsIntMgr = getIccSmsInterfaceManager(subId);
+         if (iccSmsIntMgr != null) {
+             return iccSmsIntMgr.getImsSmsFormat();
+@@ -765,6 +815,11 @@ public class SmsController extends ISmsImplBase {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     @Override
+     public int getPreferredSmsSubscription() {
++        // The default SMS subscription is the phone info permission's; refused,
++        // none (SmsManager then sends on the default phone).
++        if (lujarchRefusesPhoneInfo("getPreferredSmsSubscription")) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         // If there is a default, choose that one.
+         int defaultSubId = SubscriptionManagerService.getInstance().getDefaultSmsSubId();
+ 
+@@ -796,6 +851,10 @@ public class SmsController extends ISmsImplBase {
+      */
+     @Override
+     public boolean isSMSPromptEnabled() {
++        // The multi-SIM SMS prompt switch is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("isSMSPromptEnabled")) {
++            return false;
++        }
+         return PhoneFactory.isSMSPromptEnabled();
+     }
+ 
+@@ -898,6 +957,12 @@ public class SmsController extends ISmsImplBase {
+         enforceTelephonyFeatureWithException(getCallingPackage(),
+                 "getCarrierConfigValuesForSubscriber");
+ 
++        // The carrier's MMS configuration (user agent, UA profile, limits)
++        // Names the carrier, the phone info permission's; refused, the documented empty Bundle.
++        if (lujarchRefusesPhoneInfo("getCarrierConfigValuesForSubscriber")) {
++            return new Bundle();
++        }
++
+         final long identity = Binder.clearCallingIdentity();
+         try {
+             final CarrierConfigManager configManager =
+diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
+index 9eb5daf837630362fb05718e832c05da0a7c2c9b..6c37821832947bf8cdd30ea2d4b3680c26f9ca27 100644
+--- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
++++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
+@@ -47,6 +47,7 @@ import android.os.CountDownTimer;
+ import android.os.Handler;
+ import android.os.HandlerThread;
+ import android.os.Looper;
++import android.os.Parcel;
+ import android.os.ParcelUuid;
+ import android.os.PersistableBundle;
+ import android.os.Process;
+@@ -95,10 +96,12 @@ import android.util.RecurrenceRule;
+ 
+ import com.android.internal.R;
+ import com.android.internal.annotations.VisibleForTesting;
++import com.android.internal.app.LujarchInfo;
+ import com.android.internal.telephony.CarrierResolver;
+ import com.android.internal.telephony.ISetOpportunisticDataCallback;
+ import com.android.internal.telephony.ISub;
+ import com.android.internal.telephony.IccCard;
++import com.android.internal.telephony.LujarchPhoneInfo;
+ import com.android.internal.telephony.MccTable;
+ import com.android.internal.telephony.MultiSimSettingController;
+ import com.android.internal.telephony.Phone;
+@@ -972,6 +975,7 @@ public class SubscriptionManagerService extends ISub.Stub {
+         }, new IntentFilter(Intent.ACTION_TIME_CHANGED));
+ 
+         SubscriptionManager.invalidateSubscriptionManagerServiceCaches();
++        lujarchWatchPhoneInfo();
+ 
+         mContext.registerReceiver(new BroadcastReceiver() {
+             @Override
+@@ -982,6 +986,66 @@ public class SubscriptionManagerService extends ISub.Stub {
+         logl("Registered iSub service");
+     }
+ 
++    /**
++     * The ISub method another process is calling on this thread
++     * ({@link #onTransact}); null on the phone process's own calls.
++     */
++    private static final ThreadLocal<String> sLujarchIncoming = new ThreadLocal<>();
++
++    @Override
++    public boolean onTransact(int code, @NonNull Parcel data, @Nullable Parcel reply, int flags)
++            throws RemoteException {
++        final String outer = sLujarchIncoming.get();
++        sLujarchIncoming.set(ISub.Stub.getDefaultTransactionName(code));
++        try {
++            return super.onTransact(code, data, reply, flags);
++        } finally {
++            sLujarchIncoming.set(outer);
++        }
++    }
++
++    /**
++     * Whether the phone info permission ( 
++     * Permissions") refuses the subscription id or slot the binder caller reads through
++     * {@code method} or {@code alias}; refused in any mode, the getter answers its "invalid"
++     * value, as these getters never throw. Only an app's own ISub call is decided: the phone
++     * process asks these for itself all the time, at times with an app's identity still on the
++     * thread, and SubscriptionManager caches the answers for the whole process. An app holding
++     * the Phone permission and uids below 10000 are never refused (LujarchPhoneInfo).
++     */
++    private boolean lujarchRefusesPhoneInfo(@NonNull String method, @Nullable String alias) {
++        final String incoming = sLujarchIncoming.get();
++        if (incoming == null || !(incoming.equals(method) || incoming.equals(alias))) {
++            return false;
++        }
++        return LujarchPhoneInfo.decideCaller(mContext, null, null)
++                != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * Apps keep the subscription ids this service answers in
++     * SubscriptionManager's IPC caches; a change of an app's phone info permission or Phone
++     * permission drops every process's cache, so the app's next read takes the new answer
++     * Instead of a refusal cached before the user's choice.
++     */
++    private void lujarchWatchPhoneInfo() {
++        for (String op : new String[] {LujarchInfo.PHONE, AppOpsManager.OPSTR_READ_PHONE_STATE,
++                AppOpsManager.OPSTR_READ_PHONE_NUMBERS}) {
++            try {
++                // One listener per op: AppOps keeps the first op of a reused listener.
++                mAppOpsManager.startWatchingMode(op, null,
++                        new AppOpsManager.OnOpChangedListener() {
++                            @Override
++                            public void onOpChanged(String changedOp, String packageName) {
++                                SubscriptionManager.invalidateSubscriptionManagerServiceCaches();
++                            }
++                        });
++            } catch (RuntimeException e) {
++                loge("lujarchWatchPhoneInfo: " + op + " not watched: " + e);
++            }
++        }
++    }
++
+     /**
+      * @return The singleton instance of {@link SubscriptionManagerService}.
+      */
+@@ -3403,6 +3467,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getSlotIndex(int subId) {
++        // The subscription's slot is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getSlotIndex", null)) {
++            return SubscriptionManager.INVALID_SIM_SLOT_INDEX;
++        }
+         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
+             subId = getDefaultSubId();
+         }
+@@ -3428,6 +3496,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getSubId(int slotIndex) {
++        // The slot's subscription id is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getSubId", null)) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         if (slotIndex == SubscriptionManager.DEFAULT_SIM_SLOT_INDEX) {
+             slotIndex = getSlotIndex(getDefaultSubId());
+         }
+@@ -3533,6 +3605,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+         enforceTelephonyFeatureWithException(getCurrentPackageName(),
+                 "getDefaultSubIdAsUser");
+ 
++        // The default subscription is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getDefaultSubId", "getDefaultSubIdAsUser")) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         return getDefaultAsUser(userId, mDefaultSubId.get());
+     }
+ 
+@@ -3566,6 +3642,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getPhoneId(int subId) {
++        // The subscription's slot is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getPhoneId", null)) {
++            return SubscriptionManager.INVALID_PHONE_INDEX;
++        }
+         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
+             subId = getDefaultSubId();
+         }
+@@ -3590,6 +3670,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getDefaultDataSubId() {
++        // The default data subscription is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getDefaultDataSubId", null)) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         return mDefaultDataSubId.get();
+     }
+ 
+@@ -3663,6 +3747,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getDefaultVoiceSubIdAsUser(@UserIdInt int userId) {
++        // The default voice subscription is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getDefaultVoiceSubId", "getDefaultVoiceSubIdAsUser")) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         return getDefaultAsUser(userId, mDefaultVoiceSubId.get());
+     }
+ 
+@@ -3725,6 +3813,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getDefaultSmsSubIdAsUser(@UserIdInt int userId) {
++        // The default SMS subscription is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getDefaultSmsSubId", "getDefaultSmsSubIdAsUser")) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         return getDefaultAsUser(userId, mDefaultSmsSubId.get());
+     }
+ 
+@@ -4096,6 +4188,10 @@ public class SubscriptionManagerService extends ISub.Stub {
+      */
+     @Override
+     public int getActiveDataSubscriptionId() {
++        // The active data subscription is the phone info permission's.
++        if (lujarchRefusesPhoneInfo("getActiveDataSubscriptionId", null)) {
++            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
++        }
+         final long token = Binder.clearCallingIdentity();
+         try {
+             PhoneSwitcher phoneSwitcher = PhoneSwitcher.getInstance();

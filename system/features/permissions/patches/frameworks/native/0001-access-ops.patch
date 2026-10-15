@@ -1,0 +1,22 @@
+diff --git a/libs/permission/include/binder/AppOpsManager.h b/libs/permission/include/binder/AppOpsManager.h
+index 94735f801421b8043077d0781d98b630b338048e..66121f5db3257900432e0c30602dc3cff5d322c7 100644
+--- a/libs/permission/include/binder/AppOpsManager.h
++++ b/libs/permission/include/binder/AppOpsManager.h
+@@ -151,7 +151,16 @@ public:
+         // 116 - 154 omitted due to lack of use in native
+         OP_CONTROL_AUDIO = 154,
+         OP_CONTROL_AUDIO_PARTIAL = 155,
+-        _NUM_OP = 156,
++        // 156 - 178 omitted due to lack of use in native
++        OP_LUJARCH_SENSORS = 179,
++        OP_LUJARCH_INSTALLED_APPS = 180,
++        OP_LUJARCH_DEVICE_IDS = 181,
++        OP_LUJARCH_AUTOSTART = 182,
++        OP_LUJARCH_INSTALL = 183,
++        OP_LUJARCH_PHONE_INFO = 184,
++        OP_LUJARCH_NETWORK_INFO = 185,
++        OP_LUJARCH_DEVICE_INFO = 186,
++        _NUM_OP = 187,
+     };
+ 
+     enum {

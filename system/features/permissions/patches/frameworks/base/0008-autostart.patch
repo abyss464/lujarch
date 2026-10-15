@@ -1,0 +1,62 @@
+diff --git a/services/core/java/com/android/server/am/BroadcastQueueImpl.java b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+index 6ecf1d67c49b66f7ff77eb3803e1ef0c2ba1b47b..eb8a44a4c2d5f39c65753eaed7dc5ef6ac0dc740 100644
+--- a/services/core/java/com/android/server/am/BroadcastQueueImpl.java
++++ b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+@@ -74,6 +74,7 @@ import android.annotation.UptimeMillisLong;
+ import android.app.Activity;
+ import android.app.ActivityManager;
+ import android.app.AnrTypes;
++import android.app.AppOpsManager;
+ import android.app.ApplicationExitInfo;
+ import android.app.BroadcastOptions;
+ import android.app.IApplicationThread;
+@@ -1114,6 +1115,14 @@ class BroadcastQueueImpl extends BroadcastQueue {
+         final ComponentName component = activityInfo.getComponentName();
+         final boolean runInPccSandbox = activityInfo.shouldRunInPccSandbox();
+ 
++        // The app is not started for the receiver when its autostart is refused.
++        if (shouldSkipLujarchAutostart(info, r)) {
++            mRunningColdStart = null;
++            finishReceiverActiveLocked(queue, BroadcastRecord.DELIVERY_SKIPPED,
++                    "lujarch autostart");
++            return true;
++        }
++
+         queue.setActiveWasStopped(info.isStopped());
+         queue.setActiveFirstLaunch(info.isNotLaunched());
+ 
+@@ -1146,6 +1155,34 @@ class BroadcastQueueImpl extends BroadcastQueue {
+         return false;
+     }
+ 
++    /**
++     * Whether the cold start of {@code info} for {@code r} is refused by its autostart
++     * permission. Notes the op, so the refusal lands in history. Uids below 10000 always
++     * start, and a failed check allows the start (logged).
++     */
++
++    private boolean shouldSkipLujarchAutostart(@NonNull ApplicationInfo info,
++            @NonNull BroadcastRecord r) {
++        try {
++            final int uid = info.uid;
++            if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++                return false;
++            }
++            final String action = (r.intent != null) ? r.intent.getAction() : null;
++            final int mode = mService.getAppOpsManager().noteOpNoThrow(
++                    AppOpsManager.OP_LUJARCH_AUTOSTART, uid, info.packageName, null,
++                    "broadcast " + action);
++            if (mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED) {
++                Slog.w(TAG, "lujarch_autostart: skipping cold start of " + info.packageName
++                        + " (uid " + uid + ") for " + action);
++                return true;
++            }
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch_autostart check failed, allowing start", e);
++        }
++        return false;
++    }
++
+     /**
+      * Schedule the currently active broadcast on the given queue when we know
+      * the process is warm.

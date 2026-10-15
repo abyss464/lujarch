@@ -1,0 +1,882 @@
+diff --git a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
+index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..bc31de04be82d4b669831016a77e002d7aa72465 100644
+--- a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
++++ b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
+@@ -219,6 +219,7 @@ import com.android.server.accessibility.magnification.MagnificationController;
+ import com.android.server.accessibility.magnification.MagnificationProcessor;
+ import com.android.server.accessibility.magnification.MagnificationScaleProvider;
+ import com.android.server.inputmethod.InputMethodManagerInternal;
++import com.android.server.lujarch.LujarchAppList;
+ import com.android.server.pm.UserManagerInternal;
+ import com.android.server.policy.WindowManagerPolicy;
+ import com.android.server.statusbar.StatusBarManagerInternal;
+@@ -1829,6 +1830,8 @@ public class AccessibilityManagerService extends IAccessibilityManager.Stub
+                     "feedbackType=" + feedbackType + ";userId=" + userId);
+         }
+ 
++        final int resolvedUserId;
++        final List<AccessibilityServiceInfo> result;
+         synchronized (mLock) {
+             final int deviceId = mProxyManager.getFirstDeviceIdForUidLocked(
+                     Binder.getCallingUid());
+@@ -1839,7 +1842,7 @@ public class AccessibilityManagerService extends IAccessibilityManager.Stub
+             // We treat calls from a profile as if made by its parent as profiles
+             // share the accessibility state of the parent. The call below
+             // performs the current profile parent resolution.
+-            final int resolvedUserId = mSecurityPolicy
++            resolvedUserId = mSecurityPolicy
+                     .resolveCallingUserIdEnforcingPermissionsLocked(userId);
+ 
+             // The automation service can suppress other services.
+@@ -1850,7 +1853,7 @@ public class AccessibilityManagerService extends IAccessibilityManager.Stub
+ 
+             final List<AccessibilityServiceConnection> services = userState.mBoundServices;
+             final int serviceCount = services.size();
+-            final List<AccessibilityServiceInfo> result = new ArrayList<>(serviceCount);
++            result = new ArrayList<>(serviceCount);
+             for (int i = 0; i < serviceCount; ++i) {
+                 final AccessibilityServiceConnection service = services.get(i);
+                 if ((service.mFeedbackType & feedbackType) != 0
+@@ -1858,8 +1861,25 @@ public class AccessibilityManagerService extends IAccessibilityManager.Stub
+                     result.add(service.getServiceInfo());
+                 }
+             }
++        }
++        // Stock hands every enabled service to any app, which
++        // Names the apps the user enabled as accessibility services. For an app the
++        // Installed apps permission restricts, a service stays only when its package
++        // Stays in the permission's lists (LujarchAppList#hides: lenient keeps system
++        // services, strict the allow-set; both keep the app's own). Decided outside mLock.
++        final int callingUid = Binder.getCallingUid();
++        if (result.isEmpty() || Binder.getCallingPid() == OWN_PROCESS_ID
++                || UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
+             return result;
+         }
++        final int lujarchMode = LujarchAppList.mode(mContext, callingUid, null);
++        if (lujarchMode != AppOpsManager.MODE_ALLOWED) {
++            result.removeIf(info -> LujarchAppList.hides(lujarchMode,
++                    info.getComponentName() != null
++                            ? info.getComponentName().getPackageName() : null,
++                    callingUid, resolvedUserId));
++        }
++        return result;
+     }
+ 
+     @Override
+diff --git a/services/core/java/com/android/server/accounts/AccountManagerService.java b/services/core/java/com/android/server/accounts/AccountManagerService.java
+index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71abc2bdf85 100644
+--- a/services/core/java/com/android/server/accounts/AccountManagerService.java
++++ b/services/core/java/com/android/server/accounts/AccountManagerService.java
+@@ -100,6 +100,7 @@ import android.os.UserManager;
+ import android.provider.Settings;
+ import android.stats.devicepolicy.DevicePolicyEnums;
+ import android.text.TextUtils;
++import android.util.ArrayMap;
+ import android.util.EventLog;
+ import android.util.Log;
+ import android.util.Pair;
+@@ -122,6 +123,7 @@ import com.android.modules.expresslog.Histogram;
+ import com.android.server.LocalServices;
+ import com.android.server.ServiceThread;
+ import com.android.server.SystemService;
++import com.android.server.lujarch.LujarchAppList;
+ 
+ import com.google.android.collect.Lists;
+ import com.google.android.collect.Sets;
+@@ -410,6 +412,17 @@ public class AccountManagerService
+                     new OnInterestingAppOpChangedListener());
+         }
+ 
++        // Account lists follow the installed apps
++        // Permission (lujarchFilterAccounts); apps cache getAccounts() until the accounts
++        // Data changes, so a change of the permission's mode drops those caches.
++        try {
++            mAppOpsManager.startWatchingMode(AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS, null,
++                    (op, packageName) -> AccountManager.invalidateLocalAccountsDataCaches());
++        } catch (RuntimeException e) {
++            Log.w(TAG, "installed apps mode not watched; apps' cached"
++                    + " account lists follow a mode change at the next accounts change", e);
++        }
++
+         // Clear the accounts cache on permission changes.
+         // The specific permissions we care about are backed by AppOps, so just
+         // let the change events on those handle clearing any notifications.
+@@ -597,11 +610,24 @@ public class AccountManagerService
+         final long identityToken = clearCallingIdentity();
+         try {
+             UserAccounts accounts = getUserAccounts(userId);
++            // The packages that asked for or were given the
++            // Authenticator's account name apps; an authenticator the installed apps
++            // Permission restricts gets only the packages the permission's lists keep, judged
++            // on a copy of the visibility cache outside the account locks.
++            final int lujarchMode = LujarchAppList.mode(mContext, callingUid, null);
++            final Map<String, Integer> kept;
+             synchronized (accounts.dbLock) {
+                 synchronized (accounts.cacheLock) {
+-                    return getPackagesAndVisibilityForAccountLocked(account, accounts);
++                    if (lujarchMode == AppOpsManager.MODE_ALLOWED) {
++                        return getPackagesAndVisibilityForAccountLocked(account, accounts);
++                    }
++                    kept = new HashMap<>(
++                            getPackagesAndVisibilityForAccountLocked(account, accounts));
+                 }
+             }
++            kept.keySet().removeIf(packageName -> !isSpecialPackageKey(packageName)
++                    && LujarchAppList.hides(lujarchMode, packageName, callingUid, userId));
++            return kept;
+         } finally {
+             restoreCallingIdentity(identityToken);
+         }
+@@ -6229,8 +6255,14 @@ public class AccountManagerService
+         final PackageManagerInternal pmInternal =
+                 LocalServices.getService(PackageManagerInternal.class);
+         if (!CompatChanges.isChangeEnabled(ENFORCE_PACKAGE_VISIBILITY_FILTERING, callingUid)) {
++            // Below target SDK 34 stock answers whether the
++            // package is installed (account types, visibility queries); an app the
++            // Installed apps permission restricts learns only of packages the permission's
++            // Lists keep. From 34 on, package visibility below carries the permission.
+             return pmInternal.getPackageUid(
+-                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID;
++                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID
++                    && !LujarchAppList.hides(mContext, callingUid, null, targetPkgName,
++                            userId);
+         }
+         final boolean canAccess = !pmInternal.filterAppAccess(targetPkgName, callingUid, userId);
+         if (!canAccess && Log.isLoggable(TAG, Log.DEBUG)) {
+@@ -6399,12 +6431,54 @@ public class AccountManagerService
+         }
+         Map<Account, Integer> secondPass =
+                 filterSharedAccounts(accounts, firstPass, callingUid, callingPackage);
++        lujarchFilterAccounts(accounts, secondPass, callingUid, visibilityFilterPackage);
+ 
+         Account[] filtered = new Account[secondPass.size()];
+         filtered = secondPass.keySet().toArray(filtered);
+         return filtered;
+     }
+ 
++    /**
++     * An account's type names the app that authenticates it
++     * (com.whatsapp, org.telegram.messenger, ...), and account visibility lets an app see
++     * accounts no package visibility check covers (an app holding READ_CONTACTS sees every
++     * Account whose type manages contacts). For an app the installed apps permission
++     * restricts, an account stays only when its authenticator's package stays in the
++     * Permission's lists ({@link LujarchAppList#hides}: lenient keeps system authenticators,
++     * strict keeps the allow-set; both keep the app's own).
++     */
++    private void lujarchFilterAccounts(UserAccounts accounts, Map<Account, Integer> visible,
++            int callingUid, @Nullable String callingPackage) {
++        if (visible.isEmpty()
++                || UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
++            return;
++        }
++        final int mode = LujarchAppList.mode(mContext, callingUid, callingPackage);
++        if (mode == AppOpsManager.MODE_ALLOWED) {
++            return;
++        }
++        final ArrayMap<String, Boolean> hiddenTypes = new ArrayMap<>();
++        final long identity = Binder.clearCallingIdentity();
++        try {
++            visible.keySet().removeIf(account -> {
++                Boolean hidden = hiddenTypes.get(account.type);
++                if (hidden == null) {
++                    final RegisteredServicesCache.ServiceInfo<AuthenticatorDescription> info =
++                            mAuthenticatorCache.getServiceInfo(
++                                    AuthenticatorDescription.newKey(account.type),
++                                    accounts.userId);
++                    hidden = LujarchAppList.hides(mode,
++                            info != null ? info.componentName.getPackageName() : null,
++                            callingUid, accounts.userId);
++                    hiddenTypes.put(account.type, hidden);
++                }
++                return hidden;
++            });
++        } finally {
++            Binder.restoreCallingIdentity(identity);
++        }
++    }
++
+     @NonNull
+     private Map<Account, Integer> filterSharedAccounts(UserAccounts userAccounts,
+             @NonNull Map<Account, Integer> unfiltered, int callingUid,
+diff --git a/services/core/java/com/android/server/lujarch/LujarchAppList.java b/services/core/java/com/android/server/lujarch/LujarchAppList.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..69ec1ce90c21c2d058ecc3dcf10c1e1276030a33
+--- /dev/null
++++ b/services/core/java/com/android/server/lujarch/LujarchAppList.java
+@@ -0,0 +1,127 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.lujarch;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManagerInternal;
++import android.os.Process;
++import android.os.UserHandle;
++import android.util.Slog;
++
++import com.android.internal.app.LujarchInfo;
++import com.android.server.LocalServices;
++import com.android.server.pm.pkg.PackageStateInternal;
++
++/**
++ * The installed apps permission
++ * ({@link AppOpsManager#OPSTR_LUJARCH_INSTALLED_APPS}) over lists system services build
++ * from other apps' components and hand to any app: accounts and account types
++ * (AccountManagerService), the enabled accessibility services
++ * (AccessibilityManagerService). , "Into
++ * Existing permissions".
++ *
++ * <p>Package visibility (AppsFilter) carries the permission's two levels, so an entry is
++ * judged as package visibility judges its owner, with what stock lists show regardless
++ * of visibility kept where the level keeps it:
++ * <ul>
++ * <li>allowed: stock;</li>
++ * <li>ignored (lenient): the entries of system packages stay; an entry of an app the
++ * owner installed stays only when package visibility shows that app to the caller (the
++ * Permission's allow-set, an interaction);</li>
++ * <li>errored (strict): an entry stays only when package visibility shows its owner to
++ * the caller, which at this level is the allow-set alone.</li>
++ * </ul>
++ * At both levels the caller's own entries and those of packages with a uid below 10000
++ * stay, as package visibility shows them.
++ */
++public final class LujarchAppList {
++
++    private static final String TAG = "LujarchAppList";
++
++    private LujarchAppList() {
++    }
++
++    /**
++     * The permission's level for this read of a list: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (lenient) or {@link AppOpsManager#MODE_ERRORED}
++     * (strict). Notes the op as {@link LujarchInfo#decide} does (at most once a minute per
++     * uid while the mode is unchanged). uid below 10000: allowed. Never throws.
++     */
++    public static int mode(@NonNull Context context, int callingUid,
++            @Nullable String callingPackage) {
++        if (UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        final int mode = LujarchInfo.decide(context, AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS,
++                callingUid, callingPackage, null);
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            return AppOpsManager.MODE_ERRORED;
++        }
++        return mode == AppOpsManager.MODE_ALLOWED ? AppOpsManager.MODE_ALLOWED
++                : AppOpsManager.MODE_IGNORED;
++    }
++
++    /**
++     * Whether the entry owned by {@code targetPackage} is left out of a list for the
++     * caller at {@code mode} (from {@link #mode}). An entry without a known owner is left
++     * out at a restricting level. A failed lookup keeps the entry (logged).
++     */
++    public static boolean hides(int mode, @Nullable String targetPackage, int callingUid,
++            int userId) {
++        if (mode == AppOpsManager.MODE_ALLOWED) {
++            return false;
++        }
++        if (targetPackage == null) {
++            return true;
++        }
++        try {
++            final PackageManagerInternal pmi =
++                    LocalServices.getService(PackageManagerInternal.class);
++            final PackageStateInternal target = pmi.getPackageStateInternal(targetPackage);
++            if (target == null) {
++                return true;
++            }
++            final int targetAppId = target.getAppId();
++            if (targetAppId == UserHandle.getAppId(callingUid)
++                    || targetAppId < Process.FIRST_APPLICATION_UID) {
++                return false;
++            }
++            if (mode == AppOpsManager.MODE_IGNORED && target.isSystem()) {
++                return false;
++            }
++            return pmi.filterAppAccess(targetPackage, callingUid, userId);
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "installed apps: " + targetPackage + " for uid " + callingUid
++                    + " not judged; kept", e);
++            return false;
++        }
++    }
++
++    /**
++     * {@link #hides} at the caller's level ({@link #mode}), for a single entry; the
++     * caller's level is decided (and noted) for each call.
++     */
++    public static boolean hides(@NonNull Context context, int callingUid,
++            @Nullable String callingPackage, @Nullable String targetPackage, int userId) {
++        final int mode = mode(context, callingUid, callingPackage);
++        return mode != AppOpsManager.MODE_ALLOWED
++                && hides(mode, targetPackage, callingUid, userId);
++    }
++}
+diff --git a/services/core/java/com/android/server/pm/AppsFilterBase.java b/services/core/java/com/android/server/pm/AppsFilterBase.java
+index 32795d030d8703f0253fdef1a8912d3a9677732e..1b287338b233970ee61557b9f5ab4fdc277842fe 100644
+--- a/services/core/java/com/android/server/pm/AppsFilterBase.java
++++ b/services/core/java/com/android/server/pm/AppsFilterBase.java
+@@ -24,10 +24,21 @@ import static com.android.server.pm.AppsFilterUtils.requestsQueryAllPackages;
+ 
+ import android.annotation.NonNull;
+ import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.app.ApplicationPackageManager;
++import android.content.ComponentName;
++import android.content.Context;
++import android.content.Intent;
++import android.content.pm.PackageManager;
++import android.content.pm.ResolveInfo;
++import android.content.pm.PackageManagerInternal;
+ import android.content.pm.SigningDetails;
+ import android.os.Binder;
+ import android.os.Handler;
+ import android.os.Process;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.os.SystemClock;
+ import android.os.Trace;
+ import android.os.UserHandle;
+ import android.text.TextUtils;
+@@ -35,9 +46,16 @@ import android.util.ArrayMap;
+ import android.util.ArraySet;
+ import android.util.Slog;
+ import android.util.SparseArray;
++import android.util.SparseIntArray;
++import android.view.inputmethod.InputMethodInfo;
++import android.webkit.IWebViewUpdateService;
++import android.webkit.WebViewProviderInfo;
+ 
++import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.util.function.QuadFunction;
++import com.android.server.LocalServices;
++import com.android.server.inputmethod.InputMethodManagerInternal;
+ import com.android.server.om.OverlayReferenceMapper;
+ import com.android.server.pm.pkg.AndroidPackage;
+ import com.android.server.pm.pkg.PackageStateInternal;
+@@ -52,8 +70,10 @@ import com.android.server.utils.WatchedSparseSetArray;
+ 
+ import java.io.PrintWriter;
+ import java.util.Arrays;
++import java.util.List;
+ import java.util.Objects;
+ import java.util.concurrent.atomic.AtomicBoolean;
++import java.util.concurrent.atomic.AtomicLongArray;
+ 
+ /**
+  * AppsFilter is the entity responsible for filtering visibility between apps based on declarations
+@@ -73,6 +93,433 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+     // With each new rebuild the delay doubles until it reaches max delay.
+     protected static final int CACHE_REBUILD_DELAY_MAX_MS = 10000;
+ 
++    // OP_LUJARCH_INSTALLED_APPS enforcement state.
++    // shouldFilterApplication is extremely hot and is invoked on both the live
++    // filter and read-only snapshots, so this state is static (AppOps modes are
++    // global, not per-snapshot) and never queries AppOps inline. The per-uid
++    // mode is cached and kept current by an AppOps mode watcher plus a boot-time
++    // seed; only non-default modes are stored, so an unrestricted uid resolves
++    // to MODE_ALLOWED (stock behaviour) with a single SparseIntArray lookup.
++    // Copy-on-write: writers (rare: boot seed, mode change) clone under the
++    // lock and publish a new array; the hot path reads the volatile reference
++    // without locking, so shouldFilterApplication never contends on a lock.
++    private static final Object sLujarchLock = new Object();
++    @GuardedBy("sLujarchLock")
++    private static volatile SparseIntArray sLujarchQueryModes = new SparseIntArray();
++    // Sorted appIds a restricted caller may always see, besides itself and core
++    // uids (< FIRST_APPLICATION_UID, handled earlier in shouldFilterApplication):
++    // GmsCore/GSF (many apps call Play services APIs), the WebView providers
++    // (the current one is among them), the default launcher and the enabled
++    // IMEs. Published as a
++    // volatile immutable array so the hot path reads it without locking; it is
++    // recomputed only off the hot path (boot, mode change and a TTL refresh).
++    private static volatile int[] sLujarchAllowedAppIds = new int[0];
++    private static volatile long sLujarchAllowedRefreshedAt = 0;
++    private static final long LUJARCH_ALLOWED_TTL_MS = 60_000;
++    private static final String[] LUJARCH_ALLOWED_FIXED_PACKAGES = {
++            "com.google.android.gms",   // GmsCore
++            "com.google.android.gsf",   // Google Services Framework
++    };
++    @Nullable
++    private static volatile Context sLujarchContext;
++    @Nullable
++    private static volatile Handler sLujarchHandler;
++    // Last uptime (ms) OP_LUJARCH_INSTALLED_APPS was noted per app id. An app's
++    // own visibility checks of other apps are noted at most once per
++    // LUJARCH_NOTE_INTERVAL_MS (the history's one-minute bucket, so no timeline
++    // detail is lost), with no lock or allocation on the hot path.
++    private static final AtomicLongArray sLujarchLastNotedAt = new AtomicLongArray(
++            Process.LAST_APPLICATION_UID - Process.FIRST_APPLICATION_UID + 1);
++    private static final long LUJARCH_NOTE_INTERVAL_MS = 60_000;
++    // Last wall-clock time (ms) the permission hid a package from an app's own
++    // visibility check, per app id, unthrottled: the note above keeps at most one
++    // rejection a minute, while the crash notice (am/LujarchCrashNotice) needs the
++    // moment of the refusal. One store per hidden check, no lock or allocation.
++    private static final AtomicLongArray sLujarchLastHiddenAt = new AtomicLongArray(
++            Process.LAST_APPLICATION_UID - Process.FIRST_APPLICATION_UID + 1);
++
++    /**
++     * Store the system context and handler used to
++     * reach AppOps and to run the off-hot-path allow-set refresh. Called from
++     * {@link AppsFilterImpl#create}.
++     */
++    protected static void lujarchSetContext(@Nullable Context context, @Nullable Handler handler) {
++        sLujarchContext = context;
++        sLujarchHandler = handler;
++    }
++
++    /**
++     * The effective OP_LUJARCH_INSTALLED_APPS mode
++     * for a calling uid. Absent from the cache means the default MODE_ALLOWED,
++     * so only uids the user restricted are enforced. Reads cached state only.
++     */
++    protected int getLujarchQueryMode(int callingUid) {
++        // Lock-free volatile read; the referenced array is never mutated in
++        // place, only replaced by a writer (copy-on-write).
++        return sLujarchQueryModes.get(callingUid, AppOpsManager.MODE_ALLOWED);
++    }
++
++    /**
++     * Whether a restricted caller may always see the
++     * given target appId (the minimal set it needs to run). Reads the volatile
++     * snapshot without locking and triggers an off-hot-path refresh when stale.
++     */
++    protected boolean isLujarchQueryAllowedTarget(int targetAppId) {
++        final int[] allowed = sLujarchAllowedAppIds;
++        final boolean found = Arrays.binarySearch(allowed, targetAppId) >= 0;
++        final long now = SystemClock.uptimeMillis();
++        if (now - sLujarchAllowedRefreshedAt > LUJARCH_ALLOWED_TTL_MS) {
++            final Handler h = sLujarchHandler;
++            if (h != null) {
++                // Debounce: bump the timestamp now so only one refresh is posted.
++                sLujarchAllowedRefreshedAt = now;
++                h.post(AppsFilterBase::refreshLujarchAllowedAppIds);
++            }
++        }
++        return found;
++    }
++
++    // Outcomes of lujarchQueryDecision.
++    private static final int LUJARCH_QUERY_VISIBLE = 0;
++    private static final int LUJARCH_QUERY_HIDDEN = 1;
++    private static final int LUJARCH_QUERY_STOCK = 2;
++
++    /**
++     * What a caller restricted on
++     * OP_LUJARCH_INSTALLED_APPS sees of the target. At both levels the
++     * allow-set (GmsCore, GSF, the WebView providers, the default launcher, the
++     * enabled input methods) is visible.
++     * <ul>
++     * <li>MODE_ERRORED (strict): nothing else is; this overrides
++     * {@code <queries>}, QUERY_ALL_PACKAGES, force-queryable packages and
++     * implicit access.</li>
++     * <li>MODE_IGNORED (lenient): the apps the user installed are hidden. For a
++     * system package stock visibility decides ({@link #LUJARCH_QUERY_STOCK}),
++     * so force-queryable system packages, the content providers with app uids
++     * among them, stay reachable. A user-installed app is visible only through
++     * an interaction (implicit access, e.g. an app that shared content with the
++     * caller) or a shared library the caller uses.</li>
++     * </ul>
++     */
++    private int lujarchQueryDecision(int mode, int callingUid, int callingAppId,
++            PackageStateInternal targetPkgSetting, int userId) {
++        final int targetAppId = targetPkgSetting.getAppId();
++        if (isLujarchQueryAllowedTarget(targetAppId)) {
++            return LUJARCH_QUERY_VISIBLE;
++        }
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            return LUJARCH_QUERY_HIDDEN;
++        }
++        if (targetPkgSetting.isSystem()) {
++            return LUJARCH_QUERY_STOCK;
++        }
++        final int targetUid = UserHandle.getUid(userId, targetAppId);
++        return isImplicitlyQueryable(callingUid, targetUid)
++                || isRetainedImplicitlyQueryable(callingUid, targetUid)
++                || isQueryableViaUsesLibrary(callingAppId, targetAppId)
++                ? LUJARCH_QUERY_VISIBLE : LUJARCH_QUERY_HIDDEN;
++    }
++
++    /**
++     * Note OP_LUJARCH_INSTALLED_APPS for an app's own
++     * visibility check of another app, at most once per interval per app, so the
++     * access lands in history (as an access when allowed, a rejection when
++     * ignored or errored). Checks evaluated by the system on an app's behalf
++     * (the binder caller is not the app, e.g. visibility lists built at install)
++     * are not the app's queries and are not noted. The note itself runs on the
++     * handler, off the hot path.
++     */
++    protected void maybeNoteLujarchQuery(int callingUid) {
++        if (Binder.getCallingUid() != callingUid) {
++            return;
++        }
++        final int idx = UserHandle.getAppId(callingUid) - Process.FIRST_APPLICATION_UID;
++        if (idx < 0 || idx >= sLujarchLastNotedAt.length()) {
++            return;
++        }
++        final long now = SystemClock.uptimeMillis();
++        final long last = sLujarchLastNotedAt.get(idx);
++        if (last != 0 && now - last < LUJARCH_NOTE_INTERVAL_MS) {
++            return;
++        }
++        if (!sLujarchLastNotedAt.compareAndSet(idx, last, now)) {
++            return;
++        }
++        final Handler h = sLujarchHandler;
++        if (h != null) {
++            h.post(() -> noteLujarchQuery(callingUid));
++        }
++    }
++
++    /**
++     * The permission hid a package from an app's own visibility
++     * check (the binder caller is the app, as for the note); records when.
++     */
++    private static void noteLujarchHidden(int callingUid) {
++        if (Binder.getCallingUid() != callingUid) {
++            return;
++        }
++        final int idx = UserHandle.getAppId(callingUid) - Process.FIRST_APPLICATION_UID;
++        if (idx >= 0 && idx < sLujarchLastHiddenAt.length()) {
++            sLujarchLastHiddenAt.lazySet(idx, System.currentTimeMillis());
++        }
++    }
++
++    /**
++     * The wall-clock time (ms) OP_LUJARCH_INSTALLED_APPS last
++     * hid a package from the app with this uid's own visibility check, or 0. Per app id:
++     * The permission's mode is per uid and user 0 is the one the user uses.
++     */
++    public static long lujarchLastHiddenAt(int uid) {
++        final int idx = UserHandle.getAppId(uid) - Process.FIRST_APPLICATION_UID;
++        return idx >= 0 && idx < sLujarchLastHiddenAt.length() ? sLujarchLastHiddenAt.get(idx) : 0;
++    }
++
++    private static void noteLujarchQuery(int uid) {
++        final Context context = sLujarchContext;
++        if (context == null) {
++            return;
++        }
++        try {
++            final String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (pkgs == null || pkgs.length == 0 || appOps == null) {
++                return;
++            }
++            appOps.noteOpNoThrow(AppOpsManager.OP_LUJARCH_INSTALLED_APPS, uid, pkgs[0], null,
++                    "package visibility");
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch query_packages note failed for uid " + uid, e);
++        }
++    }
++
++    /**
++     * Seed the installed apps mode cache from AppOps
++     * and start watching for mode changes. Any failure leaves the cache empty,
++     * i.e. nothing is enforced (fail open). Runs at system-ready.
++     */
++    protected static void lujarchOnSystemReady() {
++        final Context context = sLujarchContext;
++        if (context == null) {
++            return;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return;
++            }
++            // Watch every package's mode; null package means "all packages".
++            appOps.startWatchingMode(AppOpsManager.OP_LUJARCH_INSTALLED_APPS, null,
++                    new AppOpsManager.OnOpChangedListener() {
++                        @Override
++                        public void onOpChanged(@NonNull String op, @NonNull String packageName) {
++                            refreshLujarchQueryMode(packageName, UserHandle.USER_SYSTEM);
++                        }
++
++                        @Override
++                        public void onOpChanged(@NonNull String op, @NonNull String packageName,
++                                int userId) {
++                            refreshLujarchQueryMode(packageName, userId);
++                        }
++                    });
++            // Seed: only packages with a non-default mode need to be cached.
++            // Build a fresh map and publish it once (copy-on-write).
++            final List<AppOpsManager.PackageOps> pkgOps = appOps.getPackagesForOps(
++                    new String[]{AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS});
++            if (pkgOps != null) {
++                final SparseIntArray next = new SparseIntArray();
++                for (int i = 0; i < pkgOps.size(); i++) {
++                    final AppOpsManager.PackageOps po = pkgOps.get(i);
++                    final List<AppOpsManager.OpEntry> ops = po.getOps();
++                    for (int j = 0; j < ops.size(); j++) {
++                        final AppOpsManager.OpEntry e = ops.get(j);
++                        if (e.getOp() == AppOpsManager.OP_LUJARCH_INSTALLED_APPS
++                                && e.getMode() != AppOpsManager.MODE_ALLOWED
++                                && e.getMode() != AppOpsManager.MODE_DEFAULT) {
++                            next.put(po.getUid(), e.getMode());
++                        }
++                    }
++                }
++                synchronized (sLujarchLock) {
++                    sLujarchQueryModes = next;
++                }
++            }
++            refreshLujarchAllowedAppIds();
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch query_packages init failed; not enforcing", e);
++        }
++    }
++
++    private static void refreshLujarchQueryMode(String packageName, int userId) {
++        final Context context = sLujarchContext;
++        if (context == null || packageName == null) {
++            return;
++        }
++        try {
++            final PackageManagerInternal pmi =
++                    LocalServices.getService(PackageManagerInternal.class);
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (pmi == null || appOps == null) {
++                return;
++            }
++            final int uid = pmi.getPackageUid(packageName, 0, userId);
++            if (uid < 0) {
++                return;
++            }
++            final int mode = appOps.unsafeCheckOpNoThrow(
++                    AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS, uid, packageName);
++            final boolean changed;
++            synchronized (sLujarchLock) {
++                final int old = sLujarchQueryModes.get(uid, AppOpsManager.MODE_ALLOWED);
++                final int oldEff = (old == AppOpsManager.MODE_DEFAULT)
++                        ? AppOpsManager.MODE_ALLOWED : old;
++                final int newEff = (mode == AppOpsManager.MODE_DEFAULT)
++                        ? AppOpsManager.MODE_ALLOWED : mode;
++                changed = oldEff != newEff;
++                if (changed) {
++                    setLujarchModeLocked(uid, mode);
++                }
++            }
++            if (changed) {
++                // Visibility changed for this caller; drop the memoized package
++                // query results so the new mode takes effect immediately.
++                final int reason = PackageMetrics.INVALIDATION_REASON_APP_FILTER_CHANGE;
++                PackageManagerService.invalidatePackageInfoCache(reason);
++                PackageManagerService.invalidateGetPackagesForUidCache(reason);
++                ApplicationPackageManager.invalidateQueryIntentActivitiesCache();
++                AppOpsManager.invalidateCheckPackageCache();
++                refreshLujarchAllowedAppIds();
++            }
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch query_packages mode refresh failed for " + packageName, e);
++        }
++    }
++
++    @GuardedBy("sLujarchLock")
++    private static void setLujarchModeLocked(int uid, int mode) {
++        // Copy-on-write: clone, apply, publish. Store only non-default modes so
++        // an unrestricted uid stays absent and reads MODE_ALLOWED.
++        final SparseIntArray next = sLujarchQueryModes.clone();
++        if (mode == AppOpsManager.MODE_ALLOWED || mode == AppOpsManager.MODE_DEFAULT) {
++            next.delete(uid);
++        } else {
++            next.put(uid, mode);
++        }
++        sLujarchQueryModes = next;
++    }
++
++    /**
++     * Recompute the sorted allow-set of appIds a
++     * restricted caller may always see. Runs off the hot path. Each member is
++     * resolved defensively; a member that cannot be resolved is simply omitted.
++     */
++    private static void refreshLujarchAllowedAppIds() {
++        final Context context = sLujarchContext;
++        if (context == null) {
++            return;
++        }
++        final ArraySet<Integer> appIds = new ArraySet<>();
++        final PackageManagerInternal pmi = LocalServices.getService(PackageManagerInternal.class);
++        if (pmi == null) {
++            return;
++        }
++        final int userId = UserHandle.USER_SYSTEM;
++        // Fixed members: GmsCore and GSF.
++        for (String pkg : LUJARCH_ALLOWED_FIXED_PACKAGES) {
++            addLujarchAppId(appIds, pmi, pkg, userId);
++        }
++        // WebView providers: every package the system may pick as the provider
++        // (config_webview_packages); the current one is always among them. Read
++        // from the in-process webviewupdate service: WebViewUpdateManager has no
++        // instance in system_server (getInstance throws and logs a WTF), and
++        // getCurrentWebViewPackage would grant the caller implicit access. The
++        // configured list is static, so it is complete at system-ready, before
++        // WebView preparation picks the current provider.
++        try {
++            final IWebViewUpdateService webViewUpdate = IWebViewUpdateService.Stub.asInterface(
++                    ServiceManager.getService(Context.WEBVIEW_UPDATE_SERVICE));
++            final WebViewProviderInfo[] providers =
++                    webViewUpdate != null ? webViewUpdate.getAllWebViewPackages() : null;
++            if (providers != null) {
++                for (WebViewProviderInfo provider : providers) {
++                    addLujarchAppId(appIds, pmi, provider.packageName, userId);
++                }
++            } else {
++                Slog.w(TAG, "lujarch: no WebView providers known");
++            }
++        } catch (RemoteException | RuntimeException e) {
++            Slog.w(TAG, "lujarch: could not resolve the WebView providers", e);
++        }
++        // Default launcher / home. The default comes from the home role, which
++        // the role service knows for a user only after the user's first unlock;
++        // until then getDefaultHomeActivity falls back to a direct-boot-aware
++        // home in a core uid (Settings' FallbackHome), and the launcher would be
++        // missing until a later refresh. Without a default home in an app uid,
++        // every installed home app counts, found whatever the lock state.
++        try {
++            final ComponentName home = pmi.getDefaultHomeActivity(userId);
++            final int homeUid = home == null ? -1
++                    : pmi.getPackageUid(home.getPackageName(), 0, userId);
++            if (home != null && UserHandle.getAppId(homeUid) >= Process.FIRST_APPLICATION_UID) {
++                addLujarchAppId(appIds, pmi, home.getPackageName(), userId);
++            } else {
++                final Intent homeIntent = new Intent(Intent.ACTION_MAIN)
++                        .addCategory(Intent.CATEGORY_HOME);
++                final List<ResolveInfo> homes = pmi.queryIntentActivities(homeIntent, null,
++                        PackageManager.MATCH_DIRECT_BOOT_AWARE
++                                | PackageManager.MATCH_DIRECT_BOOT_UNAWARE,
++                        Process.SYSTEM_UID, userId);
++                if (homes != null) {
++                    for (int i = 0; i < homes.size(); i++) {
++                        final ResolveInfo ri = homes.get(i);
++                        if (ri.activityInfo != null) {
++                            addLujarchAppId(appIds, pmi, ri.activityInfo.packageName, userId);
++                        }
++                    }
++                }
++            }
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch: could not resolve default launcher", e);
++        }
++        // Enabled input methods (the current IME is always among them).
++        try {
++            final InputMethodManagerInternal imm =
++                    LocalServices.getService(InputMethodManagerInternal.class);
++            if (imm != null) {
++                final List<InputMethodInfo> imes = imm.getEnabledInputMethodListAsUser(userId);
++                if (imes != null) {
++                    for (int i = 0; i < imes.size(); i++) {
++                        addLujarchAppId(appIds, pmi, imes.get(i).getPackageName(), userId);
++                    }
++                }
++            }
++        } catch (Exception e) {
++            Slog.w(TAG, "lujarch: could not resolve enabled IMEs", e);
++        }
++        final int[] sorted = new int[appIds.size()];
++        for (int i = 0; i < sorted.length; i++) {
++            sorted[i] = appIds.valueAt(i);
++        }
++        Arrays.sort(sorted);
++        sLujarchAllowedAppIds = sorted;
++        sLujarchAllowedRefreshedAt = SystemClock.uptimeMillis();
++    }
++
++    private static void addLujarchAppId(ArraySet<Integer> out, PackageManagerInternal pmi,
++            String packageName, int userId) {
++        if (packageName == null) {
++            return;
++        }
++        try {
++            final int uid = pmi.getPackageUid(packageName, 0, userId);
++            if (uid >= 0) {
++                out.add(UserHandle.getAppId(uid));
++            }
++        } catch (Exception e) {
++            // Package not installed for this user; omit it.
++        }
++    }
++
+     /**
+      * This contains a list of app UIDs that are implicitly queryable because another app explicitly
+      * interacted with it. For example, if application A starts a service in application B,
+@@ -364,6 +811,35 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+                 // if the caller is pcc uid, use the visibility of its app uid
+                 callingUid = UserHandle.getUid(userId, packageSetting.getAppId());
+             }
++            // OP_LUJARCH_INSTALLED_APPS, two levels.
++            // Both callingAppId and targetAppId are regular app uids here and
++            // differ; the caller always sees itself and core uids (above).
++            // Reads only cached state, no AppOps call.
++            maybeNoteLujarchQuery(callingUid);
++            final int lujarchQueryMode = getLujarchQueryMode(callingUid);
++            if (lujarchQueryMode == AppOpsManager.MODE_IGNORED
++                    || lujarchQueryMode == AppOpsManager.MODE_ERRORED) {
++                final AndroidPackage lujarchTargetPkg = targetPkgSetting.getPkg();
++                // Static shared libraries are not apps: stock never filters them
++                // here (library visibility is enforced at a higher level), so
++                // they fall through to the stock logic below.
++                if (lujarchTargetPkg == null || !lujarchTargetPkg.isStaticSharedLibrary()) {
++                    final int lujarchDecision = lujarchQueryDecision(lujarchQueryMode,
++                            callingUid, callingAppId, targetPkgSetting, userId);
++                    if (lujarchDecision == LUJARCH_QUERY_VISIBLE) {
++                        return false;
++                    }
++                    if (lujarchDecision == LUJARCH_QUERY_HIDDEN) {
++                        noteLujarchHidden(callingUid);
++                        if (DEBUG_LOGGING || mFeatureConfig.isLoggingEnabled(callingAppId)) {
++                            log(callingSetting, targetPkgSetting,
++                                    "BLOCKED (lujarch query_packages)");
++                        }
++                        return !DEBUG_ALLOW_ALL;
++                    }
++                    // LUJARCH_QUERY_STOCK: stock visibility decides below.
++                }
++            }
+             // use cache
+             if (mCacheReady && mCacheEnabled) {
+                 if (!shouldFilterApplicationUsingCache(callingUid,
+diff --git a/services/core/java/com/android/server/pm/AppsFilterImpl.java b/services/core/java/com/android/server/pm/AppsFilterImpl.java
+index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..1835ae69748fcc41be45cae1843054a4a0eb6551 100644
+--- a/services/core/java/com/android/server/pm/AppsFilterImpl.java
++++ b/services/core/java/com/android/server/pm/AppsFilterImpl.java
+@@ -450,6 +450,9 @@ public final class AppsFilterImpl extends AppsFilterLocked implements Watchable,
+         AppsFilterImpl appsFilter = new AppsFilterImpl(featureConfig,
+                 forcedQueryablePackageNames, forceSystemAppsQueryable, null,
+                 injector.getHandler());
++        // Keep the system context and handler to
++        // Reach AppOpsManager for the installed apps permission (see onSystemReady).
++        lujarchSetContext(injector.getContext(), injector.getHandler());
+         featureConfig.setAppsFilter(appsFilter);
+         return appsFilter;
+     }
+@@ -503,6 +506,10 @@ public final class AppsFilterImpl extends AppsFilterLocked implements Watchable,
+ 
+         updateEntireShouldFilterCacheAsync(pmInternal,
+                 PACKAGE_MANAGER_APPS_FILTER_CACHE_BUILD_REPORTED__EVENT_TYPE__BOOT);
++
++        // Seed the installed apps mode cache and
++        // start watching for mode changes now that AppOps is available.
++        lujarchOnSystemReady();
+     }
+ 
+     /**

@@ -1,0 +1,546 @@
+diff --git a/packages/SettingsProvider/src/com/android/providers/settings/LujarchSettingsPermissions.java b/packages/SettingsProvider/src/com/android/providers/settings/LujarchSettingsPermissions.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..04f82cfcbb52989bba60f7c794a10803d4695ec7
+--- /dev/null
++++ b/packages/SettingsProvider/src/com/android/providers/settings/LujarchSettingsPermissions.java
+@@ -0,0 +1,304 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.providers.settings;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.ApplicationInfo;
++import android.content.pm.IPackageManager;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.RemoteException;
++import android.os.UserHandle;
++import android.util.ArrayMap;
++import android.util.ArraySet;
++import android.util.Slog;
++
++import com.android.internal.app.LujarchInfo;
++
++/**
++ * The settings keys Lujarch's permissions cover. An app's read of a key is answered as the
++ * key's permission decides for that app:
++ * <ul>
++ * <li>basic phone info, network info and device info: {@code null} unless allowed;
++ * Lujarch's own keys (any name starting with {@link #LUJARCH_PREFIX}, in every table) are
++ * device info;</li>
++ * <li>device identifiers (Secure {@code android_id}, the app's SSAID):
++ * {@link #EMPTY_ANDROID_ID} unless allowed;</li>
++ * <li>installed apps (keys naming other apps' components): the entries of packages the
++ * choice leaves out are dropped, in the value's own format.</li>
++ * </ul>
++ * SettingsProvider runs in system_server, so a read of any other key costs one map lookup
++ * and a prefix check.
++ */
++final class LujarchSettingsPermissions {
++
++    private static final String TAG = "lujarch_permissions";
++
++    /** What an app reads for android_id while its device identifiers permission refuses. */
++    static final String EMPTY_ANDROID_ID = "0000000000000000";
++
++    private static final String LUJARCH_PREFIX = "lujarch_";
++
++    private static final String OP_DEVICE_IDS = AppOpsManager.OPSTR_LUJARCH_DEVICE_IDS;
++    private static final String OP_INSTALLED_APPS = AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS;
++
++    /** Ops a whole-table read decides, per table (the tables' keys below). */
++    private static final String[] GLOBAL_OPS =
++            {LujarchInfo.PHONE, LujarchInfo.NETWORK, LujarchInfo.DEVICE};
++    private static final String[] SECURE_OPS =
++            {LujarchInfo.DEVICE, OP_DEVICE_IDS, OP_INSTALLED_APPS};
++    private static final String[] SYSTEM_OPS = {LujarchInfo.DEVICE};
++
++    /** Key name to the op of its permission. */
++    private static final ArrayMap<String, String> sKeyOps = new ArrayMap<>();
++    /** Keys telephony also keeps per subscription, as the name followed by the id. */
++    private static final ArraySet<String> sPerSubscriptionKeys = new ArraySet<>();
++    /** Installed-app list keys that hold one component or package (null once it is left out). */
++    private static final ArraySet<String> sSingleEntryKeys = new ArraySet<>();
++
++    static {
++        // Phone info (Global).
++        put(LujarchInfo.PHONE, "mobile_data", "data_roaming", "preferred_network_mode",
++                "enable_cellular_on_boot", "multi_sim_voice_call", "multi_sim_voice_prompt",
++                "multi_sim_sms", "multi_sim_sms_prompt", "multi_sim_data_call");
++        sPerSubscriptionKeys.add("mobile_data");
++        sPerSubscriptionKeys.add("data_roaming");
++        sPerSubscriptionKeys.add("preferred_network_mode");
++        // Network info (Global). The proxy's exclusion list and PAC URL belong with its host
++        // and port.
++        put(LujarchInfo.NETWORK, "airplane_mode_on", "wifi_on", "bluetooth_on",
++                "private_dns_mode", "private_dns_specifier", "http_proxy",
++                "global_http_proxy_host", "global_http_proxy_port",
++                "global_http_proxy_exclusion_list", "global_proxy_pac_url");
++        // Device info (Global, then Secure).
++        put(LujarchInfo.DEVICE, "device_name", "boot_count", "adb_enabled", "adb_wifi_enabled",
++                "development_settings_enabled", "usb_mass_storage_enabled",
++                "lock_screen_owner_info", "bluetooth_name", "bluetooth_address");
++        // Device identifiers (Secure): the SSAID as the app reads it.
++        put(OP_DEVICE_IDS, "android_id");
++        // Installed apps (Secure): keys naming the apps the user enabled for a role or
++        // service. Lists are ':'-separated; an entry is a component ("pkg/cls"), an input
++        // method id with its subtypes ("pkg/cls;subtype;subtype") or a package.
++        put(OP_INSTALLED_APPS, "default_input_method", "enabled_input_methods",
++                "disabled_system_input_methods", "enabled_accessibility_services",
++                "enabled_notification_listeners", "autofill_service", "credential_service",
++                "credential_service_primary", "voice_interaction_service",
++                "voice_recognition_service", "assistant", "selected_spell_checker",
++                "sms_default_application", "dialer_default_application",
++                "enabled_vr_listeners");
++        for (String key : new String[] {"default_input_method", "autofill_service",
++                "voice_interaction_service", "voice_recognition_service", "assistant",
++                "selected_spell_checker", "sms_default_application",
++                "dialer_default_application"}) {
++            sSingleEntryKeys.add(key);
++        }
++    }
++
++    private static void put(String op, String... keys) {
++        for (String key : keys) {
++            sKeyOps.put(key, op);
++        }
++    }
++
++    private LujarchSettingsPermissions() {
++    }
++
++    /** The op of the permission that covers this key, or null. */
++    @Nullable
++    static String opOf(@Nullable String name) {
++        if (name == null) {
++            return null;
++        }
++        final String op = sKeyOps.get(name);
++        if (op != null) {
++            return op;
++        }
++        if (name.startsWith(LUJARCH_PREFIX)) {
++            return LujarchInfo.DEVICE;
++        }
++        // "mobile_data1": a per-subscription copy. Most keys do not end in a digit.
++        final int length = name.length();
++        if (length == 0 || !Character.isDigit(name.charAt(length - 1))) {
++            return null;
++        }
++        int end = length - 1;
++        while (end > 0 && Character.isDigit(name.charAt(end - 1))) {
++            end--;
++        }
++        final String base = name.substring(0, end);
++        return sPerSubscriptionKeys.contains(base) ? sKeyOps.get(base) : null;
++    }
++
++    /**
++     * One read by an app the permissions cover (an app uid, neither a system app nor
++     * platform-signed: the callers SettingsProvider's own read checks exempt are not
++     * checked here either). Used on the binder thread of the read, with the caller's
++     * identity.
++     */
++    static final class Reader {
++        private static final long LOOKUP_FLAGS = PackageManager.MATCH_DISABLED_COMPONENTS
++                | PackageManager.MATCH_DIRECT_BOOT_AWARE
++                | PackageManager.MATCH_DIRECT_BOOT_UNAWARE
++                | PackageManager.MATCH_UNINSTALLED_PACKAGES;
++
++        private final Context mContext;
++        private final IPackageManager mPackageManager;
++        private final int mUid;
++        private final String mPackage;
++        private final String mAttributionTag;
++        private final int mUserId;
++        private final ArrayMap<String, Integer> mModes = new ArrayMap<>();
++        private final ArrayMap<String, Boolean> mKeptPackages = new ArrayMap<>();
++
++        Reader(@NonNull Context context, @NonNull IPackageManager packageManager, int uid,
++                @Nullable String packageName, @Nullable String attributionTag) {
++            mContext = context;
++            mPackageManager = packageManager;
++            mUid = uid;
++            mPackage = packageName;
++            mAttributionTag = attributionTag;
++            mUserId = UserHandle.getUserId(uid);
++        }
++
++        /**
++         * Decides the ops of a whole table up front, so a read of the table under the
++         * provider's lock makes no AppOps call. Each is noted, as the app reads every key.
++         */
++        void decideTable(int settingsType) {
++            final String[] ops = switch (settingsType) {
++                case SettingsState.SETTINGS_TYPE_GLOBAL -> GLOBAL_OPS;
++                case SettingsState.SETTINGS_TYPE_SECURE -> SECURE_OPS;
++                default -> SYSTEM_OPS;
++            };
++            for (String op : ops) {
++                mode(op);
++            }
++        }
++
++        private int mode(String op) {
++            Integer mode = mModes.get(op);
++            if (mode == null) {
++                mode = LujarchInfo.decide(mContext, op, mUid, mPackage, mAttributionTag);
++                mModes.put(op, mode);
++            }
++            return mode;
++        }
++
++        /** The value this app reads for the key whose stored value is {@code value}. */
++        @Nullable
++        String answer(@NonNull String name, @Nullable String value) {
++            final String op = opOf(name);
++            if (op == null) {
++                return value;
++            }
++            final int mode = mode(op);
++            if (mode == AppOpsManager.MODE_ALLOWED) {
++                return value;
++            }
++            if (OP_DEVICE_IDS.equals(op)) {
++                return EMPTY_ANDROID_ID;
++            }
++            if (OP_INSTALLED_APPS.equals(op)) {
++                return keptEntries(name, value, mode);
++            }
++            return null;
++        }
++
++        /**
++         * The entries of {@code value} whose package stays visible to this app under its
++         * installed apps choice, joined as stored: Don't allow (errored) shows only the app
++         * itself; anything else not allowed (also while asking) leaves out the apps the user
++         * installed.
++         */
++        @Nullable
++        private String keptEntries(String name, @Nullable String value, int mode) {
++            if (value == null || value.isEmpty()) {
++                return value;
++            }
++            final boolean strict = mode == AppOpsManager.MODE_ERRORED;
++            final StringBuilder kept = new StringBuilder(value.length());
++            for (String entry : value.split(":")) {
++                if (entry.isEmpty()) {
++                    continue;
++                }
++                final int semicolon = entry.indexOf(';');
++                final String id = semicolon >= 0 ? entry.substring(0, semicolon) : entry;
++                final int slash = id.indexOf('/');
++                final String packageName = slash >= 0 ? id.substring(0, slash) : id;
++                if (keeps(packageName, strict)) {
++                    if (kept.length() > 0) {
++                        kept.append(':');
++                    }
++                    kept.append(entry);
++                }
++            }
++            if (kept.length() == 0) {
++                return sSingleEntryKeys.contains(name) ? null : "";
++            }
++            return kept.toString();
++        }
++
++        /**
++         * Whether the package's entries stay: the app's own and those of packages with a
++         * uid below 10000 at both levels, every system package's at the lenient level,
++         * and otherwise what package visibility (AppsFilter, which carries the permission)
++         * shows the app. A failed lookup keeps the entry (logged).
++         */
++        private boolean keeps(String packageName, boolean strict) {
++            final Boolean cached = mKeptPackages.get(packageName);
++            if (cached != null) {
++                return cached;
++            }
++            boolean keep;
++            try {
++                final ApplicationInfo ai;
++                final long token = Binder.clearCallingIdentity();
++                try {
++                    ai = mPackageManager.getApplicationInfo(packageName, LOOKUP_FLAGS,
++                            mUserId);
++                } finally {
++                    Binder.restoreCallingIdentity(token);
++                }
++                if (ai == null) {
++                    keep = false;
++                } else {
++                    final int appId = UserHandle.getAppId(ai.uid);
++                    if (appId == UserHandle.getAppId(mUid)
++                            || appId < Process.FIRST_APPLICATION_UID
++                            || (!strict && ai.isSystemApp())) {
++                        keep = true;
++                    } else {
++                        // Under the caller's identity package visibility answers for it.
++                        keep = mPackageManager.getApplicationInfo(packageName, LOOKUP_FLAGS,
++                                mUserId) != null;
++                    }
++                }
++            } catch (RemoteException | RuntimeException e) {
++                Slog.w(TAG, "installed apps: " + packageName + " for uid " + mUid
++
++                        + " not judged; kept", e);
++                keep = true;
++            }
++            mKeptPackages.put(packageName, keep);
++            return keep;
++        }
++    }
++}
+diff --git a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+index 8ddd1673ea15f14dc5eeca5f0b1ba23da56d226b..b15ec5fbee8e9f5f66f4cfd7d177d427d92f80fe 100644
+--- a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
++++ b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+@@ -473,6 +473,11 @@ public class SettingsProvider extends ContentProvider {
+             }
+             case Settings.CALL_METHOD_GET_GLOBAL -> {
+                 Setting setting = getGlobalSetting(name);
++                final LujarchSettingsPermissions.Reader lujarch = lujarchReaderForKey(name);
++                if (lujarch != null) {
++                    return lujarchValueForCallResult(lujarch, name, setting,
++                            SETTINGS_TYPE_GLOBAL);
++                }
+                 // Global settings are applicable only for the default device, hence pass
+                 // Context.DEVICE_ID_DEFAULT as the deviceId.
+                 return packageValueForCallResult(SETTINGS_TYPE_GLOBAL, name, requestingUserId,
+@@ -486,6 +491,11 @@ public class SettingsProvider extends ContentProvider {
+                         && (setting == null || setting.isNull())) {
+                     setting = getSecureSetting(name, requestingUserId, Context.DEVICE_ID_DEFAULT);
+                 }
++                final LujarchSettingsPermissions.Reader lujarch = lujarchReaderForKey(name);
++                if (lujarch != null) {
++                    return lujarchValueForCallResult(lujarch, name, setting,
++                            SETTINGS_TYPE_SECURE);
++                }
+                 return packageValueForCallResult(SETTINGS_TYPE_SECURE, name, requestingUserId,
+                         callingDeviceId, setting, isTrackingGeneration(args));
+             }
+@@ -497,6 +507,11 @@ public class SettingsProvider extends ContentProvider {
+                         && (setting == null || setting.isNull())) {
+                     setting = getSystemSetting(name, requestingUserId, Context.DEVICE_ID_DEFAULT);
+                 }
++                final LujarchSettingsPermissions.Reader lujarch = lujarchReaderForKey(name);
++                if (lujarch != null) {
++                    return lujarchValueForCallResult(lujarch, name, setting,
++                            SETTINGS_TYPE_SYSTEM);
++                }
+                 return packageValueForCallResult(SETTINGS_TYPE_SYSTEM, name, requestingUserId,
+                         callingDeviceId, setting, isTrackingGeneration(args));
+             }
+@@ -665,7 +680,7 @@ public class SettingsProvider extends ContentProvider {
+             case TABLE_GLOBAL -> {
+                 if (args.name != null) {
+                     Setting setting = getGlobalSetting(args.name);
+-                    return packageSettingForQuery(setting, normalizedProjection,
++                    return lujarchSettingForQuery(args.name, setting, normalizedProjection,
+                             sReadableGlobalSettingsWithRedactedValue);
+                 } else {
+                     return getAllGlobalSettings(projection);
+@@ -675,7 +690,7 @@ public class SettingsProvider extends ContentProvider {
+                 final int userId = UserHandle.getCallingUserId();
+                 if (args.name != null) {
+                     Setting setting = getSecureSetting(args.name, userId, callingDeviceId);
+-                    return packageSettingForQuery(setting, normalizedProjection,
++                    return lujarchSettingForQuery(args.name, setting, normalizedProjection,
+                             sReadableSecureSettingsWithRedactedValue);
+                 } else {
+                     return getAllSecureSettings(userId, Context.DEVICE_ID_DEFAULT, projection);
+@@ -685,7 +700,7 @@ public class SettingsProvider extends ContentProvider {
+                 final int userId = UserHandle.getCallingUserId();
+                 if (args.name != null) {
+                     Setting setting = getSystemSetting(args.name, userId, callingDeviceId);
+-                    return packageSettingForQuery(setting, normalizedProjection,
++                    return lujarchSettingForQuery(args.name, setting, normalizedProjection,
+                             sReadableSystemSettingsWithRedactedValue);
+                 } else {
+                     return getAllSystemSettings(userId, Context.DEVICE_ID_DEFAULT, projection);
+@@ -1534,6 +1549,8 @@ public class SettingsProvider extends ContentProvider {
+             Slog.v(LOG_TAG, "getAllGlobalSettings()");
+         }
+ 
++        final LujarchSettingsPermissions.Reader lujarch =
++                lujarchReaderForTable(SETTINGS_TYPE_GLOBAL);
+         synchronized (mLock) {
+             // Get the settings.
+             // Note that global settings are applicable only for the default device, hence pass
+@@ -1561,12 +1578,8 @@ public class SettingsProvider extends ContentProvider {
+                 }
+ 
+                 Setting setting = settingsState.getSettingLocked(name);
+-                if (setting == null || setting.isNull()) {
+-                    continue;
+-                }
+-                String value = getEffectiveValue(setting, sReadableGlobalSettingsWithRedactedValue);
+-                appendSettingToCursor(result, String.valueOf(setting.getId()), setting.getName(),
+-                        value, String.valueOf(setting.isValuePreservedInRestore()));
++                lujarchAppendSettingToCursor(result, lujarch, name, setting,
++                        sReadableGlobalSettingsWithRedactedValue);
+             }
+ 
+             return result;
+@@ -1725,6 +1738,8 @@ public class SettingsProvider extends ContentProvider {
+                 Settings.Secure.ANDROID_ID);
+         final PackageInfo ssaidCallingPkg = getCallingPackageInfo(ssaidUserId);
+ 
++        final LujarchSettingsPermissions.Reader lujarch =
++                lujarchReaderForTable(SETTINGS_TYPE_SECURE);
+         synchronized (mLock) {
+             List<String> names = getSettingsNamesLocked(SETTINGS_TYPE_SECURE, callingUserId,
+                     deviceId);
+@@ -1763,13 +1778,8 @@ public class SettingsProvider extends ContentProvider {
+                             deviceId, name);
+                 }
+ 
+-                if (setting == null || setting.isNull()) {
+-                    continue;
+-                }
+-
+-                String value = getEffectiveValue(setting, sReadableSecureSettingsWithRedactedValue);
+-                appendSettingToCursor(result, String.valueOf(setting.getId()), setting.getName(),
+-                        value, String.valueOf(setting.isValuePreservedInRestore()));
++                lujarchAppendSettingToCursor(result, lujarch, name, setting,
++                        sReadableSecureSettingsWithRedactedValue);
+             }
+ 
+             return result;
+@@ -2022,6 +2032,8 @@ public class SettingsProvider extends ContentProvider {
+         // Resolve the userId on whose behalf the call is made.
+         final int callingUserId = resolveCallingUserIdEnforcingPermissions(userId);
+ 
++        final LujarchSettingsPermissions.Reader lujarch =
++                lujarchReaderForTable(SETTINGS_TYPE_SYSTEM);
+         synchronized (mLock) {
+             List<String> names = getSettingsNamesLocked(SETTINGS_TYPE_SYSTEM, callingUserId,
+                     deviceId);
+@@ -2045,12 +2057,8 @@ public class SettingsProvider extends ContentProvider {
+ 
+                 Setting setting = mSettingsRegistry.getSettingLocked(
+                         SETTINGS_TYPE_SYSTEM, owningUserId, deviceId, name);
+-                if (setting == null || setting.isNull()) {
+-                    continue;
+-                }
+-                String value = getEffectiveValue(setting, sReadableSystemSettingsWithRedactedValue);
+-                appendSettingToCursor(result, String.valueOf(setting.getId()), setting.getName(),
+-                        value, String.valueOf(setting.isValuePreservedInRestore()));
++                lujarchAppendSettingToCursor(result, lujarch, name, setting,
++                        sReadableSystemSettingsWithRedactedValue);
+             }
+ 
+             return result;
+@@ -2916,6 +2924,95 @@ public class SettingsProvider extends ContentProvider {
+         return redactedSettingsMap;
+     }
+ 
++    /**
++     * The reader of a settings key a Lujarch permission covers, or null when nothing covers
++     * this read: another key, a uid below 10000, a system or
++     * platform-signed app (the callers {@link #enforceSettingReadable} exempts). A failed
++     * lookup allows (logged).
++     */
++    @Nullable
++    private LujarchSettingsPermissions.Reader lujarchReaderForKey(@Nullable String name) {
++        return LujarchSettingsPermissions.opOf(name) != null ? lujarchReader() : null;
++    }
++
++    /** {@link #lujarchReaderForKey} for a read of a whole table, its ops decided up front. */
++    @Nullable
++    private LujarchSettingsPermissions.Reader lujarchReaderForTable(int settingsType) {
++        final LujarchSettingsPermissions.Reader reader = lujarchReader();
++        if (reader != null) {
++            reader.decideTable(settingsType);
++        }
++        return reader;
++    }
++
++    @Nullable
++    private LujarchSettingsPermissions.Reader lujarchReader() {
++        final int callingUid = Binder.getCallingUid();
++        if (UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
++            return null;
++        }
++        try {
++            final ApplicationInfo ai = getCallingApplicationInfoOrThrow();
++            if (ai.isSystemApp() || ai.isSignedWithPlatformKey()) {
++                return null;
++            }
++            return new LujarchSettingsPermissions.Reader(getContext(), mPackageManager,
++                    callingUid, ai.packageName, getCallingAttributionTag());
++        } catch (RuntimeException e) {
++            Slog.w(LOG_TAG, "Lujarch permissions: settings read by uid " + callingUid
++                    + " not judged; allowed", e);
++            return null;
++        }
++    }
++
++    /**
++     * A covered key's value as the app reads it. Without generation tracking: the app's
++     * Settings cache would keep the answer until the key changes, so every read of a covered
++     * key reaches the provider and a changed choice applies at the next read.
++     */
++    private static Bundle lujarchValueForCallResult(
++            @NonNull LujarchSettingsPermissions.Reader lujarch, @NonNull String name,
++            @Nullable Setting setting, int settingsType) {
++        final String value = lujarch.answer(name,
++                getEffectiveValue(setting, getRedactedSettingsMap(settingsType)));
++        return value == null ? NULL_SETTING_BUNDLE
++                : Bundle.forPair(Settings.NameValueTable.VALUE, value);
++    }
++
++    /** {@link #packageSettingForQuery} with the permission's answer. */
++    private Cursor lujarchSettingForQuery(@NonNull String name, @Nullable Setting setting,
++            String[] projection, @Nullable ArrayMap<String, String> redactedSettingsMap) {
++        final LujarchSettingsPermissions.Reader lujarch = lujarchReaderForKey(name);
++        if (lujarch == null || setting == null || setting.isNull()) {
++            return packageSettingForQuery(setting, projection, redactedSettingsMap);
++        }
++        final MatrixCursor cursor = new MatrixCursor(projection, 1);
++        lujarchAppendSettingToCursor(cursor, lujarch, name, setting, redactedSettingsMap);
++        return cursor;
++    }
++
++    /**
++     * {@link #appendSettingToCursor} with the permission's answer; a key answered with null
++     * has no row (it reads as unset).
++
++     */
++    private static void lujarchAppendSettingToCursor(MatrixCursor cursor,
++            @Nullable LujarchSettingsPermissions.Reader lujarch, String name, Setting setting,
++            @Nullable ArrayMap<String, String> redactedSettingsMap) {
++        if (setting == null || setting.isNull()) {
++            return;
++        }
++        String value = getEffectiveValue(setting, redactedSettingsMap);
++        if (lujarch != null && LujarchSettingsPermissions.opOf(name) != null) {
++            value = lujarch.answer(name, value);
++            if (value == null) {
++                return;
++            }
++        }
++        appendSettingToCursor(cursor, String.valueOf(setting.getId()), setting.getName(), value,
++                String.valueOf(setting.isValuePreservedInRestore()));
++    }
++
+     private boolean isSettingPreDefined(String name, int type) {
+         if (type == SETTINGS_TYPE_GLOBAL) {
+             return sAllGlobalSettings.contains(name);

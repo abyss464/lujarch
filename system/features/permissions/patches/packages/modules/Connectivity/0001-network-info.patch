@@ -1,0 +1,816 @@
+diff --git a/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..c8152b1f428178790ac16c5c79d290ab29e9d998
+--- /dev/null
++++ b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
+@@ -0,0 +1,154 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.networkstack.tethering;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.Log;
++
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * The network info permission ({@link #OP} 
++ * "Information permissions") for the reads Tethering answers.
++ *
++ * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
++ * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
++ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
++ * window), and at once when the stored mode differs from the one last noted; in between only
++ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * lookup allows (logged). A framework that does not know the op (an image older than the op)
++ * throws for its name, which allows (logged once).
++ */
++public final class LujarchNetworkInfo {
++
++    private static final String TAG = "LujarchNetworkInfo";
++
++    /** The op's public name. */
++    public static final String OP = "android:lujarch_network_info";
++
++    private static final long NOTE_INTERVAL_MS = 60_000L;
++    private static final long REFUSED_NOTE_INTERVAL_MS = 2_000L;
++
++    /** Last note per uid: elapsed realtime and the stored mode then. */
++    private static final ConcurrentHashMap<Integer, long[]> sLastNote = new ConcurrentHashMap<>();
++
++    private static volatile boolean sUnknownOpLogged;
++
++    private LujarchNetworkInfo() {
++    }
++
++    /**
++     * The permission's mode for this read: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (answer with empty data) or
++     * {@link AppOpsManager#MODE_ERRORED} (throw where the API can, else empty data).
++     * Never throws.
++     *
++     * @param uid the reading app's uid
++     * @param packageName its package as the API verified it, or null to take the uid's first
++     * @param attributionTag its attribution tag, if known
++     */
++    public static int decide(@NonNull Context context, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final String pkg = packageName != null ? packageName : firstPackage(context, uid);
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(OP, uid, pkg);
++            final long now = SystemClock.elapsedRealtime();
++            final long[] last = sLastNote.get(uid);
++            // Foreground-only needs a note to be resolved against the uid's state.
++            final long interval = raw == AppOpsManager.MODE_ALLOWED
++                    || raw == AppOpsManager.MODE_DEFAULT
++                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
++            if (last != null && last[1] == raw && now - last[0] < interval
++                    && raw != AppOpsManager.MODE_FOREGROUND) {
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++            }
++            sLastNote.put(uid, new long[] {now, raw});
++            final int mode = appOps.noteOpNoThrow(OP, uid, pkg, attributionTag, null);
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++        } catch (RuntimeException e) {
++            if (isUnknownOp(e)) {
++                if (!sUnknownOpLogged) {
++                    sUnknownOpLogged = true;
++                    Log.w(TAG, OP + " is not an op of this system; network info allowed", e);
++                }
++            } else {
++                Log.w(TAG, OP + " of uid " + uid + " not decided; allowed", e);
++            }
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /** {@link #decide} is anything but {@link AppOpsManager#MODE_ALLOWED}. */
++    public static boolean refuses(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, uid, packageName, attributionTag) != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * {@link #refuses} for a getter that throws for a missing permission: errored (deny)
++     * throws {@link SecurityException} as that getter does.
++     */
++    public static boolean refusesOrThrows(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        final int mode = decide(context, uid, packageName, attributionTag);
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            throw new SecurityException("uid " + uid + " is denied network info (" + OP + ")");
++        }
++        return mode != AppOpsManager.MODE_ALLOWED;
++    }
++
++    private static boolean isUnknownOp(RuntimeException e) {
++        return e instanceof IllegalArgumentException && e.getMessage() != null
++                && e.getMessage().startsWith("Unknown operation string");
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        final PackageManager pm = context.getPackageManager();
++        if (pm == null) {
++            return null;
++        }
++        // The caller may not see packages by uid (package visibility); the system does.
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final String[] packages = pm.getPackagesForUid(uid);
++            return packages != null && packages.length > 0 ? packages[0] : null;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++}
+diff --git a/Tethering/src/com/android/networkstack/tethering/Tethering.java b/Tethering/src/com/android/networkstack/tethering/Tethering.java
+index 71142438bca92ca52b0b6247aaaa0df57b9be1bb..3c47908b05bd8b74b77a7455a6c5f89aea1bed99 100644
+--- a/Tethering/src/com/android/networkstack/tethering/Tethering.java
++++ b/Tethering/src/com/android/networkstack/tethering/Tethering.java
+@@ -2679,15 +2679,17 @@ public class Tethering {
+         mHandler.post(() -> {
+             CallbackCookie cookie = new CallbackCookie(uid, hasSystemPrivilege);
+             mTetheringEventCallbacks.register(callback, cookie);
++            final boolean lujarchRefused = lujarchRefuses(cookie);
+             final TetheringCallbackStartedParcel parcel = new TetheringCallbackStartedParcel();
+             parcel.supportedTypes = mSupportedTypeBitmap;
+-            parcel.upstreamNetwork = mTetherUpstream;
++            parcel.upstreamNetwork = lujarchRefused ? null : mTetherUpstream;
+             parcel.config = mConfig.toStableParcelable();
+-            parcel.states = buildTetherStatesParcel(cookie);
++            parcel.states = lujarchRefused
++                    ? lujarchEmptyTetherStates() : buildTetherStatesParcel(cookie);
+             parcel.tetheredClients = hasSystemPrivilege
+                     ? mConnectedClientsTracker.getLastTetheredClients()
+                     : Collections.emptyList();
+-            parcel.offloadStatus = mOffloadStatus;
++            parcel.offloadStatus = lujarchRefused ? TETHER_HARDWARE_OFFLOAD_STOPPED : mOffloadStatus;
+             try {
+                 callback.onCallbackStarted(parcel);
+             } catch (RemoteException e) {
+@@ -2700,6 +2702,26 @@ public class Tethering {
+         return mContext.checkCallingOrSelfPermission(permission) == PERMISSION_GRANTED;
+     }
+ 
++    // The network info permission ( 
++    // Permissions"). An app it refuses sees no tethering: no available, local-only, tethered or
++    // errored interfaces, no upstream network and offload stopped. TetheringManager's own
++    // getters (getTetheredIfaces and the rest) read these callbacks in the app's process.
++    // Decided at each delivery, on the handler thread; system callers are not checked.
++    private boolean lujarchRefuses(@Nullable CallbackCookie cookie) {
++        return cookie != null && !cookie.hasSystemPrivilege
++                && LujarchNetworkInfo.refuses(mContext, cookie.uid, null, null);
++    }
++
++    private static TetherStatesParcel lujarchEmptyTetherStates() {
++        final TetherStatesParcel parcel = new TetherStatesParcel();
++        parcel.availableList = new TetheringInterface[0];
++        parcel.tetheredList = new TetheringInterface[0];
++        parcel.localOnlyList = new TetheringInterface[0];
++        parcel.erroredIfaceList = new TetheringInterface[0];
++        parcel.lastErrorList = new int[0];
++        return parcel;
++    }
++
+     /** Unregister tethering event callback */
+     void unregisterTetheringEventCallback(ITetheringEventCallback callback) {
+         mHandler.post(() -> {
+@@ -2728,7 +2750,10 @@ public class Tethering {
+         try {
+             for (int i = 0; i < length; i++) {
+                 try {
+-                    mTetheringEventCallbacks.getBroadcastItem(i).onUpstreamChanged(network);
++                    final CallbackCookie cookie =
++                            (CallbackCookie) mTetheringEventCallbacks.getBroadcastCookie(i);
++                    mTetheringEventCallbacks.getBroadcastItem(i).onUpstreamChanged(
++                            lujarchRefuses(cookie) ? null : network);
+                 } catch (RemoteException e) {
+                     // Not really very much to do here.
+                 }
+@@ -2759,8 +2784,10 @@ public class Tethering {
+         try {
+             for (int i = 0; i < length; i++) {
+                 try {
+-                    TetherStatesParcel parcel = buildTetherStatesParcel(
+-                            (CallbackCookie) mTetheringEventCallbacks.getBroadcastCookie(i));
++                    final CallbackCookie cookie =
++                            (CallbackCookie) mTetheringEventCallbacks.getBroadcastCookie(i);
++                    TetherStatesParcel parcel = lujarchRefuses(cookie)
++                            ? lujarchEmptyTetherStates() : buildTetherStatesParcel(cookie);
+                     mTetheringEventCallbacks.getBroadcastItem(i).onTetherStatesChanged(parcel);
+                 } catch (RemoteException e) {
+                     // Not really very much to do here.
+@@ -2806,7 +2833,10 @@ public class Tethering {
+         try {
+             for (int i = 0; i < length; i++) {
+                 try {
+-                    mTetheringEventCallbacks.getBroadcastItem(i).onOffloadStatusChanged(status);
++                    final CallbackCookie cookie =
++                            (CallbackCookie) mTetheringEventCallbacks.getBroadcastCookie(i);
++                    mTetheringEventCallbacks.getBroadcastItem(i).onOffloadStatusChanged(
++                            lujarchRefuses(cookie) ? TETHER_HARDWARE_OFFLOAD_STOPPED : status);
+                 } catch (RemoteException e) {
+                     // Not really very much to do here.
+                 }
+diff --git a/service-t/src/com/android/server/net/NetworkStatsService.java b/service-t/src/com/android/server/net/NetworkStatsService.java
+index 14809fb611743a5badf900f6159b060168dc1a0f..ec5a2848fc4007a4ed01c2f99493f2c62b94fc1c 100644
+--- a/service-t/src/com/android/server/net/NetworkStatsService.java
++++ b/service-t/src/com/android/server/net/NetworkStatsService.java
+@@ -194,6 +194,7 @@ import com.android.net.module.util.SkDestroyListener;
+ import com.android.net.module.util.Struct;
+ import com.android.net.module.util.Struct.S32;
+ import com.android.net.module.util.Struct.S64;
++import com.android.server.connectivity.LujarchNetworkInfo;
+ import com.android.net.module.util.Struct.U8;
+ import com.android.net.module.util.TerribleErrorLog;
+ import com.android.net.module.util.bpf.CookieTagMapValue;
+@@ -2023,6 +2024,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
+ 
+     @Override
+     public String[] getMobileIfaces() {
++        // Interface names are the network info permission's. TrafficStats'
++        // mobile totals then sum nothing (0).
++        if (LujarchNetworkInfo.refuses(mContext, Binder.getCallingUid(), null, null)) {
++            return new String[0];
++        }
+         return mMobileIfaces.clone();
+     }
+ 
+@@ -2234,6 +2240,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
+     @Override
+     public StatsResult getIfaceStats(@NonNull String iface) {
+         Objects.requireNonNull(iface);
++        // Interface traffic totals are the network info permission's; null
++        // reads as TrafficStats.UNSUPPORTED.
++        if (LujarchNetworkInfo.refuses(mContext, Binder.getCallingUid(), null, null)) {
++            return null;
++        }
+         return getStatsResultFromEntryOrNull(getIfaceStatsInternal(iface));
+     }
+ 
+@@ -2256,6 +2267,11 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
+     @Nullable
+     @Override
+     public StatsResult getTotalStats() {
++        // Device traffic totals are the network info permission's; null reads
++        // as TrafficStats.UNSUPPORTED. The app's own totals (getUidStats) stay.
++        if (LujarchNetworkInfo.refuses(mContext, Binder.getCallingUid(), null, null)) {
++            return null;
++        }
+         return getStatsResultFromEntryOrNull(getTotalStatsInternal());
+     }
+ 
+diff --git a/service/src/com/android/server/ConnectivityService.java b/service/src/com/android/server/ConnectivityService.java
+index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..7c66c7ba9e0cee27830f0e195c97d32004f415f5 100644
+--- a/service/src/com/android/server/ConnectivityService.java
++++ b/service/src/com/android/server/ConnectivityService.java
+@@ -283,6 +283,7 @@ import android.net.QosSocketInfo;
+ import android.net.RouteInfo;
+ import android.net.RouteInfoParcel;
+ import android.net.SocketKeepalive;
++import android.net.TelephonyNetworkSpecifier;
+ import android.net.TetheringManager;
+ import android.net.TransportInfo;
+ import android.net.UidRange;
+@@ -413,6 +414,7 @@ import com.android.server.connectivity.DnsManager;
+ import com.android.server.connectivity.DnsManager.PrivateDnsValidationUpdate;
+ import com.android.server.connectivity.DscpPolicyTracker;
+ import com.android.server.connectivity.FullScore;
++import com.android.server.connectivity.LujarchNetworkInfo;
+ import com.android.server.connectivity.IProxyTracker;
+ import com.android.server.connectivity.IntegerRangeUtils;
+ import com.android.server.connectivity.InterfaceTracker;
+@@ -3225,6 +3227,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
+                     null /* extraInfo */);
+         }
+         filterForLegacyLockdown(filtered);
++        // The network info permission. The extra info names the network
++        // (the APN of a mobile network); the state stays, it tells the app it is online.
++        if (lujarchRefuses(mDeps.getCallingUid(), null, null)) {
++            filtered.setExtraInfo(null);
++        }
++        // The subtype is the mobile network type, the phone info permission's (decided only
++        // when there is one, so a Wi-Fi NetworkInfo notes no phone info read).
++        if ((filtered.getSubtype() != TelephonyManager.NETWORK_TYPE_UNKNOWN
++                || !TextUtils.isEmpty(filtered.getSubtypeName()))
++                && LujarchNetworkInfo.refuses(mContext, LujarchNetworkInfo.PHONE,
++                        mDeps.getCallingUid(), null, null)) {
++            filtered.setSubtype(TelephonyManager.NETWORK_TYPE_UNKNOWN, "");
++        }
+         return filtered;
+     }
+ 
+@@ -3325,7 +3340,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             return null;
+         }
+         final NetworkAgentInfo nai = mLegacyTypeTracker.getNetworkForType(networkType);
+-        if (nai == null) {
++        // A VPN is hidden from an app the network info permission refuses.
++        if (nai == null || lujarchHidesVpn(nai)) {
+             return makeFakeNetworkInfo(networkType, uid);
+         }
+         return filterNetworkInfo(nai.networkInfo, networkType, nai.networkCapabilities, uid,
+@@ -3355,8 +3371,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
+     @Nullable
+     public NetworkInfo getNetworkInfoForUid(Network network, int uid, boolean ignoreBlocked) {
+         enforceAccessPermission();
+-        final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
++        NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
+         if (nai == null) return null;
++        // An app the network info permission refuses gets a VPN's underlying
++        // network's NetworkInfo instead of one of TYPE_VPN, as its default network's.
++        if (lujarchHidesVpn(nai)) {
++            nai = lujarchUnderlyingNetwork(nai);
++            if (nai == null) return null;
++        }
+         return getFilteredNetworkInfo(nai, uid, ignoreBlocked);
+     }
+ 
+@@ -3382,7 +3404,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             return null;
+         }
+         final NetworkAgentInfo nai = mLegacyTypeTracker.getNetworkForType(networkType);
+-        if (nai == null) {
++        if (nai == null || lujarchHidesVpn(nai)) {
+             return null;
+         }
+         final int uid = mDeps.getCallingUid();
+@@ -3396,6 +3418,19 @@ public class ConnectivityService extends IConnectivityManager.Stub
+     @NonNull
+     public Network[] getAllNetworks() {
+         enforceAccessPermission();
++        // The network info permission. Other networks (other apps', a VPN
++        // that does not apply to the app) are not the refused app's to see; its own default
++        // network stays, so it knows whether it is online.
++        final int uid = mDeps.getCallingUid();
++        if (lujarchRefuses(uid, null, null)) {
++            final Network own = getActiveNetworkForUidInternal(uid, true /* ignoreBlocked */);
++            return own == null ? new Network[0] : new Network[] {own};
++        }
++        return getAllNetworksInternal();
++    }
++
++    @NonNull
++    private Network[] getAllNetworksInternal() {
+         synchronized (mNetworkForNetId) {
+             final Network[] result = new Network[mNetworkForNetId.size()];
+             for (int i = 0; i < mNetworkForNetId.size(); i++) {
+@@ -3435,11 +3470,16 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             if (null != nc
+                     && nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)
+                     && !result.containsKey(nai.network)) {
++                // This API does not verify the package; the network info
++                // Permission takes the uid's own.
+                 result.put(
+                         nai.network,
+-                        createWithSensitiveInfoSanitizedIfNecessaryWhenParceled(
+-                                nc, false /* includeLocationSensitiveInfo */,
+-                                getCallingPid(), mDeps.getCallingUid(), callingPackageName,
++                        lujarchCapabilities(nc,
++                                createWithSensitiveInfoSanitizedForPermissions(
++                                        nc, false /* includeLocationSensitiveInfo */,
++                                        getCallingPid(), mDeps.getCallingUid(),
++                                        callingPackageName, callingAttributionTag),
++                                mDeps.getCallingUid(), null /* packageName */,
+                                 callingAttributionTag));
+             }
+         }
+@@ -3452,10 +3492,13 @@ public class ConnectivityService extends IConnectivityManager.Stub
+                 if (null != nc) {
+                     result.put(
+                             network,
+-                            createWithSensitiveInfoSanitizedIfNecessaryWhenParceled(
+-                                    nc,
+-                                    false /* includeLocationSensitiveInfo */,
+-                                    getCallingPid(), mDeps.getCallingUid(), callingPackageName,
++                            lujarchCapabilities(nc,
++                                    createWithSensitiveInfoSanitizedForPermissions(
++                                            nc,
++                                            false /* includeLocationSensitiveInfo */,
++                                            getCallingPid(), mDeps.getCallingUid(),
++                                            callingPackageName, callingAttributionTag),
++                                    mDeps.getCallingUid(), null /* packageName */,
+                                     callingAttributionTag));
+                 }
+             }
+@@ -3598,8 +3641,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
+         final int uid = mDeps.getCallingUid();
+         NetworkAgentInfo nai = getNetworkAgentInfoForUid(uid);
+         if (nai == null) return null;
+-        return linkPropertiesRestrictedForCallerPermissions(nai.linkProperties,
+-                Binder.getCallingPid(), uid);
++        return lujarchLinkProperties(linkPropertiesRestrictedForCallerPermissions(
++                nai.linkProperties, Binder.getCallingPid(), uid), nai, uid, null, null,
++                true /* canThrow */);
+     }
+ 
+     @Override
+@@ -3608,18 +3652,21 @@ public class ConnectivityService extends IConnectivityManager.Stub
+         NetworkAgentInfo nai = mLegacyTypeTracker.getNetworkForType(networkType);
+         final LinkProperties lp = getLinkProperties(nai);
+         if (lp == null) return null;
+-        return linkPropertiesRestrictedForCallerPermissions(
+-                lp, Binder.getCallingPid(), mDeps.getCallingUid());
++        final int uid = mDeps.getCallingUid();
++        return lujarchLinkProperties(linkPropertiesRestrictedForCallerPermissions(
++                lp, Binder.getCallingPid(), uid), nai, uid, null, null, true /* canThrow */);
+     }
+ 
+     // TODO - this should be ALL networks
+     @Override
+     public LinkProperties getLinkProperties(Network network) {
+         enforceAccessPermission();
+-        final LinkProperties lp = getLinkProperties(getNetworkAgentInfoForNetwork(network));
++        final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
++        final LinkProperties lp = getLinkProperties(nai);
+         if (lp == null) return null;
+-        return linkPropertiesRestrictedForCallerPermissions(
+-                lp, Binder.getCallingPid(), mDeps.getCallingUid());
++        final int uid = mDeps.getCallingUid();
++        return lujarchLinkProperties(linkPropertiesRestrictedForCallerPermissions(
++                lp, Binder.getCallingPid(), uid), nai, uid, null, null, true /* canThrow */);
+     }
+ 
+     @Nullable
+@@ -3642,7 +3689,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
+         if (!hasAccessPermission(-1 /* pid */, uid)) {
+             return null;
+         }
+-        return linkPropertiesRestrictedForCallerPermissions(lp, -1 /* callerPid */, uid);
++        return lujarchLinkProperties(
++                linkPropertiesRestrictedForCallerPermissions(lp, -1 /* callerPid */, uid),
++                null /* nai */, uid, packageName, callingAttributionTag, false /* canThrow */);
+     }
+ 
+     private NetworkCapabilities getNetworkCapabilitiesInternal(Network network) {
+@@ -3836,6 +3885,118 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             @Nullable NetworkCapabilities nc, boolean includeLocationSensitiveInfo,
+             int callingPid, int callingUid, @NonNull String callingPkgName,
+             @Nullable String callingAttributionTag) {
++        return lujarchCapabilities(nc,
++                createWithSensitiveInfoSanitizedForPermissions(nc, includeLocationSensitiveInfo,
++                        callingPid, callingUid, callingPkgName, callingAttributionTag),
++                callingUid, callingPkgName, callingAttributionTag);
++    }
++
++    // The network info permission ( 
++    // Permissions"). Every getter and callback that hands an app a network's capabilities or
++    // link properties passes here. A refused app keeps what tells it whether it is online
++    // (available, validated, metered, the transport) and loses what describes the network or
++    // its surroundings. The network's owner (a VPN app's own VPN) is never redacted.
++
++    private boolean lujarchRefuses(int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        return LujarchNetworkInfo.refuses(mContext, uid, packageName, attributionTag);
++    }
++
++    /**
++     * Capabilities for a refused app: a VPN shows as its underlying transports (no
++     * TRANSPORT_VPN, NOT_VPN set, no VpnTransportInfo), signal strength and link bandwidth
++     * are unspecified, and Wi-Fi's WifiInfo is a blank one (no SSID, BSSID, RSSI, link
++     * speed, frequency, standard or security type).
++     */
++    @Nullable
++    private NetworkCapabilities lujarchCapabilities(@Nullable NetworkCapabilities nc,
++            @Nullable NetworkCapabilities sanitized, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        if (nc == null || sanitized == null) {
++            return sanitized;
++        }
++        lujarchPhoneCapabilities(sanitized, uid, packageName, attributionTag);
++        if (uid == nc.getOwnerUid() || !lujarchRefuses(uid, packageName, attributionTag)) {
++            return sanitized;
++        }
++        if (sanitized.hasTransport(TRANSPORT_VPN)) {
++            sanitized.removeTransportType(TRANSPORT_VPN);
++            sanitized.addCapability(NET_CAPABILITY_NOT_VPN);
++            sanitized.setTransportInfo(null);
++        }
++        sanitized.setSignalStrength(NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED);
++        sanitized.setLinkUpstreamBandwidthKbps(NetworkCapabilities.LINK_BANDWIDTH_UNSPECIFIED);
++        sanitized.setLinkDownstreamBandwidthKbps(NetworkCapabilities.LINK_BANDWIDTH_UNSPECIFIED);
++        final TransportInfo info = sanitized.getTransportInfo();
++        if (sanitized.hasTransport(TRANSPORT_WIFI) && (info == null || info instanceof WifiInfo)) {
++            // The BSSID an app without location permission gets.
++            sanitized.setTransportInfo(
++                    new WifiInfo.Builder().setBssid("02:00:00:00:00:00").build());
++        }
++        return sanitized;
++    }
++
++    /**
++     * The phone info permission's part of the capabilities: a mobile network's subscription
++     * (TelephonyNetworkSpecifier, subscription ids) is left out for an app it refuses.
++     * Decided only when there is one, so other networks note no phone info read.
++     */
++    private void lujarchPhoneCapabilities(@NonNull NetworkCapabilities sanitized, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        final boolean telephonySpecifier =
++                sanitized.getNetworkSpecifier() instanceof TelephonyNetworkSpecifier;
++        if ((!telephonySpecifier && sanitized.getSubscriptionIds().isEmpty())
++                || !LujarchNetworkInfo.refuses(mContext, LujarchNetworkInfo.PHONE, uid,
++                        packageName, attributionTag)) {
++            return;
++        }
++        if (telephonySpecifier) {
++            sanitized.setNetworkSpecifier(null);
++        }
++        sanitized.setSubscriptionIds(Collections.emptySet());
++    }
++
++    /**
++     * Link properties for a refused app: an empty LinkProperties (no interface name,
++     * addresses, routes, DNS servers, domains, private DNS, proxy, NAT64 prefix, MTU 0).
++     * With {@code canThrow} (a getter, which throws for a missing permission), errored
++     * throws SecurityException instead.
++     */
++    @NonNull
++    private LinkProperties lujarchLinkProperties(@NonNull LinkProperties lp,
++            @Nullable NetworkAgentInfo nai, int uid, @Nullable String packageName,
++            @Nullable String attributionTag, boolean canThrow) {
++        if (nai != null && uid == nai.networkCapabilities.getOwnerUid()) {
++            return lp;
++        }
++        final boolean refused = canThrow
++                ? LujarchNetworkInfo.refusesOrThrows(mContext, uid, packageName, attributionTag)
++                : lujarchRefuses(uid, packageName, attributionTag);
++        return refused ? new LinkProperties() : lp;
++    }
++
++    /** A VPN the calling app does not own, while the network info permission refuses it. */
++    private boolean lujarchHidesVpn(@NonNull NetworkAgentInfo nai) {
++        final int uid = mDeps.getCallingUid();
++        return nai.isVPN() && uid != nai.networkCapabilities.getOwnerUid()
++                && lujarchRefuses(uid, null, null);
++    }
++
++    /** The network a VPN runs over (its first underlying network, or the default). */
++    @Nullable
++    private NetworkAgentInfo lujarchUnderlyingNetwork(@NonNull NetworkAgentInfo vpn) {
++        final Network[] underlying = underlyingNetworksOrDefault(
++                vpn.networkCapabilities.getOwnerUid(), vpn.declaredUnderlyingNetworks);
++        if (underlying == null || underlying.length == 0) return null;
++        final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(underlying[0]);
++        return nai == null || nai.isVPN() ? null : nai;
++    }
++
++    @Nullable
++    private NetworkCapabilities createWithSensitiveInfoSanitizedForPermissions(
++            @Nullable NetworkCapabilities nc, boolean includeLocationSensitiveInfo,
++            int callingPid, int callingUid, @NonNull String callingPkgName,
++            @Nullable String callingAttributionTag) {
+         if (nc == null) {
+             return null;
+         }
+@@ -4038,7 +4199,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
+         enforceNetworkStackOrSettingsPermission();
+ 
+         final ArrayList<NetworkStateSnapshot> result = new ArrayList<>();
+-        for (Network network : getAllNetworks()) {
++        for (Network network : getAllNetworksInternal()) {
+             final NetworkAgentInfo nai = getNetworkAgentInfoForNetwork(network);
+             final boolean includeNetwork = (nai != null) && nai.isCreated();
+             if (includeNetwork) {
+@@ -12955,8 +13116,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
+                                 nri.mPid, nri.mUid, nrForCallback.getRequestorPackageName(),
+                                 nri.mCallingAttributionTag);
+                 putParcelable(bundle, nc);
+-                putParcelable(bundle, linkPropertiesRestrictedForCallerPermissions(
+-                        networkAgent.linkProperties, nri.mPid, nri.mUid));
++                putParcelable(bundle, lujarchLinkProperties(
++                        linkPropertiesRestrictedForCallerPermissions(
++                                networkAgent.linkProperties, nri.mPid, nri.mUid),
++                        networkAgent, nri.mUid, nrForCallback.getRequestorPackageName(),
++                        nri.mCallingAttributionTag, false /* canThrow */));
+                 // The local network info is often null, so can't use the static putParcelable
+                 // method here.
+                 bundle.putParcelable(LocalNetworkInfo.class.getSimpleName(),
+@@ -12974,8 +13138,11 @@ public class ConnectivityService extends IConnectivityManager.Stub
+                 break;
+             }
+             case CALLBACK_IP_CHANGED: {
+-                putParcelable(bundle, linkPropertiesRestrictedForCallerPermissions(
+-                        networkAgent.linkProperties, nri.mPid, nri.mUid));
++                putParcelable(bundle, lujarchLinkProperties(
++                        linkPropertiesRestrictedForCallerPermissions(
++                                networkAgent.linkProperties, nri.mPid, nri.mUid),
++                        networkAgent, nri.mUid, nrForCallback.getRequestorPackageName(),
++                        nri.mCallingAttributionTag, false /* canThrow */));
+                 break;
+             }
+             case CALLBACK_BLK_CHANGED: {
+diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0c0e67435ffb777f7f30e309dae82276afd4fac7
+--- /dev/null
++++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
+@@ -0,0 +1,174 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.connectivity;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.Log;
++
++import java.util.Set;
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * The network info permission ({@link #OP} 
++ * "Information permissions") for the reads ConnectivityService and NetworkStatsService answer,
++ * And the phone info permission ({@link #PHONE}) for the mobile network type and subscription
++ * id ConnectivityService hands out.
++ *
++ * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
++ * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
++ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * Asked) at most once a minute per uid and op while the permission allows, every two seconds while it
++ * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
++ * window), and at once when the stored mode differs from the one last noted; in between only
++ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * lookup allows (logged). A framework that does not know the op (an image older than the op)
++ * throws for its name, which allows (logged once).
++ */
++public final class LujarchNetworkInfo {
++
++    private static final String TAG = "LujarchNetworkInfo";
++
++    /** The network info op's public name. */
++    public static final String OP = "android:lujarch_network_info";
++
++    /** The phone info op's public name. */
++    public static final String PHONE = "android:lujarch_phone_info";
++
++    private static final long NOTE_INTERVAL_MS = 60_000L;
++    private static final long REFUSED_NOTE_INTERVAL_MS = 2_000L;
++
++    /** Last note per op and uid: elapsed realtime and the stored mode then. */
++    private static final ConcurrentHashMap<String, long[]> sLastNote = new ConcurrentHashMap<>();
++
++    /** Ops this system did not know, logged once each. */
++    private static final Set<String> sUnknownOpsLogged = ConcurrentHashMap.newKeySet();
++
++    private LujarchNetworkInfo() {
++    }
++
++    /**
++     * The permission's mode for this read: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (answer with empty data) or
++     * {@link AppOpsManager#MODE_ERRORED} (throw where the API can, else empty data).
++     * Never throws.
++     *
++     * @param uid the reading app's uid
++     * @param packageName its package as the API verified it, or null to take the uid's first
++     * @param attributionTag its attribution tag, if known
++     */
++    public static int decide(@NonNull Context context, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        return decide(context, OP, uid, packageName, attributionTag);
++    }
++
++    /** {@link #decide(Context, int, String, String)} for the permission {@code op}. */
++    public static int decide(@NonNull Context context, @NonNull String op, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final String pkg = packageName != null ? packageName : firstPackage(context, uid);
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(op, uid, pkg);
++            final String key = op + '/' + uid;
++            final long now = SystemClock.elapsedRealtime();
++            final long[] last = sLastNote.get(key);
++            // Foreground-only needs a note to be resolved against the uid's state.
++            final long interval = raw == AppOpsManager.MODE_ALLOWED
++                    || raw == AppOpsManager.MODE_DEFAULT
++                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
++            if (last != null && last[1] == raw && now - last[0] < interval
++                    && raw != AppOpsManager.MODE_FOREGROUND) {
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++            }
++            sLastNote.put(key, new long[] {now, raw});
++            final int mode = appOps.noteOpNoThrow(op, uid, pkg, attributionTag, null);
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++        } catch (RuntimeException e) {
++            if (isUnknownOp(e)) {
++                if (sUnknownOpsLogged.add(op)) {
++                    Log.w(TAG, op + " is not an op of this system; allowed", e);
++                }
++            } else {
++                Log.w(TAG, op + " of uid " + uid + " not decided; allowed", e);
++            }
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /** {@link #decide} is anything but {@link AppOpsManager#MODE_ALLOWED}. */
++    public static boolean refuses(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, uid, packageName, attributionTag) != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /** {@link #refuses(Context, int, String, String)} for the permission {@code op}. */
++    public static boolean refuses(@NonNull Context context, @NonNull String op, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, op, uid, packageName, attributionTag)
++                != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * {@link #refuses} for a getter that throws for a missing permission: errored (deny)
++     * throws {@link SecurityException} as that getter does.
++     */
++    public static boolean refusesOrThrows(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        final int mode = decide(context, uid, packageName, attributionTag);
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            throw new SecurityException("uid " + uid + " is denied network info (" + OP + ")");
++        }
++        return mode != AppOpsManager.MODE_ALLOWED;
++    }
++
++    private static boolean isUnknownOp(RuntimeException e) {
++        return e instanceof IllegalArgumentException && e.getMessage() != null
++                && e.getMessage().startsWith("Unknown operation string");
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        final PackageManager pm = context.getPackageManager();
++        if (pm == null) {
++            return null;
++        }
++        // The caller may not see packages by uid (package visibility); the system does.
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final String[] packages = pm.getPackagesForUid(uid);
++            return packages != null && packages.length > 0 ? packages[0] : null;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++}
