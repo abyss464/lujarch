@@ -1,0 +1,224 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/NotificationListener.java b/packages/SystemUI/src/com/android/systemui/statusbar/NotificationListener.java
+index 9099c29c63232800b968c20ca17ecd3ad5a6a3ff..701c61d733b864cc841c11e98a6df33eeae15132 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/NotificationListener.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/NotificationListener.java
+@@ -110,6 +110,11 @@ public class NotificationListener extends NotificationListenerWithPlugins implem
+             return;
+         }
+         final RankingMap currentRanking = getCurrentRanking();
++        // Lujarch (ICON-2): icons that break the notification design get ANIP's.
++        for (StatusBarNotification sbn : notifications) {
++            com.android.systemui.statusbar.notification.lujarch.NotificationIconFix.apply(
++                    mContext, sbn);
++        }
+         mMainExecutor.execute(() -> {
+             // There's currently a race condition between the calls to getActiveNotifications() and
+             // getCurrentRanking(). It's possible for the ranking that we store here to not contain
+@@ -148,6 +153,9 @@ public class NotificationListener extends NotificationListenerWithPlugins implem
+             if (!isKeyInRankingMap(key, rankingMap)) {
+                 Log.wtf(TAG, "Missing ranking after plugins for " + key);
+             }
++            // Lujarch (ICON-2): icons that break the notification design get ANIP's.
++            com.android.systemui.statusbar.notification.lujarch.NotificationIconFix.apply(
++                    mContext, sbn);
+             mMainExecutor.execute(() -> {
+                 for (NotificationHandler handler : mNotificationHandlers) {
+                     handler.onNotificationPosted(sbn, rankingMap);
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/NotificationIconFix.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/NotificationIconFix.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..4451937c64e8978e2cea06342893a7c5747b6b1c
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/NotificationIconFix.java
+@@ -0,0 +1,192 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.systemui.statusbar.notification.lujarch;
++
++import android.app.Notification;
++import android.content.Context;
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.drawable.AdaptiveIconDrawable;
++import android.graphics.drawable.Drawable;
++import android.graphics.drawable.Icon;
++import android.provider.Settings;
++import android.service.notification.StatusBarNotification;
++import android.util.ArrayMap;
++import android.util.Log;
++import android.util.LruCache;
++
++import org.json.JSONObject;
++
++import java.io.InputStream;
++import java.nio.charset.StandardCharsets;
++import java.util.Iterator;
++import java.util.Map;
++import java.util.zip.ZipEntry;
++import java.util.zip.ZipFile;
++
++/**
++ * Notification icons that do not follow Android's design (a colour picture or the app icon
++ * as the small icon, which the status bar turns into a white square) get the monochrome icon
++ * of the Android Notification Icon Project (ANIP, BetterAndroid, Apache-2.0; ICON-2), from
++ * its bundle on /system_ext. An app whose rule says "overlay" gets it whatever it posts.
++ *
++ * Applied where SystemUI receives a notification, so the status bar, the shade, the shelf and
++ * the always-on display all show the same icon. The notification's colour, when the app sets
++ * none, becomes the rule's. The owner's switch: Settings.Global lujarch_icons_notifications
++ * (Settings > Notifications > Fit notification icons).
++ */
++public final class NotificationIconFix {
++    private static final String TAG = "lujarch_icons";
++    public static final String SETTING = "lujarch_icons_notifications";
++    private static final String BUNDLE = "/system_ext/etc/lujarch/icons/anip-bundle.zip";
++    private static final String[] RULE_DIRS = {"app", "game", "system/common"};
++    private static final int PROBE = 48;
++
++    private static final class Rule {
++        String entry;
++        Integer color;
++        boolean overlay;
++    }
++
++    private static Map<String, Rule> sRules;
++    private static final LruCache<String, Boolean> sNonCompliant = new LruCache<>(256);
++    private static final LruCache<String, Icon> sIcons = new LruCache<>(64);
++
++    private NotificationIconFix() {}
++
++    /** Swaps the small icon of {@code sbn} when a rule applies; never throws. */
++    public static void apply(Context context, StatusBarNotification sbn) {
++        try {
++            if (Settings.Global.getInt(context.getContentResolver(), SETTING, 1) == 0) return;
++            Rule rule = rules().get(sbn.getPackageName());
++            if (rule == null) return;
++            Notification n = sbn.getNotification();
++            Icon small = n.getSmallIcon();
++            if (!rule.overlay && !nonCompliant(context, sbn, small)) return;
++            Icon icon = icon(rule);
++            if (icon == null) return;
++            n.setSmallIcon(icon);
++            if (n.color == Notification.COLOR_DEFAULT && rule.color != null) {
++                n.color = rule.color;
++            }
++        } catch (RuntimeException e) {
++            Log.w(TAG, "Kept the icon of " + sbn.getPackageName(), e);
++        }
++    }
++
++    /**
++     * An icon that does not follow the design: the app icon itself, or a picture that fills
++     * its box (opaque over most of it), which a status bar tint turns into a solid shape.
++     */
++    private static boolean nonCompliant(Context context, StatusBarNotification sbn, Icon small) {
++        if (small == null) return false;
++        String key = null;
++        if (small.getType() == Icon.TYPE_RESOURCE) {
++            key = sbn.getPackageName() + "/" + small.getResPackage() + ":" + small.getResId();
++            Boolean cached = sNonCompliant.get(key);
++            if (cached != null) return cached;
++        }
++        boolean bad = false;
++        Drawable d = small.loadDrawableAsUser(context, sbn.getUserId());
++        if (d instanceof AdaptiveIconDrawable) {
++            bad = true;
++        } else if (d != null) {
++            Bitmap b = Bitmap.createBitmap(PROBE, PROBE, Bitmap.Config.ARGB_8888);
++            d.setBounds(0, 0, PROBE, PROBE);
++            d.draw(new Canvas(b));
++            int x0 = PROBE, y0 = PROBE, x1 = -1, y1 = -1;
++            int[] px = new int[PROBE * PROBE];
++            b.getPixels(px, 0, PROBE, 0, 0, PROBE, PROBE);
++            b.recycle();
++            for (int y = 0; y < PROBE; y++) {
++                for (int x = 0; x < PROBE; x++) {
++                    if (Color.alpha(px[y * PROBE + x]) > 40) {
++                        x0 = Math.min(x0, x); y0 = Math.min(y0, y);
++                        x1 = Math.max(x1, x); y1 = Math.max(y1, y);
++                    }
++                }
++            }
++            if (x1 >= 0) {
++                int opaque = 0;
++                for (int y = y0; y <= y1; y++) {
++                    for (int x = x0; x <= x1; x++) {
++                        if (Color.alpha(px[y * PROBE + x]) > 200) opaque++;
++                    }
++                }
++                int box = (x1 - x0 + 1) * (y1 - y0 + 1);
++                // a silhouette leaves room around and inside its shape; a picture does not
++                bad = box > 0.4f * PROBE * PROBE && opaque > 0.85f * box;
++            }
++        }
++        if (key != null) sNonCompliant.put(key, bad);
++        return bad;
++    }
++
++    private static Icon icon(Rule rule) {
++        Icon cached = sIcons.get(rule.entry);
++        if (cached != null) return cached;
++        try (ZipFile zip = new ZipFile(BUNDLE)) {
++            ZipEntry e = zip.getEntry(rule.entry);
++            if (e == null) return null;
++            try (InputStream in = zip.getInputStream(e)) {
++                Bitmap b = BitmapFactory.decodeStream(in);
++                if (b == null) return null;
++                Icon icon = Icon.createWithBitmap(b);
++                sIcons.put(rule.entry, icon);
++                return icon;
++            }
++        } catch (Exception ex) {
++            Log.w(TAG, "No icon " + rule.entry, ex);
++            return null;
++        }
++    }
++
++    /** The rules of the bundle, by package; a rule's target lends it its icon and fields. */
++    private static synchronized Map<String, Rule> rules() {
++        if (sRules != null) return sRules;
++        Map<String, Rule> rules = new ArrayMap<>();
++        try (ZipFile zip = new ZipFile(BUNDLE)) {
++            for (String dir : RULE_DIRS) {
++                ZipEntry m = zip.getEntry(dir + "/manifest.json");
++                if (m == null) continue;
++                JSONObject all;
++                try (InputStream in = zip.getInputStream(m)) {
++                    all = new JSONObject(new String(in.readAllBytes(), StandardCharsets.UTF_8));
++                }
++                for (Iterator<String> it = all.keys(); it.hasNext(); ) {
++                    String pkg = it.next();
++                    JSONObject r = all.getJSONObject(pkg);
++                    JSONObject base = r;
++                    String file = pkg;
++                    if (r.has("target") && all.has(r.getString("target"))) {
++                        file = r.getString("target");
++                        base = all.getJSONObject(file);
++                    }
++                    Rule rule = new Rule();
++                    // the file is named by the package as written (some keep capitals)
++                    rule.entry = dir + "/res/" + file + "."
++                            + base.optString("format", "png").toLowerCase();
++                    String color = r.optString("color", base.optString("color", ""));
++                    if (!color.isEmpty()) {
++                        try {
++                            rule.color = Color.parseColor(color);
++                        } catch (IllegalArgumentException ignored) {
++                            // a malformed colour: the notification keeps its own
++                        }
++                    }
++                    rule.overlay = r.optBoolean("overlay", base.optBoolean("overlay", false));
++                    rules.put(pkg, rule);
++                }
++            }
++            Log.i(TAG, rules.size() + " rules from " + BUNDLE);
++        } catch (Exception e) {
++            Log.w(TAG, "No notification icon rules", e);
++        }
++        sRules = rules;
++        return rules;
++    }
++}

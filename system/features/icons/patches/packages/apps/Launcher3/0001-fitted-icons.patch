@@ -1,0 +1,82 @@
+diff --git a/quickstep/src/com/android/launcher3/icons/LauncherIconProviderImpl.kt b/quickstep/src/com/android/launcher3/icons/LauncherIconProviderImpl.kt
+index fcd2c52ffc8ff39d838af5d6d46e42441c3fff5d..d41b899e12fb5711c7a59ff1817ed6e1c2888ba1 100644
+--- a/quickstep/src/com/android/launcher3/icons/LauncherIconProviderImpl.kt
++++ b/quickstep/src/com/android/launcher3/icons/LauncherIconProviderImpl.kt
+@@ -16,13 +16,18 @@
+ 
+ package com.android.launcher3.icons
+ 
++import android.content.BroadcastReceiver
+ import android.content.Context
++import android.content.Intent
++import android.content.IntentFilter
+ import android.content.pm.ApplicationInfo
+ import android.content.pm.PackageItemInfo
+ import android.content.res.Resources.NotFoundException
+ import android.graphics.drawable.AdaptiveIconDrawable
+ import android.graphics.drawable.Drawable
++import android.os.UserHandle
+ import android.util.Log
++import com.android.internal.lujarch.icons.LujarchIcons
+ import com.android.launcher3.LauncherModel
+ import com.android.launcher3.dagger.ApplicationContext
+ import com.android.launcher3.dagger.LauncherAppSingleton
+@@ -59,6 +64,23 @@ constructor(
+     init {
+         pluginManagerWrapper.addPluginListener(this, IconProcessorPlugin::class.java)
+         lifecycle.addCloseable { pluginManagerWrapper.removePluginListener(this) }
++        // Lujarch (ICON-1): fitted icons changed (a mode, the switch): reload, and the cache
++        // entries whose token changed are drawn again (getApplicationInfoHash).
++        val receiver =
++            object : BroadcastReceiver() {
++                override fun onReceive(context: Context, intent: Intent) {
++                    MODEL_EXECUTOR.execute {
++                        iconCacheProvider.get().clearMemoryCache()
++                        modelProvider.get().reloadIfActive("LujarchFittedIcons")
++                    }
++                }
++            }
++        ctx.registerReceiver(
++            receiver,
++            IntentFilter(LujarchIcons.ACTION_ICONS_CHANGED),
++            Context.RECEIVER_EXPORTED,
++        )
++        lifecycle.addCloseable { ctx.unregisterReceiver(receiver) }
+     }
+ 
+     private var processor: IconProcessorPlugin? = null
+@@ -67,6 +89,13 @@ constructor(
+         mSystemState.withAdditionalValues(
+             (appInfo.sourceDir?.hashCode() ?: 0).toString(),
+             appInfo.longVersionCode.toString(),
++            // Lujarch (ICON-1): the fitted icon changes with the owner's choice
++            LujarchIcons.token(
++                    appInfo.packageName,
++                    appInfo.icon,
++                    UserHandle.getUserId(appInfo.uid),
++                )
++                .toString(),
+         )
+ 
+     override fun loadPackageIcon(
+@@ -74,8 +103,18 @@ constructor(
+         appInfo: ApplicationInfo,
+         density: Int,
+     ): Drawable? {
+-        fun Drawable.preprocess(resId: Int) =
+-            processor?.preprocessDrawable(this, resId, appInfo) ?: this
++        // Lujarch (ICON-1): a legacy icon becomes its fitted adaptive icon, before any plugin.
++        fun Drawable.preprocess(resId: Int): Drawable {
++            val fitted =
++                LujarchIcons.maybeFit(
++                    mContext.resources,
++                    appInfo.packageName,
++                    resId,
++                    UserHandle.getUserId(appInfo.uid),
++                    this,
++                )
++            return processor?.preprocessDrawable(fitted, resId, appInfo) ?: fitted
++        }
+ 
+         try {
+             val resources = mContext.packageManager.getResourcesForApplication(appInfo)

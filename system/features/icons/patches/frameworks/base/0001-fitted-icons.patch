@@ -1,0 +1,1859 @@
+diff --git a/core/java/android/app/ApplicationPackageManager.java b/core/java/android/app/ApplicationPackageManager.java
+index ce6929f0a2df1f0b814794224f1a76af569afa80..e9124619589f44f94895da1129930e2f82c4ce5c 100644
+--- a/core/java/android/app/ApplicationPackageManager.java
++++ b/core/java/android/app/ApplicationPackageManager.java
+@@ -3595,6 +3595,13 @@ public class ApplicationPackageManager extends PackageManager {
+                 dr = getArchivedAppIcon(itemInfo.packageName);
+             } else {
+                 dr = getDrawable(itemInfo.packageName, itemInfo.icon, appInfo);
++                // Lujarch: a legacy app icon becomes its fitted adaptive icon.
++                if (dr != null) {
++                    dr = com.android.internal.lujarch.icons.LujarchIcons.maybeFit(
++                            mContext.getResources(), itemInfo.packageName, itemInfo.icon,
++                            appInfo != null ? UserHandle.getUserId(appInfo.uid) : getUserId(),
++                            dr);
++                }
+             }
+         }
+         if (dr == null && itemInfo != appInfo && appInfo != null) {
+diff --git a/core/java/android/content/pm/LauncherActivityInfo.java b/core/java/android/content/pm/LauncherActivityInfo.java
+index b25a473a376264800e9f1c0ff6202f39041fdfb3..4980b29b3f2e257b6363f8bfd5e32c9f16d7585e 100644
+--- a/core/java/android/content/pm/LauncherActivityInfo.java
++++ b/core/java/android/content/pm/LauncherActivityInfo.java
+@@ -136,6 +136,9 @@ public class LauncherActivityInfo {
+                 final Resources resources = mPm.getResourcesForApplication(
+                         getActivityInfo().applicationInfo);
+                 icon = resources.getDrawableForDensity(iconRes, density);
++                // Lujarch: a legacy app icon becomes its fitted adaptive icon.
++                icon = com.android.internal.lujarch.icons.LujarchIcons.maybeFit(resources,
++                        getActivityInfo().packageName, iconRes, getUser().getIdentifier(), icon);
+             } catch (NameNotFoundException | Resources.NotFoundException exc) {
+             }
+         }
+diff --git a/core/java/com/android/internal/lujarch/icons/ILujarchIconService.aidl b/core/java/com/android/internal/lujarch/icons/ILujarchIconService.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..1e84ba8cbedcb764f0581bc4fb18696489469cb9
+--- /dev/null
++++ b/core/java/com/android/internal/lujarch/icons/ILujarchIconService.aidl
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.internal.lujarch.icons;
++
++import com.android.internal.lujarch.icons.LujarchIconLayers;
++
++/**
++ * Lujarch fitted icons (ICON-1): a legacy app icon becomes an adaptive one, redrawn or fitted. Reads are open to every app (an app's icon is public);
++ * changes need WRITE_SECURE_SETTINGS.
++ * @hide
++ */
++interface ILujarchIconService {
++    /** 0 when the icon stays as it is; else a token that changes when the fitted icon does. */
++    long getToken(String packageName, int iconRes, int userId);
++    /** The layers for the icon as it is set now, or null to keep the original. */
++    LujarchIconLayers getLayers(String packageName, int iconRes, int userId);
++    /** The layers a mode would give (the chooser's previews), null for the original. */
++    LujarchIconLayers getPreview(String packageName, int iconRes, int userId, int mode);
++    /** Whether the app's icon is one the system fits (a legacy icon). */
++    boolean isFittable(String packageName, int iconRes, int userId);
++
++    int getMode(String packageName);
++    void setMode(String packageName, int mode);
++}
+diff --git a/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.aidl b/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f469213009b0e9c88e0c97c8d52e63f03e93e4e
+--- /dev/null
++++ b/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.aidl
+@@ -0,0 +1,8 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.internal.lujarch.icons;
++
++/** @hide */
++parcelable LujarchIconLayers;
+diff --git a/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.java b/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..10c0eb8c11dbcde2567ff365bc9ec16c4c2a7dcf
+--- /dev/null
++++ b/core/java/com/android/internal/lujarch/icons/LujarchIconLayers.java
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.internal.lujarch.icons;
++
++import android.annotation.Nullable;
++import android.graphics.Bitmap;
++import android.os.Parcel;
++import android.os.Parcelable;
++
++/**
++ * The layers of a fitted icon, each the 108 dp canvas of an adaptive icon.
++ * @hide
++ */
++public final class LujarchIconLayers implements Parcelable {
++    /** A logo: redrawn as shapes. */
++    public static final int KIND_LOGO = 1;
++    /** An illustration: fitted, never redrawn. */
++    public static final int KIND_ILLUSTRATION = 2;
++
++    public final Bitmap background;
++    public final Bitmap foreground;
++    @Nullable
++    public final Bitmap monochrome;
++    public final int kind;
++
++    public LujarchIconLayers(Bitmap background, Bitmap foreground, @Nullable Bitmap monochrome,
++            int kind) {
++        this.background = background;
++        this.foreground = foreground;
++        this.monochrome = monochrome;
++        this.kind = kind;
++    }
++
++    private LujarchIconLayers(Parcel in) {
++        background = Bitmap.CREATOR.createFromParcel(in);
++        foreground = Bitmap.CREATOR.createFromParcel(in);
++        monochrome = in.readInt() != 0 ? Bitmap.CREATOR.createFromParcel(in) : null;
++        kind = in.readInt();
++    }
++
++    @Override
++    public void writeToParcel(Parcel dest, int flags) {
++        background.writeToParcel(dest, flags);
++        foreground.writeToParcel(dest, flags);
++        dest.writeInt(monochrome != null ? 1 : 0);
++        if (monochrome != null) monochrome.writeToParcel(dest, flags);
++        dest.writeInt(kind);
++    }
++
++    @Override
++    public int describeContents() {
++        return 0;
++    }
++
++    public static final Creator<LujarchIconLayers> CREATOR = new Creator<>() {
++        @Override
++        public LujarchIconLayers createFromParcel(Parcel in) {
++            return new LujarchIconLayers(in);
++        }
++
++        @Override
++        public LujarchIconLayers[] newArray(int size) {
++            return new LujarchIconLayers[size];
++        }
++    };
++}
+diff --git a/core/java/com/android/internal/lujarch/icons/LujarchIcons.java b/core/java/com/android/internal/lujarch/icons/LujarchIcons.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..9d225495b9db091eb3c7e270bdb6211b6b8a6228
+--- /dev/null
++++ b/core/java/com/android/internal/lujarch/icons/LujarchIcons.java
+@@ -0,0 +1,125 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.internal.lujarch.icons;
++
++import android.annotation.Nullable;
++import android.app.ActivityThread;
++import android.content.res.Resources;
++import android.graphics.Bitmap;
++import android.graphics.drawable.AdaptiveIconDrawable;
++import android.graphics.drawable.BitmapDrawable;
++import android.graphics.drawable.Drawable;
++import android.os.IBinder;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.os.UserHandle;
++import android.util.Log;
++import android.util.LruCache;
++
++/**
++ * The client of fitted icons: wherever an app's icon is loaded (PackageManager's item icons,
++ * LauncherActivityInfo, the launcher), a legacy icon is swapped for its fitted adaptive one.
++ * One service decides and draws (LujarchIconService), so every surface shows the same icon.
++ * @hide
++ */
++public final class LujarchIcons {
++    private static final String TAG = "lujarch_icons";
++    public static final String SERVICE = "lujarch_icons";
++    /** Settings.Global switch of fitted icons, 1 (the default) on. */
++    public static final String SETTING_FIT = "lujarch_icons_fit";
++    /** Sent to registered receivers when any fitted icon changed (a mode, the switch). */
++    public static final String ACTION_ICONS_CHANGED =
++            "com.android.internal.lujarch.icons.action.ICONS_CHANGED";
++
++    /** The owner's choices for one app; DEFAULT follows the system (redraw a logo). */
++    public static final int MODE_DEFAULT = 0;
++    public static final int MODE_ORIGINAL = 1;
++    public static final int MODE_FIT = 2;
++    public static final int MODE_REDRAW = 3;
++
++    private static final class Entry {
++        final long token;
++        final LujarchIconLayers layers;
++
++        Entry(long token, LujarchIconLayers layers) {
++            this.token = token;
++            this.layers = layers;
++        }
++    }
++
++    // The layers of the icons this process showed last; small: the launcher keeps its own
++    // cache and other apps show few icons at a time.
++    private static final LruCache<String, Entry> sCache = new LruCache<>(24);
++    private static volatile ILujarchIconService sService;
++
++    private LujarchIcons() {}
++
++    @Nullable
++    public static ILujarchIconService service() {
++        ILujarchIconService s = sService;
++        if (s == null) {
++            IBinder b = ServiceManager.getService(SERVICE);
++            if (b == null) return null;
++            s = ILujarchIconService.Stub.asInterface(b);
++            sService = s;
++        }
++        return s;
++    }
++
++    /**
++     * The icon to show for an app's icon resource: the fitted adaptive icon when the system
++     * fits this one, else {@code original}. Never throws; any failure keeps the original.
++     */
++    public static Drawable maybeFit(Resources res, String packageName, int iconRes, int userId,
++            Drawable original) {
++        if (original == null || original instanceof AdaptiveIconDrawable || iconRes == 0
++                || packageName == null || ActivityThread.isSystem()) {
++            return original;
++        }
++        try {
++            ILujarchIconService s = service();
++            if (s == null) return original;
++            long token = s.getToken(packageName, iconRes, userId);
++            if (token == 0) return original;
++            String key = packageName + "/" + iconRes + "/" + userId;
++            Entry e = sCache.get(key);
++            if (e == null || e.token != token) {
++                LujarchIconLayers layers = s.getLayers(packageName, iconRes, userId);
++                if (layers == null) return original;
++                e = new Entry(token, layers);
++                sCache.put(key, e);
++            }
++            return toDrawable(res, e.layers);
++        } catch (RemoteException | RuntimeException ex) {
++            Log.w(TAG, "Keeping the original icon of " + packageName, ex);
++            return original;
++        }
++    }
++
++    /** As {@link #maybeFit(Resources, String, int, int, Drawable)} for the calling user. */
++    public static Drawable maybeFit(Resources res, String packageName, int iconRes,
++            Drawable original) {
++        return maybeFit(res, packageName, iconRes, UserHandle.myUserId(), original);
++    }
++
++    /** The token of an app's fitted icon (0: not fitted), for caches keyed on the icon. */
++    public static long token(String packageName, int iconRes, int userId) {
++        try {
++            ILujarchIconService s = service();
++            return s == null ? 0 : s.getToken(packageName, iconRes, userId);
++        } catch (RemoteException | RuntimeException e) {
++            return 0;
++        }
++    }
++
++    public static AdaptiveIconDrawable toDrawable(Resources res, LujarchIconLayers l) {
++        return new AdaptiveIconDrawable(bitmap(res, l.background), bitmap(res, l.foreground),
++                l.monochrome != null ? bitmap(res, l.monochrome) : null);
++    }
++
++    private static Drawable bitmap(Resources res, Bitmap b) {
++        return new BitmapDrawable(res, b);
++    }
++}
+diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
+index 7e6c8923ac809b1aa87043cc564d504702669f26..86875e116a5ebda39a931cfff8c6eab98d744d33 100644
+--- a/core/res/AndroidManifest.xml
++++ b/core/res/AndroidManifest.xml
+@@ -38,6 +38,8 @@
+     <protected-broadcast android:name="android.intent.action.BOOT_COMPLETED" />
+     <protected-broadcast android:name="android.intent.action.PACKAGE_INSTALL" />
+     <protected-broadcast android:name="android.intent.action.PACKAGE_ADDED" />
++    <!-- Lujarch: fitted icons changed (com.android.internal.lujarch.icons). -->
++    <protected-broadcast android:name="com.android.internal.lujarch.icons.action.ICONS_CHANGED" />
+     <protected-broadcast android:name="android.intent.action.PACKAGE_REPLACED" />
+     <protected-broadcast android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+     <protected-broadcast android:name="android.intent.action.PACKAGE_REMOVED" />
+diff --git a/services/core/java/com/android/server/lujarch/icons/IconFitter.java b/services/core/java/com/android/server/lujarch/icons/IconFitter.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f3e8754b45a45558543e01d951bd026a0ba22f8
+--- /dev/null
++++ b/services/core/java/com/android/server/lujarch/icons/IconFitter.java
+@@ -0,0 +1,1081 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.server.lujarch.icons;
++
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.List;
++import java.util.Random;
++
++/**
++ * Turns a legacy (single-layer) app icon into the layers of an adaptive icon (ICON-1). Plain
++ * Java on ARGB arrays.
++ *
++ * The analysis: the tile's background as a fitted colour gradient; the foreground as what
++ * differs from it; campaign decorations (a banner across the bottom, badges at the side)
++ * dropped; the main elements as connected components, specks, edge shading and captions
++ * dropped; the palette by k-means; an illustration told from a logo by its colours and detail.
++ *
++ * Two results:
++ * <ul>
++ * <li>FIT: the background to full bleed (its gradient kept), the original foreground pixels
++ * scaled into the safe zone;
++ * <li>REDRAW: a flat plate in the background colour and the main elements as a flat shape,
++ * white on a dark or saturated plate, else in the dominant colour, with a second colour kept as
++ * an accent. An illustration is not redrawn: it gets FIT.
++ * </ul>
++ * Both come with a monochrome layer (the main elements' shape) for themed icons, except for an
++ * illustration.
++ */
++public final class IconFitter {
++    /** The analysis size: the icon is rendered square at this size before it is passed in. */
++    public static final int N = 512;
++
++    public static final int KIND_LOGO = 1;
++    public static final int KIND_ILLUSTRATION = 2;
++
++    /** The layers of an adaptive icon, each size x size ARGB, the 108 dp canvas. */
++    public static final class Layers {
++        public final int size;
++        public final int kind;
++        public final int[] background;
++        public final int[] foreground;
++        /** Null for an illustration: the launcher then derives one as for any icon. */
++        public final int[] monochrome;
++        /** What was found, for logs and tests: "banner", "badge", "caption". */
++        public final List<String> notes;
++
++        Layers(int size, int kind, int[] background, int[] foreground, int[] monochrome,
++                List<String> notes) {
++            this.size = size;
++            this.kind = kind;
++            this.background = background;
++            this.foreground = foreground;
++            this.monochrome = monochrome;
++            this.notes = notes;
++        }
++    }
++
++    // In the 108 dp canvas the visible circle is 72 dp; the elements' larger side is this share
++    // of the circle (as in the prototype the owner approved, 2026-10-01).
++    private static final float GLYPH_OF_CIRCLE = 0.58f;
++    private static final float CIRCLE_OF_CANVAS = 72f / 108f;
++
++    private IconFitter() {}
++
++    /**
++     * Fits an icon. {@code argb} is N x N, the legacy icon rendered square with alpha.
++     * Returns null when the icon has no usable shape (empty, or nothing but background).
++     */
++    public static Layers fit(int[] argb, boolean redraw, int size) {
++        Analysis a = analyse(argb);
++        if (a == null) return null;
++        boolean asRedraw = redraw && a.kind == KIND_LOGO;
++        int[] bg = asRedraw ? flatPlate(a, size) : extendedBackground(a, size);
++        int[] fg = asRedraw ? redrawForeground(a, size) : fitForeground(argb, a, size);
++        int[] mono = a.kind == KIND_LOGO ? monochrome(a, size) : null;
++        return new Layers(size, a.kind, bg, fg, mono, a.notes);
++    }
++
++    // ---------------------------------------------------------------- analysis
++
++    static final class Analysis {
++        int x0, y0, x1, y1;          // the tile
++        double[][] coef;              // background model, 6 terms per channel (RGB)
++        boolean[] fitMask;            // what FIT keeps (all of the logo but edge shading)
++        boolean[] shape;              // the main elements without captions (REDRAW, mono)
++        int[] cls;                    // palette class per pixel of shape: 0 main, 1 accent
++        float[][] centers;            // palette, RGB, by share
++        float[] share;
++        float[] bgMean;
++        int kind;
++        boolean whiteTile;
++        List<String> notes = new ArrayList<>();
++    }
++
++    static Analysis analyse(int[] px) {
++        final int n = N;
++        boolean[] a = new boolean[n * n];
++        int x0 = n, y0 = n, x1 = -1, y1 = -1;
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                if ((px[y * n + x] >>> 24) > 128) {
++                    a[y * n + x] = true;
++                    if (x < x0) x0 = x;
++                    if (x > x1) x1 = x;
++                    if (y < y0) y0 = y;
++                    if (y > y1) y1 = y;
++                }
++            }
++        }
++        if (x1 < 0) return null;
++        Analysis r = new Analysis();
++        r.x0 = x0; r.y0 = y0; r.x1 = x1; r.y1 = y1;
++        int w = x1 - x0, h = y1 - y0;
++        if (w < 16 || h < 16) return null;
++
++        float[] lab = new float[n * n * 3];
++        for (int i = 0; i < n * n; i++) toLab(px[i], lab, i * 3);
++
++        // ring 5-9 % inside the tile's edge
++        int[] d = new int[n * n];
++        List<Integer> ring = new ArrayList<>();
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                int dd = Math.min(Math.min(x - x0, x1 - x), Math.min(y - y0, y1 - y));
++                d[y * n + x] = dd;
++                if (a[y * n + x] && dd > 0.05 * w && dd < 0.09 * w) ring.add(y * n + x);
++            }
++        }
++        r.coef = fitBackground(px, lab, ring);
++        float[] bgRgb = new float[3];
++        float[] bgLab = new float[3];
++        boolean[] fg = new boolean[n * n];
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                int i = y * n + x;
++                if (!a[i]) continue;
++                model(r.coef, x / (float) n, y / (float) n, bgRgb);
++                toLab(bgRgb, bgLab);
++                fg[i] = dist(lab, i * 3, bgLab) > 22;
++            }
++        }
++        model(r.coef, 0.5f, 0.5f, bgRgb);
++        r.bgMean = bgRgb.clone();
++
++        dropOverlays(px, lab, fg, r, d);
++        fg = open(fg, n, 1);
++        fg = close(fg, n, 2);
++
++        // components
++        int[] lbl = new int[n * n];
++        List<int[]> stats = components(fg, n, lbl); // {area, minx, miny, maxx, maxy}
++        if (stats.isEmpty()) return null;
++        int total = 0, big = 0;
++        for (int[] s : stats) {
++            total += s[0];
++            big = Math.max(big, s[0]);
++        }
++        Integer[] order = new Integer[stats.size()];
++        for (int i = 0; i < order.length; i++) order[i] = i;
++        Arrays.sort(order, (p, q) -> stats.get(q)[0] - stats.get(p)[0]);
++        boolean[] touchesEdge = new boolean[stats.size()];
++        for (int i = 0; i < n * n; i++) {
++            if (lbl[i] > 0 && d[i] < 0.035 * w) touchesEdge[lbl[i] - 1] = true;
++        }
++        boolean[] keepC = new boolean[stats.size()];
++        boolean[] fitC = new boolean[stats.size()];
++        List<Integer> kept = new ArrayList<>();
++        for (int i : order) {
++            int area = stats.get(i)[0];
++            boolean shading = touchesEdge[i] && area < 0.25 * total;
++            // beside a removed decoration, a crumb of it is not a stroke of the logo
++            if (!shading && (area >= 0.015 * big || r.notes.isEmpty())) fitC[i] = true;
++            if (area < 0.06 * big || shading) continue;
++            keepC[i] = true;
++            kept.add(i);
++        }
++        // captions: three or more similar-height components in one row, apart from the main
++        // element and small beside it (a wordmark as large as the symbol stays)
++        boolean[] captionC = new boolean[stats.size()];
++        if (kept.size() >= 4) {
++            int[] m = stats.get(kept.get(0));
++            int mh = m[4] - m[2] + 1;
++            for (int i : kept.subList(1, kept.size())) {
++                int[] s = stats.get(i);
++                int hi = s[4] - s[2] + 1;
++                float cy = (s[2] + s[4]) / 2f;
++                int band = 0;
++                for (int j : kept.subList(1, kept.size())) {
++                    int[] t = stats.get(j);
++                    int hj = t[4] - t[2] + 1;
++                    float cyj = (t[2] + t[4]) / 2f;
++                    float ratio = hj / (float) Math.max(hi, 1);
++                    if (Math.abs(cyj - cy) < 0.5f * hi && ratio > 0.6f && ratio < 1.6f) band++;
++                }
++                if (band >= 3 && (cy > m[4] || cy < m[2]) && hi < 0.3f * mh) captionC[i] = true;
++            }
++        }
++        r.fitMask = new boolean[n * n];
++        r.shape = new boolean[n * n];
++        boolean anyCaption = false;
++        for (int i = 0; i < n * n; i++) {
++            int c = lbl[i] - 1;
++            if (c < 0) continue;
++            r.fitMask[i] = fitC[c];
++            r.shape[i] = keepC[c] && !captionC[c];
++            anyCaption |= captionC[c];
++        }
++        if (anyCaption) r.notes.add("caption");
++        if (count(r.shape) < 50) return null;
++
++        // palette of the main elements, two colours
++        float[][] cols = rgbOf(px, r.shape, 20000);
++        Kmeans k2 = kmeans(cols, Math.min(2, cols.length), 20);
++        r.centers = k2.centers;
++        r.share = k2.share;
++        r.cls = new int[n * n];
++        Arrays.fill(r.cls, -1);
++        for (int i = 0; i < n * n; i++) {
++            if (r.shape[i]) r.cls[i] = k2.nearest(px[i]);
++        }
++        // an illustration: many colours or much detail
++        Kmeans k5 = kmeans(cols, Math.min(5, cols.length), 20);
++        int strong = 0;
++        for (float s : k5.share) if (s > 0.10f) strong++;
++        // detail inside the shapes (their outlines do not count): a flat logo has none, an
++        // illustration's eyes, teeth, shading do
++        float detail = edgeDensity(px, erode(r.shape, n, 2), n);
++        int families = hueFamilies(k5);
++        r.kind = (strong >= 3 || families >= 3 || detail > 0.08f)
++                ? KIND_ILLUSTRATION : KIND_LOGO;
++        r.notes.add(String.format(java.util.Locale.ROOT, "strong=%d families=%d detail=%.3f",
++                strong, families, detail));
++        r.whiteTile = lum(r.bgMean) > 0.85f && sat(r.bgMean) < 0.12f;
++        return r;
++    }
++
++    /** Robust fit: a linear gradient first, dropping far samples, then the quadratic one. */
++    private static double[][] fitBackground(int[] px, float[] lab, List<Integer> ring) {
++        int m = ring.size();
++        double[][] X = new double[m][];
++        double[][] C = new double[m][];
++        float[][] CL = new float[m][];
++        for (int k = 0; k < m; k++) {
++            int i = ring.get(k);
++            X[k] = basis((i % N) / (double) N, (i / N) / (double) N);
++            C[k] = new double[] {(px[i] >> 16) & 255, (px[i] >> 8) & 255, px[i] & 255};
++            CL[k] = new float[] {lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]};
++        }
++        boolean[] keep = new boolean[m];
++        Arrays.fill(keep, true);
++        float[] tmpRgb = new float[3], tmpLab = new float[3];
++        for (int it = 0; it < 5; it++) {
++            double[][] lin = lstsq(X, C, keep, 3);
++            float[] res = new float[m];
++            List<Float> kr = new ArrayList<>();
++            for (int k = 0; k < m; k++) {
++                for (int c = 0; c < 3; c++) {
++                    tmpRgb[c] = (float) (lin[c][0] + lin[c][1] * X[k][1] + lin[c][2] * X[k][2]);
++                }
++                toLab(tmpRgb, tmpLab);
++                res[k] = (float) Math.sqrt(sq(CL[k][0] - tmpLab[0]) + sq(CL[k][1] - tmpLab[1])
++                        + sq(CL[k][2] - tmpLab[2]));
++                if (keep[k]) kr.add(res[k]);
++            }
++            float thr = Math.max(14f, percentile(kr, 60));
++            boolean[] nk = new boolean[m];
++            int cnt = 0;
++            boolean same = true;
++            for (int k = 0; k < m; k++) {
++                nk[k] = res[k] < thr;
++                if (nk[k]) cnt++;
++                if (nk[k] != keep[k]) same = false;
++            }
++            if (cnt < 0.3 * m || same) break;
++            keep = nk;
++        }
++        return lstsq(X, C, keep, 6);
++    }
++
++    /**
++     * Campaign decorations: a banner (from the bottom up, rows whose foreground spans the tile
++     * edge to edge; its slogan's letters are holes, so the span counts) and badges (a colour
++     * cluster small, compact and away from the middle). Their pixels, and what they enclose,
++     * are not the logo.
++     */
++    private static void dropOverlays(int[] px, float[] lab, boolean[] fg, Analysis r, int[] d) {
++        final int n = N;
++        int x0 = r.x0, y0 = r.y0, x1 = r.x1, y1 = r.y1, w = x1 - x0, h = y1 - y0;
++        // badges
++        List<Integer> idx = new ArrayList<>();
++        for (int i = 0; i < n * n; i++) if (fg[i]) idx.add(i);
++        if (idx.size() >= 100) {
++            float[][] pts = new float[idx.size()][];
++            for (int k = 0; k < pts.length; k++) {
++                int i = idx.get(k);
++                pts[k] = new float[] {lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]};
++            }
++            Kmeans km = kmeans(pts, Math.min(6, pts.length), 30);
++            float cx = (x0 + x1) / 2f, cy = (y0 + y1) / 2f;
++            for (int c = 0; c < km.centers.length; c++) {
++                List<Integer> members = new ArrayList<>();
++                for (int k = 0; k < pts.length; k++) if (km.label[k] == c) members.add(idx.get(k));
++                if (members.size() < 30) continue;
++                float share = members.size() / (float) pts.length;
++                float[] xs = new float[members.size()], ys = new float[members.size()];
++                for (int k = 0; k < xs.length; k++) {
++                    xs[k] = members.get(k) % n;
++                    ys[k] = members.get(k) / n;
++                }
++                float bw = (pct(xs, 98) - pct(xs, 2)) / w, bh = (pct(ys, 98) - pct(ys, 2)) / h;
++                float off = (float) Math.hypot(pct(xs, 50) - cx, pct(ys, 50) - cy) / w;
++                if (share < 0.15f && bw < 0.32f && bh < 0.32f && off > 0.24f) {
++                    boolean[] m = new boolean[n * n];
++                    for (int i : members) m[i] = true;
++                    m = close(m, n, 4);
++                    boolean[] hull = convexHullOfLargest(m, n);
++                    hull = dilate(hull, n, 2);
++                    for (int i = 0; i < n * n; i++) if (hull[i]) fg[i] = false;
++                    r.notes.add("badge");
++                }
++            }
++        }
++        // banner
++        int rows = 0, top = -1;
++        for (int y = y1; y > y0; y--) {
++            int lo = -1, hi = -1;
++            for (int x = x0; x <= x1; x++) {
++                if (fg[y * n + x]) {
++                    if (lo < 0) lo = x;
++                    hi = x;
++                }
++            }
++            if (lo < 0 || (hi - lo) < 0.92 * w || lo - x0 > 0.04 * w || hi - x0 < 0.96 * w) break;
++            rows++;
++            top = y;
++        }
++        if (rows > 0.10 * h) {
++            float[] bcol = new float[3];
++            List<float[]> band = new ArrayList<>();
++            for (int y = top; y <= y1; y++) {
++                for (int x = x0; x <= x1; x++) {
++                    int i = y * n + x;
++                    if (fg[i]) band.add(new float[] {lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]});
++                }
++            }
++            for (int c = 0; c < 3; c++) {
++                float[] v = new float[band.size()];
++                for (int k = 0; k < v.length; k++) v[k] = band.get(k)[c];
++                bcol[c] = pct(v, 50);
++            }
++            for (int y = top; y <= y1; y++) {
++                for (int x = x0; x <= x1; x++) fg[y * n + x] = false;
++            }
++            int above = Math.max(y0, top - (int) (0.12 * h));
++            for (int y = above; y < top; y++) {
++                for (int x = x0; x <= x1; x++) {
++                    int i = y * n + x;
++                    if (fg[i] && dist(lab, i * 3, bcol) < 7) fg[i] = false;
++                }
++            }
++            // what is left along the cut thinner than a stroke is the banner's rim
++            int k = Math.max(1, (int) (0.0175 * w));
++            boolean[] opened = open(fg, n, k);
++            int zone = Math.max(y0, top - (int) (0.15 * h));
++            for (int y = zone; y < top; y++) {
++                for (int x = x0; x <= x1; x++) {
++                    int i = y * n + x;
++                    if (!opened[i]) fg[i] = false;
++                }
++            }
++            r.notes.add("banner");
++        }
++    }
++
++    // ---------------------------------------------------------------- composition
++
++    private static int[] extendedBackground(Analysis a, int size) {
++        int[] out = new int[size * size];
++        float[] c = new float[3];
++        for (int y = 0; y < size; y++) {
++            for (int x = 0; x < size; x++) {
++                // the visible circle maps onto the tile; the canvas around it continues it
++                float u = canvasToTile(x, size, a.x0, a.x1);
++                float v = canvasToTile(y, size, a.y0, a.y1);
++                model(a.coef, u / N, v / N, c);
++                out[y * size + x] = argb(255, c[0], c[1], c[2]);
++            }
++        }
++        return out;
++    }
++
++    private static float canvasToTile(int p, int size, int t0, int t1) {
++        float circle = CIRCLE_OF_CANVAS * size;
++        float off = (size - circle) / 2f;
++        return t0 + (p + 0.5f - off) / circle * (t1 - t0);
++    }
++
++    private static int[] fitForeground(int[] px, Analysis a, int size) {
++        int[] box = bbox(a.fitMask, N);
++        int[] out = new int[size * size];
++        float target = GLYPH_OF_CIRCLE * CIRCLE_OF_CANVAS * size;
++        float s = target / Math.max(box[2] - box[0] + 1, box[3] - box[1] + 1);
++        int w = Math.round((box[2] - box[0] + 1) * s), h = Math.round((box[3] - box[1] + 1) * s);
++        int ox = (size - w) / 2, oy = (size - h) / 2;
++        double[][] in = s < 1 ? integralPremultiplied(px, a.fitMask) : null;
++        for (int y = 0; y < h; y++) {
++            for (int x = 0; x < w; x++) {
++                float fx0 = box[0] + x / s, fy0 = box[1] + y / s;
++                out[(oy + y) * size + ox + x] = s < 1
++                        ? areaColor(in, fx0, fy0, fx0 + 1 / s, fy0 + 1 / s)
++                        : sampleMasked(px, a.fitMask, fx0 + 0.5f / s - 0.5f, fy0 + 0.5f / s - 0.5f);
++            }
++        }
++        return out;
++    }
++
++    private static int[] flatPlate(Analysis a, int size) {
++        float[] plate = plateColor(a);
++        int[] out = new int[size * size];
++        Arrays.fill(out, argb(255, plate[0], plate[1], plate[2]));
++        return out;
++    }
++
++    /**
++     * A white tile's plate is the logo's brand colour: of its main colours (a fifth of it or
++     * more), the most saturated; the largest share is no guide when two colours are close.
++     */
++    private static float[] plateColor(Analysis a) {
++        if (!a.whiteTile) return a.bgMean;
++        float[] best = a.centers[0];
++        for (int i = 1; i < a.centers.length; i++) {
++            if (a.share[i] >= 0.2f && sat(a.centers[i]) > sat(best) + 0.1f) best = a.centers[i];
++        }
++        return best;
++    }
++
++    /**
++     * How many colour families the elements use (a cluster of 6 % or more): the greys, black
++     * and white are one family (counted from 15 %), and chromatic colours less than 30 degrees
++     * of hue apart are one.
++     */
++    private static int hueFamilies(Kmeans k) {
++        boolean achromatic = false;
++        List<Float> hues = new ArrayList<>();
++        for (int i = 0; i < k.centers.length; i++) {
++            if (k.share[i] < 0.06f) continue;
++            float[] c = k.centers[i];
++            float mx = Math.max(c[0], Math.max(c[1], c[2])) / 255f;
++            if (sat(c) < 0.18f || mx < 0.2f) {
++                // black, white or grey as a colour of the logo, not the grey fringe of its
++                // anti-aliased edges
++                achromatic |= k.share[i] >= 0.15f;
++                continue;
++            }
++            hues.add(hue(c));
++        }
++        hues.sort(null);
++        int fam = 0;
++        for (int i = 0; i < hues.size(); i++) {
++            if (i == 0 || hues.get(i) - hues.get(i - 1) >= 30f) fam++;
++        }
++        // the hue circle closes: red near 0 and near 360 is one family
++        if (hues.size() > 1 && hues.get(0) + 360f - hues.get(hues.size() - 1) < 30f && fam > 1) {
++            fam--;
++        }
++        return fam + (achromatic ? 1 : 0);
++    }
++
++    private static float hue(float[] c) {
++        float r = c[0] / 255f, g = c[1] / 255f, b = c[2] / 255f;
++        float mx = Math.max(r, Math.max(g, b)), mn = Math.min(r, Math.min(g, b)), d = mx - mn;
++        if (d == 0) return 0;
++        float h;
++        if (mx == r) h = ((g - b) / d) % 6f;
++        else if (mx == g) h = (b - r) / d + 2f;
++        else h = (r - g) / d + 4f;
++        h *= 60f;
++        return h < 0 ? h + 360f : h;
++    }
++
++    private static int[] redrawForeground(Analysis a, int size) {
++        float[] plate = plateColor(a);
++        float[] glyph;
++        float[] accent = null;
++        if (a.whiteTile) {
++            glyph = new float[] {255, 255, 255};
++        } else {
++            glyph = (lum(plate) < 0.62f || sat(plate) > 0.45f)
++                    ? new float[] {255, 255, 255} : a.centers[0];
++            if (a.share.length > 1 && a.share[1] > 0.18f
++                    && Math.sqrt(sq(a.centers[1][0] - a.centers[0][0])
++                    + sq(a.centers[1][1] - a.centers[0][1])
++                    + sq(a.centers[1][2] - a.centers[0][2])) > 60) {
++                accent = a.centers[1];
++            }
++        }
++        int[] box = bbox(a.shape, N);
++        float[] alpha = smoothMask(a.shape, box, size);
++        int[] out = new int[size * size];
++        for (int i = 0; i < out.length; i++) {
++            out[i] = argb(Math.round(alpha[i] * 255), glyph[0], glyph[1], glyph[2]);
++        }
++        if (accent != null) {
++            boolean[] am = new boolean[N * N];
++            for (int i = 0; i < am.length; i++) am[i] = a.shape[i] && a.cls[i] == 1;
++            float[] aa = smoothMask(am, box, size);
++            for (int i = 0; i < out.length; i++) {
++                if (aa[i] > 0) out[i] = over(out[i], argb(Math.round(aa[i] * 255),
++                        accent[0], accent[1], accent[2]));
++            }
++        }
++        return out;
++    }
++
++    private static int[] monochrome(Analysis a, int size) {
++        int[] box = bbox(a.shape, N);
++        float[] alpha = smoothMask(a.shape, box, size);
++        int[] out = new int[size * size];
++        for (int i = 0; i < out.length; i++) out[i] = argb(Math.round(alpha[i] * 255), 255, 255, 255);
++        return out;
++    }
++
++    /**
++     * The shape in box, scaled into the safe zone with smooth anti-aliased edges: bilinear
++     * coverage, a small blur, then a soft threshold. This is what smooths the traced outline in
++     * the prototype (potrace there; potrace is GPL, so not here).
++     */
++    private static float[] smoothMask(boolean[] m, int[] box, int size) {
++        float target = GLYPH_OF_CIRCLE * CIRCLE_OF_CANVAS * size;
++        float s = target / Math.max(box[2] - box[0] + 1, box[3] - box[1] + 1);
++        int w = Math.round((box[2] - box[0] + 1) * s), h = Math.round((box[3] - box[1] + 1) * s);
++        int ox = (size - w) / 2, oy = (size - h) / 2;
++        float[] cov = new float[size * size];
++        double[] in = integral(m);
++        for (int y = 0; y < h; y++) {
++            for (int x = 0; x < w; x++) {
++                // the share of the source footprint the shape covers (downscaling without
++                // aliasing); bilinear where the footprint is under a pixel
++                float fx0 = box[0] + x / s, fy0 = box[1] + y / s;
++                cov[(oy + y) * size + ox + x] = s < 1
++                        ? area(in, fx0, fy0, fx0 + 1 / s, fy0 + 1 / s)
++                        : bilinear(m, fx0 + 0.5f / s - 0.5f, fy0 + 0.5f / s - 0.5f);
++            }
++        }
++        float sigma = Math.max(0.6f, 1.2f * s);
++        float[] blurred = blur(cov, size, sigma);
++        float[] out = new float[size * size];
++        for (int i = 0; i < out.length; i++) {
++            float t = (blurred[i] - 0.5f) / 0.12f + 0.5f; // a ~1.5 px soft edge
++            out[i] = t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
++        }
++        return out;
++    }
++
++    // ---------------------------------------------------------------- image helpers
++
++    private static float[][] rgbOf(int[] px, boolean[] m, int max) {
++        int c = count(m);
++        int step = Math.max(1, c / max);
++        List<float[]> l = new ArrayList<>();
++        int k = 0;
++        for (int i = 0; i < m.length; i++) {
++            if (m[i] && (k++ % step == 0)) {
++                l.add(new float[] {(px[i] >> 16) & 255, (px[i] >> 8) & 255, px[i] & 255});
++            }
++        }
++        return l.toArray(new float[0][]);
++    }
++
++    private static float edgeDensity(int[] px, boolean[] m, int n) {
++        int edges = 0, total = 0;
++        for (int y = 1; y < n - 1; y++) {
++            for (int x = 1; x < n - 1; x++) {
++                int i = y * n + x;
++                if (!m[i]) continue;
++                total++;
++                float gx = gray(px[i + 1]) - gray(px[i - 1]);
++                float gy = gray(px[i + n]) - gray(px[i - n]);
++                if (Math.sqrt(gx * gx + gy * gy) > 60) edges++;
++            }
++        }
++        return total == 0 ? 0 : edges / (float) total;
++    }
++
++    private static float gray(int c) {
++        return 0.299f * ((c >> 16) & 255) + 0.587f * ((c >> 8) & 255) + 0.114f * (c & 255);
++    }
++
++    private static List<int[]> components(boolean[] m, int n, int[] lbl) {
++        List<int[]> stats = new ArrayList<>();
++        int[] stack = new int[n * n];
++        for (int s = 0; s < n * n; s++) {
++            if (!m[s] || lbl[s] != 0) continue;
++            int id = stats.size() + 1;
++            int[] st = {0, n, n, -1, -1};
++            int sp = 0;
++            stack[sp++] = s;
++            lbl[s] = id;
++            while (sp > 0) {
++                int i = stack[--sp];
++                int x = i % n, y = i / n;
++                st[0]++;
++                st[1] = Math.min(st[1], x); st[2] = Math.min(st[2], y);
++                st[3] = Math.max(st[3], x); st[4] = Math.max(st[4], y);
++                for (int dy = -1; dy <= 1; dy++) {
++                    for (int dx = -1; dx <= 1; dx++) {
++                        int xx = x + dx, yy = y + dy;
++                        if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue;
++                        int j = yy * n + xx;
++                        if (m[j] && lbl[j] == 0) {
++                            lbl[j] = id;
++                            stack[sp++] = j;
++                        }
++                    }
++                }
++            }
++            stats.add(st);
++        }
++        return stats;
++    }
++
++    private static boolean[] erode(boolean[] m, int n, int r) {
++        return morph(m, n, r, true);
++    }
++
++    private static boolean[] dilate(boolean[] m, int n, int r) {
++        return morph(m, n, r, false);
++    }
++
++    /** Square structuring element of side 2r+1, separable. */
++    private static boolean[] morph(boolean[] m, int n, int r, boolean erode) {
++        boolean[] t = new boolean[n * n], o = new boolean[n * n];
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                boolean v = erode;
++                for (int k = -r; k <= r && v == erode; k++) {
++                    int xx = x + k;
++                    boolean s = xx >= 0 && xx < n && m[y * n + xx];
++                    if (erode ? !s : s) v = !erode;
++                }
++                t[y * n + x] = v;
++            }
++        }
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                boolean v = erode;
++                for (int k = -r; k <= r && v == erode; k++) {
++                    int yy = y + k;
++                    boolean s = yy >= 0 && yy < n && t[yy * n + x];
++                    if (erode ? !s : s) v = !erode;
++                }
++                o[y * n + x] = v;
++            }
++        }
++        return o;
++    }
++
++    private static boolean[] open(boolean[] m, int n, int r) {
++        return dilate(erode(m, n, r), n, r);
++    }
++
++    private static boolean[] close(boolean[] m, int n, int r) {
++        return erode(dilate(m, n, r), n, r);
++    }
++
++    /** The convex hull of the largest component, filled. */
++    private static boolean[] convexHullOfLargest(boolean[] m, int n) {
++        int[] lbl = new int[n * n];
++        List<int[]> st = components(m, n, lbl);
++        int best = 0;
++        for (int i = 1; i < st.size(); i++) if (st.get(i)[0] > st.get(best)[0]) best = i;
++        List<int[]> pts = new ArrayList<>();
++        for (int i = 0; i < n * n; i++) {
++            if (lbl[i] == best + 1) pts.add(new int[] {i % n, i / n});
++        }
++        List<int[]> hull = hull(pts);
++        boolean[] out = new boolean[n * n];
++        int[] b = st.isEmpty() ? new int[] {0, 0, 0, -1, -1} : st.get(best);
++        for (int y = b[2]; y <= b[4]; y++) {
++            for (int x = b[1]; x <= b[3]; x++) {
++                if (inside(hull, x, y)) out[y * n + x] = true;
++            }
++        }
++        return out;
++    }
++
++    private static List<int[]> hull(List<int[]> p) {
++        p.sort((a, b) -> a[0] != b[0] ? a[0] - b[0] : a[1] - b[1]);
++        int k = 0;
++        int[][] h = new int[2 * p.size() + 1][];
++        for (int[] q : p) {
++            while (k >= 2 && cross(h[k - 2], h[k - 1], q) <= 0) k--;
++            h[k++] = q;
++        }
++        for (int i = p.size() - 2, t = k + 1; i >= 0; i--) {
++            int[] q = p.get(i);
++            while (k >= t && cross(h[k - 2], h[k - 1], q) <= 0) k--;
++            h[k++] = q;
++        }
++        List<int[]> out = new ArrayList<>();
++        for (int i = 0; i < Math.max(0, k - 1); i++) out.add(h[i]);
++        return out;
++    }
++
++    private static long cross(int[] o, int[] a, int[] b) {
++        return (long) (a[0] - o[0]) * (b[1] - o[1]) - (long) (a[1] - o[1]) * (b[0] - o[0]);
++    }
++
++    private static boolean inside(List<int[]> hull, int x, int y) {
++        if (hull.size() < 3) return false;
++        for (int i = 0; i < hull.size(); i++) {
++            int[] a = hull.get(i), b = hull.get((i + 1) % hull.size());
++            if (cross(a, b, new int[] {x, y}) < 0) return false;
++        }
++        return true;
++    }
++
++    private static int[] bbox(boolean[] m, int n) {
++        int x0 = n, y0 = n, x1 = -1, y1 = -1;
++        for (int i = 0; i < m.length; i++) {
++            if (!m[i]) continue;
++            int x = i % n, y = i / n;
++            x0 = Math.min(x0, x); y0 = Math.min(y0, y);
++            x1 = Math.max(x1, x); y1 = Math.max(y1, y);
++        }
++        return new int[] {x0, y0, x1, y1};
++    }
++
++    private static int count(boolean[] m) {
++        int c = 0;
++        for (boolean b : m) if (b) c++;
++        return c;
++    }
++
++    /** Summed-area table of a mask, (N+1)^2. */
++    private static double[] integral(boolean[] m) {
++        int w = N + 1;
++        double[] t = new double[w * w];
++        for (int y = 0; y < N; y++) {
++            double row = 0;
++            for (int x = 0; x < N; x++) {
++                row += m[y * N + x] ? 1 : 0;
++                t[(y + 1) * w + x + 1] = t[y * w + x + 1] + row;
++            }
++        }
++        return t;
++    }
++
++    /** Summed-area tables of premultiplied alpha, red, green, blue under a mask. */
++    private static double[][] integralPremultiplied(int[] px, boolean[] m) {
++        int w = N + 1;
++        double[][] t = new double[4][w * w];
++        double[] row = new double[4];
++        for (int y = 0; y < N; y++) {
++            Arrays.fill(row, 0);
++            for (int x = 0; x < N; x++) {
++                int i = y * N + x, c = px[i];
++                double al = m[i] ? (c >>> 24) / 255.0 : 0;
++                row[0] += al;
++                row[1] += al * ((c >> 16) & 255);
++                row[2] += al * ((c >> 8) & 255);
++                row[3] += al * (c & 255);
++                for (int k = 0; k < 4; k++) t[k][(y + 1) * w + x + 1] = t[k][y * w + x + 1] + row[k];
++            }
++        }
++        return t;
++    }
++
++    /** The mean of a summed-area table over [x0,x1) x [y0,y1), whole pixels, clamped. */
++    private static double mean(double[] t, float x0, float y0, float x1, float y1) {
++        int w = N + 1;
++        int a = clampN(Math.round(x0)), b = clampN(Math.round(y0));
++        int c = Math.max(a + 1, clampN(Math.round(x1))), d = Math.max(b + 1, clampN(Math.round(y1)));
++        c = Math.min(N, c); d = Math.min(N, d);
++        if (c <= a || d <= b) return 0;
++        double sum = t[d * w + c] - t[b * w + c] - t[d * w + a] + t[b * w + a];
++        return sum / ((c - a) * (double) (d - b));
++    }
++
++    private static int clampN(int v) {
++        return Math.max(0, Math.min(N, v));
++    }
++
++    private static float area(double[] t, float x0, float y0, float x1, float y1) {
++        return (float) mean(t, x0, y0, x1, y1);
++    }
++
++    private static int areaColor(double[][] t, float x0, float y0, float x1, float y1) {
++        double al = mean(t[0], x0, y0, x1, y1);
++        if (al <= 1e-4) return 0;
++        return argb((int) Math.round(al * 255), (float) (mean(t[1], x0, y0, x1, y1) / al),
++                (float) (mean(t[2], x0, y0, x1, y1) / al), (float) (mean(t[3], x0, y0, x1, y1) / al));
++    }
++
++    private static float bilinear(boolean[] m, float x, float y) {
++        int x0 = (int) Math.floor(x), y0 = (int) Math.floor(y);
++        float fx = x - x0, fy = y - y0;
++        return (1 - fx) * (1 - fy) * at(m, x0, y0) + fx * (1 - fy) * at(m, x0 + 1, y0)
++                + (1 - fx) * fy * at(m, x0, y0 + 1) + fx * fy * at(m, x0 + 1, y0 + 1);
++    }
++
++    private static float at(boolean[] m, int x, int y) {
++        return x < 0 || y < 0 || x >= N || y >= N || !m[y * N + x] ? 0 : 1;
++    }
++
++    /** Bilinear sample of the original pixels, alpha cut by the mask (premultiplied mix). */
++    private static int sampleMasked(int[] px, boolean[] m, float x, float y) {
++        int x0 = (int) Math.floor(x), y0 = (int) Math.floor(y);
++        float fx = x - x0, fy = y - y0;
++        float[] acc = new float[4];
++        float[] wts = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy};
++        int[][] pos = {{x0, y0}, {x0 + 1, y0}, {x0, y0 + 1}, {x0 + 1, y0 + 1}};
++        for (int k = 0; k < 4; k++) {
++            int xx = pos[k][0], yy = pos[k][1];
++            if (xx < 0 || yy < 0 || xx >= N || yy >= N || !m[yy * N + xx]) continue;
++            int c = px[yy * N + xx];
++            float al = ((c >>> 24) / 255f) * wts[k];
++            acc[0] += al;
++            acc[1] += al * ((c >> 16) & 255);
++            acc[2] += al * ((c >> 8) & 255);
++            acc[3] += al * (c & 255);
++        }
++        if (acc[0] <= 0) return 0;
++        return argb(Math.round(acc[0] * 255), acc[1] / acc[0], acc[2] / acc[0], acc[3] / acc[0]);
++    }
++
++    private static float[] blur(float[] src, int n, float sigma) {
++        int r = (int) Math.ceil(sigma * 2.5f);
++        float[] k = new float[2 * r + 1];
++        float sum = 0;
++        for (int i = -r; i <= r; i++) {
++            k[i + r] = (float) Math.exp(-i * i / (2 * sigma * sigma));
++            sum += k[i + r];
++        }
++        for (int i = 0; i < k.length; i++) k[i] /= sum;
++        float[] t = new float[n * n], o = new float[n * n];
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                float v = 0;
++                for (int i = -r; i <= r; i++) {
++                    int xx = Math.min(n - 1, Math.max(0, x + i));
++                    v += k[i + r] * src[y * n + xx];
++                }
++                t[y * n + x] = v;
++            }
++        }
++        for (int y = 0; y < n; y++) {
++            for (int x = 0; x < n; x++) {
++                float v = 0;
++                for (int i = -r; i <= r; i++) {
++                    int yy = Math.min(n - 1, Math.max(0, y + i));
++                    v += k[i + r] * t[yy * n + x];
++                }
++                o[y * n + x] = v;
++            }
++        }
++        return o;
++    }
++
++    // ---------------------------------------------------------------- colour
++
++    private static double[] basis(double x, double y) {
++        return new double[] {1, x, y, x * x, y * y, x * y};
++    }
++
++    private static void model(double[][] coef, float x, float y, float[] out) {
++        double[] b = basis(x, y);
++        for (int c = 0; c < 3; c++) {
++            double v = 0;
++            for (int t = 0; t < coef[c].length; t++) v += coef[c][t] * b[t];
++            out[c] = (float) Math.max(0, Math.min(255, v));
++        }
++    }
++
++    /** Least squares per channel over the first {@code terms} basis terms (normal equations). */
++    private static double[][] lstsq(double[][] X, double[][] C, boolean[] keep, int terms) {
++        double[][] out = new double[3][];
++        for (int c = 0; c < 3; c++) {
++            double[][] A = new double[terms][terms + 1];
++            for (int k = 0; k < X.length; k++) {
++                if (!keep[k]) continue;
++                for (int i = 0; i < terms; i++) {
++                    for (int j = 0; j < terms; j++) A[i][j] += X[k][i] * X[k][j];
++                    A[i][terms] += X[k][i] * C[k][c];
++                }
++            }
++            for (int i = 0; i < terms; i++) A[i][i] += 1e-6; // keeps a flat tile solvable
++            out[c] = solve(A, terms);
++        }
++        return out;
++    }
++
++    private static double[] solve(double[][] A, int n) {
++        for (int p = 0; p < n; p++) {
++            int max = p;
++            for (int i = p + 1; i < n; i++) if (Math.abs(A[i][p]) > Math.abs(A[max][p])) max = i;
++            double[] t = A[p]; A[p] = A[max]; A[max] = t;
++            for (int i = p + 1; i < n; i++) {
++                double f = A[i][p] / A[p][p];
++                for (int j = p; j <= n; j++) A[i][j] -= f * A[p][j];
++            }
++        }
++        double[] x = new double[n];
++        for (int i = n - 1; i >= 0; i--) {
++            double s = A[i][n];
++            for (int j = i + 1; j < n; j++) s -= A[i][j] * x[j];
++            x[i] = s / A[i][i];
++        }
++        return x;
++    }
++
++    private static void toLab(int c, float[] out, int o) {
++        float[] rgb = {(c >> 16) & 255, (c >> 8) & 255, c & 255};
++        float[] lab = new float[3];
++        toLab(rgb, lab);
++        out[o] = lab[0]; out[o + 1] = lab[1]; out[o + 2] = lab[2];
++    }
++
++    /** sRGB (0-255) to CIE Lab (D65), on OpenCV's 8-bit scale (L*2.55, a+128, b+128). */
++    private static void toLab(float[] rgb, float[] out) {
++        double r = lin(rgb[0] / 255.0), g = lin(rgb[1] / 255.0), b = lin(rgb[2] / 255.0);
++        double x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
++        double y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
++        double z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
++        double fx = f(x), fy = f(y), fz = f(z);
++        out[0] = (float) ((116 * fy - 16) * 2.55);
++        out[1] = (float) (500 * (fx - fy) + 128);
++        out[2] = (float) (200 * (fy - fz) + 128);
++    }
++
++    private static double lin(double c) {
++        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++    }
++
++    private static double f(double t) {
++        return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116.0;
++    }
++
++    private static float dist(float[] lab, int o, float[] ref) {
++        return (float) Math.sqrt(sq(lab[o] - ref[0]) + sq(lab[o + 1] - ref[1])
++                + sq(lab[o + 2] - ref[2]));
++    }
++
++    private static float lum(float[] c) {
++        return (0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2]) / 255f;
++    }
++
++    private static float sat(float[] c) {
++        float mx = Math.max(c[0], Math.max(c[1], c[2])), mn = Math.min(c[0], Math.min(c[1], c[2]));
++        return mx == 0 ? 0 : (mx - mn) / mx;
++    }
++
++    private static int argb(int a, float r, float g, float b) {
++        return (Math.max(0, Math.min(255, a)) << 24) | (clamp(r) << 16) | (clamp(g) << 8) | clamp(b);
++    }
++
++    private static int clamp(float v) {
++        return Math.max(0, Math.min(255, Math.round(v)));
++    }
++
++    private static int over(int dst, int src) {
++        float sa = (src >>> 24) / 255f, da = (dst >>> 24) / 255f;
++        float oa = sa + da * (1 - sa);
++        if (oa <= 0) return 0;
++        float[] o = new float[3];
++        for (int c = 0; c < 3; c++) {
++            int sh = 16 - 8 * c;
++            o[c] = (((src >> sh) & 255) * sa + ((dst >> sh) & 255) * da * (1 - sa)) / oa;
++        }
++        return argb(Math.round(oa * 255), o[0], o[1], o[2]);
++    }
++
++    private static double sq(double v) {
++        return v * v;
++    }
++
++    private static float pct(float[] v, float p) {
++        float[] s = v.clone();
++        Arrays.sort(s);
++        return s[Math.min(s.length - 1, Math.max(0, (int) (p / 100f * (s.length - 1))))];
++    }
++
++    private static float percentile(List<Float> v, float p) {
++        float[] a = new float[v.size()];
++        for (int i = 0; i < a.length; i++) a[i] = v.get(i);
++        return a.length == 0 ? 0 : pct(a, p);
++    }
++
++    // ---------------------------------------------------------------- k-means
++
++    static final class Kmeans {
++        float[][] centers;
++        float[] share;
++        int[] label;
++
++        int nearest(int c) {
++            float[] p = {(c >> 16) & 255, (c >> 8) & 255, c & 255};
++            int best = 0;
++            double bd = Double.MAX_VALUE;
++            for (int k = 0; k < centers.length; k++) {
++                double dd = sq(p[0] - centers[k][0]) + sq(p[1] - centers[k][1])
++                        + sq(p[2] - centers[k][2]);
++                if (dd < bd) { bd = dd; best = k; }
++            }
++            return best;
++        }
++    }
++
++    /** k-means++ with a fixed seed (the same icon always gives the same result), by share. */
++    static Kmeans kmeans(float[][] pts, int k, int iters) {
++        Random rnd = new Random(1);
++        int n = pts.length, dim = pts[0].length;
++        float[][] c = new float[k][];
++        c[0] = pts[rnd.nextInt(n)].clone();
++        double[] d2 = new double[n];
++        for (int j = 1; j < k; j++) {
++            double sum = 0;
++            for (int i = 0; i < n; i++) {
++                double best = Double.MAX_VALUE;
++                for (int q = 0; q < j; q++) best = Math.min(best, d(pts[i], c[q]));
++                d2[i] = best;
++                sum += best;
++            }
++            double t = rnd.nextDouble() * sum;
++            int pick = n - 1;
++            for (int i = 0; i < n; i++) {
++                t -= d2[i];
++                if (t <= 0) { pick = i; break; }
++            }
++            c[j] = pts[pick].clone();
++        }
++        int[] lab = new int[n];
++        for (int it = 0; it < iters; it++) {
++            for (int i = 0; i < n; i++) {
++                int best = 0;
++                double bd = Double.MAX_VALUE;
++                for (int q = 0; q < k; q++) {
++                    double dd = d(pts[i], c[q]);
++                    if (dd < bd) { bd = dd; best = q; }
++                }
++                lab[i] = best;
++            }
++            double[][] sums = new double[k][dim];
++            int[] cnt = new int[k];
++            for (int i = 0; i < n; i++) {
++                cnt[lab[i]]++;
++                for (int t = 0; t < dim; t++) sums[lab[i]][t] += pts[i][t];
++            }
++            for (int q = 0; q < k; q++) {
++                if (cnt[q] == 0) continue;
++                for (int t = 0; t < dim; t++) c[q][t] = (float) (sums[q][t] / cnt[q]);
++            }
++        }
++        int[] cnt = new int[k];
++        for (int i = 0; i < n; i++) cnt[lab[i]]++;
++        Integer[] order = new Integer[k];
++        for (int q = 0; q < k; q++) order[q] = q;
++        Arrays.sort(order, (p, q) -> cnt[q] - cnt[p]);
++        int[] rank = new int[k];
++        Kmeans out = new Kmeans();
++        out.centers = new float[k][];
++        out.share = new float[k];
++        for (int q = 0; q < k; q++) {
++            out.centers[q] = c[order[q]];
++            out.share[q] = cnt[order[q]] / (float) n;
++            rank[order[q]] = q;
++        }
++        out.label = new int[n];
++        for (int i = 0; i < n; i++) out.label[i] = rank[lab[i]];
++        return out;
++    }
++
++    private static double d(float[] a, float[] b) {
++        double s = 0;
++        for (int i = 0; i < a.length; i++) s += sq(a[i] - b[i]);
++        return s;
++    }
++}
+diff --git a/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java b/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8017232670dc7eb6e26226bb115cc4abeb7a3d4a
+--- /dev/null
++++ b/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java
+@@ -0,0 +1,453 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.server.lujarch.icons;
++
++import android.Manifest;
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.content.pm.ApplicationInfo;
++import android.content.pm.PackageManager;
++import android.content.res.Resources;
++import android.database.ContentObserver;
++import android.graphics.Bitmap;
++import android.graphics.Canvas;
++import android.graphics.drawable.AdaptiveIconDrawable;
++import android.graphics.drawable.Drawable;
++import android.os.Binder;
++import android.os.Environment;
++import android.os.Handler;
++import android.os.HandlerThread;
++import android.os.Process;
++import android.os.UserHandle;
++import android.provider.Settings;
++import android.util.ArrayMap;
++import android.util.AtomicFile;
++import android.util.DisplayMetrics;
++import android.util.Log;
++import android.util.LruCache;
++import android.util.Slog;
++import android.util.Xml;
++
++import com.android.internal.lujarch.icons.ILujarchIconService;
++import com.android.internal.lujarch.icons.LujarchIconLayers;
++import com.android.internal.lujarch.icons.LujarchIcons;
++import com.android.modules.utils.TypedXmlPullParser;
++import com.android.modules.utils.TypedXmlSerializer;
++import com.android.server.SystemService;
++
++import org.xmlpull.v1.XmlPullParser;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.util.Map;
++
++/**
++ * Lujarch fitted icons (ICON-1): an app whose icon is a legacy single layer gets an adaptive icon
++ * drawn by IconFitter, redrawn (a logo) or fitted (an illustration, or the owner's choice). The
++ * owner's choices: the switch Settings.Global lujarch_icons_fit (Wallpaper & style, next to
++ * themed icons) and a mode per app (original, fitted, redrawn), kept in state.xml.
++ *
++ * Results are cached by package version, icon resource, mode and algorithm version, in memory
++ * and as PNGs under /data/system/lujarch_icons/cache; a change of mode or switch drops the
++ * entries it touches and tells the launcher (ACTION_ICONS_CHANGED).
++ */
++public final class LujarchIconService extends SystemService {
++    private static final String TAG = "lujarch_icons";
++    /** Bumped with every change of IconFitter's output, so old cache entries are not used. */
++    private static final int ALGO_VERSION = 2;
++    /** The analysis density: icons are rendered at 4x (xxxhdpi) before they are fitted. */
++    private static final int RENDER_DENSITY = DisplayMetrics.DENSITY_XXXHIGH;
++    /** The canvas of the layers: 108 dp at about the phone's 2.625x. */
++    private static final int CANVAS = 288;
++
++    private final Object mLock = new Object();
++    private final File mDir = new File(Environment.getDataSystemDirectory(), "lujarch_icons");
++    private final File mCacheDir = new File(mDir, "cache");
++    private final AtomicFile mStateFile = new AtomicFile(new File(mDir, "state.xml"));
++    private final Map<String, Integer> mModes = new ArrayMap<>();
++    // Settings.Global lujarch_icons_fit, read when the system services are ready
++    private boolean mEnabled = true;
++    private int mGeneration;
++    // key -> layers, or NONE for an icon that stays (an adaptive icon, an unusable one)
++    private final LruCache<String, Object> mResults = new LruCache<>(64);
++    private static final Object NONE = new Object();
++    private Handler mHandler;
++
++    public LujarchIconService(Context context) {
++        super(context);
++    }
++
++    @Override
++    public void onStart() {
++        mCacheDir.mkdirs();
++        readState();
++        HandlerThread t = new HandlerThread(TAG, Process.THREAD_PRIORITY_BACKGROUND);
++        t.start();
++        mHandler = new Handler(t.getLooper());
++        publishBinderService(LujarchIcons.SERVICE, new BinderService());
++    }
++
++    @Override
++    public void onBootPhase(int phase) {
++        if (phase == PHASE_SYSTEM_SERVICES_READY) {
++            getContext().getContentResolver().registerContentObserver(
++                    Settings.Global.getUriFor(LujarchIcons.SETTING_FIT), false,
++                    new ContentObserver(mHandler) {
++                        @Override
++                        public void onChange(boolean selfChange) {
++                            readSwitch();
++                        }
++                    });
++            readSwitch();
++            return;
++        }
++        if (phase != PHASE_BOOT_COMPLETED) return;
++        IntentFilter f = new IntentFilter();
++        f.addAction(Intent.ACTION_PACKAGE_REMOVED);
++        f.addDataScheme("package");
++        getContext().registerReceiverForAllUsers(new BroadcastReceiver() {
++            @Override
++            public void onReceive(Context context, Intent intent) {
++                String pkg = intent.getData() != null ? intent.getData().getSchemeSpecificPart()
++                        : null;
++                if (pkg != null && !intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
++                    mHandler.post(() -> forget(pkg));
++                }
++            }
++        }, f, null, mHandler);
++        mHandler.post(this::trimCache);
++    }
++
++    // ------------------------------------------------------------------ the work
++
++    private int effectiveMode(String pkg) {
++        synchronized (mLock) {
++            if (!mEnabled) return LujarchIcons.MODE_ORIGINAL;
++            Integer m = mModes.get(pkg);
++            return m == null ? LujarchIcons.MODE_DEFAULT : m;
++        }
++    }
++
++    /** The cache key; '@' cannot occur in a package name. DEFAULT draws as REDRAW. */
++    private String key(ApplicationInfo ai, int iconRes, int mode) {
++        if (mode == LujarchIcons.MODE_DEFAULT) mode = LujarchIcons.MODE_REDRAW;
++        return ai.packageName + "@" + ai.longVersionCode + "@" + ai.sourceDir.hashCode() + "@"
++                + iconRes + "@" + mode + "@" + ALGO_VERSION;
++    }
++
++    /** The token for the icon as set now; 0 to keep the original. */
++    long token(String pkg, int iconRes, int userId) {
++        int mode = effectiveMode(pkg);
++        if (mode == LujarchIcons.MODE_ORIGINAL) return 0;
++        ApplicationInfo ai = appInfo(pkg, userId);
++        if (ai == null) return 0;
++        Object r = result(ai, iconRes, mode, userId);
++        if (r == NONE) return 0;
++        long t = key(ai, iconRes, mode).hashCode();
++        synchronized (mLock) {
++            t = t * 31 + mGeneration;
++        }
++        return t == 0 ? 1 : t;
++    }
++
++    LujarchIconLayers layers(String pkg, int iconRes, int userId, int mode) {
++        if (mode == LujarchIcons.MODE_ORIGINAL) return null;
++        ApplicationInfo ai = appInfo(pkg, userId);
++        if (ai == null) return null;
++        Object r = result(ai, iconRes, mode, userId);
++        return r == NONE ? null : (LujarchIconLayers) r;
++    }
++
++    private Object result(ApplicationInfo ai, int iconRes, int mode, int userId) {
++        String key = key(ai, iconRes, mode);
++        Object r = mResults.get(key);
++        if (r != null) return r;
++        r = readCache(key);
++        if (r == null) {
++            r = compute(ai, iconRes, mode, userId);
++            writeCache(key, r);
++        }
++        mResults.put(key, r);
++        return r;
++    }
++
++    private Object compute(ApplicationInfo ai, int iconRes, int mode, int userId) {
++        long start = System.nanoTime();
++        try {
++            Resources res = getContext().getPackageManager().getResourcesForApplication(ai);
++            Drawable d = res.getDrawableForDensity(iconRes, RENDER_DENSITY, null);
++            if (d == null || d instanceof AdaptiveIconDrawable) return NONE;
++            int n = IconFitter.N;
++            Bitmap src = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
++            d.setBounds(0, 0, n, n);
++            d.draw(new Canvas(src));
++            int[] px = new int[n * n];
++            src.getPixels(px, 0, n, 0, 0, n, n);
++            src.recycle();
++            boolean redraw = mode != LujarchIcons.MODE_FIT;
++            IconFitter.Layers l = IconFitter.fit(px, redraw, CANVAS);
++            if (l == null) {
++                Slog.i(TAG, ai.packageName + ": nothing to fit, original kept");
++                return NONE;
++            }
++            Slog.i(TAG, ai.packageName + ": " + (l.kind == IconFitter.KIND_LOGO ? "logo" : "illustration")
++                    + (redraw ? ", redrawn " : ", fitted ") + l.notes + " in "
++                    + (System.nanoTime() - start) / 1_000_000 + " ms");
++            return new LujarchIconLayers(bitmap(l.background), bitmap(l.foreground),
++                    l.monochrome != null ? bitmap(l.monochrome) : null,
++                    l.kind == IconFitter.KIND_LOGO ? LujarchIconLayers.KIND_LOGO
++                            : LujarchIconLayers.KIND_ILLUSTRATION);
++        } catch (PackageManager.NameNotFoundException | Resources.NotFoundException e) {
++            return NONE;
++        } catch (RuntimeException | OutOfMemoryError e) {
++            Slog.e(TAG, ai.packageName + ": fitting failed, original kept", e);
++            return NONE;
++        }
++    }
++
++    /** Whether the icon is a legacy one (cheap: the drawable's type, nothing drawn). */
++    boolean isLegacy(String pkg, int iconRes, int userId) {
++        ApplicationInfo ai = appInfo(pkg, userId);
++        if (ai == null || iconRes == 0) return false;
++        Object cached = mResults.get(key(ai, iconRes, LujarchIcons.MODE_FIT));
++        if (cached != null) return cached != NONE;
++        try {
++            Resources res = getContext().getPackageManager().getResourcesForApplication(ai);
++            Drawable d = res.getDrawableForDensity(iconRes, RENDER_DENSITY, null);
++            return d != null && !(d instanceof AdaptiveIconDrawable);
++        } catch (PackageManager.NameNotFoundException | Resources.NotFoundException e) {
++            return false;
++        }
++    }
++
++    private static Bitmap bitmap(int[] argb) {
++        Bitmap b = Bitmap.createBitmap(argb, CANVAS, CANVAS, Bitmap.Config.ARGB_8888);
++        // the layer's intrinsic size is the 108 dp canvas
++        b.setDensity(Math.round(CANVAS * DisplayMetrics.DENSITY_DEFAULT / 108f));
++        return b;
++    }
++
++    private ApplicationInfo appInfo(String pkg, int userId) {
++        long id = Binder.clearCallingIdentity();
++        try {
++            return getContext().getPackageManager().getApplicationInfoAsUser(pkg, 0, userId);
++        } catch (PackageManager.NameNotFoundException e) {
++            return null;
++        } finally {
++            Binder.restoreCallingIdentity(id);
++        }
++    }
++
++    // ------------------------------------------------------------------ the disk cache
++
++    private Object readCache(String key) {
++        File none = new File(mCacheDir, key + ".none");
++        if (none.exists()) return NONE;
++        File bg = new File(mCacheDir, key + ".bg.png");
++        File fg = new File(mCacheDir, key + ".fg.png");
++        if (!bg.exists() || !fg.exists()) return null;
++        File mono = new File(mCacheDir, key + ".mono.png");
++        Bitmap b = decode(bg), f = decode(fg), m = mono.exists() ? decode(mono) : null;
++        if (b == null || f == null) return null;
++        int kind = m != null ? LujarchIconLayers.KIND_LOGO : LujarchIconLayers.KIND_ILLUSTRATION;
++        return new LujarchIconLayers(b, f, m, kind);
++    }
++
++    private static Bitmap decode(File f) {
++        Bitmap b = android.graphics.BitmapFactory.decodeFile(f.getPath());
++        if (b != null) b.setDensity(Math.round(CANVAS * DisplayMetrics.DENSITY_DEFAULT / 108f));
++        return b;
++    }
++
++    private void writeCache(String key, Object r) {
++        try {
++            if (r == NONE) {
++                new File(mCacheDir, key + ".none").createNewFile();
++                return;
++            }
++            LujarchIconLayers l = (LujarchIconLayers) r;
++            write(new File(mCacheDir, key + ".bg.png"), l.background);
++            write(new File(mCacheDir, key + ".fg.png"), l.foreground);
++            if (l.monochrome != null) write(new File(mCacheDir, key + ".mono.png"), l.monochrome);
++        } catch (Exception e) {
++            Slog.w(TAG, "Cannot cache " + key, e);
++        }
++    }
++
++    private static void write(File f, Bitmap b) throws Exception {
++        try (FileOutputStream out = new FileOutputStream(f)) {
++            b.compress(Bitmap.CompressFormat.PNG, 100, out);
++        }
++    }
++
++    /** Drops a removed app's entries. */
++    private void forget(String pkg) {
++        File[] files = mCacheDir.listFiles((d, n) -> n.startsWith(pkg + "@"));
++        if (files != null) for (File f : files) f.delete();
++        mResults.evictAll();
++    }
++
++    /** Drops entries of versions no longer installed and of older algorithm versions. */
++    private void trimCache() {
++        File[] files = mCacheDir.listFiles();
++        if (files == null) return;
++        PackageManager pm = getContext().getPackageManager();
++        for (File f : files) {
++            String[] p = f.getName().split("@");
++            boolean keep = false;
++            if (p.length >= 6 && p[5].startsWith(String.valueOf(ALGO_VERSION) + ".")) {
++                try {
++                    ApplicationInfo ai = pm.getApplicationInfo(p[0], 0);
++                    keep = String.valueOf(ai.longVersionCode).equals(p[1]);
++                } catch (PackageManager.NameNotFoundException e) {
++                    keep = false;
++                }
++            }
++            if (!keep) f.delete();
++        }
++    }
++
++    // ------------------------------------------------------------------ the owner's choices
++
++    private void readSwitch() {
++        boolean enabled = Settings.Global.getInt(getContext().getContentResolver(),
++                LujarchIcons.SETTING_FIT, 1) != 0;
++        synchronized (mLock) {
++            if (enabled == mEnabled) return;
++            mEnabled = enabled;
++        }
++        Slog.i(TAG, "fitted icons " + (enabled ? "on" : "off"));
++        changed();
++    }
++
++    private void changed() {
++        synchronized (mLock) {
++            mGeneration++;
++        }
++        mResults.evictAll();
++        writeState();
++        Intent i = new Intent(LujarchIcons.ACTION_ICONS_CHANGED)
++                .addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
++        long id = Binder.clearCallingIdentity();
++        try {
++            getContext().sendBroadcastAsUser(i, UserHandle.ALL);
++        } finally {
++            Binder.restoreCallingIdentity(id);
++        }
++    }
++
++    private void readState() {
++        if (!mStateFile.getBaseFile().exists()) return;
++        try (FileInputStream in = mStateFile.openRead()) {
++            TypedXmlPullParser p = Xml.resolvePullParser(in);
++            int type;
++            while ((type = p.next()) != XmlPullParser.END_DOCUMENT) {
++                if (type != XmlPullParser.START_TAG) continue;
++                if ("app".equals(p.getName())) {
++                    mModes.put(p.getAttributeValue(null, "package"),
++                            p.getAttributeInt(null, "mode", LujarchIcons.MODE_DEFAULT));
++                }
++            }
++        } catch (Exception e) {
++            Slog.e(TAG, "Unreadable state, every icon follows the default", e);
++            mModes.clear();
++        }
++    }
++
++    private void writeState() {
++        FileOutputStream out = null;
++        try {
++            out = mStateFile.startWrite();
++            TypedXmlSerializer s = Xml.resolveSerializer(out);
++            s.startDocument(null, true);
++            s.startTag(null, "icons");
++            synchronized (mLock) {
++                for (Map.Entry<String, Integer> e : mModes.entrySet()) {
++                    s.startTag(null, "app");
++                    s.attribute(null, "package", e.getKey());
++                    s.attributeInt(null, "mode", e.getValue());
++                    s.endTag(null, "app");
++                }
++            }
++            s.endTag(null, "icons");
++            s.endDocument();
++            mStateFile.finishWrite(out);
++        } catch (Exception e) {
++            Slog.e(TAG, "Cannot save the fitted icons' state", e);
++            if (out != null) mStateFile.failWrite(out);
++        }
++    }
++
++    // ------------------------------------------------------------------ binder
++
++    private final class BinderService extends ILujarchIconService.Stub {
++        @Override
++        public long getToken(String packageName, int iconRes, int userId) {
++            long id = Binder.clearCallingIdentity();
++            try {
++                return token(packageName, iconRes, userId);
++            } finally {
++                Binder.restoreCallingIdentity(id);
++            }
++        }
++
++        @Override
++        public LujarchIconLayers getLayers(String packageName, int iconRes, int userId) {
++            long id = Binder.clearCallingIdentity();
++            try {
++                return layers(packageName, iconRes, userId, effectiveMode(packageName));
++            } finally {
++                Binder.restoreCallingIdentity(id);
++            }
++        }
++
++        @Override
++        public LujarchIconLayers getPreview(String packageName, int iconRes, int userId,
++                int mode) {
++            long id = Binder.clearCallingIdentity();
++            try {
++                return layers(packageName, iconRes, userId, mode);
++            } finally {
++                Binder.restoreCallingIdentity(id);
++            }
++        }
++
++        @Override
++        public boolean isFittable(String packageName, int iconRes, int userId) {
++            long id = Binder.clearCallingIdentity();
++            try {
++                return isLegacy(packageName, iconRes, userId);
++            } finally {
++                Binder.restoreCallingIdentity(id);
++            }
++        }
++
++        @Override
++        public int getMode(String packageName) {
++            synchronized (mLock) {
++                Integer m = mModes.get(packageName);
++                return m == null ? LujarchIcons.MODE_DEFAULT : m;
++            }
++        }
++
++        @Override
++        public void setMode(String packageName, int mode) {
++            getContext().enforceCallingOrSelfPermission(
++                    Manifest.permission.WRITE_SECURE_SETTINGS, TAG);
++            synchronized (mLock) {
++                if (mode == LujarchIcons.MODE_DEFAULT) {
++                    mModes.remove(packageName);
++                } else {
++                    mModes.put(packageName, mode);
++                }
++            }
++            Slog.i(TAG, packageName + ": mode " + mode);
++            changed();
++        }
++    }
++}
+diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
+index bc3fe0dbf14255811984b8a43202ad88d995fe6a..0725433786785c0d03f61b61b9c46a91cb1567ad 100644
+--- a/services/java/com/android/server/SystemServer.java
++++ b/services/java/com/android/server/SystemServer.java
+@@ -2868,6 +2868,12 @@ public final class SystemServer implements Dumpable {
+             mSystemServiceManager.startService(LauncherAppsService.class);
+             t.traceEnd();
+ 
++            // Lujarch: fitted icons (com.android.server.lujarch.icons).
++            t.traceBegin("StartLujarchIconService");
++            mSystemServiceManager.startService(
++                    com.android.server.lujarch.icons.LujarchIconService.class);
++            t.traceEnd();
++
+             t.traceBegin("StartCrossProfileAppsService");
+             mSystemServiceManager.startService(CrossProfileAppsService.class);
+             t.traceEnd();
