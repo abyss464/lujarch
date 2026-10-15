@@ -1,0 +1,2 @@
+/system_ext/bin/lujarch_updates    u:object_r:lujarch_updates_exec:s0
+/metadata/lujarch/updates(/.*)?    u:object_r:lujarch_updates_metadata_file:s0
