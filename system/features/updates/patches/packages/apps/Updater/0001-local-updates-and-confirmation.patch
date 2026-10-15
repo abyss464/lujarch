@@ -116,7 +116,7 @@ index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..bf6d1700a39bf03c4c51bad628186174
                  val intent = Intent(Intent.ACTION_VIEW, url.toUri())
 diff --git a/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..e82ff4f3cbc1b81de05bb489b6e617bb1f9be530
+index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb0baa309c
 --- /dev/null
 +++ b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
 @@ -0,0 +1,230 @@
@@ -343,7 +343,7 @@ index 0000000000000000000000000000000000000000..e82ff4f3cbc1b81de05bb489b6e617bb
 +                    CardModel(
 +                        title = context.getString(R.string.lujarch_restoring_title),
 +                        text = context.getString(R.string.lujarch_restoring_text),
-+                        buttons = listOf(CardButton(context.getString(R.string.lujarch_restart), restart)),
++                        buttons = listOf(CardButton(context.getString(R.string.lujarch_restart), onClick = restart)),
 +                    )
 +                else -> return
 +            }
