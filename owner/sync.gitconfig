@@ -1,7 +1,0 @@
-[include]
-	path = ~/.config/git/config
-	path = ~/.gitconfig
-[url "https://mirrors.ustc.edu.cn/aosp/"]
-	insteadOf = https://android.googlesource.com/
-[url "https://mirrors.tuna.tsinghua.edu.cn/git/lineageOS/LineageOS/"]
-	insteadOf = https://github.com/LineageOS/

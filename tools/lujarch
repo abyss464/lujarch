@@ -45,12 +45,10 @@ FORBIDDEN_IN_TARGET = [
     (re.compile(r"\b(?:TODO|TBD|FIXME)\b"), "unfinished marker"),
 ]
 LEGACY = [re.compile(r"fuxi-?os", re.IGNORECASE), re.compile(r"\bFuxi[A-Z]")]
-# The one-time migration names the previous system's packages, paths and properties.
-LEGACY_ALLOWED = ("owner/process/migration.md", "owner/migrate/")
 CJK_RANGES = ((0x3000, 0x303F), (0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF),
               (0xF900, 0xFAFF), (0xFF00, 0xFFEF))
 CJK_RE = re.compile("[" + "".join(f"{chr(a)}-{chr(b)}" for a, b in CJK_RANGES) + "]")
-CJK_ALLOWED_FILES = {"README.md", "owner/README.md", "target/terms.md"}
+CJK_ALLOWED_FILES = {"README.md", "target/terms.md"}
 RECORD_RE = re.compile(
     r"^(?:plans?|pending|state|status|decisions?|changelog|changes|history|todo|roadmap|"
     r"known[-_]issues|notes|journal|releases)$",
@@ -299,18 +297,16 @@ def check_files(findings):
         text = read_text(path)
         if text is None:
             continue
-        legacy_allowed = name.startswith(LEGACY_ALLOWED)
         cjk_allowed = (
             name in CJK_ALLOWED_FILES
             or "/res/values-zh-rCN/" in f"/{name}"
             or "/res/values-ja/" in f"/{name}"
         )
         for n, line in enumerate(text.split("\n"), 1):
-            if not legacy_allowed:
-                for pattern in LEGACY:
-                    if pattern.search(line):
-                        findings.add(path, n, "legacy name; the system is Lujarch")
-                        break
+            for pattern in LEGACY:
+                if pattern.search(line):
+                    findings.add(path, n, "legacy name; the system is Lujarch")
+                    break
             if not cjk_allowed and CJK_RE.search(line):
                 findings.add(path, n, "Chinese or Japanese text outside the READMEs and terms.md")
 
