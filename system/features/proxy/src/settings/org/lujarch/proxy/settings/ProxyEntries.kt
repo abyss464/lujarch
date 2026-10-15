@@ -34,6 +34,7 @@ import androidx.fragment.app.Fragment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -77,6 +78,10 @@ object ProxySummary {
     fun text(context: Context, s: State): String {
         val info = s.info ?: return context.getString(R.string.status_unknown)
         if (!info.mihomoEnabled) return context.getString(R.string.px_summary_off)
+        // Turned on a moment ago: the service has not started the core yet.
+        if (info.mihomoState == ProxyInfo.STATE_OFF) {
+            return context.getString(R.string.px_summary_on, context.getString(R.string.px_state_starting))
+        }
         val detail = if (info.mihomoState == ProxyInfo.STATE_RUNNING) {
             ProxyFormat.modeLabel(context, s.mode) ?: ProxyFormat.stateLabel(context, info.mihomoState)
         } else {
@@ -86,14 +91,42 @@ object ProxySummary {
     }
 
     /**
-     * Tells Settings that the state changed: the Network & internet tile's
-     * summary and switch (the Quick Settings tile reads it whenever the panel
-     * shows it).
+     * Tells Settings that the state changed: the Network & internet tile's summary and switch (the
+     * Quick Settings tile reads it whenever the panel shows it). Settings is told again at every
+     * change of the state for a minute after, while the service starts or stops the core.
      */
     fun changed(context: Context) {
+        val app = context.applicationContext
+        notify(app)
+        follower?.cancel()
+        follower = followScope.launch {
+            var last: String? = null
+            repeat(FOLLOW_SECONDS) {
+                val state = try {
+                    ProxyClient.status().state
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "proxy summary: ${e.message}")
+                    null
+                }
+                if (state != last) {
+                    if (last != null) notify(app)
+                    last = state
+                }
+                delay(1000)
+            }
+        }
+    }
+
+    private fun notify(context: Context) {
         context.contentResolver.notifyChange(ProxySummaryProvider.SUMMARY_URI, null)
         context.contentResolver.notifyChange(ProxySummaryProvider.SWITCH_URI, null)
     }
+
+    private const val FOLLOW_SECONDS = 60
+    private val followScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var follower: Job? = null
 }
 
 /**

@@ -127,10 +127,27 @@ int RunCapture(std::vector<std::string> argv, std::chrono::seconds timeout, std:
     return WEXITSTATUS(status);
 }
 
-std::string LastLines(const std::string& text, size_t count) {
-    std::vector<std::string> lines = android::base::Split(android::base::Trim(text), "\n");
-    if (lines.size() > count) lines.erase(lines.begin(), lines.end() - count);
-    return android::base::Join(lines, "\n");
+// What the core's check says is wrong: the messages of its error lines (`msg="..."`), without
+// its closing "test failed" line; its last lines when it wrote none.
+std::string CheckMessages(const std::string& output) {
+    std::vector<std::string> messages;
+    for (const std::string& line : android::base::Split(output, "\n")) {
+        if (line.find("level=error") == std::string::npos) continue;
+        size_t start = line.find("msg=\"");
+        if (start == std::string::npos) continue;
+        std::string message;
+        for (size_t i = start + 5; i < line.size() && line[i] != '"'; ++i) {
+            if (line[i] == '\\' && i + 1 < line.size()) ++i;
+            message.push_back(line[i]);
+        }
+        if (!message.empty()) messages.push_back(message);
+    }
+    if (messages.empty()) {
+        std::vector<std::string> lines = android::base::Split(android::base::Trim(output), "\n");
+        if (lines.size() > 3) lines.erase(lines.begin(), lines.end() - 3);
+        return android::base::Join(lines, "\n");
+    }
+    return android::base::Join(messages, "\n");
 }
 
 }  // namespace
@@ -241,7 +258,7 @@ bool Supervisor::Valid(const std::string& config, std::string* error) {
     std::string output;
     int code = RunCapture({kCoreBinary, "-t", "-d", kDir, "-f", config}, 120s, &output);
     if (code == 0) return true;
-    *error = code < 0 ? "the check did not finish" : LastLines(output, 3);
+    *error = code < 0 ? "the check did not finish" : CheckMessages(output);
     return false;
 }
 
