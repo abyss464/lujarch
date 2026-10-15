@@ -65,3 +65,7 @@ commit = "70b21adac5b60e323ae7003020e304b9756524df"
 url = "https://github.com/syncthing/syncthing.git"
 version = "v2.1.5"
 commit = "2ca95cf1498104113fdfde46df4107f2450a0f71"
+
+[prebuilts.ksud.arm64]
+url = "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/ksud-aarch64-linux-android"
+sha256 = "52ba3da465459bfbac98dd25c53f8d31f93ee5a8ee89d84f67a28fe0d18cdef2"

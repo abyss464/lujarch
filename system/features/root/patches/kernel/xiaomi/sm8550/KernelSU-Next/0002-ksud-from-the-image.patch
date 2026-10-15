@@ -1,0 +1,28 @@
+diff --git a/kernel/runtime/ksud.h b/kernel/runtime/ksud.h
+index 09384deff44cfb11c9520bfee3d85125f2864fe4..0b2ef7b623c76aeb840c36d02452d2ee60e5bae9 100644
+--- a/kernel/runtime/ksud.h
++++ b/kernel/runtime/ksud.h
+@@ -3,7 +3,8 @@
+ 
+ #include <asm/syscall.h>
+ 
+-#define KSUD_PATH "/data/adb/ksud"
++// ksud comes with the system image; it runs only as su.
++#define KSUD_PATH "/system_ext/bin/ksud"
+ 
+ void ksu_ksud_init();
+ void ksu_ksud_exit();
+diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
+index 5bf84cb66fdb2ef284fed07a99b0b5c256afeae8..f474298c8dea215558b1a8dd9e75b86205ba9bd0 100644
+--- a/kernel/runtime/ksud_integration.c
++++ b/kernel/runtime/ksud_integration.c
+@@ -436,6 +436,9 @@ static void ksu_install_rc_hook(struct file *file)
+     rc_hooked = true;
+     stop_init_rc_hook();
+ 
++    // init's own init.rc stays as it is: no ksud boot stages, no module rc.
++    return;
++
+     // now we can sure that the init process is reading
+     // `/system/etc/init/init.rc`
+ 

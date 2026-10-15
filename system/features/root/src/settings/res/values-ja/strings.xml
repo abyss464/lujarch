@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <plurals name="root_apps_category_count">
+        <item quantity="other">アプリ · %1$d 個を許可</item>
+    </plurals>
+    <plurals name="root_grant_shared">
+        <item quantity="other">このアプリはユーザー ID を他の %1$d 個のアプリと共有しており、Root アクセスはそれらすべてに適用されます。</item>
+    </plurals>
+    <plurals name="root_profile_capabilities_count">
+        <item quantity="other">%1$d 個のケーパビリティ</item>
+    </plurals>
+    <plurals name="root_shared_more">
+        <item quantity="other">" ほか %1$d 個のアプリ"</item>
+    </plurals>
+    <string name="error_root_profile">Root プロファイルを変更できませんでした</string>
+    <string name="error_su_grant">Root アクセスを許可できませんでした</string>
+    <string name="error_su_revoke">Root アクセスを取り消せませんでした</string>
+    <string name="root_allow_switch">Root アクセスを許可</string>
+    <string name="root_app_footer">これらは、KernelSU がこのアプリの su セッションに適用する値です。KernelSU のプロファイル テンプレートと、カスタム ドメイン用の追加 SELinux ルールは提供していません。これらには KernelSU のマネージャー アプリが必要で、ここから読み込んだルールセットはシステム全体の SELinux ポリシーを変更するためです。Root アクセスをオフにすると、プロファイルはデフォルトに戻ります。</string>
+    <string name="root_app_system_state">%1$s · システムアプリ</string>
+    <string name="root_apps_category">アプリ</string>
+    <string name="root_auth_continue">このまま続行</string>
+    <string name="root_auth_grant_subtitle">%1$s に Root アクセスを許可するには、本人確認を行ってください</string>
+    <string name="root_auth_grant_title">Root アクセスを許可</string>
+    <string name="root_auth_profile_subtitle">%1$s の Root アクセスでできることを広げるには、本人確認を行ってください</string>
+    <string name="root_auth_profile_title">Root プロファイルを変更</string>
+    <string name="root_auth_set_lock">画面ロックを設定</string>
+    <string name="root_auth_state_ok">Root アクセスの許可や、その権限を広げるプロファイルの変更の前には、画面ロックまたは指紋による確認が求められます</string>
+    <!-- Root access: the owner's identity before Root is given away -->
+    <string name="root_auth_title">認証</string>
+    <string name="root_auth_unavailable_message">画面ロックを設定すると Root アクセスの際に確認が求められるようになります。または、先ほど行った確認のまま続行することもできます。</string>
+    <string name="root_auth_unavailable_no_lock">このスマートフォンには画面ロックがないため、本人確認ができません。タップして設定してください。</string>
+    <string name="root_auth_unavailable_other">現在このスマートフォンでは本人確認ができません。タップすると画面ロックの設定が開きます。</string>
+    <string name="root_auth_unavailable_title">本人確認ができません</string>
+    <string name="root_footer">信頼できるアプリだけを許可してください。Root アクセス権を持つアプリは、すべてのデータを読み取り、システムを変更し、その動作を隠すことができます。</string>
+    <string name="root_grant_confirm">許可</string>
+    <string name="root_grant_message">%1$s は Root として任意のコマンドを実行できるようになり、このデバイスとそのすべてのデータを完全に制御できます。</string>
+    <string name="root_grant_message_other">%1$s はシステム ID（ユーザー ID %2$d）として動作します。許可すると、この ID を持つすべてのプロセスが Root として任意のコマンドを実行できます。</string>
+    <string name="root_grant_message_shell">%1$s は adb が使用するシェル ID（ユーザー ID 2000）です。許可すると、USB デバッグまたはワイヤレス デバッグを承認されたすべてのパソコンが、開発者向けオプションの [ルート状態でのデバッグ] と同様に、完全な Root アクセスを得ます。</string>
+    <string name="root_grant_message_system">%1$s はシステム ユーザー（ユーザー ID 1000）として動作し、Android のシステム サーバーや多くのシステムアプリがこの ID を共有しています。許可すると、この ID を持つすべてのプロセスが Root として任意のコマンドを実行でき、そのいずれかに欠陥があれば、SELinux の保護の外でデバイスを完全に制御されるおそれがあります。</string>
+    <string name="root_grant_title">Root アクセスを許可しますか？</string>
+    <!-- Root access -->
+    <string name="root_intro">ここで許可したアプリは Root（su）としてコマンドを実行でき、このデバイスを完全に制御できます。</string>
+    <string name="root_ksu_title">KernelSU</string>
+    <string name="root_ksu_unavailable">このカーネルには KernelSU がありません</string>
+    <string name="root_ksu_version">バージョン %1$s</string>
+    <string name="root_namespace_category">マウント名前空間</string>
+    <string name="root_namespace_global">グローバル</string>
+    <string name="root_namespace_global_summary">Root セッションはシステムのグローバル マウント名前空間で動作し、そのマウントはすべてのアプリから見えます</string>
+    <string name="root_namespace_individual">個別</string>
+    <string name="root_namespace_individual_summary">Root セッションごとにマウントのコピーが作成され、変更は外部に影響しません</string>
+    <string name="root_namespace_inherited">継承（デフォルト）</string>
+    <string name="root_namespace_inherited_summary">Root セッションは、起動したアプリのマウントを参照します</string>
+    <string name="root_profile_capabilities">ケーパビリティ</string>
+    <string name="root_profile_capabilities_all">すべて</string>
+    <string name="root_profile_category">Root プロファイル</string>
+    <string name="root_profile_domain">SELinux ドメイン</string>
+    <string name="root_profile_domain_choice">%1$s\n%2$s</string>
+    <string name="root_profile_domain_invalid">a～z、0～9、_ を使って user:role:type:level の形式で入力してください</string>
+    <string name="root_profile_domain_ksu">KernelSU のドメイン。すべての権限あり（デフォルト）</string>
+    <string name="root_profile_domain_message">user:role:type:level 形式の SELinux コンテキスト（例: u:r:shell:s0）。システムはポリシーにそのドメインがあるかを確認します。プログラムが必要とするルールがないドメインでは、su セッションが失敗します。</string>
+    <string name="root_profile_domain_other">その他のドメイン</string>
+    <string name="root_profile_domain_su">Android の su ドメイン。デバッグ可能なビルドにのみ存在します</string>
+    <string name="root_profile_gid">グループ ID</string>
+    <string name="root_profile_gid_message">このアプリの su セッションは、このグループ ID で実行されます。0 は root です。</string>
+    <string name="root_profile_groups">補助グループ</string>
+    <string name="root_profile_groups_other">その他のグループ ID</string>
+    <string name="root_profile_groups_other_message">追加するグループ ID をカンマで区切って入力します。</string>
+    <string name="root_profile_groups_too_many">KernelSU が保持できるグループは最大 %1$d 個です</string>
+    <string name="root_profile_id_invalid">0～2147483646 の ID を入力してください</string>
+    <string name="root_profile_no_new_privs">新しい権限を付与しない</string>
+    <string name="root_profile_no_new_privs_summary">su セッション内のプログラムは、再度 su を呼び出してこのプロファイルを取得することはできません</string>
+    <string name="root_profile_none">なし</string>
+    <string name="root_profile_reset">デフォルトのプロファイルに戻す</string>
+    <string name="root_profile_reset_confirm">戻す</string>
+    <string name="root_profile_reset_message">%1$s の su セッションに KernelSU のデフォルトの Root プロファイルが再び適用されます。</string>
+    <string name="root_profile_reset_summary">KernelSU のデフォルト: ユーザーとグループは 0、すべてのケーパビリティ、KernelSU のドメイン、継承されたマウント名前空間</string>
+    <string name="root_profile_reset_title">デフォルトのプロファイルに戻しますか？</string>
+    <string name="root_profile_root_id">0（root）</string>
+    <string name="root_profile_source">プロファイル</string>
+    <string name="root_profile_source_default">KernelSU のデフォルト</string>
+    <string name="root_profile_source_own">このアプリ用に作成</string>
+    <string name="root_profile_uid">ユーザー ID</string>
+    <string name="root_profile_uid_message">このアプリの su セッションは、このユーザー ID で実行されます。0 は root です。それ以外の ID では root のファイル アクセス権がありません。</string>
+    <string name="root_profile_warning_continue">変更</string>
+    <string name="root_profile_warning_message">KernelSU は、選択した値をそのまま適用します。ユーザー ID、グループ、ケーパビリティ、SELinux ドメインを狭めると、su を要求するほとんどのプログラムが失敗します。値を誤ると、ここでデフォルトのプロファイルに戻すまで、このアプリの su セッションが使用できなくなることがあります。</string>
+    <string name="root_profile_warning_title">Root プロファイルを変更しますか？</string>
+    <string name="root_shared_summary">ユーザー ID %1$d は %2$s と共有されています。KernelSU はユーザー ID ごとに Root アクセスを許可するため、これらすべてに適用されます。</string>
+    <string name="root_shared_title">共有ユーザー ID</string>
+    <!-- Root access -->
+    <string name="root_state_allowed">許可</string>
+    <!-- Root access: every profile field -->
+    <string name="root_state_allowed_custom">許可 · 独自のプロファイル</string>
+    <string name="root_state_allowed_detail">許可: アプリは Root としてコマンドを実行できます</string>
+    <string name="root_state_allowed_shared">許可 · 共有ユーザー ID</string>
+    <string name="root_state_forbidden">利用不可: KernelSU は、1000 以外でユーザー ID が 2000 未満のシステム ID に Root アクセスを許可しません（このアプリ: %1$d）</string>
+    <string name="root_state_never_detail">許可されたことはありません</string>
+    <string name="root_state_not_allowed">許可しない</string>
+    <string name="root_state_settings_app">利用不可: Lujarch 自身のアプリが Root アクセスを取得することはありません</string>
+    <string name="root_state_title">状態</string>
+    <!-- Page titles and state summaries -->
+    <string name="root_title">Root アクセス</string>
+    <string name="status_unknown">不明</string>
+    <string name="error_load_root">Root アクセスを読み込めませんでした</string>
+    <string name="root_error_invalid">これらの値は Root プロファイルにできません</string>
+    <string name="root_error_never_granted">このアプリは Root アクセスを取得できません</string>
+    <string name="root_error_no_root">このアプリには Root アクセスがありません</string>
+    <string name="root_error_not_installed">このアプリはインストールされていません</string>
+    <string name="root_special_access">特別なアプリアクセス</string>
+    <string name="root_summary">Root としてコマンドを実行できるアプリ</string>
+    <string name="search_root_keywords">Root, スーパーユーザー, Root アクセス, su, superuser, KernelSU</string>
+</resources>

@@ -391,6 +391,21 @@ def check_lock(findings):
         if spec.get("build") not in ("go", "cargo") or "module" not in spec:
             findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
                          f"component {name}: build (go or cargo) and module are required")
+    prebuilt_pins = lock.get("prebuilts", {})
+    for name, pin in prebuilt_pins.items():
+        arches = {k: v for k, v in pin.items() if isinstance(v, dict)}
+        if not arches:
+            findings.add(path, 0, f"prebuilts.{name}: no architecture with url and sha256")
+        for arch, spec in arches.items():
+            if not str(spec.get("url", "")).startswith("https://") or not re.fullmatch(
+                    r"[0-9a-f]{64}", str(spec.get("sha256", ""))):
+                findings.add(path, 0, f"prebuilts.{name}.{arch}: url (https) and sha256 are required")
+    for feature, name, spec in feature_prebuilts():
+        if name not in prebuilt_pins:
+            findings.add(path, 0, f"prebuilt {name} of {feature} is not pinned")
+        if "module" not in spec:
+            findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
+                         f"prebuilt {name}: module is required")
     manifest = ROOT / "upstream.xml"
     if not manifest.exists():
         findings.add("upstream.xml", 0, "missing")
@@ -866,6 +881,7 @@ def extra_files(host):
             if staged:
                 found.append(d.name)
     files.update(component_files(host))
+    files.update(prebuilt_files(host))
     if not files:
         return {}
 
@@ -1085,6 +1101,61 @@ def component_files(host):
             path = build_component(host, feature, name, spec, arch)
             files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
     return files
+
+
+def feature_prebuilts():
+    """Every prebuilt of every feature.toml, as (feature, name, spec)."""
+    out = []
+    for path in sorted((SYSTEM / "features").glob("*/feature.toml")):
+        for name, spec in load_toml(path).get("prebuilts", {}).items():
+            out.append((path.parent.name, name, spec))
+    return out
+
+
+def prebuilt_cache(host, pin):
+    """A pinned prebuilt in the host's prebuilts directory, named by its sha256."""
+    return host.path_of("paths", "prebuilts") / pin["sha256"]
+
+
+def prebuilt_files(host):
+    """vendor/extra/features/<feature>/prebuilt/<arch>/<module> of every pinned prebuilt."""
+    files = {}
+    pins = lock_file().get("prebuilts", {})
+    for feature, name, spec in feature_prebuilts():
+        for arch, pin in pins.get(name, {}).items():
+            if not isinstance(pin, dict):
+                continue
+            path = prebuilt_cache(host, pin)
+            if not path.is_file():
+                die(f"prebuilt {name} for {arch} is not fetched (lujarch fetch)")
+            if sha256_file(path) != pin["sha256"]:
+                die(f"{path} does not match the sha256 of prebuilt {name} for {arch}")
+            files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
+    return files
+
+
+def cmd_fetch(_args):
+    """Downloads the pinned prebuilts the host does not have yet."""
+    host = Host()
+    for name, pins in lock_file().get("prebuilts", {}).items():
+        for arch, pin in pins.items():
+            if not isinstance(pin, dict):
+                continue
+            path = prebuilt_cache(host, pin)
+            if path.is_file() and sha256_file(path) == pin["sha256"]:
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            part = path.with_suffix(".part")
+            log(f"fetching {name} for {arch}: {pin['url']}")
+            run = subprocess.run(["curl", "-fL", "--retry", "5", "-o", str(part), pin["url"]])
+            if run.returncode:
+                die(f"download of {name} for {arch} failed")
+            if sha256_file(part) != pin["sha256"]:
+                part.unlink()
+                die(f"{pin['url']} does not match its sha256 in lock.toml")
+            part.rename(path)
+    log("every pinned prebuilt is fetched")
+    return 0
 
 
 def staged_edits(dest):
@@ -1948,6 +2019,7 @@ def main():
     status.add_argument("--list", action="store_true", help="list the items without a test")
     sub.add_parser("pin", help="write upstream.xml from the tree's commits")
     sub.add_parser("sync", help="sync the tree to upstream.xml and apply the patches")
+    sub.add_parser("fetch", help="download the pinned prebuilts the host does not have")
     sub.add_parser("patch", help="apply the patches of system/order")
     sub.add_parser("unpatch", help="revert the patches of system/order")
     save = sub.add_parser("save", help="save the tree's changes into an entry's patches")
@@ -1971,7 +2043,7 @@ def main():
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
         "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "stock": cmd_stock,
-        "build": cmd_build,
+        "build": cmd_build, "fetch": cmd_fetch,
         "vm": cmd_vm,
     }[args.command](args)
 

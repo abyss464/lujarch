@@ -2,6 +2,7 @@
 
 #include <android-base/file.h>
 #include <android-base/logging.h>
+#include <android-base/parseint.h>
 #include <android-base/properties.h>
 #include <android-base/strings.h>
 #include <android/binder_ibinder.h>
@@ -32,6 +33,22 @@ void Serve(const std::string& name, const ndk::SpAIBinder& binder, int threads) 
     }
     ABinderProcess_startThreadPool();
     ABinderProcess_joinThreadPool();
+}
+
+std::optional<uid_t> PackageUid(std::string_view package) {
+    std::string list;
+    if (!android::base::ReadFileToString(kPackagesList, &list)) {
+        PLOG(ERROR) << "cannot read " << kPackagesList;
+        return std::nullopt;
+    }
+    for (const std::string& line : android::base::Split(list, "\n")) {
+        std::vector<std::string> fields = android::base::Split(line, " ");
+        uid_t uid;
+        if (fields.size() > 1 && fields[0] == package && android::base::ParseUint(fields[1], &uid)) {
+            return uid;
+        }
+    }
+    return std::nullopt;
 }
 
 std::vector<std::string> CallerPackages() {

@@ -1,0 +1,5 @@
+prefix = "ROOT"
+
+# KernelSU-Next's su (ksud) as released for the kernel side in upstream.xml; pinned in lock.toml.
+[prebuilts.ksud]
+module = "ksud"

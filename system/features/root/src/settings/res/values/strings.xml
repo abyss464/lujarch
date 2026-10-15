@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <plurals name="root_apps_category_count">
+        <item quantity="one">Apps · %1$d allowed</item>
+        <item quantity="other">Apps · %1$d allowed</item>
+    </plurals>
+    <plurals name="root_grant_shared">
+        <item quantity="one">This app shares its user ID with %1$d other app; Root access applies to it too.</item>
+        <item quantity="other">This app shares its user ID with %1$d other apps; Root access applies to all of them.</item>
+    </plurals>
+    <plurals name="root_profile_capabilities_count">
+        <item quantity="one">%1$d capability</item>
+        <item quantity="other">%1$d capabilities</item>
+    </plurals>
+    <!-- Appended to the name list: quoted, as aapt2 trims unquoted edge spaces. -->
+    <plurals name="root_shared_more">
+        <item quantity="one">" and %1$d more"</item>
+        <item quantity="other">" and %1$d more"</item>
+    </plurals>
+    <string name="error_root_profile">Couldn\'t change the Root profile</string>
+    <string name="error_su_grant">Couldn\'t allow Root access</string>
+    <string name="error_su_revoke">Couldn\'t revoke Root access</string>
+    <string name="root_allow_switch">Allow Root access</string>
+    <string name="root_app_footer">These are the values KernelSU applies to this app\'s su sessions. KernelSU\'s profile templates and extra SELinux rules for a custom domain are not offered: they need its manager app, and a rule set loaded from here would change the whole system\'s SELinux policy. Turning Root access off returns the profile to the default.</string>
+    <string name="root_app_system_state">%1$s · system app</string>
+    <string name="root_apps_category">Apps</string>
+    <string name="root_auth_continue">Continue anyway</string>
+    <string name="root_auth_grant_subtitle">Confirm it\'s you to give %1$s Root access</string>
+    <string name="root_auth_grant_title">Allow Root access</string>
+    <string name="root_auth_profile_subtitle">Confirm it\'s you to widen what Root access lets %1$s do</string>
+    <string name="root_auth_profile_title">Change the Root profile</string>
+    <string name="root_auth_set_lock">Set a screen lock</string>
+    <string name="root_auth_state_ok">Allowing Root access, and every profile change that widens what it may do, ask for your screen lock or fingerprint first</string>
+    <!-- Root access: the owner's identity before Root is given away -->
+    <string name="root_auth_title">Authentication</string>
+    <string name="root_auth_unavailable_message">Set a screen lock to have Root access ask for it, or continue with the confirmation you gave just now.</string>
+    <string name="root_auth_unavailable_no_lock">This phone has no screen lock, so your identity cannot be checked. Tap to set one.</string>
+    <string name="root_auth_unavailable_other">Your identity cannot be checked on this phone at the moment. Tap for the screen lock settings.</string>
+    <string name="root_auth_unavailable_title">Can\'t check your identity</string>
+    <string name="root_footer">Allow only apps you trust. An app with Root access can read all data, change the system and hide what it does.</string>
+    <string name="root_grant_confirm">Allow</string>
+    <string name="root_grant_message">%1$s will be able to run any command as Root, with full control over this device and all its data.</string>
+    <string name="root_grant_message_other">%1$s runs as a system identity (user ID %2$d). If you allow it, every process with this identity can run any command as Root.</string>
+    <string name="root_grant_message_shell">%1$s is the shell identity (user ID 2000) that adb uses. If you allow it, every computer authorized for USB or wireless debugging gets full Root access, as with Rooted debugging in Developer options.</string>
+    <string name="root_grant_message_system">%1$s runs as the system user (user ID 1000), which Android\'s system server and many system apps share. If you allow it, every process with this identity can run any command as Root, and a flaw in any of them gives full control of the device outside SELinux\'s protection.</string>
+    <string name="root_grant_title">Allow Root access?</string>
+    <!-- Root access -->
+    <string name="root_intro">Apps allowed here can run commands as Root (su), which gives full control over this device.</string>
+    <string name="root_ksu_title">KernelSU</string>
+    <string name="root_ksu_unavailable">This kernel has no KernelSU</string>
+    <string name="root_ksu_version">Version %1$s</string>
+    <string name="root_namespace_category">Mount namespace</string>
+    <string name="root_namespace_global">Global</string>
+    <string name="root_namespace_global_summary">Root sessions work in the system\'s global mount namespace; their mounts are visible to every app</string>
+    <string name="root_namespace_individual">Individual</string>
+    <string name="root_namespace_individual_summary">Each Root session gets its own copy of the mounts; its changes stay private</string>
+    <string name="root_namespace_inherited">Inherited (default)</string>
+    <string name="root_namespace_inherited_summary">Root sessions see the mounts of the app that starts them</string>
+    <string name="root_profile_capabilities">Capabilities</string>
+    <string name="root_profile_capabilities_all">All</string>
+    <string name="root_profile_category">Root profile</string>
+    <string name="root_profile_domain">SELinux domain</string>
+    <string name="root_profile_domain_choice">%1$s\n%2$s</string>
+    <string name="root_profile_domain_invalid">Use user:role:type:level with a–z, 0–9 and _</string>
+    <string name="root_profile_domain_ksu">KernelSU\'s domain, with every permission (default)</string>
+    <string name="root_profile_domain_message">An SELinux context of the form user:role:type:level, such as u:r:shell:s0. The system checks that its policy has it; a domain without the rules its programs need makes su sessions fail.</string>
+    <string name="root_profile_domain_other">Other domain</string>
+    <string name="root_profile_domain_su">Android\'s su domain; exists only on debuggable builds</string>
+    <string name="root_profile_gid">Group ID</string>
+    <string name="root_profile_gid_message">Su sessions of this app run with this group ID. 0 is root.</string>
+    <string name="root_profile_groups">Supplementary groups</string>
+    <string name="root_profile_groups_other">Other group IDs</string>
+    <string name="root_profile_groups_other_message">Group IDs to add, separated by commas.</string>
+    <string name="root_profile_groups_too_many">KernelSU keeps at most %1$d groups</string>
+    <string name="root_profile_id_invalid">Enter IDs from 0 to 2147483646</string>
+    <string name="root_profile_no_new_privs">No new privileges</string>
+    <string name="root_profile_no_new_privs_summary">Programs in a su session cannot call su again to regain this profile</string>
+    <string name="root_profile_none">None</string>
+    <string name="root_profile_reset">Restore default profile</string>
+    <string name="root_profile_reset_confirm">Restore</string>
+    <string name="root_profile_reset_message">Su sessions of %1$s get KernelSU\'s default Root profile again.</string>
+    <string name="root_profile_reset_summary">KernelSU\'s default: user and group 0, every capability, KernelSU\'s domain, inherited mount namespace</string>
+    <string name="root_profile_reset_title">Restore the default profile?</string>
+    <string name="root_profile_root_id">0 (root)</string>
+    <string name="root_profile_source">Profile</string>
+    <string name="root_profile_source_default">KernelSU default</string>
+    <string name="root_profile_source_own">Written for this app</string>
+    <string name="root_profile_uid">User ID</string>
+    <string name="root_profile_uid_message">Su sessions of this app run with this user ID. 0 is root; another ID leaves them without root\'s file access.</string>
+    <string name="root_profile_warning_continue">Change</string>
+    <string name="root_profile_warning_message">KernelSU applies these values exactly as chosen. A narrower user ID, group set, capability set or SELinux domain makes most programs that ask for su fail; a wrong value can leave this app\'s su sessions unusable until the default profile is restored here.</string>
+    <string name="root_profile_warning_title">Change the Root profile?</string>
+    <string name="root_shared_summary">User ID %1$d is shared with %2$s. KernelSU grants Root access per user ID, so it applies to all of them.</string>
+    <string name="root_shared_title">Shared user ID</string>
+    <!-- Root access -->
+    <string name="root_state_allowed">Allowed</string>
+    <!-- Root access: every profile field -->
+    <string name="root_state_allowed_custom">Allowed · own profile</string>
+    <string name="root_state_allowed_detail">Allowed: the app can run commands as Root</string>
+    <string name="root_state_allowed_shared">Allowed · shared user ID</string>
+    <string name="root_state_forbidden">Not available: KernelSU does not grant Root access to system identities below user ID 2000 other than 1000 (this app: %1$d)</string>
+    <string name="root_state_never_detail">Never allowed</string>
+    <string name="root_state_not_allowed">Not allowed</string>
+    <string name="root_state_settings_app">Not available: Lujarch\'s own apps never get Root access</string>
+    <string name="root_state_title">State</string>
+    <!-- Page titles and state summaries -->
+    <string name="root_title">Root access</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="error_load_root">Couldn\'t load Root access</string>
+    <string name="root_error_invalid">These values can\'t be a root profile</string>
+    <string name="root_error_never_granted">This app can\'t get Root access</string>
+    <string name="root_error_no_root">This app has no Root access</string>
+    <string name="root_error_not_installed">This app isn\'t installed</string>
+    <string name="root_special_access">Special app access</string>
+    <string name="root_summary">Apps that can run commands as Root</string>
+    <string name="search_root_keywords">Root, su, superuser, Root access, KernelSU</string>
+</resources>

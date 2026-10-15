@@ -3,3 +3,4 @@ features/core
 features/permissions
 features/updates
 features/proxy
+features/root

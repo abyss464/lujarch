@@ -1,0 +1,28 @@
+# lujarch_root: the root daemon. It reads and writes KernelSU's app profiles for Lujarch Settings,
+# as uid 0 without capabilities. KernelSU's driver fd comes from its reboot(2) hook, before any
+# SELinux check, and its ioctls are on a private anonymous inode in the daemon's own context.
+type lujarch_root, domain, coredomain;
+type lujarch_root_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_root)
+
+type lujarch_root_service, service_manager_type;
+system_internal_prop(lujarch_root_prop)
+
+# Its interface.
+binder_use(lujarch_root)
+add_service(lujarch_root, lujarch_root_service)
+allow platform_app_all lujarch_root_service:service_manager find;
+binder_call(platform_app_all, lujarch_root)
+
+# The callers' packages and the packages' user IDs.
+allow lujarch_root system_data_file:dir search;
+allow lujarch_root packages_list_file:file r_file_perms;
+
+# KernelSU writes its allowlist to /data/adb/ksu/.allowlist: the daemon makes the directory when it
+# is missing and watches the file to confirm that a change was written.
+allow lujarch_root adb_data_file:dir { search getattr write add_name create };
+allow lujarch_root adb_data_file:file getattr;
+
+# lujarch.root.flush: KernelSU queues the allowlist write as task_work on init, and a property
+# write wakes init to run it.
+set_prop(lujarch_root, lujarch_root_prop)

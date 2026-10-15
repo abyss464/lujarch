@@ -120,3 +120,8 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | 2FA codes | 两步验证码 | 2FA コード |
 | Passwords | 密码 | パスワード |
 | Sources | 数据源 | ソース |
+| Allow Root access | 允许 Root 权限 | Root アクセスを許可 |
+| Root profile | Root 配置 | Root プロファイル |
+| Allowed with a custom profile | 已允许（自定义配置） | 許可（カスタム プロファイル） |
+| Restore default profile | 恢复默认配置 | デフォルトのプロファイルに戻す |
+| Mount namespace | 挂载命名空间 | マウント名前空間 |
