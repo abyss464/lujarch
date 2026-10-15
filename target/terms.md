@@ -146,3 +146,11 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Privacy indicators | 隐私指示器 | プライバシー インジケーター |
 | Lyrics | 歌词 | 歌詞 |
 | Media | 媒体 | メディア |
+| Fit app icons | 适配应用图标 | アプリアイコンを揃える |
+| Icon | 图标 | アイコン |
+| Original | 原始 | オリジナル |
+| Fitted | 适配 | 調整 |
+| Redrawn | 重绘 | 再描画 |
+| Fit notification icons | 适配通知图标 | 通知アイコンを揃える |
+| App drawer sections | 应用抽屉分区 | アプリドロワーのセクション |
+| Unnamed section | 未命名分区 | 名前のないセクション |
