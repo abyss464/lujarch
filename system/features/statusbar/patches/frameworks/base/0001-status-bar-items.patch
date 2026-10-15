@@ -1,0 +1,2314 @@
+diff --git a/packages/SystemUI/LineageManifest.xml b/packages/SystemUI/LineageManifest.xml
+index 7b1b48de3fb0c7d59ea4227ff510272fd0a55857..c2a58b2b09e6e9c4aa3e2e37e414be766bd1b4ed 100644
+--- a/packages/SystemUI/LineageManifest.xml
++++ b/packages/SystemUI/LineageManifest.xml
+@@ -36,7 +36,7 @@
+             android:targetActivity=".tuner.TunerActivity"
+             android:icon="@drawable/tuner"
+             android:theme="@style/Theme.SubSettingsBase.Expressive"
+-            android:label="@string/status_bar_icons_title"
++            android:label="@string/lujarch_sb_page_title"
+             android:process=":tuner"
+             android:exported="true">
+             <intent-filter>
+diff --git a/packages/SystemUI/res/layout/status_bar.xml b/packages/SystemUI/res/layout/status_bar.xml
+index 799ac531193ca9aeb6c3fb5164b018c40e82ba2d..c656c90c57e2809677b522f501b8c00246d75350 100644
+--- a/packages/SystemUI/res/layout/status_bar.xml
++++ b/packages/SystemUI/res/layout/status_bar.xml
+@@ -89,6 +89,18 @@
+                         android:layout_height="match_parent"
+                         android:layout="@layout/operator_name" />
+ 
++                    <!-- Lujarch: the playing song's lyric line (SB-3). While it
++                         shows, the clock and the notification icons give way; gone without one. -->
++                    <com.android.systemui.statusbar.lujarch.lyrics.LyricsView
++                        android:id="@+id/lujarch_lyrics"
++                        android:layout_width="0dp"
++                        android:layout_height="match_parent"
++                        android:layout_weight="1"
++                        android:layout_gravity="center_vertical"
++                        android:paddingStart="@dimen/status_bar_left_clock_starting_padding"
++                        android:paddingEnd="@dimen/status_bar_left_clock_end_padding"
++                        android:visibility="gone" />
++
+                     <com.android.systemui.statusbar.policy.Clock
+                         android:id="@+id/clock"
+                         android:layout_width="wrap_content"
+diff --git a/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..697b13ee0dde2b76aaa51f7a42d97619dad9ce0a
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
+@@ -0,0 +1,55 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_sb_page_title">ステータスバーの項目</string>
++    <string name="lujarch_sb_group_connectivity">接続</string>
++    <string name="lujarch_sb_group_sound">音とモード</string>
++    <string name="lujarch_sb_group_status">ステータス</string>
++    <string name="lujarch_sb_group_chips">アクティビティ チップ</string>
++    <string name="lujarch_sb_group_privacy">プライバシー インジケーター</string>
++    <string name="lujarch_sb_group_general">時計、バッテリー、通知</string>
++    <string name="lujarch_sb_mobile">モバイル信号</string>
++    <string name="lujarch_sb_stacked_mobile">デュアル SIM の信号（重ねて表示）</string>
++    <string name="lujarch_sb_satellite">衛星</string>
++    <string name="lujarch_sb_rotate">回転ロック</string>
++    <string name="lujarch_sb_sensors_off">センサー オフ</string>
++    <string name="lujarch_sb_connected_display">外部ディスプレイ</string>
++    <string name="lujarch_sb_ime">入力方法</string>
++    <string name="lujarch_sb_speakerphone">スピーカーフォン</string>
++    <string name="lujarch_sb_tty">TTY モード</string>
++    <string name="lujarch_sb_telecom_mute">通話のミュート</string>
++    <string name="lujarch_sb_chip_screen_record">画面録画</string>
++    <string name="lujarch_sb_chip_screen_record_summary">オフ: このチップが表示されずに画面を録画できます</string>
++    <string name="lujarch_sb_chip_share">画面共有</string>
++    <string name="lujarch_sb_chip_share_summary">オフ: このチップが表示されずにアプリが画面を受け取れます</string>
++    <string name="lujarch_sb_chip_cast_summary">オフ: このチップが表示されずに画面をキャストできます</string>
++    <string name="lujarch_sb_chip_call">通話中</string>
++    <string name="lujarch_sb_chip_battery_plug">充電器の接続</string>
++    <string name="lujarch_sb_chip_display_connected">ディスプレイの接続</string>
++    <string name="lujarch_sb_chip_live">ライブ通知</string>
++    <string name="lujarch_sb_privacy_chip">カメラとマイクのチップ</string>
++    <string name="lujarch_sb_privacy_chip_summary">オフ: このチップが表示されずにアプリがカメラやマイクを使用できます</string>
++    <string name="lujarch_sb_privacy_location">位置情報インジケーター</string>
++    <string name="lujarch_sb_privacy_location_summary">オフ: このインジケーターが表示されずにアプリが位置情報を読み取れます</string>
++    <string name="lujarch_sb_privacy_dot">プライバシー ドット</string>
++    <string name="lujarch_sb_privacy_dot_summary">オフ: このドットが表示されずにアプリがカメラやマイクを使用できます</string>
++    <string name="lujarch_sb_notification_icons">通知アイコン</string>
++    <string name="lujarch_sb_operator_name">携帯通信会社名</string>
++    <string name="lujarch_sb_carrier_text">ロック画面の携帯通信会社名</string>
++    <string name="lujarch_sb_lyrics">歌詞</string>
++    <string name="lujarch_sb_lyrics_summary">歌詞付きの曲を再生中、現在の行をステータスバーの左側に表示します。タップするとプレーヤーを開きます</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..2479c9352895fb9d42afa300316c7895f24c831f
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
+@@ -0,0 +1,61 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_sb_page_title">状态栏内容</string>
++
++    <string name="lujarch_sb_group_connectivity">连接</string>
++    <string name="lujarch_sb_group_sound">声音和模式</string>
++    <string name="lujarch_sb_group_status">状态</string>
++    <string name="lujarch_sb_group_chips">活动提示</string>
++    <string name="lujarch_sb_group_privacy">隐私指示器</string>
++    <string name="lujarch_sb_group_general">时钟、电池和通知</string>
++
++    <string name="lujarch_sb_mobile">移动网络信号</string>
++    <string name="lujarch_sb_stacked_mobile">双卡信号（叠放）</string>
++    <string name="lujarch_sb_satellite">卫星</string>
++
++    <string name="lujarch_sb_rotate">屏幕旋转锁定</string>
++    <string name="lujarch_sb_sensors_off">传感器已关闭</string>
++    <string name="lujarch_sb_connected_display">外接显示屏</string>
++    <string name="lujarch_sb_ime">输入法</string>
++    <string name="lujarch_sb_speakerphone">扬声器</string>
++    <string name="lujarch_sb_tty">TTY 模式</string>
++    <string name="lujarch_sb_telecom_mute">通话静音</string>
++
++    <string name="lujarch_sb_chip_screen_record">屏幕录制</string>
++    <string name="lujarch_sb_chip_screen_record_summary">关闭后，录制屏幕时不会显示此提示</string>
++    <string name="lujarch_sb_chip_share">共享屏幕</string>
++    <string name="lujarch_sb_chip_share_summary">关闭后，向应用共享屏幕时不会显示此提示</string>
++    <string name="lujarch_sb_chip_cast_summary">关闭后，投放屏幕时不会显示此提示</string>
++    <string name="lujarch_sb_chip_call">正在进行的通话</string>
++    <string name="lujarch_sb_chip_battery_plug">已连接充电器</string>
++    <string name="lujarch_sb_chip_display_connected">显示屏已连接</string>
++    <string name="lujarch_sb_chip_live">实时通知</string>
++
++    <string name="lujarch_sb_privacy_chip">相机和麦克风提示</string>
++    <string name="lujarch_sb_privacy_chip_summary">关闭后，应用使用相机或麦克风时不会显示此提示</string>
++    <string name="lujarch_sb_privacy_location">位置信息提示</string>
++    <string name="lujarch_sb_privacy_location_summary">关闭后，应用读取位置信息时不会显示此提示</string>
++    <string name="lujarch_sb_privacy_dot">隐私圆点</string>
++    <string name="lujarch_sb_privacy_dot_summary">关闭后，应用使用相机或麦克风时不会显示此圆点</string>
++
++    <string name="lujarch_sb_notification_icons">通知图标</string>
++    <string name="lujarch_sb_operator_name">运营商名称</string>
++    <string name="lujarch_sb_carrier_text">锁屏运营商信息</string>
++    <string name="lujarch_sb_lyrics">状态栏歌词</string>
++    <string name="lujarch_sb_lyrics_summary">播放带歌词的歌曲时，当前这句显示在状态栏左侧；点按打开播放器</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8189e0f3f403189039903deeac235f45921ec05e
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
+@@ -0,0 +1,73 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <!-- The status bar items page (SB-1): everything the status bar shows has a switch here.
++         The titles are those of the items in StatusBarItems. -->
++
++    <!-- Title of the page and of its entry in Settings [CHAR LIMIT=40] -->
++    <string name="lujarch_sb_page_title">Status bar items</string>
++
++    <!-- Group titles [CHAR LIMIT=40] -->
++    <string name="lujarch_sb_group_connectivity">Connectivity</string>
++    <string name="lujarch_sb_group_sound">Sound and modes</string>
++    <string name="lujarch_sb_group_status">Status</string>
++    <string name="lujarch_sb_group_chips">Activity chips</string>
++    <string name="lujarch_sb_group_privacy">Privacy indicators</string>
++    <string name="lujarch_sb_group_general">Clock, battery and notifications</string>
++
++    <!-- Connectivity [CHAR LIMIT=40] -->
++    <string name="lujarch_sb_mobile">Mobile signal</string>
++    <string name="lujarch_sb_stacked_mobile">Dual-SIM signal, stacked</string>
++    <string name="lujarch_sb_satellite">Satellite</string>
++
++    <!-- Status [CHAR LIMIT=40] -->
++    <string name="lujarch_sb_rotate">Rotation lock</string>
++    <string name="lujarch_sb_sensors_off">Sensors off</string>
++    <string name="lujarch_sb_connected_display">External display</string>
++    <string name="lujarch_sb_ime">Input method</string>
++    <string name="lujarch_sb_speakerphone">Speakerphone</string>
++    <string name="lujarch_sb_tty">TTY mode</string>
++    <string name="lujarch_sb_telecom_mute">Call mute</string>
++
++    <!-- Activity chips: title and, for what an app can do to the screen unseen, the summary
++         [CHAR LIMIT=40] [CHAR LIMIT=80] -->
++    <string name="lujarch_sb_chip_screen_record">Screen recording</string>
++    <string name="lujarch_sb_chip_screen_record_summary">Off: the screen can be recorded without this chip showing</string>
++    <string name="lujarch_sb_chip_share">Screen sharing</string>
++    <string name="lujarch_sb_chip_share_summary">Off: apps can receive your screen without this chip showing</string>
++    <string name="lujarch_sb_chip_cast_summary">Off: your screen can be cast without this chip showing</string>
++    <string name="lujarch_sb_chip_call">Ongoing call</string>
++    <string name="lujarch_sb_chip_battery_plug">Charger connected</string>
++    <string name="lujarch_sb_chip_display_connected">Display connected</string>
++    <string name="lujarch_sb_chip_live">Live notifications</string>
++
++    <!-- Privacy indicators: each says what an app can do unseen once the switch is off
++         [CHAR LIMIT=40] [CHAR LIMIT=80] -->
++    <string name="lujarch_sb_privacy_chip">Camera and microphone chip</string>
++    <string name="lujarch_sb_privacy_chip_summary">Off: apps can use the camera or microphone without this chip showing</string>
++    <string name="lujarch_sb_privacy_location">Location indicator</string>
++    <string name="lujarch_sb_privacy_location_summary">Off: apps can read your location without this indicator showing</string>
++    <string name="lujarch_sb_privacy_dot">Privacy dot</string>
++    <string name="lujarch_sb_privacy_dot_summary">Off: apps can use the camera or microphone without this dot showing</string>
++
++    <!-- Clock, battery and notifications [CHAR LIMIT=40] -->
++    <string name="lujarch_sb_notification_icons">Notification icons</string>
++    <string name="lujarch_sb_operator_name">Carrier name</string>
++    <string name="lujarch_sb_carrier_text">Lock screen carrier text</string>
++    <string name="lujarch_sb_lyrics">Lyrics</string>
++    <string name="lujarch_sb_lyrics_summary">While a song with lyrics plays, its current line takes the left side; a tap opens the player</string>
++</resources>
+diff --git a/packages/SystemUI/res/xml/status_bar_prefs.xml b/packages/SystemUI/res/xml/status_bar_prefs.xml
+index c8e983b781d2f266980f025ac47005ef9d4304fe..ef4482ff2f55b08978d8c1600e95647d941a894a 100644
+--- a/packages/SystemUI/res/xml/status_bar_prefs.xml
++++ b/packages/SystemUI/res/xml/status_bar_prefs.xml
+@@ -13,127 +13,8 @@
+      See the License for the specific language governing permissions and
+      limitations under the License.
+ -->
++<!-- The switches are generated from StatusBarItems: a second list here would be a status bar
++     item without a registry entry. -->
+ <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+-    xmlns:sysui="http://schemas.android.com/apk/res-auto"
+     android:key="status_bar"
+-    android:title="@string/status_bar">
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_auto_rotate"
+-        android:key="rotate"
+-        android:title="@string/status_bar_settings_auto_rotation" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_headset"
+-        android:key="headset"
+-        android:title="@string/headset" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_firewall"
+-        android:key="firewall"
+-        android:title="@string/status_bar_firewall" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_work"
+-        android:key="managed_profile"
+-        android:title="@string/status_bar_work" />
+-
+-    <!-- ime -->
+-    <!-- sync_failing -->
+-    <!-- sync_active -->
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_cast"
+-        android:key="cast"
+-        android:title="@string/quick_settings_cast_title" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_hotspot"
+-        android:key="hotspot"
+-        android:title="@string/quick_settings_hotspot_label" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@*android:drawable/ic_qs_bluetooth"
+-        android:key="bluetooth"
+-        android:title="@string/quick_settings_bluetooth_label" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_camera"
+-        android:key="cameratoggle"
+-        android:title="@string/quick_settings_camera_label" />
+-
+-    <!-- nfc -->
+-    <!-- tty -->
+-    <!-- speakerphone -->
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_do_not_disturb"
+-        android:key="zen"
+-        android:title="@string/quick_settings_dnd_label" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_mute"
+-        android:key="mute"
+-        android:title="@string/volume_ringer_status_silent" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_vibrate"
+-        android:key="volume"
+-        android:title="@string/volume_ringer_status_vibrate" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_wifi"
+-        android:key="wifi"
+-        android:title="@string/quick_settings_wifi_label" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_ethernet"
+-        android:key="ethernet"
+-        android:title="@string/status_bar_ethernet" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_mobile_network"
+-        android:key="mobile"
+-        android:title="@string/quick_settings_cellular_detail_title" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_airplanemode"
+-        android:key="airplane"
+-        android:title="@string/status_bar_airplane" />
+-
+-    <!-- other weird signal stuff -->
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_vpn"
+-        android:key="vpn"
+-        android:title="@string/legacy_vpn_name" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/stat_sys_lujarch_proxy"
+-        android:key="@string/lujarch_proxy_slot"
+-        android:title="@string/lujarch_proxy_title" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@*android:drawable/ic_battery"
+-        android:key="battery"
+-        android:title="@string/battery" />
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_alarm"
+-        android:key="alarm_clock"
+-        android:title="@string/status_bar_alarm" />
+-
+-    <!-- secure -->
+-
+-    <com.android.systemui.tuner.StatusBarSwitch
+-        android:icon="@drawable/ic_statusbar_clock"
+-        android:key="clock"
+-        android:title="@string/clock" />
+-
+-    <com.android.systemui.tuner.TunerSwitch
+-        android:icon="@drawable/ic_statusbar_priority"
+-        android:key="low_priority"
+-        android:title="@string/tuner_low_priority"
+-        sysui:defValue="false" />
+-
+-</PreferenceScreen>
++    android:title="@string/status_bar" />
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/HeaderPrivacyIconsController.kt b/packages/SystemUI/src/com/android/systemui/qs/HeaderPrivacyIconsController.kt
+index a781ab309b321431c1e423510431de251b0382e3..6303271336102e173b0621a66184c3e52c89b79b 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/HeaderPrivacyIconsController.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/HeaderPrivacyIconsController.kt
+@@ -26,10 +26,13 @@ import com.android.systemui.privacy.PrivacyDialogController
+ import com.android.systemui.privacy.PrivacyDialogControllerV2
+ import com.android.systemui.privacy.PrivacyItem
+ import com.android.systemui.privacy.PrivacyItemController
++import com.android.systemui.privacy.PrivacyType
+ import com.android.systemui.privacy.logging.PrivacyLogger
+ import com.android.systemui.settings.UserTracker
+ import com.android.systemui.shade.ShadeViewProviderModule.Companion.SHADE_HEADER
+ import com.android.systemui.shade.domain.interactor.ShadeDialogContextInteractor
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
+ import com.android.systemui.statusbar.phone.StatusIconContainer
+ import com.android.systemui.statusbar.policy.DeviceProvisionedController
+ import java.util.concurrent.Executor
+@@ -71,6 +74,7 @@ constructor(
+     private val featureFlags: FeatureFlags,
+     private val shadeDialogContextInteractor: ShadeDialogContextInteractor,
+     private val userTracker: UserTracker,
++    private val hideList: StatusBarHideList,
+ ) {
+ 
+     var chipVisibilityListener: ChipVisibilityListener? = null
+@@ -123,11 +127,29 @@ constructor(
+         privacyChip.addOnAttachStateChangeListener(attachStateChangeListener)
+     }
+ 
++    // Lujarch (SB-1): the chip and the location in it are items the user can hide.
++    private var reportedPrivacyItems = emptyList<PrivacyItem>()
++    private val hideListListener = StatusBarHideList.Listener {
++        showPrivacyItems(reportedPrivacyItems)
++    }
++
++    private fun showPrivacyItems(privacyItems: List<PrivacyItem>) {
++        reportedPrivacyItems = privacyItems
++        val shown: List<PrivacyItem> =
++            when {
++                hideList.isHidden(StatusBarItems.PRIVACY_CHIP) -> emptyList()
++                hideList.isHidden(StatusBarItems.PRIVACY_LOCATION) ->
++                    privacyItems.filter { it.privacyType != PrivacyType.TYPE_LOCATION }
++                else -> privacyItems
++            }
++        privacyChip.privacyList = shown
++        setChipVisibility(shown.isNotEmpty())
++    }
++
+     private val picCallback: PrivacyItemController.Callback =
+         object : PrivacyItemController.Callback {
+             override fun onPrivacyItemsChanged(privacyItems: List<PrivacyItem>) {
+-                privacyChip.privacyList = privacyItems
+-                setChipVisibility(privacyItems.isNotEmpty())
++                showPrivacyItems(privacyItems)
+             }
+ 
+             override fun onFlagMicCameraChanged(flag: Boolean) {
+@@ -224,11 +246,13 @@ constructor(
+         micCameraIndicatorsEnabled = privacyItemController.micCameraAvailable
+         locationIndicatorsEnabled = privacyItemController.locationAvailable
+         privacyItemController.addCallback(picCallback)
++        hideList.addListener(hideListListener)
+     }
+ 
+     fun stopListening() {
+         listening = false
+         privacyItemController.removeCallback(picCallback)
++        hideList.removeListener(hideListListener)
+         privacyChipLogged = false
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt b/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt
+index b2045c548aac686ef3cda00a86ebf109130e9332..f35ea6f966c60fa47970d3d7037c695b2d8a108d 100644
+--- a/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt
++++ b/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt
+@@ -24,12 +24,16 @@ import com.android.systemui.dagger.qualifiers.Background
+ import com.android.systemui.privacy.PrivacyConfig
+ import com.android.systemui.privacy.PrivacyItem
+ import com.android.systemui.privacy.PrivacyItemController
++import com.android.systemui.privacy.PrivacyType
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
+ import javax.inject.Inject
+ import kotlinx.coroutines.CoroutineDispatcher
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.channels.awaitClose
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.stateIn
+ import kotlinx.coroutines.withContext
+ 
+@@ -56,8 +60,9 @@ constructor(
+     private val privacyItemController: PrivacyItemController,
+     @Background private val backgroundDispatcher: CoroutineDispatcher,
+     private val safetyCenterManager: SafetyCenterManager,
++    private val hideList: StatusBarHideList,
+ ) : PrivacyChipRepository {
+-    override val privacyItems: StateFlow<List<PrivacyItem>> =
++    private val reportedPrivacyItems: StateFlow<List<PrivacyItem>> =
+         conflatedCallbackFlow {
+                 val callback =
+                     object : PrivacyItemController.Callback {
+@@ -74,6 +79,23 @@ constructor(
+                 initialValue = emptyList(),
+             )
+ 
++    // Lujarch (SB-1): the chip and the location in it are items the user can hide.
++    override val privacyItems: StateFlow<List<PrivacyItem>> =
++        combine(reportedPrivacyItems, hideList.hidden) { items, hidden ->
++                when {
++                    StatusBarHideList.isHidden(hidden, StatusBarItems.PRIVACY_CHIP) ->
++                        emptyList<PrivacyItem>()
++                    StatusBarHideList.isHidden(hidden, StatusBarItems.PRIVACY_LOCATION) ->
++                        items.filter { it.privacyType != PrivacyType.TYPE_LOCATION }
++                    else -> items
++                }
++            }
++            .stateIn(
++                scope = applicationScope,
++                started = SharingStarted.Eagerly,
++                initialValue = emptyList(),
++            )
++
+     override val isMicCameraIndicationEnabled: StateFlow<Boolean> =
+         conflatedCallbackFlow {
+                 val callback =
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/chips/ui/viewmodel/OngoingActivityChipsViewModel.kt b/packages/SystemUI/src/com/android/systemui/statusbar/chips/ui/viewmodel/OngoingActivityChipsViewModel.kt
+index fa11ffd80b3d06016903e49acbf351ef02ddc7fa..b28de9a4b01f9601f8c2ab715f00e162c82d310f 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/chips/ui/viewmodel/OngoingActivityChipsViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/chips/ui/viewmodel/OngoingActivityChipsViewModel.kt
+@@ -33,6 +33,8 @@ import com.android.systemui.statusbar.chips.screenrecord.ui.viewmodel.ScreenReco
+ import com.android.systemui.statusbar.chips.sharetoapp.ui.viewmodel.ShareToAppChipViewModel
+ import com.android.systemui.statusbar.chips.ui.model.MultipleOngoingActivityChipsModel
+ import com.android.systemui.statusbar.chips.ui.model.OngoingActivityChipModel
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
+ import com.android.systemui.statusbar.notification.shared.StatusBarHeadline
+ import com.android.systemui.util.kotlin.filterValuesNotNull
+ import javax.inject.Inject
+@@ -66,6 +68,7 @@ constructor(
+     private val screenCaptureRecordFeaturesInteractor: ScreenCaptureRecordFeaturesInteractor,
+     private val chipsRefiners: Set<@JvmSuppressWildcards OngoingActivityChipsRefiner>,
+     @StatusBarChipsLog private val logger: LogBuffer,
++    private val hideList: StatusBarHideList,
+ ) {
+     private enum class ChipType {
+         ScreenRecord,
+@@ -106,8 +109,50 @@ constructor(
+         val notifs: List<OngoingActivityChipModel.Active> = emptyList(),
+     )
+ 
++    /**
++     * Lujarch (SB-1): the chips the user hides are inactive from here on, so every consumer (the
++     * ranking, the notification icons that make room while a chip shows, the legacy paths) sees the
++     * status bar the user chose. The chip behind a hidden one stays as it is.
++     */
++    private fun ChipBundle.withoutHiddenChips(hidden: Set<String>): ChipBundle {
++        fun isHidden(key: String) = StatusBarHideList.isHidden(hidden, key)
++        // Screen recording is also a media projection, and the ranking keeps the share chip from
++        // standing in for the recording chip: hiding the recording chip must not bring it back.
++        val isRecording = screenRecord is OngoingActivityChipModel.Active
++        return copy(
++            screenRecord =
++                if (isHidden(StatusBarItems.CHIP_SCREEN_RECORD)) {
++                    OngoingActivityChipModel.Inactive()
++                } else {
++                    screenRecord
++                },
++            shareToApp =
++                if (
++                    isHidden(StatusBarItems.CHIP_SHARE) ||
++                        (isRecording && isHidden(StatusBarItems.CHIP_SCREEN_RECORD))
++                ) {
++                    OngoingActivityChipModel.Inactive()
++                } else {
++                    shareToApp
++                },
++            castToOtherDevice =
++                if (isHidden(StatusBarItems.CHIP_CAST)) {
++                    OngoingActivityChipModel.Inactive()
++                } else {
++                    castToOtherDevice
++                },
++            call =
++                if (isHidden(StatusBarItems.CHIP_CALL)) {
++                    OngoingActivityChipModel.Inactive()
++                } else {
++                    call
++                },
++            notifs = if (isHidden(StatusBarItems.CHIP_LIVE)) emptyList() else notifs,
++        )
++    }
++
+     /** Bundles all the incoming chips into one object to easily pass to various flows. */
+-    private val incomingChipBundle =
++    private val rawChipBundle =
+         if (screenCaptureRecordFeaturesInteractor.isLargeScreenScreencaptureEnabled) {
+                 combine(
+                     shareToAppChipViewModel.chip,
+@@ -153,6 +198,13 @@ constructor(
+             // See b/347726238.
+             .stateIn(scope, SharingStarted.Lazily, ChipBundle())
+ 
++    /** [rawChipBundle] without the chips the user hides (SB-1). */
++    private val incomingChipBundle =
++        combine(rawChipBundle, hideList.hidden) { bundle, hidden ->
++                bundle.withoutHiddenChips(hidden)
++            }
++            .stateIn(scope, SharingStarted.Lazily, ChipBundle())
++
+     private fun logChips(
+         screenRecord: OngoingActivityChipModel,
+         shareToApp: OngoingActivityChipModel,
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/events/PrivacyDotViewController.kt b/packages/SystemUI/src/com/android/systemui/statusbar/events/PrivacyDotViewController.kt
+index 14eb86bf878895836683ca83ea34738ad24de8b3..098584b0a55230074e1dfdc9db712aea6371d674 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/events/PrivacyDotViewController.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/events/PrivacyDotViewController.kt
+@@ -48,6 +48,8 @@ import com.android.systemui.statusbar.events.PrivacyDotCorner.TopLeft
+ import com.android.systemui.statusbar.events.PrivacyDotCorner.TopRight
+ import com.android.systemui.statusbar.layout.StatusBarContentInsetsChangedListener
+ import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
+ import com.android.systemui.statusbar.policy.ConfigurationController
+ import com.android.systemui.statusbar.quickactions.av.domain.interactor.AvControlsChipInteractor
+ import com.android.systemui.util.concurrency.DelayableExecutor
+@@ -130,6 +132,7 @@ constructor(
+     @ScreenDecorationsThread val uiExecutor: DelayableExecutor,
+     @Assisted private val displayId: Int,
+     private val shadeDisplaysInteractor: Lazy<ShadeDisplaysInteractor>?,
++    private val hideList: StatusBarHideList,
+ ) : PrivacyDotViewController {
+     private lateinit var tl: View
+     private lateinit var tr: View
+@@ -178,6 +181,13 @@ constructor(
+             }
+         }
+ 
++    // Lujarch (SB-1): the corner dot is an item the user can hide.
++    private val hideListListener =
++        StatusBarHideList.Listener {
++            val dot = hideList.isHidden(StatusBarItems.PRIVACY_DOT)
++            synchronized(lock) { nextViewState = nextViewState.copy(dotHiddenByUser = dot) }
++        }
++
+     private val statusBarStateListener =
+         object : StatusBarStateController.StateListener {
+             override fun onExpandedChanged(isExpanded: Boolean) {
+@@ -193,6 +203,8 @@ constructor(
+         contentInsetsProvider.addCallback(insetsChangedListener)
+         configurationController.addCallback(configurationListener)
+         stateController.addCallback(statusBarStateListener)
++        hideList.addListener(hideListListener)
++        hideListListener.onHideListChanged()
+         scope.launch {
+             avControlsChipInteractor?.isShowingAvChip?.collect { shouldSuppress ->
+                 synchronized(lock) {
+@@ -224,6 +236,7 @@ constructor(
+         contentInsetsProvider.removeCallback(insetsChangedListener)
+         configurationController.removeCallback(configurationListener)
+         stateController.removeCallback(statusBarStateListener)
++        hideList.removeListener(hideListListener)
+         mainExecutor.execute { animationScheduler.removeCallback(systemStatusAnimationCallback) }
+     }
+ 
+@@ -727,6 +740,8 @@ data class ViewState(
+     val shadeExpanded: Boolean = false,
+     val qsExpanded: Boolean = false,
+     val dotDuplicatedByAvControlsChip: Boolean = false,
++    /** Lujarch (SB-1): the user hides the corner dot / the ring round the camera. */
++    val dotHiddenByUser: Boolean = false,
+     val portraitRect: Rect? = null,
+     val landscapeRect: Rect? = null,
+     val upsideDownRect: Rect? = null,
+@@ -742,7 +757,8 @@ data class ViewState(
+         return systemPrivacyEventIsActive &&
+             !shadeExpanded &&
+             !qsExpanded &&
+-            !dotDuplicatedByAvControlsChip
++            !dotDuplicatedByAvControlsChip &&
++            !dotHiddenByUser
+     }
+ 
+     fun needsLayout(other: ViewState): Boolean {
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/events/SystemEventCoordinator.kt b/packages/SystemUI/src/com/android/systemui/statusbar/events/SystemEventCoordinator.kt
+index ffe29916f2a73ae12254d69df5b59394784f60e1..168a6a693fbbb03ec387fa8872b1d8e23edcda92 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/events/SystemEventCoordinator.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/events/SystemEventCoordinator.kt
+@@ -35,6 +35,8 @@ import com.android.systemui.privacy.PrivacyItem
+ import com.android.systemui.privacy.PrivacyItemController
+ import com.android.systemui.privacy.PrivacyType
+ import com.android.systemui.res.R
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
+ import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryInteractor
+ import com.android.systemui.statusbar.policy.BatteryController
+ import com.android.systemui.util.time.SystemClock
+@@ -61,6 +63,7 @@ constructor(
+     connectedDisplayInteractor: ConnectedDisplayInteractor,
+     @SystemEventCoordinatorLog private val logBuffer: LogBuffer,
+     @Main private val mainCoroutineContext: CoroutineContext,
++    private val hideList: StatusBarHideList,
+ ) {
+ 
+     private val tag = "SystemEventCoordinator(displayId=${context.displayId})"
+@@ -72,9 +75,15 @@ constructor(
+     private var connectedDisplayCollectionJob: Job? = null
+     private lateinit var scheduler: SystemStatusAnimationScheduler
+ 
++    // Lujarch (SB-1): what the user hides in Status bar items. Location in the privacy indicators
++    // changes which items count, so the list is looked at again when it changes.
++    private val hideListListener =
++        StatusBarHideList.Listener { privacyStateListener.onHideListChanged() }
++
+     fun startObserving() {
+         batteryController.addCallback(batteryStateListener)
+         privacyController.addCallback(privacyStateListener)
++        hideList.addListener(hideListListener)
+         if (
+             !Flags.statusBarIsConnectedDisplayChipControlledByConfig() ||
+                 context.resources.getBoolean(R.bool.config_isStatusBarConnectedDisplayChipEnabled)
+@@ -86,6 +95,7 @@ constructor(
+     fun stopObserving() {
+         batteryController.removeCallback(batteryStateListener)
+         privacyController.removeCallback(privacyStateListener)
++        hideList.removeListener(hideListListener)
+         connectedDisplayCollectionJob?.cancel()
+     }
+ 
+@@ -94,6 +104,7 @@ constructor(
+     }
+ 
+     fun notifyPluggedIn(@IntRange(from = 0, to = 100) batteryLevel: Int) {
++        if (hideList.isHidden(StatusBarItems.CHIP_BATTERY_PLUG)) return
+         scope.launch(mainCoroutineContext) {
+             scheduler.onStatusEvent(
+                 BatteryEvent(
+@@ -129,7 +140,11 @@ constructor(
+             }
+         connectedDisplayCollectionJob =
+             scope.launch(mainCoroutineContext) {
+-                onDisplayConnectedFlow.collect { scheduler.onStatusEvent(connectedDisplayEvent) }
++                onDisplayConnectedFlow.collect {
++                    if (!hideList.isHidden(StatusBarItems.CHIP_DISPLAY_CONNECTED)) {
++                        scheduler.onStatusEvent(connectedDisplayEvent)
++                    }
++                }
+             }
+     }
+ 
+@@ -154,23 +169,35 @@ constructor(
+         object : PrivacyItemController.Callback {
+             var currentPrivacyItems = listOf<PrivacyItem>()
+             var previousPrivacyItems = listOf<PrivacyItem>()
++            // What the controller reported, before the user's choice of what to show.
++            private var reportedPrivacyItems = listOf<PrivacyItem>()
+             var timeLastEmpty = systemClock.elapsedRealtime()
+             // Tracks the last time a location privacy indicator was shown for an app. Used to
+             // debounce the animation.
+             private val appLastLocationUseTime = mutableMapOf<String, Long>()
+ 
+             override fun onPrivacyItemsChanged(privacyItems: List<PrivacyItem>) {
+-                if (uniqueItemsMatch(privacyItems, currentPrivacyItems)) {
++                reportedPrivacyItems = privacyItems
++                // Lujarch (SB-1): location is an item of the privacy indicators the user can hide.
++                val shownItems =
++                    if (hideList.isHidden(StatusBarItems.PRIVACY_LOCATION)) {
++                        privacyItems.filter { it.privacyType != PrivacyType.TYPE_LOCATION }
++                    } else {
++                        privacyItems
++                    }
++                if (uniqueItemsMatch(shownItems, currentPrivacyItems)) {
+                     return
+-                } else if (privacyItems.isEmpty()) {
++                } else if (shownItems.isEmpty()) {
+                     previousPrivacyItems = currentPrivacyItems
+                     timeLastEmpty = systemClock.elapsedRealtime()
+                 }
+ 
+-                currentPrivacyItems = privacyItems
++                currentPrivacyItems = shownItems
+                 notifyListeners()
+             }
+ 
++            fun onHideListChanged() = onPrivacyItemsChanged(reportedPrivacyItems)
++
+             private fun notifyListeners() {
+                 if (currentPrivacyItems.isEmpty()) {
+                     notifyPrivacyItemsEmpty()
+@@ -199,7 +226,10 @@ constructor(
+                                     locationIndicatorsEnabled() &&
+                                     locationIndicatorsAnimation()
+ 
++                            // The chip the user hides is not shown; the dot still is (a persistent
++                            // indicator with no animation before it).
+                             isChipAnimationEnabled() &&
++                                !hideList.isHidden(StatusBarItems.PRIVACY_CHIP) &&
+                                 (shouldAnimateCameraMic || shouldAnimateLocation)
+                         }
+                     notifyPrivacyItemsChanged(showAnimation)
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarHideList.kt b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarHideList.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..f18dc5ff8e6bcddb83fa8802f71318b671c0f429
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarHideList.kt
+@@ -0,0 +1,98 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.lujarch
++
++import android.content.Context
++import com.android.systemui.dagger.SysUISingleton
++import com.android.systemui.statusbar.phone.ui.StatusBarIconController
++import com.android.systemui.tuner.TunerService
++import java.util.concurrent.CopyOnWriteArraySet
++import javax.inject.Inject
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.map
++
++/**
++ * The items of the status bar the user hides (SB-1): Settings.Secure `icon_blacklist`, the list
++ * SystemUI already keeps for its icon slots, is the one place every switch of the status bar page
++ * writes. An entry is an item's key ([StatusBarItems]): a live icon slot, an icon set from outside
++ * (`<slot>__external`), or a `lujarch_` key of an element that is not an icon slot (chips,
++ * privacy indicators, the carrier texts, the notification icons).
++ *
++ * A null setting means the config's default (rotate, headset); the empty string hides nothing, as
++ * [StatusBarIconController.getIconHideList] reads it.
++ */
++@SysUISingleton
++class StatusBarHideList
++@Inject
++constructor(private val context: Context, tunerService: TunerService) : TunerService.Tunable {
++
++    /** Called on the main thread when the list changed. */
++    fun interface Listener {
++        fun onHideListChanged()
++    }
++
++    private val hiddenKeys = MutableStateFlow<Set<String>>(emptySet())
++    private val listeners = CopyOnWriteArraySet<Listener>()
++
++    /** The keys the user hides, as the setting last had them. */
++    val hidden: StateFlow<Set<String>> = hiddenKeys.asStateFlow()
++
++    init {
++        tunerService.addTunable(this, StatusBarIconController.ICON_HIDE_LIST)
++    }
++
++    override fun onTuningChanged(key: String?, newValue: String?) {
++        if (StatusBarIconController.ICON_HIDE_LIST != key) return
++        hiddenKeys.value = StatusBarIconController.getIconHideList(context, newValue)
++        listeners.forEach { it.onHideListChanged() }
++    }
++
++    /** Whether the user hides the item [key]. */
++    fun isHidden(key: String): Boolean = isHidden(hiddenKeys.value, key)
++
++    /** [isHidden] as a flow that emits when the answer changes. */
++    fun isHiddenFlow(key: String): Flow<Boolean> =
++        hiddenKeys.map { isHidden(it, key) }.distinctUntilChanged()
++
++    fun addListener(listener: Listener) {
++        listeners.add(listener)
++    }
++
++    fun removeListener(listener: Listener) {
++        listeners.remove(listener)
++    }
++
++    companion object {
++        /**
++         * Whether [key] is in [hidden]. An icon set from outside has the slot `<slot>__external`;
++         * the plain name hides it too, so an entry such as `ime` or `speakerphone` works.
++         */
++        @JvmStatic
++        fun isHidden(hidden: Set<String>, key: String): Boolean {
++            if (hidden.contains(key)) return true
++            val base = key.removeSuffix(EXTERNAL_SLOT_SUFFIX)
++            return base != key && hidden.contains(base)
++        }
++
++        /** The suffix SystemUI gives the slot of an icon another package sets. */
++        const val EXTERNAL_SLOT_SUFFIX = "__external"
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..37257e8a3f3bce9a4c236eb5250992260c604392
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt
+@@ -0,0 +1,289 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.lujarch
++
++import android.content.Context
++import android.content.pm.PackageManager
++import android.location.flags.Flags.locationIndicatorsEnabled
++import android.telephony.TelephonyManager
++import androidx.annotation.StringRes
++import com.android.systemui.res.R
++import com.android.systemui.statusbar.core.NewStatusBarIcons
++
++/**
++ * Everything the status bar can show has a switch (SB-1). This file is the one registry: the
++ * status bar items page (`tuner/StatusBarTuner`) is generated from [ITEMS]; a slot of
++ * `config_statusBarIcons` without an item is in [NEVER_APPEARS] with the reason.
++ *
++ * The key of an item is what the switch writes into Settings.Secure `icon_blacklist`
++ * ([StatusBarHideList]): the slot name of an icon SystemUI holds, `<slot>__external` for an icon
++ * another package sets (a plain `<slot>` hides it too), or a `lujarch_` key for an element that is
++ * not an icon slot. A new element ships with its item here; one without is a bug.
++ */
++enum class StatusBarGroup(@StringRes val title: Int) {
++    CONNECTIVITY(R.string.lujarch_sb_group_connectivity),
++    SOUND(R.string.lujarch_sb_group_sound),
++    STATUS(R.string.lujarch_sb_group_status),
++    CHIPS(R.string.lujarch_sb_group_chips),
++    PRIVACY(R.string.lujarch_sb_group_privacy),
++    GENERAL(R.string.lujarch_sb_group_general),
++}
++
++/** Whether an item can appear on this device; the page shows no switch for what never will. */
++enum class StatusBarAppears {
++    ALWAYS,
++    TELEPHONY,
++    SATELLITE,
++    STACKED_MOBILE,
++    /** The location symbol is an icon only while the privacy indicators do not carry location. */
++    LOCATION_ICON,
++    LOCATION_INDICATORS;
++
++    fun onThisDevice(context: Context): Boolean =
++        when (this) {
++            ALWAYS -> true
++            TELEPHONY -> context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
++            SATELLITE ->
++                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_SATELLITE)
++            STACKED_MOBILE ->
++                NewStatusBarIcons.isEnabled &&
++                    (context.getSystemService(TelephonyManager::class.java)?.supportedModemCount
++                        ?: 1) > 1
++            LOCATION_ICON -> !locationIndicatorsEnabled()
++            LOCATION_INDICATORS -> locationIndicatorsEnabled()
++        }
++}
++
++class StatusBarItem(
++    val key: String,
++    @StringRes val title: Int,
++    val group: StatusBarGroup,
++    val appears: StatusBarAppears = StatusBarAppears.ALWAYS,
++    /** A line under the title, or 0. */
++    @StringRes val summary: Int = 0,
++)
++
++object StatusBarItems {
++    // Keys of the elements that are not icon slots.
++    const val OPERATOR_NAME = "lujarch_operator_name"
++    const val CARRIER_TEXT = "lujarch_carrier_text"
++    const val NOTIFICATION_ICONS = "lujarch_notification_icons"
++    const val LYRICS = "lujarch_lyrics"
++    const val CHIP_SCREEN_RECORD = "lujarch_chip_screen_record"
++    const val CHIP_SHARE = "lujarch_chip_share"
++    // `cast` is a slot name in config_statusBarIcons that no icon uses: the cast chip takes it.
++    const val CHIP_CAST = "cast"
++    const val CHIP_CALL = "lujarch_chip_call"
++    const val CHIP_BATTERY_PLUG = "lujarch_chip_battery_plug"
++    const val CHIP_DISPLAY_CONNECTED = "lujarch_chip_display_connected"
++    const val CHIP_LIVE = "lujarch_chip_live"
++    const val PRIVACY_CHIP = "lujarch_privacy_chip"
++    const val PRIVACY_LOCATION = "lujarch_privacy_location"
++    const val PRIVACY_DOT = "lujarch_privacy_dot"
++
++    private fun item(
++        key: String,
++        @StringRes title: Int,
++        group: StatusBarGroup,
++        appears: StatusBarAppears = StatusBarAppears.ALWAYS,
++        @StringRes summary: Int = 0,
++    ) = StatusBarItem(key, title, group, appears, summary)
++
++    /** The switches, in the order of the page. */
++    val ITEMS: List<StatusBarItem> =
++        listOf(
++            // Connectivity
++            item("wifi", R.string.quick_settings_wifi_label, StatusBarGroup.CONNECTIVITY),
++            item(
++                "mobile",
++                R.string.lujarch_sb_mobile,
++                StatusBarGroup.CONNECTIVITY,
++                StatusBarAppears.TELEPHONY,
++            ),
++            item(
++                "stacked_mobile",
++                R.string.lujarch_sb_stacked_mobile,
++                StatusBarGroup.CONNECTIVITY,
++                StatusBarAppears.STACKED_MOBILE,
++            ),
++            item("airplane", R.string.status_bar_airplane, StatusBarGroup.CONNECTIVITY),
++            item("ethernet", R.string.status_bar_ethernet, StatusBarGroup.CONNECTIVITY),
++            item("hotspot", R.string.quick_settings_hotspot_label, StatusBarGroup.CONNECTIVITY),
++            item("vpn", R.string.legacy_vpn_name, StatusBarGroup.CONNECTIVITY),
++            item("lujarch_proxy", R.string.lujarch_proxy_title, StatusBarGroup.CONNECTIVITY),
++            item("data_saver", R.string.data_saver, StatusBarGroup.CONNECTIVITY),
++            item("bluetooth", R.string.quick_settings_bluetooth_label, StatusBarGroup.CONNECTIVITY),
++            item(
++                "satellite",
++                R.string.lujarch_sb_satellite,
++                StatusBarGroup.CONNECTIVITY,
++                StatusBarAppears.SATELLITE,
++            ),
++
++            // Sound and modes
++            item("mute", R.string.volume_ringer_status_silent, StatusBarGroup.SOUND),
++            item("volume", R.string.volume_ringer_status_vibrate, StatusBarGroup.SOUND),
++            item("zen", R.string.quick_settings_dnd_label, StatusBarGroup.SOUND),
++            item("headset", R.string.headset, StatusBarGroup.SOUND),
++
++            // Status
++            item("alarm_clock", R.string.status_bar_alarm, StatusBarGroup.STATUS),
++            item("rotate", R.string.lujarch_sb_rotate, StatusBarGroup.STATUS),
++            item("managed_profile", R.string.status_bar_work, StatusBarGroup.STATUS),
++            item(
++                "location",
++                R.string.quick_settings_location_label,
++                StatusBarGroup.STATUS,
++                StatusBarAppears.LOCATION_ICON,
++            ),
++            item("sensors_off", R.string.lujarch_sb_sensors_off, StatusBarGroup.STATUS),
++            item("connected_display", R.string.lujarch_sb_connected_display, StatusBarGroup.STATUS),
++            item("ime__external", R.string.lujarch_sb_ime, StatusBarGroup.STATUS),
++            item(
++                "speakerphone__external",
++                R.string.lujarch_sb_speakerphone,
++                StatusBarGroup.STATUS,
++                StatusBarAppears.TELEPHONY,
++            ),
++            item(
++                "tty",
++                R.string.lujarch_sb_tty,
++                StatusBarGroup.STATUS,
++                StatusBarAppears.TELEPHONY,
++            ),
++            item("firewall", R.string.status_bar_firewall, StatusBarGroup.STATUS),
++            item(
++                "telecom_mute__external",
++                R.string.lujarch_sb_telecom_mute,
++                StatusBarGroup.STATUS,
++                StatusBarAppears.TELEPHONY,
++            ),
++
++            // Activity chips
++            item(
++                CHIP_SCREEN_RECORD,
++                R.string.lujarch_sb_chip_screen_record,
++                StatusBarGroup.CHIPS,
++                summary = R.string.lujarch_sb_chip_screen_record_summary,
++            ),
++            item(
++                CHIP_SHARE,
++                R.string.lujarch_sb_chip_share,
++                StatusBarGroup.CHIPS,
++                summary = R.string.lujarch_sb_chip_share_summary,
++            ),
++            item(
++                CHIP_CAST,
++                R.string.quick_settings_cast_title,
++                StatusBarGroup.CHIPS,
++                summary = R.string.lujarch_sb_chip_cast_summary,
++            ),
++            item(
++                CHIP_CALL,
++                R.string.lujarch_sb_chip_call,
++                StatusBarGroup.CHIPS,
++                StatusBarAppears.TELEPHONY,
++            ),
++            item(
++                CHIP_BATTERY_PLUG,
++                R.string.lujarch_sb_chip_battery_plug,
++                StatusBarGroup.CHIPS,
++            ),
++            item(
++                CHIP_DISPLAY_CONNECTED,
++                R.string.lujarch_sb_chip_display_connected,
++                StatusBarGroup.CHIPS,
++            ),
++            item(CHIP_LIVE, R.string.lujarch_sb_chip_live, StatusBarGroup.CHIPS),
++
++            // Privacy indicators: a safety signal, on by default, no confirmation when turned off
++            item(
++                PRIVACY_CHIP,
++                R.string.lujarch_sb_privacy_chip,
++                StatusBarGroup.PRIVACY,
++                summary = R.string.lujarch_sb_privacy_chip_summary,
++            ),
++            item(
++                PRIVACY_LOCATION,
++                R.string.lujarch_sb_privacy_location,
++                StatusBarGroup.PRIVACY,
++                StatusBarAppears.LOCATION_INDICATORS,
++                R.string.lujarch_sb_privacy_location_summary,
++            ),
++            item(
++                PRIVACY_DOT,
++                R.string.lujarch_sb_privacy_dot,
++                StatusBarGroup.PRIVACY,
++                summary = R.string.lujarch_sb_privacy_dot_summary,
++            ),
++
++            // Clock, battery and notifications
++            item("clock", R.string.clock, StatusBarGroup.GENERAL),
++            item(
++                LYRICS,
++                R.string.lujarch_sb_lyrics,
++                StatusBarGroup.GENERAL,
++                summary = R.string.lujarch_sb_lyrics_summary,
++            ),
++            item("battery", R.string.battery, StatusBarGroup.GENERAL),
++            item(
++                NOTIFICATION_ICONS,
++                R.string.lujarch_sb_notification_icons,
++                StatusBarGroup.GENERAL,
++            ),
++            item(
++                OPERATOR_NAME,
++                R.string.lujarch_sb_operator_name,
++                StatusBarGroup.GENERAL,
++                StatusBarAppears.TELEPHONY,
++            ),
++            item(
++                CARRIER_TEXT,
++                R.string.lujarch_sb_carrier_text,
++                StatusBarGroup.GENERAL,
++                StatusBarAppears.TELEPHONY,
++            ),
++        )
++
++    /**
++     * Slots of config_statusBarIcons (and other icon slots) that nothing on this device can put an
++     * icon in, each with why: they have no switch. The check on the phone fails when one of them
++     * holds a visible icon, so a claim that stops being true is found.
++     */
++    val NEVER_APPEARS: Map<String, String> =
++        mapOf(
++            "no_calling" to "nothing sets it",
++            "call_strength" to "nothing sets it; the mobile icon carries the signal",
++            "sync_failing" to "nothing sets it",
++            "sync_active" to "nothing sets it",
++            "nfc" to "the NFC service sets no status bar icon",
++            "cdma_eri" to "nothing sets it; CDMA roaming is in the mobile icon",
++            "data_connection" to "nothing sets it; the network type is in the mobile icon",
++            "phone_evdo_signal" to "nothing sets it",
++            "phone_signal" to "nothing sets it; the signal is the mobile icon",
++            "secure" to "nothing sets it under this name",
++            "camera" to "always set invisible; the privacy indicators show camera use",
++            "microphone" to "always set invisible; the privacy indicators show microphone use",
++            "screen_record" to "always set invisible; the screen recording chip shows it",
++            "assist_attention__external" to "config_enableVisualQueryAttentionDetection is false",
++        )
++
++    /** The switches of [group] that can appear on this device, in page order. */
++    @JvmStatic
++    fun itemsFor(context: Context, group: StatusBarGroup): List<StatusBarItem> =
++        ITEMS.filter { it.group == group && it.appears.onThisDevice(context) }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/LyricsView.kt b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/LyricsView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..853553e332926a09d0dfdeb4b3d27c532a3ab93d
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/LyricsView.kt
+@@ -0,0 +1,198 @@
++/*
++ * Copyright (C) 2026 Lujarch
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.lujarch.lyrics
++
++import android.animation.ValueAnimator
++import android.app.ActivityOptions
++import android.app.PendingIntent
++import android.content.Context
++import android.content.Intent
++import android.graphics.Rect
++import android.os.UserHandle
++import android.util.AttributeSet
++import android.util.Log
++import android.util.TypedValue
++import android.view.Gravity
++import android.view.View
++import android.view.animation.PathInterpolator
++import android.widget.FrameLayout
++import android.widget.TextView
++import com.android.systemui.plugins.DarkIconDispatcher
++import com.android.systemui.res.R
++import java.util.ArrayList
++
++/**
++ * Lujarch: the lyric line on the start side of the status bar (SB-3). One line at a
++ * time; a new line rises in as the old one rises out. A line wider than the view rests, then slides to
++ * its end within the time it stays, and rests again. The text takes the clock's look and its tint. A tap
++ * opens the app that plays.
++ */
++class LyricsView(context: Context, attrs: AttributeSet?) :
++    FrameLayout(context, attrs), DarkIconDispatcher.DarkReceiver {
++
++    private var shown = newText()
++    private var leaving = newText()
++    private var line: StatusBarLyrics.Line? = null
++    private var color = 0
++    private var scroll: ValueAnimator? = null
++
++    init {
++        clipChildren = true
++        clipToPadding = true
++        addView(leaving)
++        addView(shown)
++        leaving.visibility = INVISIBLE
++        color = shown.currentTextColor
++        setOnClickListener { open() }
++        contentDescription = null
++    }
++
++    private fun newText() =
++        TextView(context).apply {
++            layoutParams =
++                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.START or Gravity.CENTER_VERTICAL)
++            setTextAppearance(R.style.TextAppearance_StatusBar_Default)
++            gravity = Gravity.CENTER_VERTICAL or Gravity.START
++            isSingleLine = true
++            setHorizontallyScrolling(true)
++            ellipsize = null
++            includeFontPadding = false
++            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
++        }
++
++    /** Shows [next], or hides the view for null. */
++    fun show(next: StatusBarLyrics.Line?) {
++        val old = line
++        line = next
++        if (next == null) {
++            stopScroll()
++            visibility = GONE
++            return
++        }
++        contentDescription = next.text
++        if (visibility != VISIBLE || old == null) {
++            // A change still running from before the view went away would leave the line half faded.
++            shown.animate().cancel()
++            leaving.animate().cancel()
++            stopScroll()
++            visibility = VISIBLE
++            shown.text = next.text
++            shown.scrollTo(0, 0)
++            shown.translationY = 0f
++            shown.alpha = 1f
++            leaving.visibility = INVISIBLE
++            post { startScroll(next) }
++            return
++        }
++        if (old.text == next.text) return
++        // The old line becomes the leaving one; the new one rises in.
++        val out = shown
++        shown = leaving
++        leaving = out
++        bringChildToFront(shown)
++        stopScroll()
++        shown.text = next.text
++        shown.scrollTo(0, 0)
++        shown.setTextColor(color)
++        shown.visibility = VISIBLE
++        val rise = height * RISE_FRACTION
++        shown.translationY = rise
++        shown.alpha = 0f
++        shown.animate().translationY(0f).alpha(1f).setDuration(CHANGE_MS).setInterpolator(EMPHASIZED)
++            .withEndAction { startScroll(next) }.start()
++        leaving.animate().translationY(-rise).alpha(0f).setDuration(CHANGE_MS).setInterpolator(EMPHASIZED)
++            .withEndAction { leaving.visibility = INVISIBLE }.start()
++    }
++
++    /**
++     * A line wider than the view: rest, scroll its text to the end, rest, all within the time it stays.
++     * The text scrolls inside its view (scrollX): the view is as wide as this one, and moving the view
++     * itself would carry away a text cut at its edge.
++     */
++    private fun startScroll(forLine: StatusBarLyrics.Line) {
++        if (line !== forLine || shown.width == 0) return
++        val visible = shown.width - shown.totalPaddingLeft - shown.totalPaddingRight
++        val overflow = shown.paint.measureText(shown.text.toString()) - visible
++        shown.scrollTo(0, 0)
++        if (overflow <= 0f) return
++        val stay = if (forLine.durationMs > 0) forLine.durationMs else DEFAULT_STAY_MS
++        val travel = (stay - CHANGE_MS - 2 * REST_MS).coerceAtLeast(MIN_TRAVEL_MS)
++        val px = overflow + dp(4f)
++        scroll =
++            ValueAnimator.ofFloat(0f, px).apply {
++                startDelay = REST_MS
++                duration = travel
++                interpolator = null
++                addUpdateListener { shown.scrollTo((it.animatedValue as Float).toInt(), 0) }
++                start()
++            }
++    }
++
++    private fun stopScroll() {
++        scroll?.cancel()
++        scroll = null
++    }
++
++    private fun open() {
++        val playing = line ?: return
++        val options =
++            ActivityOptions.makeBasic()
++                .setPendingIntentBackgroundActivityStartMode(
++                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
++                )
++                .toBundle()
++        try {
++            playing.launch?.let {
++                it.send(context, 0, null, null, null, null, options)
++                return
++            }
++        } catch (e: PendingIntent.CanceledException) {
++            Log.w(TAG, "the session's activity is gone; opening the app instead", e)
++        }
++        val intent =
++            context.packageManager.getLaunchIntentForPackage(playing.packageName)
++                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
++        if (intent == null) {
++            Log.w(TAG, "${playing.packageName} has no launcher activity")
++            return
++        }
++        context.startActivityAsUser(intent, options, UserHandle.CURRENT)
++    }
++
++    override fun onDarkChanged(areas: ArrayList<Rect>, darkIntensity: Float, tint: Int) {
++        color = DarkIconDispatcher.getTint(areas, this, tint)
++        shown.setTextColor(color)
++        leaving.setTextColor(color)
++    }
++
++    override fun onDetachedFromWindow() {
++        stopScroll()
++        super.onDetachedFromWindow()
++    }
++
++    private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics)
++
++    private companion object {
++        const val TAG = "LujarchLyrics"
++        const val CHANGE_MS = 350L
++        const val REST_MS = 600L
++        const val MIN_TRAVEL_MS = 1500L
++        const val DEFAULT_STAY_MS = 6000L
++        const val RISE_FRACTION = 0.6f
++        val EMPHASIZED = PathInterpolator(0.2f, 0f, 0f, 1f)
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/StatusBarLyrics.kt b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/StatusBarLyrics.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..8dfc6af5a6659806424f408a2c07122494cd9ef0
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/lyrics/StatusBarLyrics.kt
+@@ -0,0 +1,252 @@
++/*
++ * Copyright (C) 2026 Lujarch
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.lujarch.lyrics
++
++import android.app.PendingIntent
++import android.content.Context
++import android.media.MediaMetadata
++import android.media.session.MediaController
++import android.media.session.MediaSession
++import android.media.session.MediaSessionManager
++import android.media.session.PlaybackState
++import android.os.Handler
++import android.os.SystemClock
++import android.util.Log
++import com.android.systemui.dagger.SysUISingleton
++import com.android.systemui.dagger.qualifiers.Application
++import com.android.systemui.dagger.qualifiers.Main
++import javax.inject.Inject
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import org.json.JSONException
++import org.json.JSONObject
++
++/**
++ * Lujarch: the lyric line to show in the status bar (SB-3). The playing media
++ * session's metadata carries the song's timed lyrics (LRC): FeelUOwn puts them in `lyricInfo`, JSON
++ * whose `lyric` is the whole song (the ColorOS lock screen convention), and its raw lyrics in `lyrics`.
++ * The playback state gives the position, so the line follows the song without the app's help: a seek,
++ * a pause or a speed change comes as a new state and the line is worked out again.
++ *
++ * [current] is null while nothing plays, while the playing song has no lyrics, and before the first
++ * line. Only the session that plays counts: of several, the most recently active one (the list is in
++ * that order).
++ */
++@SysUISingleton
++class StatusBarLyrics
++@Inject
++constructor(@Application private val context: Context, @Main private val handler: Handler) {
++
++    /** One line: its text, how long it stays (until the next line, 0 when it is the last), its app. */
++    data class Line(
++        val text: String,
++        val durationMs: Long,
++        val packageName: String,
++        val launch: PendingIntent?,
++    )
++
++    private val _current = MutableStateFlow<Line?>(null)
++    val current: StateFlow<Line?> = _current.asStateFlow()
++
++    private val sessionManager = context.getSystemService(MediaSessionManager::class.java)
++    private val controllers = mutableMapOf<MediaController, MediaController.Callback>()
++    private val lyricsCache = mutableMapOf<String, List<LrcLine>>()
++    private val tick = Runnable { update() }
++    // The song last logged, so the log has one line per song.
++    private var loggedSong: String? = null
++    // The active sessions in the manager's order: most recently active first.
++    private var order = emptyList<MediaSession.Token>()
++
++    init {
++        try {
++            sessionManager?.addOnActiveSessionsChangedListener({ track(it) }, null, handler)
++            handler.post { track(sessionManager?.getActiveSessions(null)) }
++        } catch (e: SecurityException) {
++            Log.w(TAG, "no access to media sessions; no lyrics", e)
++        }
++    }
++
++    private fun track(sessions: List<MediaController>?) {
++        val now = sessions.orEmpty()
++        val gone = controllers.keys.filter { c -> now.none { it.sessionToken == c.sessionToken } }
++        for (c in gone) controllers.remove(c)?.let { c.unregisterCallback(it) }
++        for (c in now) {
++            if (controllers.keys.any { it.sessionToken == c.sessionToken }) continue
++            val callback =
++                object : MediaController.Callback() {
++                    override fun onPlaybackStateChanged(state: PlaybackState?) = update()
++
++                    override fun onMetadataChanged(metadata: MediaMetadata?) = update()
++
++                    override fun onSessionDestroyed() = update()
++                }
++            c.registerCallback(callback, handler)
++            controllers[c] = callback
++        }
++        order = now.map { it.sessionToken }
++        update()
++    }
++
++    // Buffering in the middle of a song counts as playing: the line stays rather than the clock
++    // flickering back for a moment.
++    private fun playing(): MediaController? =
++        order
++            .mapNotNull { token -> controllers.keys.firstOrNull { it.sessionToken == token } }
++            .firstOrNull {
++                val state = it.playbackState?.state
++                state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
++            }
++
++    /** Works out the line for now and wakes up again when the next one is due. */
++    private fun update() {
++        handler.removeCallbacks(tick)
++        val controller = playing()
++        val state = controller?.playbackState
++        val lines = controller?.metadata?.let { lyricsOf(it) }
++        if (controller != null) logSong(controller, lines)
++        if (controller == null || state == null || lines.isNullOrEmpty()) {
++            publish(null)
++            return
++        }
++        val speed = if (state.playbackSpeed > 0f) state.playbackSpeed else 1f
++        // While it buffers the position stands still: no running ahead, and no wake-up until it moves.
++        val moving = state.state == PlaybackState.STATE_PLAYING
++        val elapsed = if (moving) SystemClock.elapsedRealtime() - state.lastPositionUpdateTime else 0L
++        val position = state.position + (elapsed * speed).toLong()
++        val index = lines.indexOfLast { it.timeMs <= position }
++        if (index < 0) {
++            publish(null)
++            if (moving) schedule(lines[0].timeMs - position, speed)
++            return
++        }
++        val next = lines.getOrNull(index + 1)
++        publish(
++            Line(
++                text = lines[index].text,
++                durationMs = next?.let { ((it.timeMs - lines[index].timeMs) / speed).toLong() } ?: 0L,
++                packageName = controller.packageName,
++                launch = controller.sessionActivity,
++            )
++        )
++        if (next != null && moving) schedule(next.timeMs - position, speed)
++    }
++
++    private fun logSong(controller: MediaController, lines: List<LrcLine>?) {
++        val metadata = controller.metadata ?: return
++        // A song is its lyrics where it has them: an app may update the title as it plays (FeelUOwn's
++        // "send lyrics to media" puts the current line in it).
++        val song = controller.packageName + "/" +
++            (lyricText(metadata)?.hashCode()?.toString() ?: metadata.getString(MediaMetadata.METADATA_KEY_TITLE))
++        if (song == loggedSong) return
++        loggedSong = song
++        if (lines.isNullOrEmpty()) {
++            Log.i(TAG, "${controller.packageName}: no lyrics in the metadata (keys ${metadata.keySet()})")
++        } else {
++            Log.i(TAG, "${controller.packageName}: ${lines.size} lyric lines")
++        }
++    }
++
++    private fun schedule(untilMs: Long, speed: Float) {
++        handler.postDelayed(tick, (untilMs / speed).toLong().coerceAtLeast(MIN_DELAY_MS))
++    }
++
++    private fun publish(line: Line?) {
++        // A line keeps its identity while it stays, so the view does not play its change again.
++        val old = _current.value
++        if (line != null && old != null && line.text == old.text && line.packageName == old.packageName) {
++            return
++        }
++        _current.value = line
++    }
++
++    private fun lyricsOf(metadata: MediaMetadata): List<LrcLine>? {
++        val raw = lyricText(metadata) ?: return null
++        lyricsCache[raw]?.let { return it }
++        val parsed = Lrc.parse(raw)
++        if (lyricsCache.size >= CACHE_SIZE) lyricsCache.clear()
++        lyricsCache[raw] = parsed
++        return parsed
++    }
++
++    private fun lyricText(metadata: MediaMetadata): String? {
++        metadata.getString(KEY_LYRIC_INFO)?.let { info ->
++            try {
++                val lyric = JSONObject(info).optString("lyric")
++                if (lyric.isNotBlank()) return lyric
++            } catch (e: JSONException) {
++                Log.d(TAG, "lyricInfo is not JSON: ${e.message}")
++            }
++        }
++        for (key in RAW_KEYS) metadata.getString(key)?.takeIf { it.isNotBlank() }?.let { return it }
++        return null
++    }
++
++    private companion object {
++        const val TAG = "LujarchLyrics"
++        const val KEY_LYRIC_INFO = "lyricInfo"
++        val RAW_KEYS = listOf("lyrics", "lyric", "android.media.metadata.LYRICS")
++        const val MIN_DELAY_MS = 50L
++        const val CACHE_SIZE = 8
++    }
++}
++
++/** A timed line of LRC lyrics. */
++data class LrcLine(val timeMs: Long, val text: String)
++
++/** LRC as music apps write it, for [StatusBarLyrics]. */
++object Lrc {
++    private val TIME = Regex("""\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?]""")
++    private val WORD_TIME = Regex("""<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>""")
++    private val OFFSET = Regex("""\[offset:\s*([+-]?\d+)\s*]""", RegexOption.IGNORE_CASE)
++
++    /**
++     * The lines in time order. A line may carry several times. A line with the time of an earlier
++     * one is its translation (the original comes first) and is dropped, as are empty lines (the
++     * line before stays) and the tags ([ti:], [ar:], ...). Word times (<mm:ss.xx>) are removed.
++     */
++    fun parse(text: String): List<LrcLine> {
++        val offset = OFFSET.find(text)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
++        val byTime = LinkedHashMap<Long, String>()
++        for (rawLine in text.lineSequence()) {
++            val line = rawLine.trim()
++            val times = mutableListOf<Long>()
++            var rest = line
++            while (true) {
++                val m = TIME.matchAt(rest, 0) ?: break
++                val (min, sec, frac) = m.destructured
++                val fracMs =
++                    when (frac.length) {
++                        0 -> 0L
++                        1 -> frac.toLong() * 100
++                        2 -> frac.toLong() * 10
++                        else -> frac.take(3).toLong()
++                    }
++                times += min.toLong() * 60_000 + sec.toLong() * 1_000 + fracMs
++                rest = rest.substring(m.range.last + 1)
++            }
++            if (times.isEmpty()) continue
++            val words = WORD_TIME.replace(rest, "").trim()
++            if (words.isEmpty()) continue
++            for (t in times) {
++                val at = (t - offset).coerceAtLeast(0)
++                if (at !in byTime) byTime[at] = words
++            }
++        }
++        return byTime.entries.sortedBy { it.key }.map { LrcLine(it.key, it.value) }
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarView.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarView.java
+index 13cfa806496dbf7b7d412d80e98d4b9344b66909..e1a9d2bba55e94b3a982634ba1c7e67aa7ef712f 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarView.java
+@@ -196,6 +196,11 @@ public class KeyguardStatusBarView extends RelativeLayout {
+         setLayoutParams(lp);
+     }
+ 
++    /** Lujarch (SB-1): the user hides the carrier text (StatusBarItems.CARRIER_TEXT). */
++    void setCarrierTextHidden(boolean hidden) {
++        mCarrierLabel.setVisibility(hidden ? View.GONE : View.VISIBLE);
++    }
++
+     private void updateCarrierLabelMargin() {
+         MarginLayoutParams lp = (MarginLayoutParams) mCarrierLabel.getLayoutParams();
+         int marginStart = calculateMargin(
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarViewController.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarViewController.java
+index bbe51fca66658af87863782be75d58e351377e05..0764ff9030ee1ce9e3432390d83fa98d38c062f4 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarViewController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardStatusBarViewController.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.systemui.statusbar.phone;
+ 
++import com.android.systemui.statusbar.lujarch.StatusBarHideList;
++import com.android.systemui.statusbar.lujarch.StatusBarItems;
+ import static android.app.StatusBarManager.DISABLE2_SYSTEM_ICONS;
+ import static android.app.StatusBarManager.DISABLE_SYSTEM_INFO;
+ 
+@@ -159,6 +161,9 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+     private final OccludedToLockscreenTransitionViewModel mOccludedToLockscreenTransitionViewModel;
+     private final DreamViewModel mDreamViewModel;
+     private final KeyguardInteractor mKeyguardInteractor;
++    // Lujarch (SB-1): the carrier text is an item the user can hide.
++    private final StatusBarHideList mHideList;
++    private final StatusBarHideList.Listener mHideListListener = this::updateCarrierTextVisibility;
+ 
+     @Nullable private ComposeView mBatteryComposeView;
+     private ViewGroup mSystemIconsContainer;
+@@ -378,7 +383,8 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+             GoneToGlanceableHubTransitionViewModel goneToGlanceableHubTransitionViewModel,
+             OccludedToLockscreenTransitionViewModel occludedToLockscreenTransitionViewModel,
+             DreamViewModel dreamViewModel,
+-            KeyguardInteractor keyguardInteractor) {
++            KeyguardInteractor keyguardInteractor,
++            StatusBarHideList hideList) {
+         super(view);
+         mCoroutineDispatcher = dispatcher;
+         mContext = context;
+@@ -409,6 +415,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+         mOccludedToLockscreenTransitionViewModel = occludedToLockscreenTransitionViewModel;
+         mDreamViewModel = dreamViewModel;
+         mKeyguardInteractor = keyguardInteractor;
++        mHideList = hideList;
+ 
+         mFirstBypassAttempt = mKeyguardBypassController.getBypassEnabled();
+         if (!SceneContainerFlag.isEnabled()) {
+@@ -461,6 +468,8 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+             mKeyguardStateController.addCallback(mKeyguardStateControllerCallback);
+         }
+         mView.init(mStatusBarUserChipViewModel);
++        mHideList.addListener(mHideListListener);
++        updateCarrierTextVisibility();
+         mConfigurationController.addCallback(mConfigurationListener);
+         if (mAnimationScheduler == null) {
+             mAnimationScheduler = getAnimationSchedulerForDisplay(mContext.getDisplayId());
+@@ -548,6 +557,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+     @Override
+     protected void onViewDetached() {
+         mSystemIconsContainer.setOnHoverListener(null);
++        mHideList.removeListener(mHideListListener);
+         mConfigurationController.removeCallback(mConfigurationListener);
+         if (mAnimationScheduler != null) {
+             mAnimationScheduler.removeCallback(mAnimationCallback);
+@@ -762,6 +772,10 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
+         });
+     }
+ 
++    private void updateCarrierTextVisibility() {
++        mView.setCarrierTextHidden(mHideList.isHidden(StatusBarItems.CARRIER_TEXT));
++    }
++
+     private void updateBatteryVisibility() {
+         ArraySet<String> hideList = StatusBarIconController.getIconHideList(mContext,
+                 Settings.Secure.getString(mContext.getContentResolver(),
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarViewController.kt b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarViewController.kt
+index 2d3f497b38d6c014b71089f3d17fd9fc6fc2fa3e..7a184a32eb2825610149030d1b52c179a5c23c01 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarViewController.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarViewController.kt
+@@ -91,6 +91,8 @@ private constructor(
+     private lateinit var clock: Clock
+     private lateinit var clockCenter: Clock
+     private lateinit var clockRight: Clock
++    // Lujarch (SB-3): the lyric line takes the clock's tint.
++    private lateinit var lyrics: com.android.systemui.statusbar.lujarch.lyrics.LyricsView
+     private lateinit var startSideContainer: View
+     private lateinit var endSideContainer: View
+ 
+@@ -184,6 +186,7 @@ private constructor(
+         clock = mView.requireViewById(R.id.clock)
+         clockCenter = mView.requireViewById(R.id.clock_center)
+         clockRight = mView.requireViewById(R.id.clock_right)
++        lyrics = mView.requireViewById(R.id.lujarch_lyrics)
+ 
+         addDarkReceivers()
+ 
+@@ -321,12 +324,14 @@ private constructor(
+         darkIconDispatcher.addDarkReceiver(clock)
+         darkIconDispatcher.addDarkReceiver(clockCenter)
+         darkIconDispatcher.addDarkReceiver(clockRight)
++        darkIconDispatcher.addDarkReceiver(lyrics)
+     }
+ 
+     private fun removeDarkReceivers() {
+         darkIconDispatcher.removeDarkReceiver(clock)
+         darkIconDispatcher.removeDarkReceiver(clockCenter)
+         darkIconDispatcher.removeDarkReceiver(clockRight)
++        darkIconDispatcher.removeDarkReceiver(lyrics)
+     }
+ 
+     @Deprecated(
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ui/StatusBarIconControllerImpl.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ui/StatusBarIconControllerImpl.java
+index 979ee71bee2669498db20d59a94482d8b797e09d..ea70fb8d9f74586512178dcbd3de6eb9be2c2ccc 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ui/StatusBarIconControllerImpl.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ui/StatusBarIconControllerImpl.java
+@@ -16,6 +16,7 @@
+ 
+ package com.android.systemui.statusbar.phone.ui;
+ 
++import com.android.systemui.statusbar.lujarch.StatusBarHideList;
+ import static com.android.systemui.statusbar.phone.ui.StatusBarIconList.Slot;
+ 
+ import static com.google.common.base.Preconditions.checkArgument;
+@@ -144,7 +145,7 @@ public class StatusBarIconControllerImpl implements Tunable,
+         for (int i = 0; i < allSlots.size(); i++) {
+             Slot slot = allSlots.get(i);
+             List<StatusBarIconHolder> holders = slot.getHolderListInViewOrder();
+-            boolean hidden = mIconHideList.contains(slot.getName());
++            boolean hidden = StatusBarHideList.isHidden(mIconHideList, slot.getName());
+ 
+             for (StatusBarIconHolder holder : holders) {
+                 int viewIndex = mStatusBarIconList.getViewIndex(slot.getName(), holder.getTag());
+@@ -227,7 +228,7 @@ public class StatusBarIconControllerImpl implements Tunable,
+ 
+     private void addSystemIcon(String slot, StatusBarIconHolder holder) {
+         int viewIndex = mStatusBarIconList.getViewIndex(slot, holder.getTag());
+-        boolean hidden = mIconHideList.contains(slot);
++        boolean hidden = StatusBarHideList.isHidden(mIconHideList, slot);
+ 
+         mIconGroups.forEach(l -> l.onIconAdded(viewIndex, slot, hidden, holder));
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/binder/StackedMobileIconBinder.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/binder/StackedMobileIconBinder.kt
+index a1761371af4e6501898ecde2e854326b1fefc2c2..ecf62eb75ea7f1bb726cb9a066e0df03008a343d 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/binder/StackedMobileIconBinder.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/binder/StackedMobileIconBinder.kt
+@@ -36,6 +36,7 @@ import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarV
+ import com.android.systemui.statusbar.pipeline.shared.ui.composable.StackedMobileIcon
+ import com.android.systemui.statusbar.pipeline.shared.ui.view.SingleBindableStatusBarComposeIconView
+ import dagger.Lazy
++import kotlinx.coroutines.flow.combine
+ 
+ object StackedMobileIconBinder {
+     fun bind(
+@@ -51,7 +52,11 @@ object StackedMobileIconBinder {
+                 if (StatusBarMobileIconKairos.isEnabled) {
+                     mobileIconsViewModelKairos.get().isStackableFlow
+                 } else {
+-                    mobileIconsViewModel.get().isStackable
++                    mobileIconsViewModel.get().isStackable.combine(
++                        mobileIconsViewModel.get().isStackedIconForceHidden
++                    ) { stackable, hidden ->
++                        stackable && !hidden
++                    }
+                 },
+         ) { _, tintFlow ->
+             view.composeView.apply {
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/MobileIconsViewModel.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/MobileIconsViewModel.kt
+index 3f0fb29652176fc406aed2ee8d2e0ecb9df58677..d0234e31898f6524fdd062aa572b6e8260e4e047 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/MobileIconsViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/MobileIconsViewModel.kt
+@@ -32,6 +32,8 @@ import com.android.systemui.statusbar.pipeline.mobile.ui.MobileViewLogger
+ import com.android.systemui.statusbar.pipeline.mobile.ui.VerboseMobileViewLogger
+ import com.android.systemui.statusbar.pipeline.mobile.ui.view.ModernStatusBarMobileView
+ import com.android.systemui.statusbar.pipeline.shared.ConnectivityConstants
++import com.android.systemui.statusbar.pipeline.shared.data.model.ConnectivitySlot
++import com.android.systemui.statusbar.pipeline.shared.data.repository.ConnectivityRepository
+ import com.android.systemui.util.kotlin.mapDirect
+ import java.util.concurrent.ConcurrentHashMap
+ import javax.inject.Inject
+@@ -61,6 +63,7 @@ constructor(
+     private val interactor: MobileIconsInteractor,
+     private val airplaneModeInteractor: AirplaneModeInteractor,
+     private val constants: ConnectivityConstants,
++    connectivityRepository: ConnectivityRepository,
+     @MobileSummaryLog private val tableLogger: TableLogBuffer,
+     @Background private val scope: CoroutineScope,
+ ) {
+@@ -113,6 +116,16 @@ constructor(
+             )
+             .stateIn(scope, SharingStarted.WhileSubscribed(), false)
+ 
++    /**
++     * Whether the user hides the stacked dual-SIM icon with its own key (SB-1). `mobile` hides
++     * every signal icon, this one only the stacked icon: the per-SIM icons stay as [isStackable]
++     * decides. Collected eagerly: the icon's view asks for the value when it is laid out.
++     */
++    val isStackedIconForceHidden: StateFlow<Boolean> =
++        connectivityRepository.forceHiddenSlots
++            .map { it.contains(ConnectivitySlot.STACKED_MOBILE) }
++            .stateIn(scope, SharingStarted.Eagerly, false)
++
+     init {
+         scope.launch { subscriptionIdsFlow.collect { invalidateCaches(it) } }
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/StackedMobileIconViewModel.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/StackedMobileIconViewModel.kt
+index 509eb5e80ffafc2c21532a723582b2ea54227048..2447e6f35ef154fedcb5118803e9b6744d0e4c9a 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/StackedMobileIconViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/mobile/ui/viewmodel/StackedMobileIconViewModel.kt
+@@ -89,8 +89,12 @@ constructor(
+         }
+ 
+     private val _isIconVisible: Flow<Boolean> =
+-        combine(_dualSim, mobileIconsViewModel.isStackable) { dualSim, isStackable ->
+-            dualSim != null && isStackable
++        combine(
++            _dualSim,
++            mobileIconsViewModel.isStackable,
++            mobileIconsViewModel.isStackedIconForceHidden,
++        ) { dualSim, isStackable, isForceHidden ->
++            dualSim != null && isStackable && !isForceHidden
+         }
+ 
+     override val dualSim: DualSim? by
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/satellite/ui/viewmodel/DeviceBasedSatelliteViewModel.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/satellite/ui/viewmodel/DeviceBasedSatelliteViewModel.kt
+index bb6c128588b3f0a26e286212469d7bb8914e640b..cd2cd9ee968e97d0e55f0fb80e2b3ba908278280 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/satellite/ui/viewmodel/DeviceBasedSatelliteViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/satellite/ui/viewmodel/DeviceBasedSatelliteViewModel.kt
+@@ -31,6 +31,8 @@ import com.android.systemui.statusbar.pipeline.dagger.DeviceBasedSatelliteTableL
+ import com.android.systemui.statusbar.pipeline.satellite.domain.interactor.DeviceBasedSatelliteInteractor
+ import com.android.systemui.statusbar.pipeline.satellite.shared.model.SatelliteConnectionState
+ import com.android.systemui.statusbar.pipeline.satellite.ui.model.SatelliteIconModel
++import com.android.systemui.statusbar.pipeline.shared.data.model.ConnectivitySlot
++import com.android.systemui.statusbar.pipeline.shared.data.repository.ConnectivityRepository
+ import javax.inject.Inject
+ import kotlin.time.Duration.Companion.seconds
+ import kotlinx.coroutines.CoroutineScope
+@@ -41,6 +43,7 @@ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.distinctUntilChanged
+ import kotlinx.coroutines.flow.flatMapLatest
+ import kotlinx.coroutines.flow.flowOf
++import kotlinx.coroutines.flow.map
+ import kotlinx.coroutines.flow.stateIn
+ 
+ /**
+@@ -69,6 +72,7 @@ constructor(
+     interactor: DeviceBasedSatelliteInteractor,
+     @Application scope: CoroutineScope,
+     airplaneModeInteractor: AirplaneModeInteractor,
++    connectivityRepository: ConnectivityRepository,
+     @DeviceBasedSatelliteInputLog logBuffer: LogBuffer,
+     @DeviceBasedSatelliteTableLog tableLog: TableLogBuffer,
+ ) : DeviceBasedSatelliteViewModel {
+@@ -150,12 +154,18 @@ constructor(
+             }
+             .stateIn(scope, SharingStarted.WhileSubscribed(), false)
+ 
++    // The user hides the icon with its own key (SB-1); the carrier text below stays.
++    private val isIconForceHidden =
++        connectivityRepository.forceHiddenSlots.map { it.contains(ConnectivitySlot.SATELLITE) }
++
+     override val icon: StateFlow<Icon?> =
+-        combine(showIcon, interactor.connectionState, interactor.signalStrength) {
+-                shouldShow,
+-                state,
+-                signalStrength ->
+-                if (shouldShow) {
++        combine(
++                showIcon,
++                interactor.connectionState,
++                interactor.signalStrength,
++                isIconForceHidden,
++            ) { shouldShow, state, signalStrength, isForceHidden ->
++                if (shouldShow && !isForceHidden) {
+                     SatelliteIconModel.fromConnectionState(state, signalStrength)
+                 } else {
+                     null
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/data/model/ConnectivitySlots.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/data/model/ConnectivitySlots.kt
+index d52d0fb91b825875b8eb155ace2b61ffcd35f3cb..89bae69cd4c04b5c6688f6ca7b10f5ea885d7688 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/data/model/ConnectivitySlots.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/data/model/ConnectivitySlots.kt
+@@ -30,12 +30,17 @@ class ConnectivitySlots @Inject constructor(context: Context) {
+     private val mobileSlot: String = context.getString(R.string.status_bar_mobile)
+     private val wifiSlot: String = context.getString(R.string.status_bar_wifi)
+     private val ethernetSlot: String = context.getString(R.string.status_bar_ethernet)
++    private val stackedMobileSlot: String = context.getString(R.string.status_bar_stacked_mobile)
++    private val satelliteSlot: String = context.getString(R.string.status_bar_oem_satellite)
+ 
+     private val slotByName: Map<String, ConnectivitySlot> = mapOf(
+         airplaneSlot to ConnectivitySlot.AIRPLANE,
+         mobileSlot to ConnectivitySlot.MOBILE,
+         wifiSlot to ConnectivitySlot.WIFI,
+-        ethernetSlot to ConnectivitySlot.ETHERNET
++        ethernetSlot to ConnectivitySlot.ETHERNET,
++        // Lujarch (SB-1): these two icons hide with their own keys, not only through `mobile`.
++        stackedMobileSlot to ConnectivitySlot.STACKED_MOBILE,
++        satelliteSlot to ConnectivitySlot.SATELLITE,
+     )
+ 
+     /**
+@@ -52,5 +57,7 @@ enum class ConnectivitySlot {
+     AIRPLANE,
+     ETHERNET,
+     MOBILE,
++    STACKED_MOBILE,
++    SATELLITE,
+     WIFI,
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/domain/interactor/HomeStatusBarIconBlockListInteractor.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/domain/interactor/HomeStatusBarIconBlockListInteractor.kt
+index b1700a4f99b3b227be7df578a9d1f1667ba1ce91..70c099733841c87090d34ea7d8ef5eddde8db51e 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/domain/interactor/HomeStatusBarIconBlockListInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/domain/interactor/HomeStatusBarIconBlockListInteractor.kt
+@@ -17,44 +17,27 @@
+ package com.android.systemui.statusbar.pipeline.shared.domain.interactor
+ 
+ import android.content.res.Resources
+-import android.provider.Settings
+ import com.android.systemui.dagger.SysUISingleton
+ import com.android.systemui.dagger.qualifiers.Main
+ import com.android.systemui.res.R
+-import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
+ import com.android.systemui.statusbar.systemstatusicons.domain.interactor.SystemStatusIconBlocklistInteractor
+ import javax.inject.Inject
+ import kotlinx.coroutines.flow.Flow
+-import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.flowOf
+ 
+-/** A place to define the blocklist/allowlist for home status bar icons */
++/**
++ * A place to define the blocklist/allowlist for home status bar icons.
++ *
++ * Lujarch (SB-1): the vibrate icon is hidden with its key `volume` in Settings.Secure
++ * `icon_blacklist` like every other icon; STATUS_BAR_SHOW_VIBRATE_ICON is not a second gate.
++ */
+ @SysUISingleton
+-class HomeStatusBarIconBlockListInteractor
+-@Inject
+-constructor(@Main res: Resources, secureSettingsRepository: SecureSettingsRepository) :
++class HomeStatusBarIconBlockListInteractor @Inject constructor(@Main res: Resources) :
+     SystemStatusIconBlocklistInteractor {
+     private val defaultBlockedIcons =
+         res.getStringArray(R.array.config_collapsed_statusbar_icon_blocklist)
+ 
+-    private val vibrateIconSlot = res.getString(com.android.internal.R.string.status_bar_volume)
+-
+-    /** Tracks the user setting [Settings.Secure.STATUS_BAR_SHOW_VIBRATE_ICON] */
+-    private val shouldShowVibrateIcon: Flow<Boolean> =
+-        secureSettingsRepository.boolSetting(Settings.Secure.STATUS_BAR_SHOW_VIBRATE_ICON, false)
+-
+-    override val blockedIconSlots: Flow<Set<String>> =
+-        shouldShowVibrateIcon.map {
+-            val defaultSet = defaultBlockedIcons.toMutableSet()
+-            // It's possible that the vibrate icon was in the default blocklist, so we manually
+-            // merge the setting and list
+-            if (it) {
+-                defaultSet.remove(vibrateIconSlot)
+-            } else {
+-                defaultSet.add(vibrateIconSlot)
+-            }
+-
+-            defaultSet
+-        }
++    override val blockedIconSlots: Flow<Set<String>> = flowOf(defaultBlockedIcons.toSet())
+ 
+-    val iconBlockList: Flow<List<String>> = blockedIconSlots.map { it.toList() }
++    val iconBlockList: Flow<List<String>> = flowOf(defaultBlockedIcons.toList())
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/binder/HomeStatusBarViewBinder.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/binder/HomeStatusBarViewBinder.kt
+index dc70408bf5b68b7596253407a61bbb024ed01562..dfda7e4273357e01f9b17b2264c97faeda9cc9c6 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/binder/HomeStatusBarViewBinder.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/binder/HomeStatusBarViewBinder.kt
+@@ -44,6 +44,7 @@ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationSt
+ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationState.AnimatingIn
+ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationState.AnimatingOut
+ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationState.RunningChipAnim
++import com.android.systemui.statusbar.lujarch.lyrics.LyricsView
+ import com.android.systemui.statusbar.pipeline.shared.ui.model.VisibilityModel
+ import com.android.systemui.statusbar.pipeline.shared.ui.viewmodel.HomeStatusBarViewModel
+ import com.android.systemui.statusbar.phone.ui.StatusBarIconController
+@@ -86,6 +87,8 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
+         val hideForHun: Boolean,
+         val position: Int,
+         val visibilityModel: VisibilityModel,
++        // Lujarch: a lyric line takes the start side (docs/statusbar-lyrics.md).
++        val lyricsShowing: Boolean = false,
+     )
+ 
+     override fun bind(
+@@ -104,6 +107,7 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
+         val networkTrafficCenterView = view.findViewById<View>(R.id.network_traffic_holder_center)
+         val networkTrafficStartView = view.findViewById<View>(R.id.network_traffic_holder_start)
+         val notificationIconsArea = view.requireViewById<View>(R.id.notificationIcons)
++        val lyricsView: LyricsView = view.requireViewById(R.id.lujarch_lyrics)
+         val batteryView = view.findViewById<View>(R.id.battery_composable_view)
+ 
+         // GONE because this shouldn't take space in the layout
+@@ -305,6 +309,20 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
+                             }
+                     }
+ 
++                    // Lujarch (SB-3): the lyric line, which a heads-up hides like the rest of the
++                    // start side.
++                    launch {
++                        combine(viewModel.lyrics, viewModel.hideStartSideContentForHeadsUp) {
++                                line,
++                                hideForHun ->
++                                if (hideForHun) null else line
++                            }
++                            .collect { line ->
++                                lyricsView.show(line)
++                                clockState.update { it.copy(lyricsShowing = line != null) }
++                            }
++                    }
++
+                     launch {
+                         batteryVisible.collect { isVisible ->
+                             batteryView.isVisible = isVisible
+@@ -316,12 +334,16 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
+                             // We only want to hide left clock for HUN
+                             val hunBlocksClock =
+                                 state.position == CLOCK_POSITION_LEFT && state.hideForHun
++                            // Lujarch: a lyric line on the start side takes the left clock's place.
++                            val lyricsBlockClock =
++                                state.position == CLOCK_POSITION_LEFT && state.lyricsShowing
+ 
+                             // Apply denylist on top of ViewModel visibility
+                             val finalVisibility =
+                                 if (
+                                     state.visibilityModel.visibility == View.VISIBLE &&
+                                         !hunBlocksClock &&
++                                        !lyricsBlockClock &&
+                                         !state.autoHide &&
+                                         !state.denyListed
+                                 ) {
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/viewmodel/HomeStatusBarViewModel.kt b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/viewmodel/HomeStatusBarViewModel.kt
+index 2f3936d535a9b8993a08076dc3841f2b5de84788..00a17dbb7fe6690942c6d050d9c6ac07a781e801 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/viewmodel/HomeStatusBarViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/pipeline/shared/ui/viewmodel/HomeStatusBarViewModel.kt
+@@ -66,6 +66,9 @@ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationSt
+ import com.android.systemui.statusbar.layout.ui.viewmodel.AppHandlesViewModel
+ import com.android.systemui.statusbar.layout.ui.viewmodel.StatusBarBoundsViewModel
+ import com.android.systemui.statusbar.layout.ui.viewmodel.StatusBarContentInsetsViewModel
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
++import com.android.systemui.statusbar.lujarch.StatusBarItems
++import com.android.systemui.statusbar.lujarch.lyrics.StatusBarLyrics
+ import com.android.systemui.statusbar.notification.domain.interactor.ActiveNotificationsInteractor
+ import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationInteractor
+ import com.android.systemui.statusbar.notification.icon.domain.interactor.StatusBarNotificationIconsInteractor
+@@ -210,6 +213,12 @@ interface HomeStatusBarViewModel : Activatable {
+     val isNotificationIconContainerVisible: Flow<VisibilityModel>
+     val hideStartSideContentForHeadsUp: Flow<Boolean>
+ 
++    /**
++     * Lujarch: the lyric line the start side shows, or null (docs/statusbar-lyrics.md). While there is
++     * one the notification icons give way, and the clock too where it is on the start side.
++     */
++    val lyrics: Flow<StatusBarLyrics.Line?>
++
+     /**
+      * Pair of (system info visibility, event animation state). The animation state can be used to
+      * respond to the system event chip animations. In all cases, system info visibility correctly
+@@ -311,6 +320,8 @@ constructor(
+     private val userLogoutInteractor: UserLogoutInteractor,
+     private val scrollToTopInteractor: ScrollToTopInteractor,
+     private val headsUpNotificationInteractor: HeadsUpNotificationInteractor,
++    statusBarHideList: StatusBarHideList,
++    statusBarLyrics: StatusBarLyrics,
+ ) : HomeStatusBarViewModel, HydratedActivatable(enableEnqueuedActivations = true) {
+ 
+     val logger = loggerFactory.getOrCreate(logBufferName(thisDisplayId), 60)
+@@ -351,12 +362,17 @@ constructor(
+     override val popupChips
+         get() = statusBarPopupChips.shownQuickActionChips
+ 
++    // Lujarch (SB-1): the notification icons and the dot that stands for them are one item.
++    private val areNotificationIconsHidden =
++        statusBarHideList.isHiddenFlow(StatusBarItems.NOTIFICATION_ICONS)
++
+     override val areNotificationsLightsOut: Flow<Boolean> =
+         combine(
+                 notificationsInteractor.areAnyNotificationsPresent,
+                 lightsOutInteractor.isLowProfile(thisDisplayId) ?: flowOf(false),
+-            ) { hasNotifications, isLowProfile ->
+-                hasNotifications && isLowProfile
++                areNotificationIconsHidden,
++            ) { hasNotifications, isLowProfile, iconsHidden ->
++                hasNotifications && isLowProfile && !iconsHidden
+             }
+             .distinctUntilChanged()
+             .logDiffsForTable(
+@@ -429,10 +445,16 @@ constructor(
+                 statusBarVisibilityInteractor.shouldHomeStatusBarBeVisible,
+                 homeStatusBarInteractor.visibilityViaDisableFlags,
+                 homeStatusBarInteractor.shouldShowOperatorName,
+-            ) { shouldStatusBarBeVisible, visibilityViaDisableFlags, shouldShowOperator ->
++                statusBarHideList.isHiddenFlow(StatusBarItems.OPERATOR_NAME),
++            ) {
++                shouldStatusBarBeVisible,
++                visibilityViaDisableFlags,
++                shouldShowOperator,
++                isOperatorNameHidden ->
+                 shouldStatusBarBeVisible &&
+                     visibilityViaDisableFlags.isSystemInfoAllowed &&
+-                    shouldShowOperator
++                    shouldShowOperator &&
++                    !isOperatorNameHidden
+             }
+             .distinctUntilChanged()
+             .logDiffsForTable(
+@@ -564,6 +586,23 @@ constructor(
+             it is TopPinnedState.Pinned
+         }
+ 
++    // Lujarch (SB-3): while the home status bar shows its clock, unless the item is switched off.
++    override val lyrics: Flow<StatusBarLyrics.Line?> =
++        combine(
++                statusBarVisibilityInteractor.shouldHomeStatusBarBeVisible,
++                homeStatusBarInteractor.visibilityViaDisableFlags,
++                statusBarHideList.isHiddenFlow(StatusBarItems.LYRICS),
++                statusBarLyrics.current,
++            ) { shouldStatusBarBeVisible, visibilityViaDisableFlags, hidden, line ->
++                if (shouldStatusBarBeVisible && visibilityViaDisableFlags.isClockAllowed && !hidden) {
++                    line
++                } else {
++                    null
++                }
++            }
++            .distinctUntilChanged()
++            .flowOn(bgDispatcher)
++
+     override val isClockVisible: Flow<VisibilityModel> =
+         combine(
+                 statusBarVisibilityInteractor.shouldHomeStatusBarBeVisible,
+@@ -586,9 +625,11 @@ constructor(
+                 statusBarVisibilityInteractor.shouldHomeStatusBarBeVisible,
+                 isAnyChipVisible,
+                 homeStatusBarInteractor.visibilityViaDisableFlags,
+-            ) { shouldStatusBarBeVisible, anyChipVisible, visibilityViaDisableFlags ->
++                areNotificationIconsHidden,
++                lyrics,
++            ) { shouldStatusBarBeVisible, anyChipVisible, visibilityViaDisableFlags, iconsHidden, line ->
+                 val showNotificationIconContainer =
+-                    if (anyChipVisible) {
++                    if (anyChipVisible || iconsHidden || line != null) {
+                         false
+                     } else {
+                         shouldStatusBarBeVisible &&
+diff --git a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarSwitch.java b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarSwitch.java
+index 913d6cf3c800a39712f785e82e141c80c47f7bc9..ff63af3a6a75d4ec09a716236dc7b7986983a2bf 100644
+--- a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarSwitch.java
++++ b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarSwitch.java
+@@ -27,6 +27,7 @@ import androidx.preference.SwitchPreferenceCompat;
+ import com.android.internal.logging.MetricsLogger;
+ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
+ import com.android.systemui.Dependency;
++import com.android.systemui.statusbar.lujarch.StatusBarHideList;
+ import com.android.systemui.statusbar.phone.ui.StatusBarIconController;
+ import com.android.systemui.tuner.TunerService.Tunable;
+ 
+@@ -40,6 +41,13 @@ public class StatusBarSwitch extends SwitchPreferenceCompat implements Tunable {
+         super(context, attrs);
+     }
+ 
++    /** A switch for the status bar item [key] (StatusBarItems), made by the page in code. */
++    public StatusBarSwitch(Context context, String key) {
++        this(context, (AttributeSet) null);
++        setKey(key);
++        setIconSpaceReserved(false);
++    }
++
+     @Override
+     public void onAttached() {
+         super.onAttached();
+@@ -58,21 +66,26 @@ public class StatusBarSwitch extends SwitchPreferenceCompat implements Tunable {
+             return;
+         }
+         mHideList = StatusBarIconController.getIconHideList(getContext(), newValue);
+-        setChecked(!mHideList.contains(getKey()));
++        // A plain slot name hides the slot's external icon too (ime hides ime__external).
++        setChecked(!StatusBarHideList.isHidden(mHideList, getKey()));
+     }
+ 
+     @Override
+     protected boolean persistBoolean(boolean value) {
+         if (!value) {
+             // If not enabled add to hideList.
+-            if (!mHideList.contains(getKey())) {
++            if (!StatusBarHideList.isHidden(mHideList, getKey())) {
+                 MetricsLogger.action(getContext(), MetricsEvent.TUNER_STATUS_BAR_DISABLE,
+                         getKey());
+                 mHideList.add(getKey());
+                 setList(mHideList);
+             }
+         } else {
+-            if (mHideList.remove(getKey())) {
++            // Both names: an entry of the plain slot name would keep the item hidden.
++            boolean removed = mHideList.remove(getKey());
++            removed |= mHideList.remove(
++                    getKey().replace(StatusBarHideList.EXTERNAL_SLOT_SUFFIX, ""));
++            if (removed) {
+                 MetricsLogger.action(getContext(), MetricsEvent.TUNER_STATUS_BAR_ENABLE, getKey());
+                 setList(mHideList);
+             }
+diff --git a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
+index ee4dc9ea52c59234c05e3d41108b93959b9f580f..af5c4b89b3964f1ca1160ed06baf7abfefdc26ba 100644
+--- a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
++++ b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
+@@ -15,15 +15,28 @@
+  */
+ package com.android.systemui.tuner;
+ 
++import android.content.Context;
+ import android.os.Bundle;
+ 
+ import androidx.annotation.Nullable;
++import androidx.preference.PreferenceCategory;
++import androidx.preference.PreferenceScreen;
+ 
+ import com.android.internal.logging.MetricsLogger;
+ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
+ import com.android.settingslib.widget.SettingsBasePreferenceFragment;
+ import com.android.systemui.res.R;
++import com.android.systemui.statusbar.lujarch.StatusBarGroup;
++import com.android.systemui.statusbar.lujarch.StatusBarItem;
++import com.android.systemui.statusbar.lujarch.StatusBarItems;
+ 
++import java.util.List;
++import java.util.Locale;
++
++/**
++ * The status bar items page (SB-1): a switch for everything the status bar can show, generated
++ * from the registry in {@link StatusBarItems}; res/xml/status_bar_prefs.xml holds only the screen.
++ */
+ public class StatusBarTuner extends SettingsBasePreferenceFragment {
+ 
+     private MetricsLogger mMetricsLogger;
+@@ -31,6 +44,27 @@ public class StatusBarTuner extends SettingsBasePreferenceFragment {
+     @Override
+     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+         setPreferencesFromResource(R.xml.status_bar_prefs, rootKey);
++        final Context context = getPreferenceManager().getContext();
++        final PreferenceScreen screen = getPreferenceScreen();
++        for (StatusBarGroup group : StatusBarGroup.values()) {
++            final List<StatusBarItem> items = StatusBarItems.itemsFor(context, group);
++            if (items.isEmpty()) {
++                continue;
++            }
++            final PreferenceCategory category = new PreferenceCategory(context);
++            category.setKey("group_" + group.name().toLowerCase(Locale.ROOT));
++            category.setTitle(group.getTitle());
++            category.setIconSpaceReserved(false);
++            screen.addPreference(category);
++            for (StatusBarItem item : items) {
++                final StatusBarSwitch pref = new StatusBarSwitch(context, item.getKey());
++                pref.setTitle(item.getTitle());
++                if (item.getSummary() != 0) {
++                    pref.setSummary(item.getSummary());
++                }
++                category.addPreference(pref);
++            }
++        }
+     }
+ 
+     @Override
