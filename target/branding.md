@@ -26,5 +26,6 @@ release, or the commit alone for any other build.
 - Verify: vm
 
 The Lujarch mark, the ten-shard symbol, takes the place of LineageOS' mark wherever the system
-shows one: while the phone starts, in recovery and on the System updates card. The mark is one
-drawing, from which each of these is made.
+shows one: the animation while the phone starts, recovery and fastbootd, and the System updates
+card. Recovery and fastbootd show it with Lujarch's name and version in the mark's colors. Every
+image of the mark is made from one drawing.

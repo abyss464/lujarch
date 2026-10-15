@@ -1,0 +1,2 @@
+# The fitted icons service in system_server (ICON-1): every app reads icons, Settings writes choices.
+type lujarch_icons_service, app_api_service, ephemeral_app_api_service, system_server_service, service_manager_type;

@@ -1,0 +1,7 @@
+// The system's version (BRD-1), from the init file the tools generate.
+prebuilt_etc {
+    name: "lujarch_branding_version.rc",
+    src: "generated/version.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}

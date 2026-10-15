@@ -154,4 +154,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Redrawn | 重绘 | 再描画 |
 | Fit notification icons | 适配通知图标 | 通知アイコンを揃える |
 | App drawer sections | 应用抽屉分区 | アプリドロワーのセクション |
+| Sort apps in drawer | 应用抽屉排序 | アプリドロワーの並べ替え |
+| By name | 按名称 | 名前順 |
+| By icon color | 按图标颜色 | アイコンの色順 |
 | Unnamed section | 未命名分区 | 名前のないセクション |

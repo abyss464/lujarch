@@ -1,6 +1,7 @@
 # Launcher
 
-The owner groups the app drawer into sections of their own.
+The owner groups the app drawer into sections of their own and orders it by name or by the
+colors of the icons.
 
 ## App drawer
 
@@ -18,3 +19,15 @@ long press on it renames it, moves it up or down or deletes it, which puts its a
 others. App drawer sections lists them for the same actions. A section exists while it holds apps.
 The system makes, names and fills no section by itself, and search finds the apps of folded
 sections.
+
+### LCH-2 The drawer is ordered by name or by icon color
+
+- Home: Home settings > Sort apps in drawer
+- Switch: Sort apps in drawer: By name, By icon color
+- Default: By name
+- Verify: vm
+
+By name is Android's alphabetical order. By icon color orders the apps by the hue of their icons
+around the color wheel, with gray and black icons last and brighter icons first within a hue; the
+fast scroller then has one mark for the whole list. Sections (LCH-1) keep their own apps in the
+same order.
