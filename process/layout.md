@@ -67,6 +67,12 @@ system/features/<feature>/
   architecture, offline (Go modules from the computer's module cache, crates from Cargo's), and
   stage it at `vendor/extra/features/<feature>/prebuilt/<arch>/<module>` for the feature's
   `Android.bp`.
+- An app a feature builds from its source is a component whose `build` is `gradle` (one APK for
+  every architecture, staged under `common`) or `flutter` (one APK for each architecture; its
+  pin also names the Flutter SDK's `flutter` commit), with the `task` or `args` that build it
+  and the `output` APK. Only `tools/lujarch fetch` builds apps, since Gradle and Flutter
+  download what a build needs; every other step stages the APK fetch kept for the pin, patch
+  series and recipe.
 - A prebuilt is a program or data a feature takes as its upstream releases it, where the release
   is the only build of it that matches the pinned source: `feature.toml` names it under
   `[prebuilts.<name>]` with the `module` it becomes; `lock.toml` pins the `url` and `sha256` of
@@ -163,6 +169,10 @@ stock = "..."         # unpacked stock releases
 ndk = "..."           # Android NDK for components built outside the tree
 go = "..."            # Go installation (GOROOT) for components built outside the tree
 prebuilts = "..."     # pinned prebuilts, each named by its sha256
+jdk = "..."           # JDK for apps built from source (JAVA_HOME)
+android_sdk = "..."   # Android SDK for apps built from source
+gradle = "..."        # Gradle's cache for apps built from source (GRADLE_USER_HOME)
+pub = "..."           # Dart's package cache for Flutter apps (PUB_CACHE)
 
 [sources]
 mihomo = "..."          # where each component's repository is; its commit is in lock.toml

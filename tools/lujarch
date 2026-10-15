@@ -388,9 +388,15 @@ def check_lock(findings):
     for feature, name, spec in feature_components():
         if name not in pins:
             findings.add(path, 0, f"component {name} of {feature} is not pinned")
-        if spec.get("build") not in ("go", "cargo") or "module" not in spec:
+        if spec.get("build") not in ("go", "cargo", *APP_BUILDS) or "module" not in spec:
             findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
-                         f"component {name}: build (go or cargo) and module are required")
+                         f"component {name}: build (go, cargo, gradle or flutter) and module "
+                         "are required")
+        elif spec["build"] in APP_BUILDS and not spec.get("output"):
+            findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
+                         f"component {name}: an app names its output APK")
+        elif spec["build"] == "flutter" and not pins.get(name, {}).get("flutter"):
+            findings.add(path, 0, f"components.{name}: a Flutter app pins its flutter commit")
     prebuilt_pins = lock.get("prebuilts", {})
     for name, pin in prebuilt_pins.items():
         arches = {k: v for k, v in pin.items() if isinstance(v, dict)}
@@ -1124,8 +1130,84 @@ def component_source(host, name, pin):
     return src
 
 
+APP_BUILDS = ("gradle", "flutter")
+FLUTTER_PLATFORM = {"arm64": "android-arm64", "x86_64": "android-x64"}
+
+
+def component_arches(spec):
+    """The architectures a component is built for: an app built by Gradle once for all."""
+    return ["common"] if spec["build"] == "gradle" else device_arches()
+
+
+def flutter_sdk(host, commit):
+    """A checkout of the Flutter SDK at commit, from its repository on this computer."""
+    repo = host.path_of("sources", "flutter")
+    sdk = host.out / "components" / "flutter" / commit[:12]
+    if not (sdk / "bin" / "flutter").is_file():
+        if pgit(repo, "cat-file", "-e", f"{commit}^{{commit}}").returncode:
+            die(f"{repo} has no Flutter commit {commit} (lock.toml); fetch it there")
+        sdk.parent.mkdir(parents=True, exist_ok=True)
+        if subprocess.run(["git", "clone", "-q", str(repo), str(sdk)]).returncode:
+            die(f"could not clone {repo}")
+        pgit(sdk, "checkout", "-q", "--force", "--detach", commit, check=True)
+    return sdk
+
+
+def app_component(host, feature, name, spec, arch, build=False):
+    """The APK of an app component for arch. Only `lujarch fetch` builds apps, since Gradle and
+    Flutter download what a build needs; every other step takes the APK fetch kept, one for
+    each pin, patch series, recipe and toolchain."""
+    pin = lock_file().get("components", {}).get(name)
+    if not pin or "commit" not in pin:
+        die(f"component {name} of {feature} has no commit in lock.toml")
+    jdk = host.path_of("paths", "jdk")
+    patches = component_patches(feature, name)
+    digest = hashlib.sha256()
+    for part in (json.dumps(spec, sort_keys=True), json.dumps(pin, sort_keys=True), arch,
+                 str(jdk.resolve())):
+        digest.update(part.encode() + b"\0")
+    for patch in patches:
+        digest.update(patch.read_bytes())
+    out = host.out / "components" / name / arch / digest.hexdigest()[:16] / spec["module"]
+    if out.is_file() or not build:
+        if not out.is_file():
+            die(f"app {name} ({arch}) is not built for its pin: lujarch fetch")
+        return out
+    src = component_source(host, name, pin)
+    for patch in patches:
+        if subprocess.run(["git", "apply", str(patch)], cwd=src).returncode:
+            die(f"{name}: {rel(patch)} does not apply")
+    sdk = host.path_of("paths", "android_sdk")
+    env = dict(os.environ, LC_ALL="C", TZ="UTC", JAVA_HOME=str(jdk), ANDROID_HOME=str(sdk),
+               ANDROID_SDK_ROOT=str(sdk), GRADLE_USER_HOME=str(host.path_of("paths", "gradle")))
+    work = src / spec.get("dir", ".")
+    log(f"building app {name} ({pin.get('version', pin['commit'][:12])}, {arch})")
+    if spec["build"] == "gradle":
+        cmd = ["./gradlew", "--no-daemon", "--console=plain", spec["task"]]
+        apk = work / spec["output"]
+    else:
+        flutter = flutter_sdk(host, pin["flutter"])
+        env.update({"PUB_CACHE": str(host.path_of("paths", "pub")),
+                    "FLUTTER_ROOT": str(flutter), "FLUTTER_SUPPRESS_ANALYTICS": "true",
+                    "PATH": f"{flutter / 'bin'}:{env.get('PATH', '')}"})
+        cmd = [str(flutter / "bin" / "flutter"), "build", "apk", "--release",
+               "--target-platform", FLUTTER_PLATFORM[arch], *spec.get("args", [])]
+        apk = work / spec["output"].format(abi={"arm64": "arm64-v8a", "x86_64": "x86_64"}[arch])
+    built = subprocess.run(cmd, cwd=work, env=env).returncode == 0 and apk.is_file()
+    if built:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(apk, out)
+    pgit(src, "checkout", "-q", "--force", pin["commit"], check=True)
+    pgit(src, "clean", "-q", "-fdx", check=True)
+    if not built:
+        die(f"app {name} did not build for {arch}")
+    return out
+
+
 def build_component(host, feature, name, spec, arch):
     """The component's binary for arch, built once for each pin, patch series and toolchain."""
+    if spec["build"] in APP_BUILDS:
+        return app_component(host, feature, name, spec, arch)
     tree = host.tree
     pin = lock_file().get("components", {}).get(name)
     if not pin or "commit" not in pin:
@@ -1140,7 +1222,7 @@ def build_component(host, feature, name, spec, arch):
     elif spec["build"] == "cargo":
         toolchain = tree_rust(tree)
     else:
-        die(f"component {name}: build is go or cargo")
+        die(f"component {name}: build is go, cargo, gradle or flutter")
     digest = hashlib.sha256()
     toolchain_version = subprocess.run(
         [str(toolchain / "go"), "version"] if spec["build"] == "go"
@@ -1209,7 +1291,7 @@ def component_files(host):
     """vendor/extra/features/<feature>/prebuilt/<arch>/<module> of every component."""
     files = {}
     for feature, name, spec in feature_components():
-        for arch in device_arches():
+        for arch in component_arches(spec):
             path = build_component(host, feature, name, spec, arch)
             files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
     return files
@@ -1247,7 +1329,7 @@ def prebuilt_files(host):
 
 
 def cmd_fetch(_args):
-    """Downloads the pinned prebuilts the host does not have yet."""
+    """Downloads the pinned prebuilts the host does not have yet and builds the apps."""
     host = Host()
     for name, pins in lock_file().get("prebuilts", {}).items():
         for arch, pin in pins.items():
@@ -1267,6 +1349,11 @@ def cmd_fetch(_args):
                 die(f"{pin['url']} does not match its sha256 in lock.toml")
             part.rename(path)
     log("every pinned prebuilt is fetched")
+    for feature, name, spec in feature_components():
+        if spec["build"] in APP_BUILDS:
+            for arch in component_arches(spec):
+                app_component(host, feature, name, spec, arch, build=True)
+    log("every app is built")
     return 0
 
 
@@ -2131,7 +2218,7 @@ def main():
     status.add_argument("--list", action="store_true", help="list the items without a test")
     sub.add_parser("pin", help="write upstream.xml from the tree's commits")
     sub.add_parser("sync", help="sync the tree to upstream.xml and apply the patches")
-    sub.add_parser("fetch", help="download the pinned prebuilts the host does not have")
+    sub.add_parser("fetch", help="download the pinned prebuilts the host lacks and build the apps")
     sub.add_parser("patch", help="apply the patches of system/order")
     sub.add_parser("unpatch", help="revert the patches of system/order")
     save = sub.add_parser("save", help="save the tree's changes into an entry's patches")

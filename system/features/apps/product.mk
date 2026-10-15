@@ -30,7 +30,3 @@ else
 PRODUCT_PACKAGES += \
     GmsCore
 endif
-
-# LineageOS' camera and audio effects are not in the image (APP-4).
-PRODUCT_NO_CAMERA := true
-TARGET_EXCLUDES_AUDIOFX := true
