@@ -51,7 +51,7 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Lujarch Vault">
+        android:theme="@style/Theme.LujarchVault">
 
         <!-- The vault's home: Settings > Passwords, passkeys & accounts >
              Preferred service: Lujarch Vault (the autofill service's settings

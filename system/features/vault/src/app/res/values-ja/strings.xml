@@ -301,4 +301,40 @@
     <plurals name="settings_excluded_count">
         <item quantity="other">アプリとサイト %d 件</item>
     </plurals>
+    <string name="codes_add">アカウントを追加</string>
+    <string name="codes_add_scan">QR コードをスキャン</string>
+    <string name="codes_add_image">画像内の QR コードをスキャン</string>
+    <string name="codes_add_manual">キーを入力</string>
+    <string name="codes_add_import">Aegis ファイルからインポート</string>
+    <string name="codes_import_message">選択したファイルのパスワードです。この保管庫にまだないアカウントが追加されます。この保管庫のパスワードは変わりません。</string>
+    <string name="error_import_accounts">アカウントをインポートできませんでした</string>
+    <plurals name="codes_imported">
+        <item quantity="other">%1$d 件のアカウントを追加しました（%2$d 件は登録済み）</item>
+    </plurals>
+    <string name="codes_add_needs_aegis">アカウントは Aegis 保管庫に保存されます。先に [ソース] で設定してオンにしてください。</string>
+    <string name="codes_add_confirm">追加</string>
+    <string name="codes_added">アカウントを追加しました</string>
+    <string name="codes_edit">アカウントを編集</string>
+    <string name="codes_saved">アカウントを保存しました</string>
+    <string name="codes_favorite">お気に入りに追加</string>
+    <string name="codes_unfavorite">お気に入りから削除</string>
+    <string name="codes_next">次のコード</string>
+    <string name="codes_delete">削除</string>
+    <string name="codes_delete_title">このアカウントを削除しますか？</string>
+    <string name="codes_delete_message">「%1$s」を Aegis 保管庫から削除します。削除するとコードを取得できなくなります。先に 2 段階認証をオフにするか、別のログイン方法を確保してください。</string>
+    <string name="codes_deleted">アカウントを削除しました</string>
+    <string name="codes_field_issuer">サービス</string>
+    <string name="codes_field_account">アカウント</string>
+    <string name="codes_field_secret">キー（Base32）または otpauth:// リンク</string>
+    <string name="codes_field_type">種類</string>
+    <string name="codes_field_algorithm">アルゴリズム</string>
+    <string name="codes_field_digits">桁数</string>
+    <string name="codes_field_period">周期（秒）</string>
+    <string name="codes_field_counter">カウンタ</string>
+    <string name="codes_no_qr">画像内に QR コードが見つかりません</string>
+    <string name="scan_hint">カメラを 2FA の QR コードに向けてください</string>
+    <string name="scan_no_camera">カメラを開けません</string>
+    <string name="scan_no_permission">QR コードのスキャンにはカメラへのアクセス権限が必要です</string>
+    <string name="error_change_codes">2FA アカウントを変更できませんでした</string>
+    <string name="error_read_image">画像を読み込めませんでした</string>
 </resources>

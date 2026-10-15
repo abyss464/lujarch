@@ -4,7 +4,7 @@
         SettingsLib sub-page theme: DeviceDefault (day/night, dynamic colors),
         the same look as Lujarch Settings and Settings.
     -->
-    <style name="Theme.Lujarch Vault" parent="Theme.SubSettingsBase" />
+    <style name="Theme.LujarchVault" parent="Theme.SubSettingsBase" />
 
     <!-- The label above a field of the 2FA account dialog. -->
     <style name="CodeFieldLabel">
