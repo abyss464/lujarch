@@ -7,3 +7,4 @@ features/root
 features/battery
 features/cpu
 features/statusbar
+features/appvolume
