@@ -930,10 +930,15 @@ def prepare_tree(host):
 STOCK_UNPACKED = ".lujarch-unpacked"
 
 
+def stock_package(host, pin):
+    name = Path(pin["urls"][0].split("?", 1)[0]).name
+    return host.path_of("paths", "stock") / pin["release"] / name
+
+
 def stock_dump_dir(host, pin):
     """<stock>/<release>/<package name>/: the package's partitions, unpacked next to it."""
-    name = Path(pin["urls"][0].split("?", 1)[0]).name
-    return host.path_of("paths", "stock") / pin["release"] / Path(name).stem
+    package = stock_package(host, pin)
+    return package.parent / package.name.removesuffix(".zip")
 
 
 def sha256_file(path):
@@ -952,7 +957,7 @@ def stock_dump(host, device):
     dump = stock_dump_dir(host, pin)
     if (dump / STOCK_UNPACKED).is_file():
         return pin, dump
-    package = dump.with_suffix(".zip")
+    package = stock_package(host, pin)
     package.parent.mkdir(parents=True, exist_ok=True)
     if not package.is_file() or package.with_name(package.name + ".aria2").exists():
         log(f"downloading {pin['release']} into {package.parent}")
