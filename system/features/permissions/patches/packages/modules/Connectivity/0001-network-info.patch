@@ -635,7 +635,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..da5c52917ed7159d7799d25639ecaf34
              case CALLBACK_BLK_CHANGED: {
 diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..49d9e01b4a21d4e03971e4b70f1d2ec344110c68
+index 0000000000000000000000000000000000000000..5ffa317852e938783e65525731ce0f3400b800fe
 --- /dev/null
 +++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 @@ -0,0 +1,173 @@
@@ -674,7 +674,7 @@ index 0000000000000000000000000000000000000000..49d9e01b4a21d4e03971e4b70f1d2ec3
 +/**
 + * The network info permission ({@link #OP})
 + * for the reads ConnectivityService and NetworkStatsService answer,
-+ * and the phone info permission ({@link #PHONE}) for the mobile network type and subscription
++ * and basic phone info ({@link #PHONE}) for the mobile network type and subscription
 + * id ConnectivityService hands out.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a

@@ -1,5 +1,5 @@
 diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
-index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf8289745d4e4 100644
+index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb84694aab59c 100644
 --- a/src/com/android/phone/PhoneInterfaceManager.java
 +++ b/src/com/android/phone/PhoneInterfaceManager.java
 @@ -73,6 +73,7 @@ import android.os.LocaleList;
@@ -183,7 +183,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
  
 +    /**
 +     * The ITelephony method another process is calling on this thread
-+     * ({@link #onTransact}); null on the phone process's own calls. The phone info permission
++     * ({@link #onTransact}); null on the phone process's own calls. Basic phone info
 +     * answers an app's own read only: calls the phone process makes to itself (through
 +     * TelephonyManager, or while it serves another interface to an app, with that app's identity
 +     * still on the thread) keep their stock answers.
@@ -232,7 +232,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
 +
 +    /**
 +     * Whether a read the caller reached through a normal permission
-+     * (READ_BASIC_PHONE_STATE, ACCESS_NETWORK_STATE) is refused by the phone info permission
++     * (READ_BASIC_PHONE_STATE, ACCESS_NETWORK_STATE) is refused by basic phone info
 +     * ({@code mode}), decided as if that permission were missing: {@code stockEnforce}, the stock
 +     * check that remains (READ_PHONE_STATE, MODIFY_PHONE_STATE, READ_PRIVILEGED_PHONE_STATE,
 +     * carrier privileges), still lets the read through. When it throws, errored rethrows its
@@ -256,8 +256,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
 +
 +    /**
 +     * The READ_PHONE_STATE check of a read READ_BASIC_PHONE_STATE did not
-+     * pass ({@code mode} MODE_ALLOWED: the stock path, the permission is missing) or the phone
-+     * info permission refused ({@code mode} ignored or errored), as {@link #lujarchRefused}: its
++     * pass ({@code mode} MODE_ALLOWED: the stock path, the permission is missing) or basic phone
++     * info refused ({@code mode} ignored or errored), as {@link #lujarchRefused}: its
 +     * SecurityException propagates on the stock path and when errored, and reads false when
 +     * ignored.
 +     */
@@ -290,8 +290,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
          enforceTelephonyFeatureWithException(callingPackage,
                  PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getNetworkTypeForSubscriber");
  
-+        // Below target SDK 29 this read needs no permission; it is the phone
-+        // info permission's (refused: unknown, as it never throws there).
++        // Below target SDK 29 this read needs no permission; it is basic phone
++        // info (refused: unknown, as it never throws there).
 +        if (targetSdk < android.os.Build.VERSION_CODES.Q
 +                && lujarchPhoneInfo(callingPackage, callingFeatureId,
 +                        "getNetworkTypeForSubscriber") != AppOpsManager.MODE_ALLOWED) {
@@ -375,8 +375,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
                      mApp, subId, functionName);
  
          }
-+        // The mobile data switch, reached through a normal permission, is the
-+        // Phone info permission's; refused, as if that permission were missing (lujarchRefused).
++        // The mobile data switch, reached through a normal permission, is basic phone info;
++        // refused, as if that permission were missing (lujarchRefused).
 +        if (normalPermission && lujarchRefused(
 +                lujarchPhoneInfo(null, null, "getDataEnabled", "isUserDataEnabled"),
 +                () -> TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(
@@ -551,8 +551,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf828
                          mApp, "getUiccCardsInfo")) {
                      throw new SecurityException("Caller does not have permission.");
                  } else {
-+                    // The sanitized copy READ_BASIC_PHONE_STATE reaches is the
-+                    // Phone info permission's; refused, as if that permission were missing: errored
++                    // The sanitized copy READ_BASIC_PHONE_STATE reaches is basic phone info;
++                    // refused, as if that permission were missing: errored
 +                    // throws as above, ignored answers no cards.
 +                    final int lujarch =
 +                            lujarchPhoneInfo(callingPackage, null, "getUiccCardsInfo");

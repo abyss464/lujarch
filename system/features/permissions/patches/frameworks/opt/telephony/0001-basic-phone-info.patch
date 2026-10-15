@@ -1,5 +1,5 @@
 diff --git a/src/java/com/android/internal/telephony/SmsController.java b/src/java/com/android/internal/telephony/SmsController.java
-index db70ce534115d43f0bdbeb1b21425580e32f6015..1a48ccd7340296d601e0548787296a70d94de2ed 100644
+index db70ce534115d43f0bdbeb1b21425580e32f6015..2e54803dd20dbee6180a8a1ceef2a12c9898a365 100644
 --- a/src/java/com/android/internal/telephony/SmsController.java
 +++ b/src/java/com/android/internal/telephony/SmsController.java
 @@ -37,6 +37,8 @@ import android.os.BaseBundle;
@@ -66,8 +66,8 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..1a48ccd7340296d601e0548787296a70
  
          enforceTelephonyFeatureWithException(getCallingPackage(), "isSmsSimPickActivityNeeded");
  
-+        // The answer tells whether more than one SIM is active, the phone
-+        // info permission's; refused, no SIM pick (SmsManager then sends on the default phone).
++        // The answer tells whether more than one SIM is active, basic phone
++        // info; refused, no SIM pick (SmsManager then sends on the default phone).
 +        if (lujarchRefusesPhoneInfo("isSmsSimPickActivityNeeded")) {
 +            return false;
 +        }
@@ -79,8 +79,8 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..1a48ccd7340296d601e0548787296a70
      @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
      @Override
      public String getImsSmsFormatForSubscriber(int subId) {
-+        // The IMS SMS format (3GPP or 3GPP2) names the network's family, the
-+        // Phone info permission's; refused, unknown.
++        // The IMS SMS format (3GPP or 3GPP2) names the network's family, basic phone info;
++        // refused, unknown.
 +        if (lujarchRefusesPhoneInfo("getImsSmsFormatForSubscriber")) {
 +            return SmsConstants.FORMAT_UNKNOWN;
 +        }
@@ -124,7 +124,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..1a48ccd7340296d601e0548787296a70
          try {
              final CarrierConfigManager configManager =
 diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
-index 9eb5daf837630362fb05718e832c05da0a7c2c9b..a0da63647c01e4524663fc15c36df9f03f158cdf 100644
+index 9eb5daf837630362fb05718e832c05da0a7c2c9b..7ac135fc0a6077a7e4e8379ec6d2b15778c2e566 100644
 --- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 +++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 @@ -47,6 +47,7 @@ import android.os.CountDownTimer;
@@ -198,7 +198,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..a0da63647c01e4524663fc15c36df9f0
 +
 +    /**
 +     * Apps keep the subscription ids this service answers in
-+     * SubscriptionManager's IPC caches; a change of an app's phone info permission or Phone
++     * SubscriptionManager's IPC caches; a change of an app's basic phone info or Phone
 +     * permission drops every process's cache, so the app's next read takes the new answer
 +     * instead of a refusal cached before the user's choice.
 +     */

@@ -1,5 +1,5 @@
 diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
-index b7d9f653023e91bc8c9145f0f6bf3014f921503c..793791c6a7bc9d7f3cfcdae5a0d91d37d7fca4aa 100644
+index b7d9f653023e91bc8c9145f0f6bf3014f921503c..d5f3fb19f76086adaec8a16538f3a9cd07481c59 100644
 --- a/core/java/android/app/ActivityThread.java
 +++ b/core/java/android/app/ActivityThread.java
 @@ -247,6 +247,7 @@ import com.android.internal.R;
@@ -16,8 +16,8 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..793791c6a7bc9d7f3cfcdae5a0d91d37
          // in many places.
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(newConfig,
 -                contextThemeWrapperOverrideConfig);
-+        // Without mcc and mnc when the process's phone
-+        // info permission refuses (a copy; mCurrentConfig and the created configuration reported
++        // Without mcc and mnc when the process's basic phone
++        // info is refused (a copy; mCurrentConfig and the created configuration reported
 +        // to the window manager keep the real values).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
@@ -29,7 +29,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..793791c6a7bc9d7f3cfcdae5a0d91d37
      private void handleWindowingModeChangeIfNeeded(ActivityClientRecord r,
              Configuration newConfiguration) {
 +        // The activity's callbacks get no mcc and mnc
-+        // when the process's phone info permission refuses.
++        // when the process's basic phone info is refused.
 +        newConfiguration = Configuration.lujarchForApp(newConfiguration);
          final Activity activity = r.activity;
          final int newWindowingMode = newConfiguration.windowConfiguration.getWindowingMode();
@@ -94,7 +94,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..793791c6a7bc9d7f3cfcdae5a0d91d37
              /*
               * Update the system configuration since its preloaded and might not
 diff --git a/core/java/android/app/ConfigurationController.java b/core/java/android/app/ConfigurationController.java
-index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..d5b1e5b9faaff5ac9e672d857b8c0eaad9d44da3 100644
+index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..4912cb474dd277ff0f23220a4aa4a10f74e2e59b 100644
 --- a/core/java/android/app/ConfigurationController.java
 +++ b/core/java/android/app/ConfigurationController.java
 @@ -256,8 +256,10 @@ class ConfigurationController {
@@ -103,15 +103,15 @@ index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..d5b1e5b9faaff5ac9e672d857b8c0eaa
          // in many places.
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(
 -                newConfig, contextThemeWrapperOverrideConfig);
-+        // Without mcc and mnc when the process's phone
-+        // info permission refuses (a copy; this controller keeps the real configuration).
++        // Without mcc and mnc when the process's basic phone
++        // info is refused (a copy; this controller keeps the real configuration).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
          cb.onConfigurationChanged(configToReport);
      }
  
 diff --git a/core/java/android/content/res/Configuration.java b/core/java/android/content/res/Configuration.java
-index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..483473df89320dfa9d9d58c39941b9624851f4f1 100644
+index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..8a4e0a499397da65f3cc4f5d7e64055aef631a4b 100644
 --- a/core/java/android/content/res/Configuration.java
 +++ b/core/java/android/content/res/Configuration.java
 @@ -1043,6 +1043,57 @@ public final class Configuration implements Parcelable, Comparable<Configuration
@@ -119,9 +119,9 @@ index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..483473df89320dfa9d9d58c39941b962
      public static final int NATIVE_CONFIG_GRAMMATICAL_GENDER = 0x20000;
  
 +    /**
-+     * The phone info permission refuses this app
-+     * process (decided once at bind), so the configurations its app reads carry no mcc and
-+     * mnc (0, undefined) and its resources pick no carrier-specific values.
++     * Whether this app process is refused basic phone info (decided once at bind), so the
++     * configurations its app reads carry no mcc and mnc (0, undefined) and its resources pick no
++     * carrier-specific values.
 +     */
 +    private static volatile boolean sLujarchHideOperator;
 +
@@ -173,15 +173,15 @@ index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..483473df89320dfa9d9d58c39941b962
       * <p>Construct an invalid Configuration. This state is only suitable for constructing a
       * Configuration delta that will be applied to some valid Configuration object. In order to
 diff --git a/core/java/android/content/res/ResourcesImpl.java b/core/java/android/content/res/ResourcesImpl.java
-index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..62447f47c78c02e9a535cc962049c3636d41366b 100644
+index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..e7b94842516909d40d0befdf40b0c3d5e141a542 100644
 --- a/core/java/android/content/res/ResourcesImpl.java
 +++ b/core/java/android/content/res/ResourcesImpl.java
 @@ -681,6 +681,12 @@ public class ResourcesImpl {
          }
  
          mTmpConfig.setTo(config);
-+        // No mcc and mnc for an app process whose phone
-+        // info permission refuses, so no carrier-specific resources and none in the
++        // No mcc and mnc for an app process whose basic phone
++        // info is refused, so no carrier-specific resources and none in the
 +        // configuration the app reads; a stale value from before the decision is dropped.
 +        Configuration.lujarchClearOperator(mTmpConfig);
 +        final @Config int lujarchChanges = Configuration.lujarchClearOperator(mConfiguration)
@@ -278,7 +278,7 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34
      private static String getString(String property) {
          return SystemProperties.get(property, UNKNOWN);
 diff --git a/core/java/android/window/WindowTokenClient.java b/core/java/android/window/WindowTokenClient.java
-index e8c59a5d7286db6c4947d687169154771dfeb5d0..55e64ef191f9f3482c1137e2445c6cd5226b833a 100644
+index e8c59a5d7286db6c4947d687169154771dfeb5d0..d6f7600a4b2d81c8f171fdcee01767f02af7131d 100644
 --- a/core/java/android/window/WindowTokenClient.java
 +++ b/core/java/android/window/WindowTokenClient.java
 @@ -209,7 +209,9 @@ public class WindowTokenClient extends Binder {
@@ -287,7 +287,7 @@ index e8c59a5d7286db6c4947d687169154771dfeb5d0..55e64ef191f9f3482c1137e2445c6cd5
                  if (dispatcher.shouldReportPrivateChanges() || publicDiff != 0) {
 -                    dispatcher.dispatchConfigurationChanged(newConfig);
 +                    // Without mcc and mnc when the
-+                    // process's phone info permission refuses.
++                    // process's basic phone info is refused.
 +                    dispatcher.dispatchConfigurationChanged(Configuration.lujarchForApp(newConfig));
                  }
              }
@@ -571,7 +571,7 @@ index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792
              return mHealthServiceWrapper.getProperty(id, prop);
          }
 diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
-index ee20dde909221ec2968b308d829e46bc296400af..f09fa2ecd7aa13a921fa776febceb3bd4967a785 100644
+index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482b7db2c49 100644
 --- a/services/core/java/com/android/server/TelephonyRegistry.java
 +++ b/services/core/java/com/android/server/TelephonyRegistry.java
 @@ -108,6 +108,7 @@ import com.android.internal.telephony.IOnSubscriptionsChangedListener;
@@ -608,7 +608,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..f09fa2ecd7aa13a921fa776febceb3bd
 +            TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED);
 +
 +    /**
-+     * Whether the phone info permission lets this listener receive events of
++     * Whether basic phone info lets this listener receive events of
 +     * {@link #LUJARCH_PHONE_INFO_EVENTS}. A refused listener stays registered and gets none of
 +     * them (ignored and errored alike: a callback cannot throw); it gets every other event as
 +     * stock. Decided at registration and at every delivery, so an answer applies from the next
@@ -917,7 +917,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..f09fa2ecd7aa13a921fa776febceb3bd
              log("checkPossibleMissNotify: events = null.");
              return;
          }
-+        // The permission's events follow the listener's phone info permission.
++        // The permission's events follow the listener's basic phone info.
 +        final boolean lujarchPhoneInfo = lujarchPhoneInfo(r, events);
  
 -        if ((events.contains(TelephonyCallback.EVENT_SERVICE_STATE_CHANGED))) {
