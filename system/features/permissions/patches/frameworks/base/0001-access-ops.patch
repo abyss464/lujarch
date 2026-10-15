@@ -182,39 +182,46 @@ index dfdd8b063604e2d31e1bcafc7c2d561aa080a25c..b3c39ff167b2348316c3ada985924bc3
      }
  
 diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
-index 721e530887225553f7f5465c02eef8a511df5103..7658dabb2bb7a89bf843fe135fa5db6267d0c2e2 100644
+index 721e530887225553f7f5465c02eef8a511df5103..7e6c8923ac809b1aa87043cc564d504702669f26 100644
 --- a/core/res/AndroidManifest.xml
 +++ b/core/res/AndroidManifest.xml
-@@ -1886,6 +1886,38 @@
+@@ -1886,6 +1886,45 @@
          android:description="@string/permgroupdesc_nearby_devices"
          android:priority="750" />
  
-+    <!-- Lujarch's permissions: accesses every app has, each chosen per app. -->
++    <!-- Lujarch's permissions: accesses every app has, each chosen per app, each group kept
++         out of the API apps build against. -->
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_SENSORS"
 +        android:icon="@drawable/perm_group_lujarch_sensors"
 +        android:label="@string/lujarch_permgrouplab_sensors"
 +        android:description="@string/lujarch_permgroupdesc_sensors"
 +        android:priority="705" />
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_CLIPBOARD"
 +        android:icon="@drawable/perm_group_lujarch_clipboard"
 +        android:label="@string/lujarch_permgrouplab_clipboard"
 +        android:description="@string/lujarch_permgroupdesc_clipboard"
 +        android:priority="704" />
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_INSTALLED_APPS"
 +        android:icon="@drawable/perm_group_lujarch_installed_apps"
 +        android:label="@string/lujarch_permgrouplab_installed_apps"
 +        android:description="@string/lujarch_permgroupdesc_installed_apps"
 +        android:priority="703" />
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_DEVICE_IDS"
 +        android:icon="@drawable/perm_group_lujarch_device_ids"
 +        android:label="@string/lujarch_permgrouplab_device_ids"
 +        android:description="@string/lujarch_permgroupdesc_device_ids"
 +        android:priority="702" />
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_DEVICE_INFO"
 +        android:icon="@drawable/perm_group_lujarch_device_info"
 +        android:label="@string/lujarch_permgrouplab_device_info"
 +        android:description="@string/lujarch_permgroupdesc_device_info"
 +        android:priority="701" />
++    <!-- @hide -->
 +    <permission-group android:name="android.permission-group.LUJARCH_NETWORK_INFO"
 +        android:icon="@drawable/perm_group_lujarch_network_info"
 +        android:label="@string/lujarch_permgrouplab_network_info"

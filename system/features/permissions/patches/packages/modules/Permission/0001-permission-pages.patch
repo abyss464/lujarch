@@ -111,10 +111,10 @@ index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175
 +</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..7aaba27782efd73efab3bc676380b2549ff33137
+index 0000000000000000000000000000000000000000..1c1b0c311ec7ba1a597f420c0fd0c8c9f1c49a0d
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,59 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -151,13 +151,35 @@ index 0000000000000000000000000000000000000000..7aaba27782efd73efab3bc676380b254
 +    <string name="lujarch_history_shorter_title">"古い履歴を削除しますか？"</string>
 +    <string name="lujarch_history_shorter_message">"{count,plural, =1{1 日より前の記録は削除されます。}other{# 日より前の記録は削除されます。}}"</string>
 +    <string name="lujarch_history_shorter_delete">"削除"</string>
++    <string name="lujarch_other_access">"その他のアクセス"</string>
++    <string name="lujarch_other_apps">"{count,plural, =0{アプリなし}other{# 個のアプリ}}"</string>
++    <string name="lujarch_footer_other">"このアクセスを使用したアプリを表示します。許可しない場合、Android はアプリのこの要求を、アプリに知らせずに無視します。"</string>
++    <string name="lujarch_access_vibrate">"バイブレーションの制御"</string>
++    <string name="lujarch_access_wake_lock">"デバイスのスリープを無効にする"</string>
++    <string name="lujarch_access_play_audio">"音声の再生"</string>
++    <string name="lujarch_access_toast_window">"ポップアップ メッセージの表示"</string>
++    <string name="lujarch_access_write_clipboard">"クリップボードの変更"</string>
++    <string name="lujarch_access_mute_microphone">"マイクをミュート/ミュート解除"</string>
++    <string name="lujarch_access_start_foreground">"フォアグラウンド サービスの実行"</string>
++    <string name="lujarch_access_use_biometric">"生体認証ハードウェアの使用"</string>
++    <string name="lujarch_access_use_fingerprint">"指紋認証ハードウェアの使用"</string>
++    <string name="lujarch_access_audio_media_volume">"メディアの音量"</string>
++    <string name="lujarch_access_audio_ring_volume">"着信音の音量"</string>
++    <string name="lujarch_access_audio_notification_volume">"通知の音量"</string>
++    <string name="lujarch_access_audio_alarm_volume">"アラームの音量"</string>
++    <string name="lujarch_access_audio_voice_volume">"音声の音量"</string>
++    <string name="lujarch_outcome_empty">"空のデータを返しました"</string>
++    <string name="lujarch_outcome_asked">"確認しました"</string>
++    <string name="lujarch_menu_show_days">"{count,plural, =1{過去 1 日間を表示}other{過去 # 日間を表示}}"</string>
++    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{過去 1 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}other{過去 # 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}}"</string>
++    <string name="lujarch_label_past_days">"{count,plural, =1{過去\n1 日間}other{過去\n# 日間}}"</string>
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..a67d4fc75429fd248c230a3bc62c92f789eb35ff
+index 0000000000000000000000000000000000000000..43e1704b4f04ff35aba00e79a8beb44ada807e87
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,59 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -194,13 +216,35 @@ index 0000000000000000000000000000000000000000..a67d4fc75429fd248c230a3bc62c92f7
 +    <string name="lujarch_history_shorter_title">"要删除较早的记录吗？"</string>
 +    <string name="lujarch_history_shorter_message">"{count,plural, =1{超过 1 天的记录将被删除。}other{超过 # 天的记录将被删除。}}"</string>
 +    <string name="lujarch_history_shorter_delete">"删除"</string>
++    <string name="lujarch_other_access">"其他访问"</string>
++    <string name="lujarch_other_apps">"{count,plural, =0{没有应用}other{# 个应用}}"</string>
++    <string name="lujarch_footer_other">"列出使用过此访问的应用。选择“不允许”时，Android 会忽略该应用的这类请求，且不告知该应用。"</string>
++    <string name="lujarch_access_vibrate">"控制振动"</string>
++    <string name="lujarch_access_wake_lock">"防止手机休眠"</string>
++    <string name="lujarch_access_play_audio">"播放音频"</string>
++    <string name="lujarch_access_toast_window">"显示弹出消息"</string>
++    <string name="lujarch_access_write_clipboard">"修改剪贴板内容"</string>
++    <string name="lujarch_access_mute_microphone">"将麦克风静音或取消静音"</string>
++    <string name="lujarch_access_start_foreground">"运行前台服务"</string>
++    <string name="lujarch_access_use_biometric">"使用生物特征硬件"</string>
++    <string name="lujarch_access_use_fingerprint">"使用指纹硬件"</string>
++    <string name="lujarch_access_audio_media_volume">"媒体音量"</string>
++    <string name="lujarch_access_audio_ring_volume">"铃声音量"</string>
++    <string name="lujarch_access_audio_notification_volume">"通知音量"</string>
++    <string name="lujarch_access_audio_alarm_volume">"闹钟音量"</string>
++    <string name="lujarch_access_audio_voice_volume">"语音音量"</string>
++    <string name="lujarch_outcome_empty">"返回了空数据"</string>
++    <string name="lujarch_outcome_asked">"已询问"</string>
++    <string name="lujarch_menu_show_days">"{count,plural, =1{显示过去 1 天内的访问记录}other{显示过去 # 天内的访问记录}}"</string>
++    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{过去 1 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}other{过去 # 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}}"</string>
++    <string name="lujarch_label_past_days">"{count,plural, =1{过去\n1 天}other{过去\n# 天}}"</string>
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..4a4f1b592ab829b2f46800588251d3f54506f774
+index 0000000000000000000000000000000000000000..e877b0062687aaba5d57b1355d8b215fbda81056
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,78 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -243,20 +287,120 @@ index 0000000000000000000000000000000000000000..4a4f1b592ab829b2f46800588251d3f5
 +        other   {Records older than # days are deleted.}
 +    }</string>
 +    <string name="lujarch_history_shorter_delete">Delete</string>
++    <string name="lujarch_other_access">Other access</string>
++    <string name="lujarch_other_apps">{count, plural,
++        =0      {No apps}
++        =1      {1 app}
++        other   {# apps}
++    }</string>
++    <string name="lujarch_footer_other">Lists the apps that have used this access. When it is not allowed, Android ignores the app\'s requests for it without telling the app.</string>
++    <string name="lujarch_access_vibrate">Control vibration</string>
++    <string name="lujarch_access_wake_lock">Prevent phone from sleeping</string>
++    <string name="lujarch_access_play_audio">Play audio</string>
++    <string name="lujarch_access_toast_window">Show pop-up messages</string>
++    <string name="lujarch_access_write_clipboard">Modify clipboard</string>
++    <string name="lujarch_access_mute_microphone">Mute/unmute microphone</string>
++    <string name="lujarch_access_start_foreground">Run foreground service</string>
++    <string name="lujarch_access_use_biometric">Use biometric hardware</string>
++    <string name="lujarch_access_use_fingerprint">Use fingerprint hardware</string>
++    <string name="lujarch_access_audio_media_volume">Media volume</string>
++    <string name="lujarch_access_audio_ring_volume">Ring volume</string>
++    <string name="lujarch_access_audio_notification_volume">Notification volume</string>
++    <string name="lujarch_access_audio_alarm_volume">Alarm volume</string>
++    <string name="lujarch_access_audio_voice_volume">Voice volume</string>
++    <string name="lujarch_outcome_empty">Returned empty data</string>
++    <string name="lujarch_outcome_asked">Asked</string>
++    <string name="lujarch_menu_show_days">{count, plural,
++        =1      {Show 1 day}
++        other   {Show # days}
++    }</string>
++    <string name="lujarch_usage_subtitle_days">{count, plural,
++        =1      {Timeline of when apps used your <xliff:g id="permgroup" example="Location">%1$s</xliff:g> in the past day}
++        other   {Timeline of when apps used your <xliff:g id="permgroup" example="Location">%1$s</xliff:g> in the past # days}
++    }</string>
++    <string name="lujarch_label_past_days">{count, plural,
++        =1      {Past\n1 day}
++        other   {Past\n# days}
++    }</string>
 +</resources>
+diff --git a/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt b/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt
+index a24aff1f9125ecba6c66b859e89c45cc38661509..d691cd7b87ebce668e13885366eabcb224db86fc 100644
+--- a/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt
++++ b/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt
+@@ -16,6 +16,8 @@
+ 
+ package com.android.permissioncontroller.appops.data.model.v31
+ 
++import com.android.permissioncontroller.lujarch.LujarchOutcome
++
+ /**
+  * Data class representing historical package ops read from DiscreteRegistry, These ops are for one
+  * permission group, as the permission timeline page show one group at a time.
+@@ -40,5 +42,7 @@ data class DiscretePackageOpsModel(
+         val attributionTag: String? = null,
+         val proxyPackageName: String? = null,
+         val proxyUserId: Int? = null,
++        /** The outcome of a refused use; null for an allowed one. */
++        val outcome: LujarchOutcome? = null,
+     )
+ }
 diff --git a/PermissionController/src/com/android/permissioncontroller/appops/data/repository/v31/AppOpRepository.kt b/PermissionController/src/com/android/permissioncontroller/appops/data/repository/v31/AppOpRepository.kt
-index c990f9d876fcdcd7d2f60dba21a9029d9513560d..cd9a89d12933ed4faf0dd51c10403559351d4576 100644
+index c990f9d876fcdcd7d2f60dba21a9029d9513560d..663de569b03f9ea2677b272eca0e3b03851ab73d 100644
 --- a/PermissionController/src/com/android/permissioncontroller/appops/data/repository/v31/AppOpRepository.kt
 +++ b/PermissionController/src/com/android/permissioncontroller/appops/data/repository/v31/AppOpRepository.kt
-@@ -39,6 +39,7 @@ import com.android.permissioncontroller.data.repository.v31.PackageChangeListene
+@@ -37,6 +37,9 @@ import com.android.permissioncontroller.appops.data.model.v31.PackageAppOpUsageM
+ import com.android.permissioncontroller.data.repository.v31.AppOpChangeListener
+ import com.android.permissioncontroller.data.repository.v31.PackageChangeListener
  import com.android.permissioncontroller.data.repository.v31.PermissionChangeListener
++import com.android.permissioncontroller.lujarch.LujarchHistory
++import com.android.permissioncontroller.lujarch.LujarchOutcome
++import com.android.permissioncontroller.lujarch.LujarchPermissions
  import com.android.permissioncontroller.permission.compat.AppOpsManagerCompat
  import com.android.permissioncontroller.permission.data.repository.v31.PermissionRepository
-+import com.android.permissioncontroller.lujarch.LujarchPermissions
  import com.android.permissioncontroller.permission.utils.PermissionMapping
- import java.util.concurrent.TimeUnit
- import kotlin.concurrent.Volatile
-@@ -299,6 +300,8 @@ class AppOpRepositoryImpl(
+@@ -135,6 +138,7 @@ class AppOpRepositoryImpl(
+     private val appOpsManager =
+         checkNotNull(application.getSystemService(AppOpsManager::class.java))
+     private val packageManager = application.packageManager
++    private val app = application
+ 
+     private val appOpNames = getPrivacyDashboardAppOpNames()
+ 
+@@ -170,7 +174,8 @@ class AppOpRepositoryImpl(
+ 
+     private suspend fun getDiscreteOps(opNames: List<String>): List<DiscretePackageOpsModel> {
+         val duration =
+-            if (DeviceUtils.isHandheld()) TimeUnit.DAYS.toMillis(7) else TimeUnit.DAYS.toMillis(1)
++            if (DeviceUtils.isHandheld()) TimeUnit.DAYS.toMillis(LujarchHistory.days(app).toLong())
++            else TimeUnit.DAYS.toMillis(1)
+         val currentTime = System.currentTimeMillis()
+         val beginTimeMillis = currentTime - duration
+         val request =
+@@ -202,6 +207,7 @@ class AppOpRepositoryImpl(
+                             val attributedOpEntry: AttributedOpEntry =
+                                 historicalOp.getDiscreteAccessAt(index)
+                             val proxy = attributedOpEntry.getLastProxyInfo(OPS_LAST_ACCESS_FLAGS)
++                            val outcome = LujarchOutcome.of(attributedHistoricalOps.tag)
+                             val opEvent =
+                                 DiscreteOpModel(
+                                     opName = historicalOp.opName,
+@@ -209,12 +215,14 @@ class AppOpRepositoryImpl(
+                                         attributedOpEntry.getLastAccessTime(OPS_LAST_ACCESS_FLAGS),
+                                     durationMillis =
+                                         attributedOpEntry.getLastDuration(OPS_LAST_ACCESS_FLAGS),
+-                                    attributionTag = attributedHistoricalOps.tag,
++                                    attributionTag =
++                                        if (outcome != null) null else attributedHistoricalOps.tag,
+                                     proxyPackageName = proxy?.packageName,
+                                     proxyUserId =
+                                         proxy?.uid?.let {
+                                             UserHandle.getUserHandleForUid(it).identifier
+                                         },
++                                    outcome = outcome,
+                                 )
+                             appOpEvents.add(opEvent)
+                         }
+@@ -299,6 +307,8 @@ class AppOpRepositoryImpl(
              }
          }
  
@@ -267,10 +411,10 @@ index c990f9d876fcdcd7d2f60dba21a9029d9513560d..cd9a89d12933ed4faf0dd51c10403559
          if (SdkLevel.isAtLeastT()) {
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097cada046c9
+index 0000000000000000000000000000000000000000..2025b0a3e787b38c62317f8e3a854cf94615f9fa
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,203 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -398,7 +542,8 @@ index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097c
 +                }
 +            }
 +        )
-+        activity?.title = ctx.getString(R.string.app_permission_title, label)
++        activity?.title =
++            if (permission.other) label else ctx.getString(R.string.app_permission_title, label)
 +    }
 +
 +    override fun onCreateView(
@@ -447,7 +592,7 @@ index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097c
 +                withContext(Dispatchers.IO) {
 +                    try {
 +                        uid = app.createContextAsUser(user, 0).packageManager.getPackageUid(packageName, 0)
-+                        LujarchPermissions.choice(app, permission.op, uid, packageName)
++                        LujarchPermissions.choice(app, permission, uid, packageName)
 +                    } catch (e: Exception) {
 +                        Log.e(LujarchPermissions.TAG, "$packageName not found", e)
 +                        null
@@ -467,7 +612,7 @@ index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097c
 +        val app = requireActivity().application
 +        lifecycleScope.launch {
 +            withContext(Dispatchers.IO) {
-+                LujarchPermissions.set(app, permission.op, uid, packageName, choice)
++                LujarchPermissions.set(app, permission, uid, packageName, choice)
 +            }
 +            reload()
 +        }
@@ -475,10 +620,10 @@ index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097c
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..633a5a2afda50645aee3d6db7517a9ae9f910b49
+index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d57b3e9fa8
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
-@@ -0,0 +1,264 @@
+@@ -0,0 +1,259 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -568,15 +713,10 @@ index 0000000000000000000000000000000000000000..633a5a2afda50645aee3d6db7517a9ae
 +                        }
 +                    State(
 +                        LujarchPermissions.ALL.associate {
-+                            it.group to LujarchPermissions.choice(app, it.op, uid, packageName)
++                            it.group to LujarchPermissions.choice(app, it, uid, packageName)
 +                        },
 +                        LujarchPermissions.emptyGroups(app, uid, packageName, groups),
-+                        LujarchPermissions.choice(
-+                            app,
-+                            LujarchPermissions.PHONE_INFO_OP,
-+                            uid,
-+                            packageName,
-+                        ),
++                        LujarchPermissions.choice(app, LujarchPermissions.PHONE_BASIC, uid, packageName),
 +                    )
 +                }
 +            redraw.run()
@@ -745,10 +885,10 @@ index 0000000000000000000000000000000000000000..633a5a2afda50645aee3d6db7517a9ae
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppsFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppsFragment.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..2baf9a0896122b4e8bc54a45fe052237fa77b765
+index 0000000000000000000000000000000000000000..d9ba7c6be1ae3f0a33f0a32a900e6e6a3f11ec3d
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppsFragment.kt
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,216 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -882,9 +1022,12 @@ index 0000000000000000000000000000000000000000..2baf9a0896122b4e8bc54a45fe052237
 +        lifecycleScope.launch {
 +            val rows =
 +                withContext(Dispatchers.IO) {
-+                    LujarchPermissions.apps(app, user).map {
-+                        it to LujarchPermissions.choice(app, permission.op, it.uid, it.packageName)
-+                    }
++                    val users =
++                        if (permission.other) LujarchOtherAccess.users(app)[permission.op] ?: emptySet()
++                        else null
++                    LujarchPermissions.apps(app, user)
++                        .filter { users == null || it.packageName in users }
++                        .map { it to LujarchPermissions.choice(app, permission, it.uid, it.packageName) }
 +                }
 +            render(rows)
 +        }
@@ -964,7 +1107,7 @@ index 0000000000000000000000000000000000000000..2baf9a0896122b4e8bc54a45fe052237
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..b2fc439b6ca39bb66d215e78f221990d4f821ccf
+index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d1312d85fbe
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
 @@ -0,0 +1,248 @@
@@ -1205,7 +1348,7 @@ index 0000000000000000000000000000000000000000..b2fc439b6ca39bb66d215e78f221990d
 +        val pkg = packageName
 +        val u = uid
 +        GlobalScope.launch(Dispatchers.IO) {
-+            LujarchPermissions.set(app, p.op, u, pkg, choice)
++            LujarchPermissions.set(app, p, u, pkg, choice)
 +            LujarchAsks.answered(app, pkg, op)
 +        }
 +        index++
@@ -1218,10 +1361,10 @@ index 0000000000000000000000000000000000000000..b2fc439b6ca39bb66d215e78f221990d
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchHistory.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchHistory.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..f2539a21b3ef62565b56f7ef85395c138285e9b3
+index 0000000000000000000000000000000000000000..f0e52a6cbac86aab9940a5362d66fb43c8d8f9c3
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchHistory.kt
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,90 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1257,6 +1400,24 @@ index 0000000000000000000000000000000000000000..f2539a21b3ef62565b56f7ef85395c13
 +    fun days(context: Context): Int =
 +        Settings.Global.getInt(context.contentResolver, SETTING, DEFAULT_DAYS).takeIf { it in DAYS }
 +            ?: DEFAULT_DAYS
++
++    /** The dashboard's longer range, the whole history: its menu item. */
++    @JvmStatic
++    fun showAllMenu(context: Context): String =
++        StringUtils.getIcuPluralsString(context, R.string.lujarch_menu_show_days, days(context))
++
++    /** Whether the dashboard has a range longer than its 24 hours. */
++    @JvmStatic fun hasLongerRange(context: Context): Boolean = days(context) > 1
++
++    /** The timeline's subtitle over the whole history. */
++    @JvmStatic
++    fun timelineSubtitle(context: Context, group: CharSequence): String =
++        StringUtils.getIcuPluralsString(context, R.string.lujarch_usage_subtitle_days, days(context), group)
++
++    /** The dashboard graphic's label over the whole history. */
++    @JvmStatic
++    fun pastLabel(context: Context): String =
++        StringUtils.getIcuPluralsString(context, R.string.lujarch_label_past_days, days(context))
 +
 +    @JvmStatic
 +    fun choose(context: Context) {
@@ -1294,9 +1455,159 @@ index 0000000000000000000000000000000000000000..f2539a21b3ef62565b56f7ef85395c13
 +        }
 +    }
 +}
+diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd0443194bda
+--- /dev/null
++++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
+@@ -0,0 +1,94 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.permissioncontroller.lujarch
++
++import android.app.AppOpsManager
++import android.content.Context
++import android.content.Intent
++import android.os.Process
++import android.util.Log
++import androidx.preference.Preference
++import androidx.preference.PreferenceCategory
++import androidx.preference.PreferenceScreen
++import com.android.permissioncontroller.R
++import com.android.permissioncontroller.permission.utils.StringUtils
++import java.text.Collator
++
++/**
++ * The other accesses on Special app access > See more: every access Android records for apps that
++ * has no page of its own, each with the number of apps that used it and opening their list.
++ */
++object LujarchOtherAccess {
++    private const val KEY = "lujarch_other_access"
++
++    /** The packages of [user] that used each access, or have a choice of it, by op. */
++    @JvmStatic
++    fun users(context: Context): Map<String, Set<String>> =
++        try {
++            val ops = LujarchPermissions.OTHER.map { it.op }.toTypedArray()
++            val user = Process.myUserHandle()
++            context
++                .getSystemService(AppOpsManager::class.java)!!
++                .getPackagesForOps(ops)
++                .filter { android.os.UserHandle.getUserHandleForUid(it.uid) == user }
++                .flatMap { p -> p.ops.map { it.opStr to p.packageName } }
++                .groupBy({ it.first }, { it.second })
++                .mapValues { it.value.toSet() }
++        } catch (e: RuntimeException) {
++            Log.e(LujarchPermissions.TAG, "users of the other accesses not read", e)
++            emptyMap()
++        }
++
++    /** Adds the section of the other accesses at the end of the See more page. */
++    @JvmStatic
++    fun addTo(screen: PreferenceScreen, context: Context) {
++        val users = users(context)
++        val category =
++            PreferenceCategory(context).apply {
++                key = KEY
++                setTitle(R.string.lujarch_other_access)
++            }
++        screen.addPreference(category)
++        val collator = Collator.getInstance(context.resources.configuration.locales.get(0))
++        LujarchPermissions.OTHER.map { it to context.getString(it.title) }
++            .sortedWith { l, r -> collator.compare(l.second, r.second) }
++            .forEach { (p, title) ->
++                category.addPreference(
++                    Preference(context).apply {
++                        key = KEY + "_" + p.op
++                        this.title = title
++                        summary =
++                            StringUtils.getIcuPluralsString(
++                                context,
++                                R.string.lujarch_other_apps,
++                                users[p.op]?.size ?: 0,
++                            )
++                        isIconSpaceReserved = true
++                        isPersistent = false
++                        setOnPreferenceClickListener {
++                            context.startActivity(
++                                Intent(Intent.ACTION_MANAGE_PERMISSION_APPS)
++                                    .setPackage(context.packageName)
++                                    .putExtra(Intent.EXTRA_PERMISSION_GROUP_NAME, p.group)
++                            )
++                            true
++                        }
++                    }
++                )
++            }
++    }
++}
+diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOutcome.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOutcome.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c7b8552ba35080db3adbb313bcd9d1b9c49ef84b
+--- /dev/null
++++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOutcome.kt
+@@ -0,0 +1,44 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.permissioncontroller.lujarch
++
++import android.Manifest
++import androidx.annotation.StringRes
++import com.android.permissioncontroller.R
++
++/**
++ * The outcome of a use the system refused. The system records such a use under its outcome in
++ * place of the attribution tag (AppOpsService's LUJARCH_OUTCOME_* hold the same tags); an allowed
++ * use keeps its tag and has no outcome.
++ */
++enum class LujarchOutcome(val tag: String, @StringRes val label: Int) {
++    EMPTY("lujarch:empty", R.string.lujarch_outcome_empty),
++    REFUSED("lujarch:refused", R.string.denied_header),
++    ASKED("lujarch:asked", R.string.lujarch_outcome_asked);
++
++    companion object {
++        @JvmStatic fun of(tag: String?): LujarchOutcome? = entries.firstOrNull { it.tag == tag }
++
++        /**
++         * Whether every app has [group], requested or not: Lujarch's permissions, and Phone, whose
++         * basic phone info every app reads.
++         */
++        @JvmStatic
++        fun everyAppHas(group: String): Boolean =
++            LujarchPermissions.of(group) != null || group == Manifest.permission_group.PHONE
++    }
++}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..0f248786323999ebfc1584692abbcc45f69f24fd
+index 0000000000000000000000000000000000000000..e890ba3ecb25b98e3c8bb80219f3a918e4ca345e
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt
 @@ -0,0 +1,226 @@
@@ -1396,7 +1707,7 @@ index 0000000000000000000000000000000000000000..0f248786323999ebfc1584692abbcc45
 +                                appOps.getPackagesForOps(arrayOf(LujarchPermissions.PHONE_INFO_OP))
 +                                    .associate { po ->
 +                                        po.packageName to
-+                                            LujarchChoice.ofMode(po.ops.firstOrNull()?.mode ?: AppOpsManager.MODE_ALLOWED)
++                                            LujarchPermissions.PHONE_BASIC.choiceOf(po.ops.firstOrNull()?.mode ?: AppOpsManager.MODE_ALLOWED)
 +                                    }
 +                            } catch (e: RuntimeException) {
 +                                Log.e(LujarchPermissions.TAG, "basic phone info not read", e)
@@ -1528,7 +1839,7 @@ index 0000000000000000000000000000000000000000..0f248786323999ebfc1584692abbcc45
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..db62edc1c26d3eb281076ee50966e242c7c6c4e3
+index 0000000000000000000000000000000000000000..1d345f02372aed1db6836739e9765a3bf81385dd
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
 @@ -0,0 +1,187 @@
@@ -1604,7 +1915,7 @@ index 0000000000000000000000000000000000000000..db62edc1c26d3eb281076ee50966e242
 +                    LujarchPermissions.ALL.associate { p ->
 +                        val allowed =
 +                            apps.count {
-+                                LujarchPermissions.choice(app, p.op, it.uid, it.packageName).allows
++                                LujarchPermissions.choice(app, p, it.uid, it.packageName).allows
 +                            }
 +                        p.group to (allowed to apps.size)
 +                    }
@@ -1721,10 +2032,10 @@ index 0000000000000000000000000000000000000000..db62edc1c26d3eb281076ee50966e242
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510df7b57798
+index 0000000000000000000000000000000000000000..fc14a255f4bf91c64cc1d1d4498569390ec30d44
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
-@@ -0,0 +1,289 @@
+@@ -0,0 +1,347 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1790,8 +2101,29 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +    @StringRes val footer: Int,
 +    /** Choices whose name here differs from the choice's own. */
 +    val labels: Map<LujarchChoice, Int> = emptyMap(),
++    /**
++     * The name of an access that is no permission group, one Android records for apps (Special
++     * app access > See more); 0: the group's. Such an access has no data to return empty, so
++     * Don't allow stores MODE_IGNORED, which the system's checks answer by doing nothing.
++     */
++    @StringRes val title: Int = 0,
 +) {
 +    @StringRes fun label(choice: LujarchChoice): Int = labels[choice] ?: choice.label
++
++    val other: Boolean
++        get() = title != 0
++
++    /** The mode [choice] stores. */
++    fun mode(choice: LujarchChoice): Int =
++        if (other && choice == LujarchChoice.DENY) AppOpsManager.MODE_IGNORED else choice.mode
++
++    /** The choice a stored mode shows; an other access left to Android is allowed. */
++    fun choiceOf(mode: Int): LujarchChoice =
++        when {
++            !other -> LujarchChoice.ofMode(mode)
++            mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED -> LujarchChoice.DENY
++            else -> LujarchChoice.ALLOW
++        }
 +}
 +
 +/** Lujarch's permissions and the apps' choices of them. */
@@ -1853,7 +2185,40 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +            mapOf(LujarchChoice.ALLOW to R.string.lujarch_choice_basic_phone_info),
 +        )
 +
-+    @JvmStatic fun of(group: String?): LujarchPermission? = ALL.firstOrNull { it.group == group }
++    /**
++     * The accesses Android records for apps that have no page of their own and that the system
++     * refuses when not allowed, each named by its op.
++     */
++    val OTHER =
++        listOf(
++                "android:vibrate" to R.string.lujarch_access_vibrate,
++                "android:wake_lock" to R.string.lujarch_access_wake_lock,
++                "android:play_audio" to R.string.lujarch_access_play_audio,
++                "android:toast_window" to R.string.lujarch_access_toast_window,
++                "android:write_clipboard" to R.string.lujarch_access_write_clipboard,
++                "android:mute_microphone" to R.string.lujarch_access_mute_microphone,
++                "android:start_foreground" to R.string.lujarch_access_start_foreground,
++                "android:use_biometric" to R.string.lujarch_access_use_biometric,
++                "android:use_fingerprint" to R.string.lujarch_access_use_fingerprint,
++                "android:audio_media_volume" to R.string.lujarch_access_audio_media_volume,
++                "android:audio_ring_volume" to R.string.lujarch_access_audio_ring_volume,
++                "android:audio_notification_volume" to R.string.lujarch_access_audio_notification_volume,
++                "android:audio_alarm_volume" to R.string.lujarch_access_audio_alarm_volume,
++                "android:audio_voice_volume" to R.string.lujarch_access_audio_voice_volume,
++            )
++            .map { (op, title) ->
++                LujarchPermission(
++                    op,
++                    op,
++                    listOf(LujarchChoice.ALLOW, LujarchChoice.DENY),
++                    R.string.lujarch_footer_other,
++                    title = title,
++                )
++            }
++
++    @JvmStatic
++    fun of(group: String?): LujarchPermission? =
++        ALL.firstOrNull { it.group == group } ?: OTHER.firstOrNull { it.group == group }
 +
 +    @JvmStatic fun groups(): List<String> = ALL.map { it.group }
 +
@@ -1884,7 +2249,8 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +
 +    @JvmStatic
 +    fun label(context: Context, group: String): CharSequence =
-+        try {
++        of(group)?.takeIf { it.other }?.let { context.getString(it.title) }
++            ?: try {
 +            context.packageManager.getPermissionGroupInfo(group, 0).loadLabel(context.packageManager)
 +        } catch (e: PackageManager.NameNotFoundException) {
 +            Log.e(TAG, "$group is not defined", e)
@@ -1893,7 +2259,8 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +
 +    @JvmStatic
 +    fun description(context: Context, group: String): CharSequence? =
-+        try {
++        if (of(group)?.other == true) null
++        else try {
 +            context.packageManager.getPermissionGroupInfo(group, 0).loadDescription(context.packageManager)
 +        } catch (e: PackageManager.NameNotFoundException) {
 +            Log.e(TAG, "$group is not defined", e)
@@ -1903,35 +2270,37 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +    @JvmStatic
 +    fun icon(context: Context, group: String): Drawable? =
 +        try {
-+            val info = context.packageManager.getPermissionGroupInfo(group, 0)
-+            Utils.applyTint(context, info.loadIcon(context.packageManager), android.R.attr.colorControlNormal)
++            val icon =
++                if (of(group)?.other == true) context.getDrawable(R.drawable.ic_more_items)
++                else context.packageManager.getPermissionGroupInfo(group, 0).loadIcon(context.packageManager)
++            Utils.applyTint(context, icon, android.R.attr.colorControlNormal)
 +        } catch (e: PackageManager.NameNotFoundException) {
 +            Log.e(TAG, "$group is not defined", e)
 +            null
 +        }
 +
-+    /** The app's choice of [op]; a failed read shows Allow, the stock access (logged). */
++    /** The app's choice of [p]; a failed read shows Allow, the stock access (logged). */
 +    @JvmStatic
-+    fun choice(context: Context, op: String, uid: Int, packageName: String): LujarchChoice =
++    fun choice(context: Context, p: LujarchPermission, uid: Int, packageName: String): LujarchChoice =
 +        try {
 +            val appOps = context.getSystemService(AppOpsManager::class.java)!!
 +            // The raw mode: "Ask every time" is the stored MODE_DEFAULT, which checks evaluate.
 +            @Suppress("DEPRECATION")
-+            LujarchChoice.ofMode(appOps.unsafeCheckOpRawNoThrow(op, uid, packageName))
++            p.choiceOf(appOps.unsafeCheckOpRawNoThrow(p.op, uid, packageName))
 +        } catch (e: RuntimeException) {
-+            Log.e(TAG, "$op of $packageName not read", e)
++            Log.e(TAG, "${p.op} of $packageName not read", e)
 +            LujarchChoice.ALLOW
 +        }
 +
-+    /** Sets the app's choice of [op]; whether it was written (a failure is logged). */
++    /** Sets the app's choice of [p]; whether it was written (a failure is logged). */
 +    @JvmStatic
-+    fun set(context: Context, op: String, uid: Int, packageName: String, choice: LujarchChoice): Boolean =
++    fun set(context: Context, p: LujarchPermission, uid: Int, packageName: String, choice: LujarchChoice): Boolean =
 +        try {
-+            context.getSystemService(AppOpsManager::class.java)!!.setMode(op, uid, packageName, choice.mode)
-+            Log.i(TAG, "$packageName ($uid) $op: $choice")
++            context.getSystemService(AppOpsManager::class.java)!!.setMode(p.op, uid, packageName, p.mode(choice))
++            Log.i(TAG, "$packageName ($uid) ${p.op}: $choice")
 +            true
 +        } catch (e: RuntimeException) {
-+            Log.e(TAG, "$op of $packageName not set to $choice", e)
++            Log.e(TAG, "${p.op} of $packageName not set to $choice", e)
 +            false
 +        }
 +
@@ -2016,7 +2385,7 @@ index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510d
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..a916c5191f3a49aefff1e11a6b31864e77081a68
+index 0000000000000000000000000000000000000000..3ec92e036d5ac25ebee72450c07ebf9ba0005dc8
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt
 @@ -0,0 +1,299 @@
@@ -2183,7 +2552,7 @@ index 0000000000000000000000000000000000000000..a916c5191f3a49aefff1e11a6b31864e
 +                }
 +                empty = group in LujarchPermissions.emptyGroups(app, uid, packageName, listOf(group))
 +                if (phone) {
-+                    phoneInfo = LujarchPermissions.choice(app, LujarchPermissions.PHONE_INFO_OP, uid, packageName)
++                    phoneInfo = LujarchPermissions.choice(app, LujarchPermissions.PHONE_BASIC, uid, packageName)
 +                }
 +            }
 +            loaded = true
@@ -2236,7 +2605,7 @@ index 0000000000000000000000000000000000000000..a916c5191f3a49aefff1e11a6b31864e
 +                if (phone) {
 +                    LujarchPermissions.set(
 +                        app,
-+                        LujarchPermissions.PHONE_INFO_OP,
++                        LujarchPermissions.PHONE_BASIC,
 +                        uid,
 +                        packageName,
 +                        if (allow) LujarchChoice.ALLOW else LujarchChoice.DENY,
@@ -2257,7 +2626,7 @@ index 0000000000000000000000000000000000000000..a916c5191f3a49aefff1e11a6b31864e
 +                if (phone) {
 +                    LujarchPermissions.set(
 +                        app,
-+                        LujarchPermissions.PHONE_INFO_OP,
++                        LujarchPermissions.PHONE_BASIC,
 +                        uid,
 +                        packageName,
 +                        if (choice == LujarchChoice.EMPTY) LujarchChoice.EMPTY else choice,
@@ -2340,6 +2709,98 @@ index d8d96ae1868dfd6919b2ea35e6e43495a16b9811..efc1b132f8530a382b09f71c42000863
          } else {
              PermissionMapping.getPlatformPermissionGroups()
          }
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/domain/model/v31/PermissionTimelineUsageModel.kt b/PermissionController/src/com/android/permissioncontroller/permission/domain/model/v31/PermissionTimelineUsageModel.kt
+index 04233299e4cb2ef6b2bd08938b56178301e3deb7..7593f6d10eb517f62254f9a9fce2b78717df3a37 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/domain/model/v31/PermissionTimelineUsageModel.kt
++++ b/PermissionController/src/com/android/permissioncontroller/permission/domain/model/v31/PermissionTimelineUsageModel.kt
+@@ -16,6 +16,8 @@
+ 
+ package com.android.permissioncontroller.permission.domain.model.v31
+ 
++import com.android.permissioncontroller.lujarch.LujarchOutcome
++
+ /**
+  * This model class provides data for creating one row/preference on the permission timeline page.
+  * The time stamps are with precision rounded to minute.
+@@ -32,6 +34,8 @@ data class PermissionTimelineUsageModel(
+     val attributionTags: Set<String>? = null,
+     val proxyPackageName: String? = null,
+     val proxyUserId: Int? = null,
++    /** The outcome of the entry's uses when the system refused them. */
++    val outcome: LujarchOutcome? = null,
+ )
+ 
+ sealed class PermissionTimelineUsageModelWrapper {
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageDetailsUseCase.kt b/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageDetailsUseCase.kt
+index 2d66036cce0137ee215c110b597515b07944980e..30833577a30cb4e8b8837bede4acc1c1f74ab94c 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageDetailsUseCase.kt
++++ b/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageDetailsUseCase.kt
+@@ -24,6 +24,8 @@ import com.android.permissioncontroller.PermissionControllerApplication
+ import com.android.permissioncontroller.appops.data.model.v31.DiscretePackageOpsModel
+ import com.android.permissioncontroller.appops.data.model.v31.DiscretePackageOpsModel.DiscreteOpModel
+ import com.android.permissioncontroller.appops.data.repository.v31.AppOpRepository
++import com.android.permissioncontroller.lujarch.LujarchOutcome
++import com.android.permissioncontroller.lujarch.LujarchPermissions
+ import com.android.permissioncontroller.permission.data.repository.v31.PermissionRepository
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionTimelineUsageModel
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionTimelineUsageModelWrapper
+@@ -222,6 +224,7 @@ class GetPermissionGroupUsageDetailsUseCase(
+                 packageOpsCluster.appOpAccesses.mapNotNull { it.attributionTag }.toSet(),
+                 proxy?.proxyPackageName,
+                 proxy?.proxyUserId,
++                packageOpsCluster.appOpAccesses.first().outcome,
+             )
+         }
+     }
+@@ -244,6 +247,9 @@ class GetPermissionGroupUsageDetailsUseCase(
+         clusteredAccesses: List<DiscreteOpModel>,
+     ): Boolean {
+         val clusterOp = clusteredAccesses.last().opName
++        if (currentAccess.outcome != clusteredAccesses.last().outcome) {
++            return false
++        }
+         if (
+             (isOpClusteredByItself(currentAccess.opName) || isOpClusteredByItself(clusterOp)) &&
+                 currentAccess.opName != clusteredAccesses.last().opName
+@@ -278,6 +284,7 @@ class GetPermissionGroupUsageDetailsUseCase(
+     private suspend fun List<DiscretePackageOpsModel>.filterPackagesNotRequestingPermission(
+         permissionGroup: String
+     ): List<DiscretePackageOpsModel> {
++        if (LujarchOutcome.everyAppHas(permissionGroup)) return this
+         return mapNotNull { packageOpsModel ->
+             val userHandle = UserHandle.of(packageOpsModel.userId)
+             val packageInfo =
+@@ -345,6 +352,10 @@ class GetPermissionGroupUsageDetailsUseCase(
+                     AppOpsManager.OPSTR_EMERGENCY_LOCATION
+                 )
+             }
++            permissionGroupOpNamesMap[Manifest.permission_group.PHONE]?.add(
++                LujarchPermissions.PHONE_INFO_OP
++            )
++            LujarchPermissions.ALL.forEach { permissionGroupOpNamesMap[it.group] = mutableListOf(it.op) }
+             return permissionGroupOpNamesMap.toMap()
+         }
+     }
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageUseCase.kt b/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageUseCase.kt
+index 022f42e6e352f98cb44ccff17fc14ff45a0000e1..c873029dbd5a284d0fe27bfc28e1f784d4fb3886 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageUseCase.kt
++++ b/PermissionController/src/com/android/permissioncontroller/permission/domain/usecase/v31/GetPermissionGroupUsageUseCase.kt
+@@ -25,6 +25,7 @@ import android.util.Log
+ import com.android.modules.utils.build.SdkLevel
+ import com.android.permissioncontroller.appops.data.model.v31.PackageAppOpUsageModel
+ import com.android.permissioncontroller.appops.data.repository.v31.AppOpRepository
++import com.android.permissioncontroller.lujarch.LujarchOutcome
+ import com.android.permissioncontroller.permission.data.repository.v31.PermissionRepository
+ import com.android.permissioncontroller.permission.domain.model.v31.PackagePermissionGroupUsageModel
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionGroupUsageModel
+@@ -127,6 +128,7 @@ class GetPermissionGroupUsageUseCase(
+             val packageInfo = packageRepository.getPackageInfo(pkgOps.packageName, userHandle)
+             val filteredOps =
+                 pkgOps.usages.filter { permissionGroupUsage ->
++                    LujarchOutcome.everyAppHas(permissionGroupUsage.key) ||
+                     packageInfo?.requestedPermissions?.any { permission ->
+                         permissionGroupUsage.key ==
+                             PermissionMapping.getGroupOfPlatformPermission(permission)
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java b/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java
 index f8720a0a3a63688772ce90ade260d9e1fce59eae..33a5332d4cb50db891ef962a257bccb897873f02 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java
@@ -2561,8 +3022,61 @@ index 70525f7c28470d571b719edeb952751e3702aa26..7c4d6bdd7f1537635543e54960a4491f
      }
  
      @Override
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageDetailsFragment.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageDetailsFragment.java
+index 9078f1a0a143d1fed641490b092f6c152a79c112..0a24e3210b0af60809b0af9a306d94600efc882c 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageDetailsFragment.java
++++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageDetailsFragment.java
+@@ -52,6 +52,7 @@ import androidx.recyclerview.widget.RecyclerView;
+ 
+ import com.android.permissioncontroller.PermissionControllerApplication;
+ import com.android.permissioncontroller.R;
++import com.android.permissioncontroller.lujarch.LujarchHistory;
+ import com.android.permissioncontroller.permission.ui.ManagePermissionsActivity;
+ import com.android.permissioncontroller.permission.ui.handheld.SettingsWithLargeHeader;
+ import com.android.permissioncontroller.permission.ui.model.v31.PermissionUsageDetailsViewModel;
+@@ -217,7 +218,7 @@ public class PermissionUsageDetailsFragment extends SettingsWithLargeHeader {
+                         Menu.NONE,
+                         MENU_SHOW_7_DAYS_DATA,
+                         Menu.NONE,
+-                        R.string.menu_show_7_days_data);
++                        LujarchHistory.showAllMenu(requireContext()));
+         mShow24HoursDataMenu =
+                 menu.add(
+                         Menu.NONE,
+@@ -279,16 +280,12 @@ public class PermissionUsageDetailsFragment extends SettingsWithLargeHeader {
+         screen.removeAll();
+         Preference subtitlePreference = new Preference(context);
+         updateShow7DaysToggle(uiData.getShow7Days());
+-        int usageSubtitle = uiData.getShow7Days()
+-                ? R.string.permission_group_usage_subtitle_7d
+-                : R.string.permission_group_usage_subtitle_24h;
+-
+-        subtitlePreference.setSummary(
+-                getResources()
+-                        .getString(
+-                                usageSubtitle,
+-                                KotlinUtils.INSTANCE.getPermGroupLabel(
+-                                        context, mPermissionGroup)));
++        CharSequence groupLabel =
++                KotlinUtils.INSTANCE.getPermGroupLabel(context, mPermissionGroup);
++        subtitlePreference.setSummary(uiData.getShow7Days()
++                ? LujarchHistory.timelineSubtitle(context, groupLabel)
++                : getResources().getString(R.string.permission_group_usage_subtitle_24h,
++                        groupLabel));
+         subtitlePreference.setSelectable(false);
+         screen.addPreference(subtitlePreference);
+ 
+@@ -397,7 +394,7 @@ public class PermissionUsageDetailsFragment extends SettingsWithLargeHeader {
+     private void updateShow7DaysToggle(boolean show7Days) {
+         if (!mMenuItemsCreated) return;
+ 
+-        mShow7DaysDataMenu.setVisible(!show7Days);
++        mShow7DaysDataMenu.setVisible(!show7Days && LujarchHistory.hasLongerRange(requireContext()));
+         mShow24HoursDataMenu.setVisible(show7Days);
+     }
+ 
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageFragment.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageFragment.java
-index 3f3e47b8f9ce309044f6b6b6ae9e8723c8267a61..7cab1970c9f0930d7b2b25c9557bc8989b842bc1 100644
+index 3f3e47b8f9ce309044f6b6b6ae9e8723c8267a61..103f89de2157ef41056c8c55a326b82f678cefb9 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageFragment.java
 +++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageFragment.java
 @@ -46,6 +46,7 @@ import androidx.preference.PreferenceScreen;
@@ -2581,7 +3095,15 @@ index 3f3e47b8f9ce309044f6b6b6ae9e8723c8267a61..7cab1970c9f0930d7b2b25c9557bc898
  
      private PermissionUsageViewModel mViewModel;
  
-@@ -189,6 +191,7 @@ public class PermissionUsageFragment extends SettingsWithLargeHeader {
+@@ -182,13 +184,14 @@ public class PermissionUsageFragment extends SettingsWithLargeHeader {
+                         Menu.NONE,
+                         MENU_SHOW_7_DAYS_DATA,
+                         Menu.NONE,
+-                        R.string.menu_show_7_days_data);
++                        LujarchHistory.showAllMenu(requireContext()));
+         mShow24HoursDataMenu =
+                 menu.add(
+                         Menu.NONE,
                          MENU_SHOW_24_HOURS_DATA,
                          Menu.NONE,
                          R.string.menu_show_24_hours_data);
@@ -2600,6 +3122,38 @@ index 3f3e47b8f9ce309044f6b6b6ae9e8723c8267a61..7cab1970c9f0930d7b2b25c9557bc898
          int itemId = item.getItemId();
          switch (itemId) {
              case android.R.id.home:
+@@ -259,7 +266,7 @@ public class PermissionUsageFragment extends SettingsWithLargeHeader {
+     private void updateShow7DaysToggle(boolean show7Days) {
+         if (!mMenuItemsCreated) return;
+ 
+-        mShow7DaysDataMenu.setVisible(!show7Days);
++        mShow7DaysDataMenu.setVisible(!show7Days && LujarchHistory.hasLongerRange(requireContext()));
+         mShow24HoursDataMenu.setVisible(show7Days);
+     }
+ 
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageGraphicPreference.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageGraphicPreference.java
+index f7239a1f2d852ba1c7b1d501984e3de93967c52a..259c7c13b399747ec7d0eab4edc666846bb12cd6 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageGraphicPreference.java
++++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v31/PermissionUsageGraphicPreference.java
+@@ -33,6 +33,7 @@ import androidx.preference.Preference;
+ import androidx.preference.PreferenceViewHolder;
+ 
+ import com.android.permissioncontroller.R;
++import com.android.permissioncontroller.lujarch.LujarchHistory;
+ import com.android.settingslib.widget.GroupSectionDividerMixin;
+ 
+ import java.util.Arrays;
+@@ -124,8 +125,8 @@ public class PermissionUsageGraphicPreference extends Preference implements
+         TextView centerLabel = new TextView(getContext());
+         centerLabel.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
+ 
+-        int privdashLabel = mShow7Days ? R.string.privdash_label_7d : R.string.privdash_label_24h;
+-        centerLabel.setText(getContext().getString(privdashLabel));
++        centerLabel.setText(mShow7Days ? LujarchHistory.pastLabel(getContext())
++                : getContext().getString(R.string.privdash_label_24h));
+         centerLabel.setTextAppearance(R.style.PrivacyDashboardGraphicLabel);
+ 
+         int colorCameraRes = mIsNightMode ? android.R.color.system_accent1_100 :
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v36/AppPermissionFragment.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v36/AppPermissionFragment.java
 index fe998aaf2696caa81ffd11199ec010ff6253af10..a1ac728d706507961239be67c1786c23f2dee6d8 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/v36/AppPermissionFragment.java
@@ -2651,6 +3205,93 @@ index fe998aaf2696caa81ffd11199ec010ff6253af10..a1ac728d706507961239be67c1786c23
          Map<ButtonType, ButtonState> currentStates = mViewModel.getButtonStateLiveData().getValue();
          Map<ButtonType, ButtonState> newStates = new ArrayMap<>();
          for (ButtonType button: currentStates.keySet()) {
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/model/v31/PermissionUsageDetailsViewModel.kt b/PermissionController/src/com/android/permissioncontroller/permission/ui/model/v31/PermissionUsageDetailsViewModel.kt
+index d8eeb8fd9410313c05c1246bef2b8a307d67a631..c43f0863ced719ad8d3e952824b156d724dd372e 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/ui/model/v31/PermissionUsageDetailsViewModel.kt
++++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/model/v31/PermissionUsageDetailsViewModel.kt
+@@ -46,6 +46,7 @@ import com.android.modules.utils.build.SdkLevel
+ import com.android.permissioncontroller.DeviceUtils
+ import com.android.permissioncontroller.R
+ import com.android.permissioncontroller.appops.data.repository.v31.AppOpRepository
++import com.android.permissioncontroller.lujarch.LujarchHistory
+ import com.android.permissioncontroller.permission.compat.IntentCompat
+ import com.android.permissioncontroller.permission.data.repository.v31.PermissionRepository
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionTimelineUsageModel
+@@ -156,7 +157,12 @@ class PermissionUsageDetailsViewModel(
+                         }
+                     val showingSubAttribution = !subAttributionLabel.isNullOrEmpty()
+                     val summary =
+-                        buildUsageSummary(subAttributionLabel, proxyLabel, durationSummaryLabel)
++                        buildUsageSummary(
++                            clusterOps.outcome?.let { application.getString(it.label) },
++                            subAttributionLabel,
++                            proxyLabel,
++                            durationSummaryLabel,
++                        )
+                     PermissionUsageDetailsViewModel.AppPermissionAccessUiInfo(
+                         UserHandle.of(clusterOps.userId),
+                         clusterOps.packageName,
+@@ -195,7 +201,7 @@ class PermissionUsageDetailsViewModel(
+ 
+     private fun getUsageDuration(show7Days: Boolean): Long {
+         return if (show7Days && DeviceUtils.isHandheld()) {
+-            TIME_7_DAYS_DURATION
++            DAYS.toMillis(LujarchHistory.days(application).toLong())
+         } else {
+             TIME_24_HOURS_DURATION
+         }
+@@ -263,11 +269,14 @@ class PermissionUsageDetailsViewModel(
+     }
+ 
+     private fun buildUsageSummary(
++        outcome: String?,
+         subAttributionLabel: String?,
+         proxyPackageLabel: String?,
+         durationSummary: String?,
+     ): String? {
+         val subTextStrings: MutableList<String> = mutableListOf()
++        // A refused use has no duration, so at most three parts remain.
++        outcome?.let { subTextStrings.add(it) }
+         subAttributionLabel?.let { subTextStrings.add(subAttributionLabel) }
+         proxyPackageLabel?.let { subTextStrings.add(it) }
+         durationSummary?.let { subTextStrings.add(it) }
+@@ -294,7 +303,6 @@ class PermissionUsageDetailsViewModel(
+     companion object {
+         const val ONE_MINUTE_MS = 60_000
+         const val CLUSTER_SPACING_MINUTES: Long = 1L
+-        val TIME_7_DAYS_DURATION: Long = DAYS.toMillis(7)
+         val TIME_24_HOURS_DURATION: Long = DAYS.toMillis(1)
+         internal const val SHOULD_SHOW_SYSTEM_KEY = "showSystem"
+         internal const val SHOULD_SHOW_7_DAYS_KEY = "show7Days"
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/viewmodel/v31/PermissionUsageViewModel.kt b/PermissionController/src/com/android/permissioncontroller/permission/ui/viewmodel/v31/PermissionUsageViewModel.kt
+index e6179656d2005240945195b44d3ab636d2688530..505f6288d9cc4cdca2d335130981cd6661ff0886 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/ui/viewmodel/v31/PermissionUsageViewModel.kt
++++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/viewmodel/v31/PermissionUsageViewModel.kt
+@@ -42,6 +42,7 @@ import com.android.permissioncontroller.appfunctions.domain.usecase.v37.GetAgent
+ import com.android.permissioncontroller.appinteraction.data.repository.AppInteractionRepository
+ import com.android.permissioncontroller.appinteraction.domain.model.v31.AgentActivityItem
+ import com.android.permissioncontroller.common.model.Stateful
++import com.android.permissioncontroller.lujarch.LujarchHistory
+ import com.android.permissioncontroller.permission.data.repository.v31.PermissionRepository
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionGroupUsageModel
+ import com.android.permissioncontroller.permission.domain.model.v31.PermissionGroupUsageModelWrapper
+@@ -127,7 +128,7 @@ class PermissionUsageViewModel(
+         val curTime = System.currentTimeMillis()
+         val showPermissionUsagesDuration =
+             if (show7DaysData && DeviceUtils.isHandheld()) {
+-                TIME_7_DAYS_DURATION
++                TimeUnit.DAYS.toMillis(LujarchHistory.days(app).toLong())
+             } else {
+                 TIME_24_HOURS_DURATION
+             }
+@@ -217,7 +218,6 @@ class PermissionUsageViewModel(
+ 
+     /** Companion class for [PermissionUsageViewModel]. */
+     companion object {
+-        private val TIME_7_DAYS_DURATION = TimeUnit.DAYS.toMillis(7)
+         private val TIME_24_HOURS_DURATION = TimeUnit.DAYS.toMillis(1)
+     }
+ }
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/utils/PermissionMapping.kt b/PermissionController/src/com/android/permissioncontroller/permission/utils/PermissionMapping.kt
 index f17ecf618621c2a2526838cab462f691968d2a03..7dc0541c097dbc0ab781c45e6e913062c8592abf 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/utils/PermissionMapping.kt
@@ -2675,3 +3316,23 @@ index f17ecf618621c2a2526838cab462f691968d2a03..7dc0541c097dbc0ab781c45e6e913062
          if (SdkLevel.isAtLeastV() && opName == AppOpsManager.OPSTR_EMERGENCY_LOCATION) {
              return Manifest.permission_group.LOCATION
          }
+diff --git a/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java b/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
+index 22169abf2fe26baaf8c26ae998a18c69b5220e11..2979d0b4de228bde120aa8ee4404aad9693fb541 100644
+--- a/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
++++ b/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
+@@ -32,6 +32,7 @@ import androidx.preference.PreferenceFragmentCompat;
+ import androidx.preference.PreferenceManager;
+ import androidx.preference.PreferenceScreen;
+ 
++import com.android.permissioncontroller.lujarch.LujarchOtherAccess;
+ import com.android.permissioncontroller.role.ui.RoleItem;
+ import com.android.permissioncontroller.role.ui.RolePreference;
+ import com.android.permissioncontroller.role.utils.RoleUiBehaviorUtils;
+@@ -122,6 +123,7 @@ public class SpecialAppAccessListChildFragment<PF extends PreferenceFragmentComp
+                     rolePreference, Process.myUserHandle(), context);
+             preferenceScreen.addPreference(preference);
+         }
++        LujarchOtherAccess.addTo(preferenceScreen, context);
+ 
+         preferenceFragment.onPreferenceScreenChanged();
+     }

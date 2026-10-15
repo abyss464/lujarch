@@ -1,0 +1,188 @@
+diff --git a/services/core/java/com/android/server/appop/AppOpHistoryHelper.java b/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
+index 487038e4ca74ad7933183e4f648344acb6280946..d53c42e08192ea7fbd8fb7b2712c7d89088d4e51 100644
+--- a/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
++++ b/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
+@@ -213,8 +213,11 @@ public class AppOpHistoryHelper {
+                 }
+             }
+             if (includeDiscreteEvents) {
+-                // Discrete accesses doesn't include rejected events, reject event has 0 duration.
+-                if (event.totalAccessCount() > 0 || event.totalDurationMillis() > 0) {
++                // Discrete accesses doesn't include rejected events, reject event has 0 duration;
++                // except a refused use recorded under its outcome, which the dashboard shows.
++                if (event.totalAccessCount() > 0 || event.totalDurationMillis() > 0
++                        || (event.totalRejectCount() > 0
++                                && AppOpsService.lujarchIsOutcome(event.attributionTag()))) {
+                     result.addDiscreteAccess(event.opCode(), event.uid(), event.packageName(),
+                             event.attributionTag(), event.uidState(), event.opFlags(),
+                             discretizeTimestamp(event.accessTimeMillis()),
+diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
+index 956ed086638211cc158141ac163f9eb0bbbe21f3..92c7df21a19e3a78132896c7890b156bd945af2a 100644
+--- a/services/core/java/com/android/server/appop/AppOpsService.java
++++ b/services/core/java/com/android/server/appop/AppOpsService.java
+@@ -1184,6 +1184,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+         mAppOpsCheckingService.systemReady();
+         initializeUidStates();
+         mLujarchNewApps.systemReady();
++        lujarchFindShownOps();
+ 
+         mConstants.startMonitoring(mContext.getContentResolver());
+         mHistoricalRegistry.systemReady(mContext.getContentResolver());
+@@ -3047,6 +3048,72 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 ? MODE_IGNORED : packageMode;
+     }
+ 
++    /**
++     * The outcomes of a refused use the privacy dashboard shows. The dashboard reads uses through
++     * the public history alone, whose entries carry no reason, so a refused use of an op it shows
++     * is recorded under its outcome in place of its attribution tag. PermissionController's
++     * LujarchOutcome holds the same tags.
++     */
++    static final String LUJARCH_OUTCOME_EMPTY = "lujarch:empty";
++    static final String LUJARCH_OUTCOME_REFUSED = "lujarch:refused";
++    static final String LUJARCH_OUTCOME_ASKED = "lujarch:asked";
++
++    /** Whether a recorded tag is an outcome. */
++    static boolean lujarchIsOutcome(@Nullable String tag) {
++        return LUJARCH_OUTCOME_EMPTY.equals(tag) || LUJARCH_OUTCOME_REFUSED.equals(tag)
++                || LUJARCH_OUTCOME_ASKED.equals(tag);
++    }
++
++    /** The ops the privacy dashboard shows, by code: Lujarch's and those of runtime permissions. */
++    private volatile boolean[] mLujarchShownOps;
++
++    /** Runs once the package manager knows the platform's permissions. */
++    private void lujarchFindShownOps() {
++        final boolean[] shown = new boolean[AppOpsManager._NUM_OP];
++        final PackageManager pm = mContext.getPackageManager();
++        for (int op = 0; op < shown.length; op++) {
++            if (AppOpsManager.isLujarchAskable(op)) {
++                shown[op] = true;
++                continue;
++            }
++            final String permission = AppOpsManager.opToPermission(op);
++            if (permission == null) {
++                continue;
++            }
++            try {
++                shown[op] = pm.getPermissionInfo(permission, 0).getProtection()
++                        == PermissionInfo.PROTECTION_DANGEROUS;
++            } catch (PackageManager.NameNotFoundException e) {
++                // A permission the platform does not define: not a runtime permission.
++            }
++        }
++        mLujarchShownOps = shown;
++    }
++
++    /** The tag a refused use of {@code code} is recorded under. */
++    private String lujarchRejectedTag(int code, @Nullable String attributionTag, String outcome) {
++        final boolean[] shown = mLujarchShownOps;
++        return shown != null && shown[code] ? outcome : attributionTag;
++    }
++
++    /**
++     * The outcome of a use the uid mode refused: empty data when the permission allows it and the
++     * app's "Return empty data" (its package mode, ignored) refused it, else not allowed.
++     */
++    private static String lujarchUidOutcome(UidState uidState, int code, int uidMode,
++            int rawUidMode) {
++        return uidMode == MODE_IGNORED && uidState.evalMode(code, rawUidMode) == MODE_ALLOWED
++                ? LUJARCH_OUTCOME_EMPTY : LUJARCH_OUTCOME_REFUSED;
++    }
++
++    /** The outcome of a use the package mode refused. */
++    private static String lujarchPackageOutcome(int switchCode, int packageMode, int mode) {
++        if (packageMode == MODE_DEFAULT && AppOpsManager.isLujarchAskable(switchCode)) {
++            return LUJARCH_OUTCOME_ASKED;
++        }
++        return mode == MODE_IGNORED ? LUJARCH_OUTCOME_EMPTY : LUJARCH_OUTCOME_REFUSED;
++    }
++
+     /** Asks the user about an access answered with empty data because its package mode asks. */
+     @GuardedBy("this")
+     private void lujarchAskIfAskingLocked(int switchCode, int uid, @NonNull String packageName,
+@@ -3596,7 +3663,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+             final UidState uidState = ops.uidState;
+             if (isOpRestrictedLocked(uid, code, packageName, attributionTag, virtualDeviceId,
+                     pvr.bypass, false)) {
+-                attributedOp.rejected(uidState.getState(), flags, notedCount);
++                attributedOp.rejected(uidState.getState(), flags, notedCount,
++                        lujarchRejectedTag(code, attributionTag, LUJARCH_OUTCOME_REFUSED));
+                 scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
+                         virtualDeviceId, flags, AppOpsManager.MODE_IGNORED);
+                 return new SyncNotedAppOp(AppOpsManager.MODE_IGNORED, code, attributionTag,
+@@ -3623,7 +3691,13 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     if (DEBUG) Slog.d(TAG, "noteOperation: uid reject #" + uidMode + " for code "
+                             + switchCode + " (" + code + ") uid " + uid + " package "
+                             + packageName + " flags: " + AppOpsManager.flagsToString(flags));
+-                    attributedOp.rejected(uidState.getState(), flags, notedCount);
++                    attributedOp.rejected(uidState.getState(), flags, notedCount,
++                            lujarchRejectedTag(code, attributionTag,
++                                    lujarchUidOutcome(uidState, code, uidMode, getUidMode(
++                                            uidState.uid,
++                                            getPersistentDeviceIdForOp(virtualDeviceId,
++                                                    switchCode),
++                                            switchCode))));
+                     scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
+                             virtualDeviceId, flags, uidMode);
+                     // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
+@@ -3644,7 +3718,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     if (DEBUG) Slog.d(TAG, "noteOperation: reject #" + mode + " for code "
+                             + switchCode + " (" + code + ") uid " + uid + " package "
+                             + packageName + " flags: " + AppOpsManager.flagsToString(flags));
+-                    attributedOp.rejected(uidState.getState(), flags, notedCount);
++                    attributedOp.rejected(uidState.getState(), flags, notedCount,
++                            lujarchRejectedTag(code, attributionTag,
++                                    lujarchPackageOutcome(switchOp.op, packageMode, mode)));
+                     lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
+                             packageMode);
+                     scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
+@@ -4268,7 +4344,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+                                 + packageName + " flags: "
+                                 + AppOpsManager.flagsToString(flags));
+                     }
+-                    attributedOp.rejected(uidState.getState(), flags, 1);
++                    attributedOp.rejected(uidState.getState(), flags, 1,
++                            lujarchRejectedTag(code, attributionTag,
++                                    lujarchUidOutcome(uidState, code, uidMode, rawUidMode)));
+                     scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
+                             virtualDeviceId, flags, uidMode, startType, attributionFlags,
+                             attributionChainId);
+@@ -4289,7 +4367,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+                                 + packageName + " flags: "
+                                 + AppOpsManager.flagsToString(flags));
+                     }
+-                    attributedOp.rejected(uidState.getState(), flags, 1);
++                    attributedOp.rejected(uidState.getState(), flags, 1,
++                            lujarchRejectedTag(code, attributionTag,
++                                    lujarchPackageOutcome(switchOp.op, packageMode, mode)));
+                     lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
+                             packageMode);
+                     scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
+diff --git a/services/core/java/com/android/server/appop/AttributedOp.java b/services/core/java/com/android/server/appop/AttributedOp.java
+index 0eb75380111648ac4e098765dac58fc076f0157e..9e3c4d713f21fc419da7034395dcf38ea2ddf8c7 100644
+--- a/services/core/java/com/android/server/appop/AttributedOp.java
++++ b/services/core/java/com/android/server/appop/AttributedOp.java
+@@ -163,11 +163,21 @@ final class AttributedOp {
+      */
+     public void rejected(@AppOpsManager.UidState int uidState, @AppOpsManager.OpFlags int flags,
+             int rejectedCount) {
++        rejected(uidState, flags, rejectedCount, tag);
++    }
++
++    /**
++     * Update state when noteOp/startOp was rejected, the rejection recorded in the history under
++     * {@code recordedTag}: the attribution tag, or the outcome the privacy dashboard shows
++     * ({@link AppOpsService#lujarchRejectedTag}).
++     */
++    public void rejected(@AppOpsManager.UidState int uidState, @AppOpsManager.OpFlags int flags,
++            int rejectedCount, @Nullable String recordedTag) {
+         long rejectTime = System.currentTimeMillis();
+         rejected(rejectTime, uidState, flags);
+ 
+         mAppOpsService.mHistoricalRegistry.incrementOpRejectedCount(parent.op, parent.uid,
+-                parent.packageName, persistentDeviceId, tag, uidState, flags,
++                parent.packageName, persistentDeviceId, recordedTag, uidState, flags,
+                 rejectTime, rejectedCount);
+     }
+ 

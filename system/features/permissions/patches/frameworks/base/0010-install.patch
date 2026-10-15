@@ -11,7 +11,7 @@ index 593c84d2dc00f7d8f54be28c643526a30e524ec6..04b5aa49cbfd881d101d9f96e69d3731
  
      <privapp-permissions package="com.android.phone">
 diff --git a/packages/PackageInstaller/AndroidManifest.xml b/packages/PackageInstaller/AndroidManifest.xml
-index 16dc409f600aad6c85a1a2273fe9283c98084e3c..9da37095d6026838e6321007b34acc3ec6d16e6f 100644
+index 16dc409f600aad6c85a1a2273fe9283c98084e3c..960600dce8c92f440ed0cfb399f2f0e8914fa658 100644
 --- a/packages/PackageInstaller/AndroidManifest.xml
 +++ b/packages/PackageInstaller/AndroidManifest.xml
 @@ -27,6 +27,7 @@
@@ -22,7 +22,7 @@ index 16dc409f600aad6c85a1a2273fe9283c98084e3c..9da37095d6026838e6321007b34acc3e
  
      <application android:name=".PackageInstallerApplication"
              android:label="@string/app_name"
-@@ -38,6 +39,20 @@
+@@ -38,6 +39,29 @@
              android:forceQueryable="true"
              android:directBootAware="true">
  
@@ -31,6 +31,15 @@ index 16dc409f600aad6c85a1a2273fe9283c98084e3c..9da37095d6026838e6321007b34acc3e
 +            android:permission="android.permission.BIND_PACKAGE_VERIFIER">
 +            <intent-filter>
 +                <action android:name="android.intent.action.PACKAGE_NEEDS_VERIFICATION" />
++                <data android:mimeType="application/vnd.android.package-archive" />
++            </intent-filter>
++        </receiver>
++
++        <receiver android:name=".lujarch.LujarchInstallResults"
++            android:exported="true"
++            android:permission="android.permission.BIND_PACKAGE_VERIFIER">
++            <intent-filter>
++                <action android:name="android.intent.action.PACKAGE_VERIFIED" />
 +                <data android:mimeType="application/vnd.android.package-archive" />
 +            </intent-filter>
 +        </receiver>
@@ -45,10 +54,10 @@ index 16dc409f600aad6c85a1a2273fe9283c98084e3c..9da37095d6026838e6321007b34acc3e
              <intent-filter>
 diff --git a/packages/PackageInstaller/res/values-ja/lujarch_strings.xml b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0f2ed2e146d852853a1fdc3945df0ff083b4dbc3
+index 0000000000000000000000000000000000000000..462ac550682cbc135e6f3b40a298d4845f9ff059
 --- /dev/null
 +++ b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,29 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -76,13 +85,14 @@ index 0000000000000000000000000000000000000000..0f2ed2e146d852853a1fdc3945df0ff0
 +    <string name="lujarch_install_deny">"インストールしない"</string>
 +    <string name="lujarch_install_refused">"「%1$s」はインストールされませんでした"</string>
 +    <string name="lujarch_install_refused_text">"[不明なアプリのインストール] で「%1$s」によるインストールが許可されていません"</string>
++    <string name="lujarch_install_unanswered_text">"待ち時間内に回答がありませんでした"</string>
 +</resources>
 diff --git a/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..fbc7fdcc46984e075190b65a2db0bc6b1c272340
+index 0000000000000000000000000000000000000000..9c3a949c5667605d9049393ce77bc122b2685ba5
 --- /dev/null
 +++ b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,29 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -110,13 +120,14 @@ index 0000000000000000000000000000000000000000..fbc7fdcc46984e075190b65a2db0bc6b
 +    <string name="lujarch_install_deny">"不安装"</string>
 +    <string name="lujarch_install_refused">"“%1$s”未安装"</string>
 +    <string name="lujarch_install_refused_text">"“安装未知应用”不允许“%1$s”安装应用"</string>
++    <string name="lujarch_install_unanswered_text">"未在等待时长内回答"</string>
 +</resources>
 diff --git a/packages/PackageInstaller/res/values/lujarch_strings.xml b/packages/PackageInstaller/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..8ed8a913c30d8169e189e547118718cee36579b4
+index 0000000000000000000000000000000000000000..69653b8da00e86bcf841fc50fbb9ab385268b423
 --- /dev/null
 +++ b/packages/PackageInstaller/res/values/lujarch_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,29 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -144,13 +155,14 @@ index 0000000000000000000000000000000000000000..8ed8a913c30d8169e189e547118718ce
 +    <string name="lujarch_install_deny">Don\u2019t install</string>
 +    <string name="lujarch_install_refused">%1$s was not installed</string>
 +    <string name="lujarch_install_refused_text">Install unknown apps does not allow %1$s to install apps</string>
++    <string name="lujarch_install_unanswered_text">No answer within the wait time</string>
 +</resources>
 diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37446c544c
+index 0000000000000000000000000000000000000000..402cf9c6180eb431b36119cc58ae56bbd86f451e
 --- /dev/null
 +++ b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
-@@ -0,0 +1,256 @@
+@@ -0,0 +1,329 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -180,6 +192,7 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +import android.content.BroadcastReceiver
 +import android.content.Context
 +import android.content.Intent
++import android.content.IntentFilter
 +import android.content.pm.PackageInfo
 +import android.content.pm.PackageManager
 +import android.net.Uri
@@ -214,6 +227,12 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +    const val EXTRA_ALLOW = "org.lujarch.permissions.extra.ALLOW"
 +    const val ACTION_ANSWER = "org.lujarch.permissions.action.INSTALL_ANSWER"
 +
++    /** Closes the question of the install [EXTRA_ID] once it has its result. */
++    const val ACTION_CLOSE = "org.lujarch.permissions.action.INSTALL_CLOSE"
++
++    /** The installs waiting for an answer, by verification id: the installer's and app's names. */
++    private const val ASKED = "lujarch_install_asked"
++
 +    val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "lujarch-install") }
 +
 +    fun waitMillis(context: Context): Long {
@@ -229,7 +248,23 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +        return nm
 +    }
 +
++    fun asked(context: Context, id: Int, installer: CharSequence, app: CharSequence) {
++        context.getSharedPreferences(ASKED, Context.MODE_PRIVATE)
++            .edit()
++            .putString(id.toString(), "$installer\n$app")
++            .apply()
++    }
++
++    /** Ends the wait of [id]: the installer's and app's names while it was waiting, else null. */
++    fun unasked(context: Context, id: Int): Pair<String, String>? {
++        val prefs = context.getSharedPreferences(ASKED, Context.MODE_PRIVATE)
++        val names = prefs.getString(id.toString(), null) ?: return null
++        prefs.edit().remove(id.toString()).apply()
++        return names.substringBefore('\n') to names.substringAfter('\n')
++    }
++
 +    fun answer(context: Context, id: Int, allow: Boolean) {
++        unasked(context, id)
 +        context.getSystemService(NotificationManager::class.java)!!.cancel(TAG, id)
 +        try {
 +            context.packageManager.verifyPendingInstall(
@@ -242,12 +277,21 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +        }
 +    }
 +
-+    fun notifyRefused(context: Context, installer: CharSequence, app: CharSequence, id: Int) {
++    fun notifyRefused(
++        context: Context,
++        installer: CharSequence,
++        app: CharSequence,
++        id: Int,
++        unanswered: Boolean = false,
++    ) {
++        val text =
++            if (unanswered) context.getString(R.string.lujarch_install_unanswered_text)
++            else context.getString(R.string.lujarch_install_refused_text, installer)
 +        val n =
 +            Notification.Builder(context, CHANNEL)
 +                .setSmallIcon(R.drawable.ic_file_download)
 +                .setContentTitle(context.getString(R.string.lujarch_install_refused, app))
-+                .setContentText(context.getString(R.string.lujarch_install_refused_text, installer))
++                .setContentText(text)
 +                .setAutoCancel(true)
 +                .build()
 +        channel(context).notify(TAG, id, n)
@@ -327,6 +371,7 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +                .putExtra(LujarchInstalls.EXTRA_SIGNATURE_CHANGED, changed)
 +                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
 +        Log.i(LujarchInstalls.TAG, "install $id of $packageName by $installer: asking")
++        LujarchInstalls.asked(context, id, installerLabel, app)
 +        val keyguard = context.getSystemService(KeyguardManager::class.java)!!
 +        val power = context.getSystemService(PowerManager::class.java)!!
 +        if (power.isInteractive && !keyguard.isKeyguardLocked) {
@@ -380,15 +425,50 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +    }
 +}
 +
++/**
++ * The result of an install the system verified: one still waiting for the user ran out of time,
++ * so its question closes and a notification says it was refused.
++ */
++class LujarchInstallResults : BroadcastReceiver() {
++    override fun onReceive(context: Context, intent: Intent) {
++        if (intent.action != Intent.ACTION_PACKAGE_VERIFIED) return
++        val id = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_ID, -1)
++        val (installer, app) = LujarchInstalls.unasked(context, id) ?: return
++        context.sendBroadcast(
++            Intent(LujarchInstalls.ACTION_CLOSE)
++                .setPackage(context.packageName)
++                .putExtra(LujarchInstalls.EXTRA_ID, id)
++        )
++        val result = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_RESULT, PackageManager.VERIFICATION_REJECT)
++        if (result == PackageManager.VERIFICATION_ALLOW) {
++            context.getSystemService(NotificationManager::class.java)!!.cancel(LujarchInstalls.TAG, id)
++            return
++        }
++        Log.i(LujarchInstalls.TAG, "install $id of $app by $installer refused: no answer in time")
++        LujarchInstalls.notifyRefused(context, installer, app, id, unanswered = true)
++    }
++}
++
 +/** The question about one install, in the look of the installer's own dialog. */
 +class LujarchInstallQuestionActivity : Activity() {
++    private var id = -1
++
++    /** The install's result came first: the question has nothing left to decide. */
++    private val closer =
++        object : BroadcastReceiver() {
++            override fun onReceive(context: Context, intent: Intent) {
++                if (intent.getIntExtra(LujarchInstalls.EXTRA_ID, -2) == id) finish()
++            }
++        }
++
 +    override fun onCreate(savedInstanceState: Bundle?) {
 +        super.onCreate(savedInstanceState)
-+        val id = intent.getIntExtra(LujarchInstalls.EXTRA_ID, -1)
++        id = intent.getIntExtra(LujarchInstalls.EXTRA_ID, -1)
 +        if (id < 0) {
 +            finish()
 +            return
 +        }
++        registerReceiver(closer, IntentFilter(LujarchInstalls.ACTION_CLOSE), Context.RECEIVER_NOT_EXPORTED)
 +        val installer = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_INSTALLER)
 +        val app = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_LABEL)
 +        val version = intent.getStringExtra(LujarchInstalls.EXTRA_VERSION)
@@ -405,6 +485,11 @@ index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37
 +            .setNegativeButton(R.string.lujarch_install_deny) { _, _ -> LujarchInstalls.answer(this, id, false) }
 +            .setOnDismissListener { finish() }
 +            .show()
++    }
++
++    override fun onDestroy() {
++        if (id >= 0) unregisterReceiver(closer)
++        super.onDestroy()
 +    }
 +}
 diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
@@ -448,10 +533,18 @@ index 6dd5e371d8a68a24854d24bb9b902e5bb018fe3f..e22ae57595083a21138a5b05beb0152e
              override val title = stringResource(switchTitleResId)
              override val checked = isAllowed
 diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
-index 478ff4c98c3b98dae9eb2ad36f3567f62aea0d67..4f4675c859655b9d08e412c268b424c2d00891ed 100644
+index 478ff4c98c3b98dae9eb2ad36f3567f62aea0d67..5f51c9ece95ec5c1d24457ca316681bc9ac84e7e 100644
 --- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
 +++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
-@@ -37,6 +37,14 @@ interface TogglePermissionAppListModel<T : AppRecord> {
+@@ -25,6 +25,7 @@ import com.android.settingslib.spa.framework.common.SettingsEntryBuilder
+ import com.android.settingslib.spa.framework.common.SettingsPageProvider
+ import com.android.settingslib.spa.framework.compose.rememberContext
+ import com.android.settingslib.spa.framework.util.asyncMapItem
++import com.android.settingslib.spa.widget.scaffold.MoreOptionsScope
+ import com.android.settingslib.spaprivileged.model.app.AppRecord
+ import com.android.settingslib.spaprivileged.model.enterprise.EnhancedConfirmation
+ import com.android.settingslib.spaprivileged.model.enterprise.Restrictions
+@@ -37,6 +38,17 @@ interface TogglePermissionAppListModel<T : AppRecord> {
      val pageTitleResId: Int
      val switchTitleResId: Int
      val footerResId: Int
@@ -463,14 +556,25 @@ index 478ff4c98c3b98dae9eb2ad36f3567f62aea0d67..4f4675c859655b9d08e412c268b424c2
 +    @Composable fun choice(record: T): () -> Int? = { null }
 +
 +    fun setChoice(record: T, value: Int) {}
++
++    /** Items the App List page adds to its menu. */
++    @Composable fun MoreOptions(scope: MoreOptionsScope) {}
      val switchRestrictionKeys: List<String>
          get() = emptyList()
  
 diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
-index cd3ac358f3a55c52f17731cd4e2015c453a5886b..9e6fb5035b8648a1b423191170dc0dc9c97ac27e 100644
+index cd3ac358f3a55c52f17731cd4e2015c453a5886b..7b1bfb1dfc19bf895a0400116aea4af722429333 100644
 --- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
 +++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
-@@ -150,6 +150,11 @@ internal class TogglePermissionInternalAppListModel<T : AppRecord>(
+@@ -129,6 +129,7 @@ internal fun <T : AppRecord> TogglePermissionAppListModel<T>.TogglePermissionApp
+             )
+         },
+         showSystemAppsInitially = showSystemAppsInitially,
++        moreOptions = { MoreOptions(this) },
+         appList = appList,
+     )
+ }
+@@ -150,6 +151,11 @@ internal class TogglePermissionInternalAppListModel<T : AppRecord>(
  
      @Composable
      fun getSummary(record: T): () -> CharSequence {
