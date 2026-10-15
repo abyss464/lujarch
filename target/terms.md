@@ -145,3 +145,4 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Status bar items | 状态栏项目 | ステータスバーの項目 |
 | Privacy indicators | 隐私指示器 | プライバシー インジケーター |
 | Lyrics | 歌词 | 歌詞 |
+| Media | 媒体 | メディア |
