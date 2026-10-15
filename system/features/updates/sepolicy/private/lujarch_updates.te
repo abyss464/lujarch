@@ -22,9 +22,10 @@ allow lujarch_updates packages_list_file:file r_file_perms;
 # The slots, their merge status and the active slot.
 hal_client_domain(lujarch_updates, hal_bootctl)
 
-# The auto-confirm choice and update_engine's merge state.
+# The auto-confirm choice, update_engine's merge state and the vendor's patch level.
 get_prop(lujarch_updates, lujarch_setting_prop)
 get_prop(lujarch_updates, lujarch_updates_prop)
+get_prop(lujarch_updates, vendor_security_patch_level_prop)
 
 # update_engine: the merge waits for the confirmation, and it reports the merge's state.
 allow update_engine lujarch_updates_metadata_file:dir r_dir_perms;
