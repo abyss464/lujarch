@@ -1,0 +1,7 @@
+[upstream]
+manifest = "https://github.com/LineageOS/android.git"
+branch = "lineage-24.0"
+aosp = "android-17.0.0_r1"
+
+[build]
+variant = "userdebug"

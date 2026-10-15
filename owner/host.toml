@@ -1,0 +1,35 @@
+# Relative paths are relative to this file's real location.
+
+[paths]
+tree = "~/Code/vendor/lineage-24.0"
+out = "~/Code/vendor/lujarch-out"
+keys = "~/.android-certs"
+ccache = "~/.cache/ccache-lineage"
+stock = "~/Android/fuxi-restore"
+ndk = "~/Android/Sdk/ndk/28.2.13676358"
+
+[sources]
+mihomo-manager = "~/Code/apps/mihomo-manager"
+
+[sync]
+jobs = 12
+gitconfig = "sync.gitconfig"
+
+[build]
+cpus = "3-15,19-31"
+jobs = 0
+memory_high = ""
+memory_max = ""
+highmem_jobs = 3
+lock = "~/.cache/lujarch/build.lock"
+
+[vm]
+cpus = 4
+memory_mb = 8192
+
+[delivery]
+push_part = 1048576
+push_pause = 2
+
+[backup]
+dir = "/backup/lujarch"

@@ -37,7 +37,7 @@ Lujarch 是小米 13（`fuxi`）上的 Android 系统，基于 LineageOS 24.0（
 
 ### 两条流程
 
-- **测试流程**：随时在电脑和虚拟设备上运行，用公开的测试钥匙签名；产物不离开电脑，任何个人手机都不参与。
+- **测试流程**：随时运行。不依赖小米 13 硬件的测试在电脑和虚拟设备上做，用公开的测试钥匙签名；只有依赖手机硬件的测试和模块测试才上手机，用正式钥匙签名。装系统一律走手机自己的“系统更新”。
 - **发布流程**：所有者要求时，从通过测试流程的提交构建，用正式钥匙签名。送到手机是 `lujarch-owner` 的事。
 
 ### 语言
@@ -85,7 +85,7 @@ Lujarch is an Android system for the Xiaomi 13 (`fuxi`), built on LineageOS 24.0
 
 ### Two flows
 
-- **Test flow**: runs at any time on the computer and on virtual devices, signed with the public test keys; its outputs never leave the computer and no personal phone takes part.
+- **Test flow**: runs at any time. Tests that do not depend on the Xiaomi 13's hardware run on the computer and on virtual devices, signed with the public test keys; only tests that depend on the phone's hardware and module tests run on a phone, signed with the release keys. A system build is always installed through the phone's own System updates.
 - **Release flow**: when the owner asks, built from a commit that passed the test flow and signed with the release keys. Bringing it to a phone is `lujarch-owner`'s job.
 
 ### Languages

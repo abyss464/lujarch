@@ -12,7 +12,7 @@
 |---|---|
 | `host.toml` | 电脑的配置：源码树和输出路径、签名钥匙位置、同步与构建资源、送达与备份设置；链接为 `~/.config/lujarch/host.toml` |
 | `sync.gitconfig` | repo 同步用的 git 设置（镜像） |
-| `process/delivery.md` | 把正式版本送到手机：唯一安装路径、装后检查、大版本试用、救援 |
+| `process/delivery.md` | 把正式版本送到手机：唯一安装路径、装后检查、升级 Android 大版本、救援 |
 | `process/backup.md` | 导出与恢复手机上的个人设置和数据 |
 | `process/migration.md` | 从上一个系统一次性迁移到 Android 17 上的 Lujarch，用完删除 |
 | `deliver/`、`backup/`、`migrate/` | 上面三件事的工具 |
@@ -30,7 +30,7 @@ Personal settings themselves live only on the phone, set in the system's UI, and
 |---|---|
 | `host.toml` | The computer's configuration: source tree and output paths, the signing keys' location, sync and build resources, delivery and backup settings; linked as `~/.config/lujarch/host.toml` |
 | `sync.gitconfig` | Git settings used for repo sync (mirrors) |
-| `process/delivery.md` | Bringing a release to the phone: the one install path, the delivery check, the major-version trial, rescue |
+| `process/delivery.md` | Bringing a release to the phone: the one install path, the delivery check, a new Android version, rescue |
 | `process/backup.md` | Exporting and restoring the personal settings and data on the phone |
 | `process/migration.md` | The one-time move from the previous system to Lujarch on Android 17, deleted after use |
 | `deliver/`, `backup/`, `migrate/` | Tools for the three above |
