@@ -139,12 +139,14 @@ ndk = "..."           # Android NDK for components built outside the tree
 [sources]
 mihomo-manager = "..."  # where a separate component's repository is; its commit is in lock.toml
 
+[computer]
+cpus = "..."          # the CPUs builds and the virtual device run on; the others stay free
+
 [sync]
 jobs = 12
 gitconfig = "..."     # git configuration used for repo sync (mirrors)
 
 [build]
-cpus = "..."          # CPU list for build jobs
 jobs = 0              # 0: derived from memory
 memory_high = ""      # empty: derived from free memory
 memory_max = ""

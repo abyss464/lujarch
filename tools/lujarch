@@ -1397,7 +1397,7 @@ m -j{jobs} {modules}
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
     def command(jobs):
         cmd = ["bash", "-c", script(jobs)]
-        cpus = host.get("build", "cpus")
+        cpus = host.get("computer", "cpus")
         if cpus:
             cmd = ["taskset", "-c", cpus, *cmd]
         return ["systemd-run", "--user", "--scope", "--quiet", "--collect",
@@ -1554,6 +1554,9 @@ def cmd_vm(args):
         "-e", "HOME=/cf/home", "-e", "ANDROID_HOST_OUT=/cf/host",
         "-e", "ANDROID_PRODUCT_OUT=/cf/images", "-w", "/cf/home",
     ]
+    cpus = host.get("computer", "cpus")
+    if cpus:
+        command += ["--cpuset-cpus", cpus]
     for port in VM_PORTS:
         ports, _, proto = port.partition("/")
         command += ["-p", f"127.0.0.1:{ports}:{ports}" + (f"/{proto}" if proto else "")]
