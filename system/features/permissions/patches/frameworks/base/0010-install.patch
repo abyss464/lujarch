@@ -400,6 +400,81 @@ index 0000000000000000000000000000000000000000..bb0eb3351aab4092199f6cffbe1dd590
 +            .show()
 +    }
 +}
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
+index 6dd5e371d8a68a24854d24bb9b902e5bb018fe3f..e22ae57595083a21138a5b05beb0152e1da64dbd 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
+@@ -16,6 +16,10 @@
+ 
+ package com.android.settingslib.spaprivileged.template.app
+ 
++import com.android.settingslib.spa.widget.preference.RadioPreferences
++import com.android.settingslib.spa.widget.preference.ListPreferenceOption
++import com.android.settingslib.spa.widget.preference.ListPreferenceModel
++import androidx.compose.runtime.mutableIntStateOf
+ import android.content.pm.ApplicationInfo
+ import android.os.Bundle
+ import androidx.annotation.VisibleForTesting
+@@ -148,6 +152,24 @@ internal fun <T : AppRecord> TogglePermissionAppListModel<T>.TogglePermissionApp
+         val record = rememberRecord(app).value ?: return@AppInfoPage
+         val isAllowed = isAllowed(record)
+         val isChangeable by rememberIsChangeable(record)
++        val choices = choices()
++        if (choices.isNotEmpty()) {
++            val current = choice(record)
++            val title = stringResource(switchTitleResId)
++            val selected = remember { mutableIntStateOf(current() ?: choices.first().first) }
++            selected.intValue = current() ?: selected.intValue
++            RadioPreferences(object : ListPreferenceModel {
++                override val title = title
++                override val enabled = { isChangeable }
++                override val options = choices.map { ListPreferenceOption(it.first, it.second) }
++                override val selectedId = selected
++                override val onIdSelected: (Int) -> Unit = {
++                    selected.intValue = it
++                    setChoice(record, it)
++                }
++            })
++            return@AppInfoPage
++        }
+         val switchModel = object : SwitchPreferenceModel {
+             override val title = stringResource(switchTitleResId)
+             override val checked = isAllowed
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
+index 478ff4c98c3b98dae9eb2ad36f3567f62aea0d67..4f4675c859655b9d08e412c268b424c2d00891ed 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
+@@ -37,6 +37,14 @@ interface TogglePermissionAppListModel<T : AppRecord> {
+     val pageTitleResId: Int
+     val switchTitleResId: Int
+     val footerResId: Int
++
++    /** Choices the app's page offers in place of the switch, as (value, label); empty: none. */
++    @Composable fun choices(): List<Pair<Int, String>> = emptyList()
++
++    /** The app's current choice, when [choices] are offered. */
++    @Composable fun choice(record: T): () -> Int? = { null }
++
++    fun setChoice(record: T, value: Int) {}
+     val switchRestrictionKeys: List<String>
+         get() = emptyList()
+ 
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
+index cd3ac358f3a55c52f17731cd4e2015c453a5886b..9e6fb5035b8648a1b423191170dc0dc9c97ac27e 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
+@@ -150,6 +150,11 @@ internal class TogglePermissionInternalAppListModel<T : AppRecord>(
+ 
+     @Composable
+     fun getSummary(record: T): () -> CharSequence {
++        val choices = listModel.choices()
++        if (choices.isNotEmpty()) {
++            val current = listModel.choice(record)
++            return { choices.firstOrNull { it.first == current() }?.second ?: context.getPlaceholder() }
++        }
+         val allowed = listModel.isAllowed(record)
+         val restrictions =
+             listModel.getRestrictions(
 diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
 index 4c63493439e274e7df270bd63fa3c1f2c31d7290..c2bd60abb16562beebb76e6c7a0b65cda2aadfaa 100644
 --- a/services/core/java/com/android/server/pm/VerifyingSession.java

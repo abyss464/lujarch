@@ -1,0 +1,193 @@
+diff --git a/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppDetailScreen.kt b/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppDetailScreen.kt
+index b5fe3ae309660dca8616726ee2b8b626fad5f6ab..3ca58e254ff8945db37abc37d29ad627b7e58e0c 100644
+--- a/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppDetailScreen.kt
++++ b/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppDetailScreen.kt
+@@ -85,7 +85,8 @@ open class InstallUnknownAppsAppDetailScreen : SpecialAccessAppDetailScreen {
+ 
+     override fun getMetricsCategory() = SettingsEnums.PAGE_UNKNOWN // TODO: correct page id
+ 
+-    override fun isFlagEnabled(context: Context) = Flags.deeplinkApps25q4()
++    // The page with Ask every time is the only one.
++    override fun isFlagEnabled(context: Context) = false
+ 
+     override val availabilityDescription =
+         "The app must be enabled, and must have requested install unknown apps permission."
+diff --git a/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppListScreen.kt b/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppListScreen.kt
+index 70168b2bfcc07c75bdbd786d168be1f30dc97355..1aee4978137c3142e1c02ace8c4b45597aaf5a73 100644
+--- a/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppListScreen.kt
++++ b/src/com/android/settings/applications/specialaccess/InstallUnknownAppsAppListScreen.kt
+@@ -51,7 +51,8 @@ open class InstallUnknownAppsAppListScreen : SpecialAccessAppListScreen() {
+ 
+     override fun getMetricsCategory() = SettingsEnums.SCREEN_UNKNOWN
+ 
+-    override fun isFlagEnabled(context: Context) = Flags.deeplinkApps25q4()
++    // The page with Ask every time is the only one.
++    override fun isFlagEnabled(context: Context) = false
+ 
+ 
+ 
+diff --git a/src/com/android/settings/spa/app/specialaccess/InstallUnknownApps.kt b/src/com/android/settings/spa/app/specialaccess/InstallUnknownApps.kt
+index d6fe7160dbfe3a9a3ea2bbf5fa7a2f804b9e6061..3cc48360e48bd6622c2bf25442dbc30dceef1c8c 100644
+--- a/src/com/android/settings/spa/app/specialaccess/InstallUnknownApps.kt
++++ b/src/com/android/settings/spa/app/specialaccess/InstallUnknownApps.kt
+@@ -24,6 +24,7 @@ import android.content.Context
+ import android.content.pm.ApplicationInfo
+ import android.os.UserManager
+ import androidx.compose.runtime.Composable
++import androidx.compose.ui.res.stringResource
+ import com.android.settings.R
+ import com.android.settingslib.spa.lifecycle.collectAsCallbackWithLifecycle
+ import com.android.settingslib.spaprivileged.model.app.AppOps
+@@ -86,6 +87,26 @@ class InstallUnknownAppsListModel(private val context: Context) :
+         record.appOpsController.setAllowed(newAllowed)
+     }
+ 
++    @Composable
++    override fun choices() =
++        listOf(
++            AppOpsManager.MODE_ALLOWED to stringResource(R.string.lujarch_choice_allow),
++            AppOpsManager.MODE_DEFAULT to stringResource(R.string.lujarch_choice_ask),
++            AppOpsManager.MODE_ERRORED to stringResource(R.string.lujarch_choice_deny),
++        )
++
++    @Composable
++    override fun choice(record: InstallUnknownAppsRecord): () -> Int? {
++        val allowed = isAllowed(record)
++        return {
++            LujarchInstallChoice.read(context, record.app, allowed())
++        }
++    }
++
++    override fun setChoice(record: InstallUnknownAppsRecord, value: Int) {
++        LujarchInstallChoice.write(context, record.app, value) { record.appOpsController.setAllowed(it) }
++    }
++
+     companion object {
+         private val APP_OPS = AppOps(AppOpsManager.OP_REQUEST_INSTALL_PACKAGES)
+ 
+@@ -95,9 +116,10 @@ class InstallUnknownAppsListModel(private val context: Context) :
+         ) = record.appOpsController.getMode() != MODE_DEFAULT ||
+             record.app.packageName in potentialPackageNames
+ 
++        /** Every app that can install apps: unknown sources and the app stores. */
+         private fun getPotentialPackageNames(userId: Int): Set<String> =
+             AppGlobals.getPackageManager()
+                 .getAppOpPermissionPackages(Manifest.permission.REQUEST_INSTALL_PACKAGES, userId)
+-                .toSet()
++                .toSet() + LujarchInstallChoice.installers(userId)
+     }
+ }
+diff --git a/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt b/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..af88c48f00e142559593523b5d693833412bf0f6
+--- /dev/null
++++ b/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt
+@@ -0,0 +1,108 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.spa.app.specialaccess
++
++import android.Manifest
++import android.app.AppGlobals
++import android.app.AppOpsManager
++import android.content.Context
++import android.content.pm.ApplicationInfo
++import android.content.pm.PackageManager
++import android.os.UserHandle
++import android.util.Log
++
++/**
++ * An installer's choice under Install unknown apps: Allow, Ask every time (each install and
++ * update waits for the user) or Don't allow. It is stored as the installer's mode of
++ * android:lujarch_install, which the system's install verifier reads, and, for an app installing
++ * from unknown sources, also as Android's own switch.
++ */
++object LujarchInstallChoice {
++    private const val TAG = "lujarch_permissions"
++
++    fun read(context: Context, app: ApplicationInfo, unknownSourcesAllowed: Boolean?): Int? {
++        val mode =
++            try {
++                context.getSystemService(AppOpsManager::class.java)!!
++                    .unsafeCheckOpRawNoThrow(AppOpsManager.OPSTR_LUJARCH_INSTALL, app.uid, app.packageName)
++            } catch (e: RuntimeException) {
++                Log.e(TAG, "install choice of ${app.packageName} not read", e)
++                return null
++            }
++        return when {
++            mode == AppOpsManager.MODE_DEFAULT -> AppOpsManager.MODE_DEFAULT
++            mode == AppOpsManager.MODE_ERRORED || mode == AppOpsManager.MODE_IGNORED ->
++                AppOpsManager.MODE_ERRORED
++            !requestsUnknownSources(app) -> AppOpsManager.MODE_ALLOWED
++            unknownSourcesAllowed == null -> null
++            unknownSourcesAllowed -> AppOpsManager.MODE_ALLOWED
++            else -> AppOpsManager.MODE_ERRORED
++        }
++    }
++
++    fun write(context: Context, app: ApplicationInfo, value: Int, setUnknownSources: (Boolean) -> Unit) {
++        try {
++            context.getSystemService(AppOpsManager::class.java)!!
++                .setMode(AppOpsManager.OP_LUJARCH_INSTALL, app.uid, app.packageName, value)
++            if (requestsUnknownSources(app)) setUnknownSources(value != AppOpsManager.MODE_ERRORED)
++            Log.i(TAG, "${app.packageName} installs: $value")
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "install choice of ${app.packageName} not written", e)
++        }
++    }
++
++    /** The apps that install without asking for unknown sources: the app stores. */
++    fun installers(userId: Int): Set<String> =
++        try {
++            AppGlobals.getPackageManager()
++                .getPackagesHoldingPermissions(arrayOf(Manifest.permission.INSTALL_PACKAGES), 0L, userId)
++                .list
++                .filter { info ->
++                    val system = info.applicationInfo?.isSystemApp ?: true
++                    !system || hasLauncher(info.packageName, userId)
++                }
++                .map { it.packageName }
++                .toSet()
++        } catch (e: Exception) {
++            Log.e(TAG, "installers of user $userId not listed", e)
++            emptySet()
++        }
++
++    private fun hasLauncher(packageName: String, userId: Int): Boolean =
++        AppGlobals.getPackageManager()
++            .queryIntentActivities(
++                android.content.Intent(android.content.Intent.ACTION_MAIN)
++                    .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
++                    .setPackage(packageName),
++                null,
++                0L,
++                userId,
++            )
++            .list
++            .isNotEmpty()
++
++    private fun requestsUnknownSources(app: ApplicationInfo): Boolean =
++        try {
++            AppGlobals.getPackageManager()
++                .getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS.toLong(), UserHandle.getUserId(app.uid))
++                ?.requestedPermissions
++                ?.contains(Manifest.permission.REQUEST_INSTALL_PACKAGES) == true
++        } catch (e: Exception) {
++            Log.e(TAG, "permissions of ${app.packageName} not read", e)
++            false
++        }
++}

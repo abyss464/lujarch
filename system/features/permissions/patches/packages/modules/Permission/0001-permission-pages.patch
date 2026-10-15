@@ -475,10 +475,10 @@ index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097c
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..682f5704d291e3be6d20e0987bcb0ce1c9c0b404
+index 0000000000000000000000000000000000000000..633a5a2afda50645aee3d6db7517a9ae9f910b49
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,264 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -596,7 +596,6 @@ index 0000000000000000000000000000000000000000..682f5704d291e3be6d20e0987bcb0ce1
 +        }
 +        val s = state ?: return
 +        val ctx = fragment.preferenceManager.context
-+        val u = user ?: Process.myUserHandle()
 +        val emptyText = ctx.getString(R.string.lujarch_choice_empty)
 +
 +        // Android's groups that return empty data: under Not allowed, saying so.
@@ -1297,7 +1296,7 @@ index 0000000000000000000000000000000000000000..f2539a21b3ef62565b56f7ef85395c13
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..78f388d5c836548875fca111ae58843a6fe54ee2
+index 0000000000000000000000000000000000000000..0f248786323999ebfc1584692abbcc45f69f24fd
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionApps.kt
 @@ -0,0 +1,226 @@
@@ -1459,7 +1458,7 @@ index 0000000000000000000000000000000000000000..78f388d5c836548875fca111ae58843a
 +                moved.add(target)
 +            }
 +        }
-+        tidy(screen, moved)
++        tidy(moved)
 +    }
 +
 +    /** The section of an app without the Phone permission, by its basic phone info. */
@@ -1485,7 +1484,7 @@ index 0000000000000000000000000000000000000000..78f388d5c836548875fca111ae58843a
 +        return c
 +    }
 +
-+    private fun tidy(screen: PreferenceScreen, changed: Set<PreferenceCategory>) {
++    private fun tidy(changed: Set<PreferenceCategory>) {
 +        val ctx = fragment.preferenceManager.context
 +        val collator = Collator.getInstance(ctx.resources.configuration.locales.get(0))
 +        for (category in changed) {
@@ -1722,10 +1721,10 @@ index 0000000000000000000000000000000000000000..db62edc1c26d3eb281076ee50966e242
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..7f2888dc060919bd30a8a6dc9efdb1b29f3f52bc
+index 0000000000000000000000000000000000000000..d757af4dd47d83a265a149f4c343510df7b57798
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
-@@ -0,0 +1,287 @@
+@@ -0,0 +1,289 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1916,6 +1915,8 @@ index 0000000000000000000000000000000000000000..7f2888dc060919bd30a8a6dc9efdb1b2
 +    fun choice(context: Context, op: String, uid: Int, packageName: String): LujarchChoice =
 +        try {
 +            val appOps = context.getSystemService(AppOpsManager::class.java)!!
++            // The raw mode: "Ask every time" is the stored MODE_DEFAULT, which checks evaluate.
++            @Suppress("DEPRECATION")
 +            LujarchChoice.ofMode(appOps.unsafeCheckOpRawNoThrow(op, uid, packageName))
 +        } catch (e: RuntimeException) {
 +            Log.e(TAG, "$op of $packageName not read", e)
