@@ -6,12 +6,14 @@
   lujarch pin                       write upstream.xml from the commits the tree has checked out
   lujarch sync                      sync the tree to upstream.xml, then apply the patches
   lujarch patch | unpatch           apply or revert the patches of system/order in the tree
+  lujarch save ENTRY [PROJECT...]   save the tree's changes into ENTRY's patches (features/x, device/y)
   lujarch build DEVICE [MODULE...]  build a device (fuxi, vm), or some of its modules
   lujarch vm start|stop|status      the virtual device
 """
 
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -19,8 +21,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import tomllib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -399,6 +403,15 @@ def check_order(findings):
         findings.add("system/order", 0, "missing")
     for entry in sorted(with_patches - set(listed)):
         findings.add("system/order", 0, f"{entry} has patches but is not listed")
+    projects = upstream_projects() if (ROOT / "upstream.xml").exists() else {}
+    for entry in sorted(with_patches):
+        pdir = SYSTEM / entry / "patches"
+        for path in sorted(p for p in pdir.rglob("*") if p.is_file()):
+            project = path.parent.relative_to(pdir).as_posix()
+            if not PATCH_NAME_RE.match(path.name):
+                findings.add(path, 0, "a patch is named NNNN-<what>.patch, <what> in kebab-case")
+            elif project not in projects:
+                findings.add(path, 0, f"{project} is not a project of upstream.xml")
 
 
 def check_approvals(findings):
@@ -507,22 +520,46 @@ def cmd_status(args):
 
 def cmd_pin(_args):
     host = Host()
+    revert_patches(host.tree)
     out = subprocess.run(["repo", "manifest", "-r", "-o", str(ROOT / "upstream.xml")],
                          cwd=host.tree, capture_output=True, text=True)
     if out.returncode:
         die(f"repo manifest failed:\n{out.stderr.strip()}")
     count = (ROOT / "upstream.xml").read_text(encoding="utf-8").count("<project ")
     log(f"upstream.xml: {count} projects at the tree's commits")
+    apply_patches(host.tree)
     return 0
+
+
+# In the tree, each patch is one commit on top of its project's pinned commit. Only commits made
+# here count as patch commits: committed at time 0 by PATCH_IDENTITY, with the patch's path as
+# subject and the hash of the file they were made from as PATCH_TRAILER. The files are the source;
+# the commits are rebuilt from them whenever they differ.
+PATCH_IDENTITY = {
+    "GIT_AUTHOR_NAME": "Lujarch", "GIT_AUTHOR_EMAIL": "patches@lujarch",
+    "GIT_AUTHOR_DATE": "@0 +0000", "GIT_COMMITTER_NAME": "Lujarch",
+    "GIT_COMMITTER_EMAIL": "patches@lujarch", "GIT_COMMITTER_DATE": "@0 +0000",
+}
+PATCH_TRAILER = "Patch-Blob"
+APPLYING = "lujarch-applying"
+EXPORT = ["-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false",
+          "-c", "diff.relative=false", "-c", "core.quotePath=true",
+          "diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames",
+          "--binary", "--full-index"]
+PATCH_NAME_RE = re.compile(r"^\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.patch$")
+
+
+def order_entries():
+    path = SYSTEM / "order"
+    if not path.exists():
+        return []
+    return [l.strip() for l in path.read_text(encoding="utf-8").split("\n") if l.strip()]
 
 
 def patch_dirs():
     """The patch directories of system/order, in order, as (entry, patches/ path)."""
-    path = SYSTEM / "order"
-    entries = [l.strip() for l in path.read_text(encoding="utf-8").split("\n") if l.strip()] \
-        if path.exists() else []
     result = []
-    for entry in entries:
+    for entry in order_entries():
         pdir = SYSTEM / entry / "patches"
         if not pdir.is_dir():
             die(f"system/order: {entry} has no patches/ directory")
@@ -539,34 +576,238 @@ def patch_series():
     return series
 
 
-def git_apply(project, patch, *flags):
-    return subprocess.run(["git", "-C", str(project), "apply", *flags, str(patch)],
-                          capture_output=True, text=True)
+def series_by_project():
+    series = {}
+    for patch, project in patch_series():
+        series.setdefault(project, []).append(patch)
+    return series
+
+
+def upstream_projects():
+    """Every project of upstream.xml as {tree path: pinned commit}."""
+    text = (ROOT / "upstream.xml").read_text(encoding="utf-8")
+    projects = {}
+    for tag in re.findall(r"<project\s[^>]*>", text):
+        name = re.search(r'\bname="([^"]+)"', tag)
+        path = re.search(r'\bpath="([^"]+)"', tag)
+        revision = re.search(r'\brevision="([0-9a-f]{40})"', tag)
+        if name and revision:
+            projects[(path or name).group(1)] = revision.group(1)
+    return projects
+
+
+def pgit(where, *args, env=None, input=None, check=False):
+    run = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True,
+                         encoding="utf-8", errors="replace", env=env, input=input)
+    if check and run.returncode:
+        die(f"git {args[0]} in {where}: {run.stderr.strip()}")
+    return run
+
+
+def blob_id(data):
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
+def patch_message(patch, data):
+    return f"{rel(patch)}\n\n{PATCH_TRAILER}: {blob_id(data)}\n"
+
+
+def git_dir(where):
+    return Path(pgit(where, "rev-parse", "--absolute-git-dir", check=True).stdout.strip())
+
+
+def changes(where):
+    return pgit(where, "status", "--porcelain").stdout.strip()
+
+
+def unmerged(where):
+    return sorted(set(pgit(where, "diff", "--name-only", "--diff-filter=U").stdout.split()))
+
+
+def diff_bytes(where, *revs):
+    run = subprocess.run(["git", "-C", str(where), *EXPORT, *revs], capture_output=True)
+    if run.returncode:
+        die(f"git diff in {where}: {run.stderr.decode(errors='replace').strip()}")
+    return run.stdout
+
+
+def project_heads(tree, projects):
+    def head(project):
+        out = pgit(tree / project, "rev-parse", "HEAD")
+        return project, out.stdout.strip() if out.returncode == 0 else None
+    with ThreadPoolExecutor(16) as pool:
+        return dict(pool.map(head, projects))
+
+
+def commits_since(where, base):
+    """The commits from base to HEAD, oldest first, as (commit, subject, blob, made here)."""
+    out = pgit(where, "log", "--reverse", "--format=%H%x1f%ct%x1f%B%x1e", f"{base}..HEAD",
+               check=True)
+    result = []
+    for record in out.stdout.split("\x1e"):
+        record = record.strip("\n")
+        if not record.strip():
+            continue
+        commit, ctime, body = record.split("\x1f", 2)
+        m = re.search(rf"^{PATCH_TRAILER}: ([0-9a-f]{{40}})$", body, re.MULTILINE)
+        result.append((commit, body.split("\n", 1)[0], m and m.group(1),
+                       ctime == "0" and m is not None))
+    return result
+
+
+def patch_base(where):
+    """The upstream commit under a project's patch commits, and those commits, oldest first."""
+    out = pgit(where, "log", "--first-parent", "--format=%H%x1f%ct%x1f%B%x1e", "HEAD",
+               check=True)
+    for record in out.stdout.split("\x1e"):
+        record = record.strip("\n")
+        if not record.strip():
+            continue
+        commit, ctime, body = record.split("\x1f", 2)
+        if ctime != "0" or not re.search(rf"^{PATCH_TRAILER}: ", body, re.MULTILINE):
+            return commit, commits_since(where, commit)
+    die(f"{where}: no upstream commit under its patch commits")
+
+
+def in_sync(made, patch):
+    _, subject, blob, ours = made
+    return ours and subject == rel(patch) and blob == blob_id(patch.read_bytes())
+
+
+def commit_index(where, message):
+    """Commit the project's index on HEAD the way patch commits are made."""
+    tree = pgit(where, "write-tree", check=True).stdout.strip()
+    commit = pgit(where, "commit-tree", tree, "-p", "HEAD", "-F", "-",
+                  env={**os.environ, **PATCH_IDENTITY}, input=message, check=True).stdout.strip()
+    pgit(where, "update-ref", "--no-deref", "HEAD", commit, check=True)
+    return commit
+
+
+def conflict_files(where):
+    """Files a patch still conflicts in: unmerged paths, leftover markers, rejected hunks."""
+    found = set(unmerged(where))
+    rejects = pgit(where, "ls-files", "--others", "--", "*.rej").stdout.split("\n")
+    found |= {r for r in rejects if r}
+    listed = pgit(where, "diff", "--name-only", "HEAD").stdout.split("\n")
+    listed += pgit(where, "ls-files", "--others", "--exclude-standard").stdout.split("\n")
+    for name in filter(None, listed):
+        text = read_text(where / name)
+        if text and re.search(r"^(<{7}|>{7}) ", text, re.MULTILINE):
+            found.add(name)
+    return sorted(found)
+
+
+def apply_one(where, patch):
+    """Apply one patch as a commit. On a conflict, leave it in the tree to be resolved."""
+    data = patch.read_bytes()
+    run = pgit(where, "apply", "--3way", "--whitespace=nowarn", str(patch))
+    if run.returncode == 0 and not unmerged(where):
+        commit_index(where, patch_message(patch, data))
+        return True
+    if not unmerged(where) and not changes(where):
+        # No three-way merge without the blobs the patch was made from: apply what fits.
+        pgit(where, "apply", "--reject", "--whitespace=nowarn", str(patch))
+    (git_dir(where) / APPLYING).write_text(rel(patch) + "\n")
+    return False
+
+
+def finish_applying(where, project, wanted):
+    marker = git_dir(where) / APPLYING
+    patch = ROOT / marker.read_text().strip()
+    if patch not in wanted:
+        die(f"{project}: {rel(patch)} is being resolved but is no longer a patch of it; "
+            f"drop the resolution with git -C {where} reset --hard, delete {marker}")
+    left = conflict_files(where)
+    if left:
+        die(f"{project}: {rel(patch)} still conflicts in " + ", ".join(left))
+    pgit(where, "add", "-A", check=True)
+    data = diff_bytes(where, "--cached", "HEAD")
+    if not data:
+        die(f"{project}: the resolution of {rel(patch)} changes nothing")
+    patch.write_bytes(data)
+    commit_index(where, patch_message(patch, data))
+    marker.unlink()
+    log(f"{project}: {rel(patch)} resolved and saved")
 
 
 def apply_patches(tree):
-    count = 0
-    for patch, project in patch_series():
-        where = tree / project
-        if not where.is_dir():
-            die(f"{rel(patch)}: no project {project} in the tree")
-        if git_apply(where, patch, "--reverse", "--check").returncode == 0:
+    """Bring every project to its pinned commit plus its patches, one commit per patch."""
+    pins = upstream_projects()
+    series = series_by_project()
+    for project in series:
+        if project not in pins:
+            die(f"patches for {project}, which upstream.xml does not have")
+    heads = project_heads(tree, pins)
+    applied = kept = 0
+    for project, pinned in pins.items():
+        wanted = series.get(project, [])
+        if not wanted and heads[project] == pinned:
             continue
-        check = git_apply(where, patch, "--check")
-        if check.returncode:
-            die(f"{rel(patch)} does not apply to {project}:\n{check.stderr.strip()}")
-        git_apply(where, patch)
-        count += 1
-        log(f"applied {rel(patch)}")
-    log(f"patches: {count} applied, {len(patch_series()) - count} already in the tree")
+        where = tree / project
+        if heads[project] is None:
+            die(f"{project} is not in the tree (lujarch sync)")
+        if (git_dir(where) / APPLYING).exists():
+            finish_applying(where, project, wanted)
+        elif changes(where):
+            die(f"{project} has changes no patch holds: lujarch save them, or discard them")
+        base, made = patch_base(where)
+        if base != pinned:
+            die(f"{project} is on {base[:12]}, upstream.xml pins {pinned[:12]} (lujarch sync)")
+        k = 0
+        while k < min(len(made), len(wanted)) and in_sync(made[k], wanted[k]):
+            k += 1
+        if k < len(made):
+            pgit(where, "checkout", "-q", "--detach", made[k - 1][0] if k else pinned, check=True)
+        kept += k
+        for patch in wanted[k:]:
+            if not apply_one(where, patch):
+                die(f"{rel(patch)} does not apply cleanly to {project}. Resolve these files in "
+                    f"{where}, then run lujarch patch again:\n  "
+                    + "\n  ".join(conflict_files(where) or ["(nothing applied)"]))
+            applied += 1
+            log(f"applied {rel(patch)}")
+    if applied or kept:
+        log(f"patches: {applied} applied, {kept} already in the tree")
 
 
 def revert_patches(tree):
-    for patch, project in reversed(patch_series()):
+    """Bring every project back to the upstream commit under its patch commits."""
+    pins = upstream_projects()
+    heads = project_heads(tree, pins)
+    for project, pinned in pins.items():
+        if heads[project] in (None, pinned):
+            continue
         where = tree / project
-        if where.is_dir() and git_apply(where, patch, "--reverse", "--check").returncode == 0:
-            git_apply(where, patch, "--reverse")
-            log(f"reverted {rel(patch)}")
+        if (git_dir(where) / APPLYING).exists():
+            die(f"{project}: a patch is being resolved there; finish it with lujarch patch")
+        if changes(where):
+            die(f"{project} has changes no patch holds: lujarch save them, or discard them")
+        base, made = patch_base(where)
+        if made:
+            pgit(where, "checkout", "-q", "--detach", base, check=True)
+            log(f"reverted {len(made)} patch{'es' if len(made) > 1 else ''} in {project}")
+
+
+def verify_tree(tree):
+    """The tree must be exactly upstream.xml plus the patches."""
+    pins = upstream_projects()
+    series = series_by_project()
+
+    def state(project):
+        where = tree / project
+        head = pgit(where, "rev-parse", "HEAD").stdout.strip()
+        return project, head, changes(where)
+    with ThreadPoolExecutor(16) as pool:
+        states = list(pool.map(state, pins))
+    problems = []
+    for project, head, dirty in states:
+        if dirty:
+            problems.append(f"{project}: changes no patch holds")
+        elif not series.get(project) and head != pins[project]:
+            problems.append(f"{project}: not on its pinned commit")
+    if problems:
+        die("the tree is not upstream.xml plus the patches (lujarch save, or discard):\n  "
+            + "\n  ".join(problems[:40]))
 
 
 def cmd_patch(_args):
@@ -576,6 +817,124 @@ def cmd_patch(_args):
 
 def cmd_unpatch(_args):
     revert_patches(Host().tree)
+    return 0
+
+
+def entry_of(patch):
+    parts = Path(rel(patch)).parts
+    return f"{parts[1]}/{parts[2]}"
+
+
+def reproduces(where, parent, commit, patch):
+    """Whether a patch file applied on parent gives commit's tree."""
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
+        if pgit(where, "read-tree", parent, env=env).returncode:
+            return False
+        if pgit(where, "apply", "--cached", str(patch), env=env).returncode:
+            return False
+        tree = pgit(where, "write-tree", env=env).stdout.strip()
+    return tree == pgit(where, "rev-parse", f"{commit}^{{tree}}").stdout.strip()
+
+
+def save_project(tree, project, entry, args, pinned, wanted):
+    where = tree / project
+    if (git_dir(where) / APPLYING).exists():
+        die(f"{project}: a patch is being resolved there; finish it with lujarch patch")
+    base, made = patch_base(where)
+    if base != pinned or len(made) != len(wanted) or \
+            not all(in_sync(m, p) for m, p in zip(made, wanted)):
+        die(f"{project} is not upstream.xml plus its patches; lujarch patch first")
+    pdir = SYSTEM / entry / "patches" / project
+    existing = sorted(pdir.glob("*.patch")) if pdir.is_dir() else []
+    new = False
+    if args.patch:
+        target = pdir / args.patch
+        if target not in existing:
+            die(f"{entry} has no patch {args.patch} for {project}")
+    elif args.name:
+        number = max((int(p.name[:4]) for p in existing), default=0) + 1
+        target = pdir / f"{number:04d}-{args.name}.patch"
+        if not PATCH_NAME_RE.match(target.name):
+            die(f"{target.name}: a patch is named NNNN-<what>.patch, <what> in kebab-case")
+        new = True
+    elif len(existing) == 1:
+        target = existing[0]
+    elif not existing:
+        die(f"{entry} has no patch for {project}: name a new one with --name")
+    else:
+        die(f"{entry} has several patches for {project}: choose one with --patch ("
+            + ", ".join(p.name for p in existing) + ")")
+
+    pgit(where, "add", "-A", check=True)
+    work = commit_index(where, "lujarch save\n")
+    order = order_entries()
+    after = sorted(wanted + ([target] if new else []),
+                   key=lambda p: (order.index(entry_of(p)), p.name))
+    by_patch = {p: m[0] for m, p in zip(made, wanted)}
+    todo = []
+    for p in after:
+        if p == target and new:
+            todo.append(f"pick {work}")
+        else:
+            todo.append(f"pick {by_patch[p]}")
+            if p == target:
+                todo.append(f"fixup {work}")
+    with tempfile.NamedTemporaryFile("w", suffix=".todo", delete=False) as f:
+        f.write("\n".join(todo) + "\n")
+    env = {**os.environ, **PATCH_IDENTITY, "GIT_SEQUENCE_EDITOR": f"cp {shlex.quote(f.name)}",
+           "GIT_EDITOR": "true"}
+    run = pgit(where, "-c", "core.hooksPath=/dev/null", "-c", "rebase.autoSquash=false",
+               "rebase", "-q", "-i", pinned, env=env)
+    os.unlink(f.name)
+    if run.returncode:
+        pgit(where, "rebase", "--abort")
+        pgit(where, "reset", "-q", "--mixed", "HEAD~1", check=True)
+        later = re.search(r"[Cc]ould not apply [0-9a-f]+\.*\s*(\S+)", run.stdout + run.stderr)
+        die(f"{project}: the change to {rel(target)} conflicts with a later patch"
+            + (f", {later.group(1)}" if later else "") + "; the change is back in the tree")
+
+    rebased = commits_since(where, pinned)
+    parent = pinned
+    for (commit, _, _, _), p in zip(rebased, after):
+        if p == target or not p.exists() or not reproduces(where, f"{commit}^", commit, p):
+            data = diff_bytes(where, f"{commit}^", commit)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(data)
+            log(f"saved {rel(p)}" if p == target else f"rewrote {rel(p)}, its context moved")
+        tree_id = pgit(where, "rev-parse", f"{commit}^{{tree}}", check=True).stdout.strip()
+        parent = pgit(where, "commit-tree", tree_id, "-p", parent, "-F", "-",
+                      env={**os.environ, **PATCH_IDENTITY},
+                      input=patch_message(p, p.read_bytes()), check=True).stdout.strip()
+    pgit(where, "update-ref", "--no-deref", "HEAD", parent, check=True)
+
+
+def cmd_save(args):
+    host = Host()
+    tree = host.tree
+    entry = args.entry.strip("/")
+    if entry.startswith("system/"):
+        entry = entry[len("system/"):]
+    if not re.fullmatch(r"(features|device)/[a-z0-9-]+", entry) or not (SYSTEM / entry).is_dir():
+        die(f"{args.entry}: not a feature or device directory under system/")
+    if entry not in order_entries():
+        die(f"{entry} is not in system/order; add it where its patches apply")
+    pins = upstream_projects()
+    if args.projects:
+        projects = [p.strip("/") for p in args.projects]
+        for p in projects:
+            if p not in pins:
+                die(f"{p} is not a project of upstream.xml")
+    else:
+        with ThreadPoolExecutor(16) as pool:
+            projects = [p for p, dirty in pool.map(lambda p: (p, changes(tree / p)), pins) if dirty]
+    projects = [p for p in projects if changes(tree / p)]
+    if not projects:
+        log("no changes in the tree")
+        return 0
+    series = series_by_project()
+    for project in projects:
+        save_project(tree, project, entry, args, pins[project], series.get(project, []))
     return 0
 
 
@@ -680,6 +1039,7 @@ def cmd_build(args):
         fcntl.flock(lock, fcntl.LOCK_EX)
 
     apply_patches(tree)
+    verify_tree(tree)
     mem_max, mem_high, jobs = build_budget(host)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
@@ -919,6 +1279,12 @@ def main():
     sub.add_parser("sync", help="sync the tree to upstream.xml and apply the patches")
     sub.add_parser("patch", help="apply the patches of system/order")
     sub.add_parser("unpatch", help="revert the patches of system/order")
+    save = sub.add_parser("save", help="save the tree's changes into an entry's patches")
+    save.add_argument("entry", help="features/<feature> or device/<device>")
+    save.add_argument("projects", nargs="*", help="projects to save (default: every changed one)")
+    which = save.add_mutually_exclusive_group()
+    which.add_argument("--name", help="start a new patch NNNN-<name>.patch")
+    which.add_argument("--patch", help="the entry's patch file to fold the changes into")
     build = sub.add_parser("build", help="build a device or some of its modules")
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
@@ -928,7 +1294,8 @@ def main():
     args = parser.parse_args()
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
-        "patch": cmd_patch, "unpatch": cmd_unpatch, "build": cmd_build, "vm": cmd_vm,
+        "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "build": cmd_build,
+        "vm": cmd_vm,
     }[args.command](args)
 
 

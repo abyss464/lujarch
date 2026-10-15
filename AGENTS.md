@@ -39,7 +39,8 @@ signed with its owner's keys. This repository is its only source. Read `README.m
 - A feature is `system/features/<feature>/` with `target/<feature>.md`; the layout is in
   `process/layout.md`.
 - Changes to upstream projects are patches of the feature that needs them, applied in the order
-  of `system/order`; never leave unsaved edits in the tree.
+  of `system/order`. An edit in the tree is saved into its patch with `tools/lujarch save`
+  (process/layout.md, Patches); never leave unsaved edits in the tree.
 - Versions and pins live only in `lock.toml` and `upstream.xml`.
 - Each test names the items it verifies. A test that verifies no item is not written.
 - Run `tools/lujarch check` before every commit. It must report nothing.
