@@ -1,9 +1,9 @@
 diff --git a/service/java/com/android/server/wifi/LujarchNetworkInfo.java b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..7a42629f296ec1b1af60a08b195df891c13d2cbc
+index 0000000000000000000000000000000000000000..830fe98c6e8ddde1dcb15effb48352f9aa4def8c
 --- /dev/null
 +++ b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,152 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -36,8 +36,7 @@ index 0000000000000000000000000000000000000000..7a42629f296ec1b1af60a08b195df891
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP})
-+ * for the reads the Wi-Fi service answers.
++ * The network info permission ({@link #OP}) for the reads the Wi-Fi service answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every

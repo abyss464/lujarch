@@ -1,5 +1,5 @@
 diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
-index b7d9f653023e91bc8c9145f0f6bf3014f921503c..d5f3fb19f76086adaec8a16538f3a9cd07481c59 100644
+index b7d9f653023e91bc8c9145f0f6bf3014f921503c..96c578b4af4b5df0dcd1b5c93ba4e81d235b6543 100644
 --- a/core/java/android/app/ActivityThread.java
 +++ b/core/java/android/app/ActivityThread.java
 @@ -247,6 +247,7 @@ import com.android.internal.R;
@@ -16,9 +16,9 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..d5f3fb19f76086adaec8a16538f3a9cd
          // in many places.
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(newConfig,
 -                contextThemeWrapperOverrideConfig);
-+        // Without mcc and mnc when the process's basic phone
-+        // info is refused (a copy; mCurrentConfig and the created configuration reported
-+        // to the window manager keep the real values).
++        // Without mcc and mnc when the process's basic phone info is refused (a copy;
++        // mCurrentConfig and the created configuration reported to the window manager keep the real
++        // values).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
  
@@ -28,22 +28,21 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..d5f3fb19f76086adaec8a16538f3a9cd
       */
      private void handleWindowingModeChangeIfNeeded(ActivityClientRecord r,
              Configuration newConfiguration) {
-+        // The activity's callbacks get no mcc and mnc
-+        // when the process's basic phone info is refused.
++        // The activity's callbacks get no mcc and mnc when the process's basic phone info is
++        // refused.
 +        newConfiguration = Configuration.lujarchForApp(newConfiguration);
          final Activity activity = r.activity;
          final int newWindowingMode = newConfiguration.windowConfiguration.getWindowingMode();
          final int oldWindowingMode = r.mLastReportedWindowingMode;
-@@ -7969,6 +7976,46 @@ public final class ActivityThread extends ClientTransactionHandler
+@@ -7969,6 +7976,45 @@ public final class ActivityThread extends ClientTransactionHandler
          return insInfo.nativeLibraryDir;
      }
  
 +    /**
-+     * What the system hands the app's process
-+     * itself is decided once per process, at bind;
-+     * A change of the user's choice applies from the app's next start. Uids below 10000 are
-+     * never touched (LujarchInfo). Isolated and SDK sandbox processes are not decided: their
-+     * uid is not the app's.
++     * What the system hands the app's process itself is decided once per process, at bind. A change
++     * of the user's choice applies from the app's next start. Uids below 10000 are never touched
++     * (LujarchInfo). Isolated and SDK sandbox processes are not decided: their uid is not the
++     * app's.
 +     * <ul>
 +     * <li>Device info ({@link LujarchInfo#decide}, one note, an ask asks): when it refuses, the
 +     * build identity reads as unknown and the process keeps UTC until it ends.
@@ -81,20 +80,19 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..d5f3fb19f76086adaec8a16538f3a9cd
      @UnsupportedAppUsage
      @RavenwoodThrow(comment = "See ActivityThread_ravenwood for initialization on Ravenwood")
      private void handleBindApplication(AppBindData data) {
-@@ -8078,6 +8125,11 @@ public final class ActivityThread extends ClientTransactionHandler
+@@ -8078,6 +8124,10 @@ public final class ActivityThread extends ClientTransactionHandler
              }
          }
  
-+        // Before the bind configuration reaches any
-+        // resources and before the app's code can run (its class loader and component factory
-+        // come with the package info below).
++        // Before the bind configuration reaches any resources and before the app's code can run
++        // (its class loader and component factory come with the package info below).
 +        lujarchDecideInfo(data);
 +
          synchronized (mResourcesManager) {
              /*
               * Update the system configuration since its preloaded and might not
 diff --git a/core/java/android/app/ConfigurationController.java b/core/java/android/app/ConfigurationController.java
-index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..4912cb474dd277ff0f23220a4aa4a10f74e2e59b 100644
+index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..4dc8fcf33f31fe699ec14c7dc83d37970a7a67c0 100644
 --- a/core/java/android/app/ConfigurationController.java
 +++ b/core/java/android/app/ConfigurationController.java
 @@ -256,8 +256,10 @@ class ConfigurationController {
@@ -103,8 +101,8 @@ index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..4912cb474dd277ff0f23220a4aa4a10f
          // in many places.
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(
 -                newConfig, contextThemeWrapperOverrideConfig);
-+        // Without mcc and mnc when the process's basic phone
-+        // info is refused (a copy; this controller keeps the real configuration).
++        // Without mcc and mnc when the process's basic phone info is refused (a copy; this
++        // controller keeps the real configuration).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
          cb.onConfigurationChanged(configToReport);
@@ -173,16 +171,16 @@ index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..8a4e0a499397da65f3cc4f5d7e64055a
       * <p>Construct an invalid Configuration. This state is only suitable for constructing a
       * Configuration delta that will be applied to some valid Configuration object. In order to
 diff --git a/core/java/android/content/res/ResourcesImpl.java b/core/java/android/content/res/ResourcesImpl.java
-index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..e7b94842516909d40d0befdf40b0c3d5e141a542 100644
+index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..0dc4283498e6993f6f0dccad0b2637067bc4c444 100644
 --- a/core/java/android/content/res/ResourcesImpl.java
 +++ b/core/java/android/content/res/ResourcesImpl.java
 @@ -681,6 +681,12 @@ public class ResourcesImpl {
          }
  
          mTmpConfig.setTo(config);
-+        // No mcc and mnc for an app process whose basic phone
-+        // info is refused, so no carrier-specific resources and none in the
-+        // configuration the app reads; a stale value from before the decision is dropped.
++        // No mcc and mnc for an app process whose basic phone info is refused, so no
++        // carrier-specific resources and none in the configuration the app reads; a stale value
++        // from before the decision is dropped.
 +        Configuration.lujarchClearOperator(mTmpConfig);
 +        final @Config int lujarchChanges = Configuration.lujarchClearOperator(mConfiguration)
 +                ? ActivityInfo.CONFIG_MCC | ActivityInfo.CONFIG_MNC : 0;
@@ -199,7 +197,7 @@ index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..e7b94842516909d40d0befdf40b0c3d5
  
      /**
 diff --git a/core/java/android/os/Build.java b/core/java/android/os/Build.java
-index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34d41c5f5f 100644
+index 25912a0a53436489a76a8a327c2a85e9a0301909..9e0d0976f33347a5b465508a171ce74dff8607f3 100644
 --- a/core/java/android/os/Build.java
 +++ b/core/java/android/os/Build.java
 @@ -46,6 +46,7 @@ import dalvik.system.VMRuntime;
@@ -232,8 +230,8 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34
      }
  
 +    /**
-+     * The device info permission refused this
-+     * process at bind, so its build identity reads as {@link #UNKNOWN}.
++     * The device info permission refused this process at bind, so its build identity reads as
++     * {@link #UNKNOWN}.
 +     */
 +    private static volatile boolean sLujarchIdentityHidden;
 +
@@ -278,16 +276,15 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34
      private static String getString(String property) {
          return SystemProperties.get(property, UNKNOWN);
 diff --git a/core/java/android/window/WindowTokenClient.java b/core/java/android/window/WindowTokenClient.java
-index e8c59a5d7286db6c4947d687169154771dfeb5d0..d6f7600a4b2d81c8f171fdcee01767f02af7131d 100644
+index e8c59a5d7286db6c4947d687169154771dfeb5d0..4795d8f6a37d2b5d43d0d04399674a76447d6f78 100644
 --- a/core/java/android/window/WindowTokenClient.java
 +++ b/core/java/android/window/WindowTokenClient.java
-@@ -209,7 +209,9 @@ public class WindowTokenClient extends Binder {
+@@ -209,7 +209,8 @@ public class WindowTokenClient extends Binder {
                  // Updating resources implies some fields of configuration are updated despite they
                  // are public or not.
                  if (dispatcher.shouldReportPrivateChanges() || publicDiff != 0) {
 -                    dispatcher.dispatchConfigurationChanged(newConfig);
-+                    // Without mcc and mnc when the
-+                    // process's basic phone info is refused.
++                    // Without mcc and mnc when the process's basic phone info is refused.
 +                    dispatcher.dispatchConfigurationChanged(Configuration.lujarchForApp(newConfig));
                  }
              }
@@ -482,7 +479,7 @@ index 0000000000000000000000000000000000000000..138167d63fe674c37cf60e6505b7d205
 +    }
 +}
 diff --git a/core/java/com/android/internal/os/RuntimeInit.java b/core/java/com/android/internal/os/RuntimeInit.java
-index 1c6371e732e5a8d19f6694b9ff7cedcdf9ccd5cd..0af59401389f5ecd997b3b2105f1b5df8c02a8af 100644
+index 1c6371e732e5a8d19f6694b9ff7cedcdf9ccd5cd..2b6fb672607f9cab7e1919a02bd23dab1309904a 100644
 --- a/core/java/com/android/internal/os/RuntimeInit.java
 +++ b/core/java/com/android/internal/os/RuntimeInit.java
 @@ -33,6 +33,8 @@ import android.os.Trace;
@@ -524,10 +521,10 @@ index 1c6371e732e5a8d19f6694b9ff7cedcdf9ccd5cd..0af59401389f5ecd997b3b2105f1b5df
 +    private static volatile boolean sLujarchUtc;
 +
 +    /**
-+     * The device info permission refuses this
-+     * process (decided once at bind, after {@code Build.lujarchHideIdentity}). Its time zone
-+     * becomes UTC for Java (the default TimeZone, which ICU follows) and native code (TZ), and
-+     * stays UTC when the system time zone changes: ActivityThread's time zone update and any
++     * The device info permission refuses this process (decided once at bind, after
++     * {@code Build.lujarchHideIdentity}). Its time zone becomes UTC for Java (the default TimeZone,
++     * which ICU follows) and native code (TZ), and stays UTC when the system time zone changes:
++     * ActivityThread's time zone update and any
 +     * {@code TimeZone.setDefault(null)} read the zone from the supplier above. The default HTTP
 +     * user agent, built from the model and build id, is made again from the hidden values.
 +     *
@@ -571,7 +568,7 @@ index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792
              return mHealthServiceWrapper.getProperty(id, prop);
          }
 diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
-index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482b7db2c49 100644
+index ee20dde909221ec2968b308d829e46bc296400af..559b9f88b610ffe131eae2339e24ea9549adb28e 100644
 --- a/services/core/java/com/android/server/TelephonyRegistry.java
 +++ b/services/core/java/com/android/server/TelephonyRegistry.java
 @@ -108,6 +108,7 @@ import com.android.internal.telephony.IOnSubscriptionsChangedListener;
@@ -582,16 +579,15 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
  import com.android.internal.telephony.TelephonyPermissions;
  import com.android.internal.telephony.flags.Flags;
  import com.android.internal.telephony.util.TelephonyUtils;
-@@ -595,6 +596,57 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -595,6 +596,56 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                  || events.contains(TelephonyCallback.EVENT_OUTGOING_EMERGENCY_SMS);
      }
  
 +    /**
-+     * The events of the basic phone info
-+     * an app can listen to without READ_PHONE_STATE: service state,
-+     * signal strength(s), call state and the active data subscription (both without a permission
-+     * up to target SDK 30), data connection state and activity, carrier network change, data
-+     * activation state, the user's mobile data switch and display info.
++     * The events of the basic phone info an app can listen to without READ_PHONE_STATE: service
++     * state, signal strength(s), call state and the active data subscription (both without a
++     * permission up to target SDK 30), data connection state and activity, carrier network change,
++     * data activation state, the user's mobile data switch and display info.
 +     */
 +    private static final Set<Integer> LUJARCH_PHONE_INFO_EVENTS = Set.of(
 +            TelephonyCallback.EVENT_SERVICE_STATE_CHANGED,
@@ -640,7 +636,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
      private boolean isPrivilegedPhoneStatePermissionRequired(Set<Integer> events) {
          return events.contains(TelephonyCallback.EVENT_SRVCC_STATE_CHANGED)
                  || events.contains(TelephonyCallback.EVENT_VOICE_ACTIVATION_STATE_CHANGED)
-@@ -1247,12 +1299,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1247,12 +1298,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              r.subId = subscriptionId;
              r.phoneId = phoneId;
              r.eventList = events;
@@ -658,7 +654,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          if (VDBG) log("listen: call onSSC state=" + mServiceState[r.phoneId]);
                          ServiceState rawSs = new ServiceState(mServiceState[r.phoneId]);
-@@ -1269,7 +1325,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1269,7 +1324,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -668,7 +664,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          if (mSignalStrength[r.phoneId] != null) {
                              int gsmSignalStrength = mSignalStrength[r.phoneId]
-@@ -1312,7 +1369,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1312,7 +1368,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -678,7 +674,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          r.callback.onLegacyCallStateChanged(mCallState[r.phoneId],
                                  getCallIncomingNumber(r, r.phoneId));
-@@ -1320,14 +1378,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1320,14 +1377,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -697,7 +693,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          r.callback.onDataConnectionStateChanged(mDataConnectionState[r.phoneId],
                                  mDataConnectionNetworkType[r.phoneId]);
-@@ -1335,14 +1395,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1335,14 +1394,16 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -716,7 +712,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          if (mSignalStrength[r.phoneId] != null) {
                              r.callback.onSignalStrengthsChanged(mSignalStrength[r.phoneId]);
-@@ -1402,7 +1464,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1402,7 +1463,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -726,7 +722,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          r.callback.onCarrierNetworkChange(mCarrierNetworkChangeState[r.phoneId]);
                      } catch (RemoteException ex) {
-@@ -1417,21 +1480,24 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1417,21 +1479,24 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -754,7 +750,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          if (mTelephonyDisplayInfos[r.phoneId] != null) {
                              r.callback.onDisplayInfoChanged(mTelephonyDisplayInfos[r.phoneId]);
-@@ -1454,7 +1520,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1454,7 +1519,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          remove(r.binder);
                      }
                  }
@@ -763,7 +759,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          TelephonyCallback.EVENT_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGED)) {
                      try {
                          r.callback.onActiveDataSubIdChanged(mActiveDataSubId);
-@@ -1789,7 +1855,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1789,7 +1854,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
          synchronized (mRecords) {
              for (Record r : mRecords) {
                  if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)
@@ -773,7 +769,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          // Ensure the listener has read call log permission; if they do not return
                          // an empty phone number.
-@@ -1802,7 +1869,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1802,7 +1868,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                  }
  
                  if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_CALL_STATE_CHANGED)
@@ -783,7 +779,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          // The new callback does NOT provide the phone number.
                          r.callback.onCallStateChanged(state);
-@@ -1837,7 +1905,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1837,7 +1904,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_LEGACY_CALL_STATE_CHANGED)
                              && (r.subId == subId)
@@ -793,7 +789,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              // Only the legacy PhoneStateListener receives the phone number.
                              String incomingNumberOrEmpty = getCallIncomingNumber(r, phoneId);
-@@ -1848,7 +1917,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1848,7 +1916,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      }
                      if (r.matchTelephonyCallbackEvent(TelephonyCallback.EVENT_CALL_STATE_CHANGED)
                              && (r.subId == subId)
@@ -803,7 +799,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              // The phone number is not included in the new call state changed
                              // listener.
-@@ -1895,7 +1965,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1895,7 +1964,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                              }
                              if (r.matchTelephonyCallbackEvent(
                                      TelephonyCallback.EVENT_SERVICE_STATE_CHANGED)
@@ -813,7 +809,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
  
                                  try {
                                      ServiceState stateToSend;
-@@ -1975,7 +2046,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -1975,7 +2045,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                          if ((activationType == SIM_ACTIVATION_TYPE_DATA)
                                  && r.matchTelephonyCallbackEvent(
                                          TelephonyCallback.EVENT_DATA_ACTIVATION_STATE_CHANGED)
@@ -823,7 +819,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                              if (DBG) {
                                  log("notifyDataActivationStateForPhoneId: callback.onDASC r=" + r
                                          + " subId=" + subId + " phoneId=" + phoneId
-@@ -2015,7 +2087,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2015,7 +2086,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      }
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_SIGNAL_STRENGTHS_CHANGED)
@@ -833,7 +829,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              if (DBG) {
                                  log("notifySignalStrengthForPhoneId: callback.onSsS r=" + r
-@@ -2029,7 +2102,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2029,7 +2101,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      }
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_SIGNAL_STRENGTH_CHANGED)
@@ -843,7 +839,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              int gsmSignalStrength = signalStrength.getGsmSignalStrength();
                              int ss = (gsmSignalStrength == 99 ? -1 : gsmSignalStrength);
-@@ -2093,7 +2167,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2093,7 +2166,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              for (Record r : mRecords) {
                  if (r.matchTelephonyCallbackEvent(
                          TelephonyCallback.EVENT_CARRIER_NETWORK_CHANGED)
@@ -853,7 +849,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          r.callback.onCarrierNetworkChange(active);
                      } catch (RemoteException ex) {
-@@ -2192,7 +2267,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2192,7 +2266,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                  for (Record r : mRecords) {
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_USER_MOBILE_DATA_STATE_CHANGED)
@@ -863,7 +859,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              r.callback.onUserMobileDataStateChanged(state);
                          } catch (RemoteException ex) {
-@@ -2231,7 +2307,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2231,7 +2306,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                  for (Record r : mRecords) {
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_DISPLAY_INFO_CHANGED)
@@ -873,7 +869,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              if (!mConfigurationProvider.isDisplayInfoNrAdvancedSupported(
                                      r.callingPackage, Binder.getCallingUserHandle())) {
-@@ -2322,7 +2399,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2322,7 +2398,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      // Notify by correct subId.
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)
@@ -883,7 +879,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              r.callback.onDataActivity(state);
                          } catch (RemoteException ex) {
-@@ -2355,7 +2433,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2355,7 +2432,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                  for (Record r : mRecords) {
                      if (r.matchTelephonyCallbackEvent(
                              TelephonyCallback.EVENT_DATA_ACTIVITY_CHANGED)
@@ -893,7 +889,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                          try {
                              r.callback.onDataActivity(state);
                          } catch (RemoteException ex) {
-@@ -2465,7 +2544,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2465,7 +2543,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
                      for (Record r : mRecords) {
                          if (r.matchTelephonyCallbackEvent(
                                  TelephonyCallback.EVENT_DATA_CONNECTION_STATE_CHANGED)
@@ -903,7 +899,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                              try {
                                  if (DBG) {
                                      log("Notify data connection state changed on sub: " + subId);
-@@ -2853,7 +2933,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -2853,7 +2932,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
          synchronized (mRecords) {
              for (Record r : mRecords) {
                  if (r.matchTelephonyCallbackEvent(
@@ -913,7 +909,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                      try {
                          r.callback.onActiveDataSubIdChanged(activeDataSubId);
                      } catch (RemoteException ex) {
-@@ -4909,8 +4990,10 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -4909,8 +4989,10 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              log("checkPossibleMissNotify: events = null.");
              return;
          }
@@ -925,7 +921,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
              try {
                  if (VDBG) log("checkPossibleMissNotify: onServiceStateChanged state=" +
                          mServiceState[phoneId]);
-@@ -4929,7 +5012,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -4929,7 +5011,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              }
          }
  
@@ -935,7 +931,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
              try {
                  if (mSignalStrength[phoneId] != null) {
                      SignalStrength signalStrength = mSignalStrength[phoneId];
-@@ -4944,7 +5028,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -4944,7 +5027,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              }
          }
  
@@ -945,7 +941,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
              try {
                  if (mSignalStrength[phoneId] != null) {
                      int gsmSignalStrength = mSignalStrength[phoneId]
-@@ -4976,7 +5061,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -4976,7 +5060,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              }
          }
  
@@ -955,7 +951,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
              try {
                  if (VDBG) {
                      log("checkPossibleMissNotify: onUserMobileDataStateChanged phoneId="
-@@ -4988,7 +5074,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -4988,7 +5073,7 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              }
          }
  
@@ -964,7 +960,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
              try {
                  if (VDBG) {
                      log("checkPossibleMissNotify: onDisplayInfoChanged phoneId="
-@@ -5055,7 +5141,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -5055,7 +5140,8 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
              }
          }
  
@@ -975,7 +971,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..5a5560706075e966b559150271f1c482
                  if (DBG) {
                      log("checkPossibleMissNotify: onDataConnectionStateChanged(mDataConnectionState"
 diff --git a/services/core/java/com/android/server/am/BatteryStatsService.java b/services/core/java/com/android/server/am/BatteryStatsService.java
-index c81c8271da531b4722db5207a495880561341f53..4cde1fe1e23b362db53c98dd80787add9a4b3c63 100644
+index c81c8271da531b4722db5207a495880561341f53..891e3050554c768f03d0bb039b0378e072ce700e 100644
 --- a/services/core/java/com/android/server/am/BatteryStatsService.java
 +++ b/services/core/java/com/android/server/am/BatteryStatsService.java
 @@ -107,6 +107,7 @@ import com.android.internal.R;
@@ -991,8 +987,8 @@ index c81c8271da531b4722db5207a495880561341f53..4cde1fe1e23b362db53c98dd80787add
      }
  
 +    /**
-+     * The device info permission of the binder caller
-+     * refuses, so the charging state and time estimates read as not known (false, -1).
++     * The device info permission of the binder caller refuses, so the charging state and time
++     * estimates read as not known (false, -1).
 +     */
 +    private boolean lujarchRefusesBattery() {
 +        return LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
@@ -1029,18 +1025,17 @@ index c81c8271da531b4722db5207a495880561341f53..4cde1fe1e23b362db53c98dd80787add
              long time = mStats.computeChargeTimeRemaining(mClock.elapsedRealtime());
              return time >= 0 ? (time/1000) : time;
 diff --git a/services/core/java/com/android/server/am/BroadcastController.java b/services/core/java/com/android/server/am/BroadcastController.java
-index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..d2c8f4b3ae609b2ebd58a4685b1c8616c8df1a9a 100644
+index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..d90163518b9bcad66ca6d230239280c47e156136 100644
 --- a/services/core/java/com/android/server/am/BroadcastController.java
 +++ b/services/core/java/com/android/server/am/BroadcastController.java
-@@ -285,8 +285,13 @@ class BroadcastController {
+@@ -285,8 +285,12 @@ class BroadcastController {
              int flags) {
          traceRegistrationBegin(receiverId, receiver, filter, userId);
          try {
 -            return registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
 -                    receiverId, receiver, filter, permission, userId, flags);
-+            // The sticky intent without extras when
-+            // the caller's permission for its action refuses (the caller's package was checked
-+            // against its process).
++            // The sticky intent without extras when the caller's permission for its action refuses
++            // (the caller's package was checked against its process).
 +            return LujarchInfoBroadcasts.forStickyCaller(mContext,
 +                    registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
 +                            receiverId, receiver, filter, permission, userId, flags),
@@ -1064,10 +1059,10 @@ index 9a270af7373921d2b0fda1e0da5a4c2cf3f2b941..6ecf1d67c49b66f7ff77eb3803e1ef0c
                      return false;
 diff --git a/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..6c17f3f82cafb3d3f75c8214042a085450591402
+index 0000000000000000000000000000000000000000..657171daf243442728b3e3a5756b3b98bd9407a3
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
-@@ -0,0 +1,214 @@
+@@ -0,0 +1,212 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1103,12 +1098,10 @@ index 0000000000000000000000000000000000000000..6c17f3f82cafb3d3f75c8214042a0854
 +import com.android.internal.app.LujarchInfo;
 +
 +/**
-+ * The system broadcasts that carry phone,
-+ * network or device information to any app that registers for them, delivered without
-+ * extras to an app whose permission refuses. The
-+ * broadcast itself still arrives, so an app that waits for it keeps working; a sticky one
-+ * is still returned by {@code registerReceiver(null, filter)}, and {@code getIntExtra}
-+ * answers its default.
++ * The system broadcasts that carry phone, network or device information to any app that registers
++ * for them, delivered without extras to an app whose permission refuses. The broadcast itself still
++ * arrives, so an app that waits for it keeps working; a sticky one is still returned by
++ * {@code registerReceiver(null, filter)}, and {@code getIntExtra} answers its default.
 + *
 + * <p>The decision is per receiving app, where the intent is handed over: the broadcast
 + * queue's delivery to a registered or manifest receiver (sticky replays to a new receiver
@@ -1283,7 +1276,7 @@ index 0000000000000000000000000000000000000000..6c17f3f82cafb3d3f75c8214042a0854
 +    }
 +}
 diff --git a/services/core/java/com/android/server/power/PowerManagerService.java b/services/core/java/com/android/server/power/PowerManagerService.java
-index cac2b761fb9ace853853f3aa21e460d09bc86900..d081e42d1bbca3f60d92b010cb779c8d64582d08 100644
+index cac2b761fb9ace853853f3aa21e460d09bc86900..1c38df90331f6c190390df42a666a2ac0917b7b4 100644
 --- a/services/core/java/com/android/server/power/PowerManagerService.java
 +++ b/services/core/java/com/android/server/power/PowerManagerService.java
 @@ -137,6 +137,7 @@ import com.android.internal.annotations.GuardedBy;
@@ -1294,12 +1287,11 @@ index cac2b761fb9ace853853f3aa21e460d09bc86900..d081e42d1bbca3f60d92b010cb779c8d
  import com.android.internal.display.BrightnessSynchronizer;
  import com.android.internal.os.BackgroundThread;
  import com.android.internal.util.DumpUtils;
-@@ -7279,6 +7280,12 @@ public final class PowerManagerService extends SystemService
+@@ -7279,6 +7280,11 @@ public final class PowerManagerService extends SystemService
  
          @Override // Binder call
          public ParcelDuration getBatteryDischargePrediction() {
-+            // No prediction for an app whose device
-+            // info permission refuses.
++            // No prediction for an app whose device info permission refuses.
 +            if (LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
 +                    null, null)) {
 +                return null;
@@ -1308,7 +1300,7 @@ index cac2b761fb9ace853853f3aa21e460d09bc86900..d081e42d1bbca3f60d92b010cb779c8d
              try {
                  synchronized (mLock) {
 diff --git a/services/usb/java/com/android/server/usb/UsbService.java b/services/usb/java/com/android/server/usb/UsbService.java
-index ba7b776420f450fd640c1b0236f583e5bd59a2c4..100deaa3b24872c35975a7d29b3592e7d98c94f9 100644
+index ba7b776420f450fd640c1b0236f583e5bd59a2c4..f81048aace0389a548f649e10a8dd6a78384cbd9 100644
 --- a/services/usb/java/com/android/server/usb/UsbService.java
 +++ b/services/usb/java/com/android/server/usb/UsbService.java
 @@ -78,6 +78,7 @@ import android.util.proto.ProtoOutputStream;
@@ -1319,12 +1311,11 @@ index ba7b776420f450fd640c1b0236f583e5bd59a2c4..100deaa3b24872c35975a7d29b3592e7
  import com.android.internal.content.PackageMonitor;
  import com.android.internal.os.BackgroundThread;
  import com.android.internal.util.DumpUtils;
-@@ -445,11 +446,21 @@ public class UsbService extends IUsbManager.Stub {
+@@ -445,11 +446,20 @@ public class UsbService extends IUsbManager.Stub {
      /* Returns a list of all currently attached USB devices (host mdoe) */
      @Override
      public void getDeviceList(Bundle devices) {
-+        // No attached devices for an app whose device
-+        // info permission refuses.
++        // No attached devices for an app whose device info permission refuses.
 +        if (lujarchRefusesUsb()) {
 +            return;
 +        }
@@ -1341,12 +1332,11 @@ index ba7b776420f450fd640c1b0236f583e5bd59a2c4..100deaa3b24872c35975a7d29b3592e7
      /* Opens the specified USB device (host mode) */
      @Override
      public ParcelFileDescriptor openDevice(String deviceName, String packageName) {
-@@ -484,6 +495,11 @@ public class UsbService extends IUsbManager.Stub {
+@@ -484,6 +494,10 @@ public class UsbService extends IUsbManager.Stub {
      /* returns the currently attached USB accessory (device mode) */
      @Override
      public UsbAccessory getCurrentAccessory() {
-+        // No attached accessory for an app whose device
-+        // info permission refuses.
++        // No attached accessory for an app whose device info permission refuses.
 +        if (lujarchRefusesUsb()) {
 +            return null;
 +        }
@@ -1509,7 +1499,7 @@ index 0000000000000000000000000000000000000000..6b04fcbd36de29563107a137cb405746
 +    }
 +}
 diff --git a/telephony/java/android/telephony/TelephonyManager.java b/telephony/java/android/telephony/TelephonyManager.java
-index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb6fe40bd3 100644
+index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..a8c09c22f1ae86e0da310baf3a393ddc8cf46dac 100644
 --- a/telephony/java/android/telephony/TelephonyManager.java
 +++ b/telephony/java/android/telephony/TelephonyManager.java
 @@ -45,6 +45,7 @@ import android.annotation.SystemApi;
@@ -1538,7 +1528,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
          int phoneId = SubscriptionManager.getPhoneId(subId);
          return getTelephonyProperty(phoneId, TelephonyProperties.operator_alpha(), "");
      }
-@@ -2840,10 +2845,25 @@ public class TelephonyManager {
+@@ -2840,10 +2845,24 @@ public class TelephonyManager {
       **/
      @UnsupportedAppUsage
      public String getNetworkOperatorForPhone(int phoneId) {
@@ -1550,11 +1540,10 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
  
  
 +    /**
-+     * Whether the basic phone info
-+     * refuses the app a getter over the telephony system properties (network and SIM
-+     * operator, SIM country, roaming). Decided in the app's own process for its own uid
-+     * ({@link LujarchPhoneInfo#decideSelf}); the getters answer "" (false for roaming) in every
-+     * refused mode, as they never throw. The properties themselves stay readable to the app's
++     * Whether the basic phone info refuses the app a getter over the telephony system properties
++     * (network and SIM operator, SIM country, roaming). Decided in the app's own process for its
++     * own uid ({@link LujarchPhoneInfo#decideSelf}); the getters answer "" (false for roaming) in
++     * every refused mode, as they never throw. The properties themselves stay readable to the app's
 +     * native code.
 +     */
 +    private static boolean lujarchRefusesPhoneInfo(@Nullable Context context) {
@@ -1564,7 +1553,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
      /**
       * Returns the network specifier of the subscription ID pinned to the TelephonyManager. The
       * network specifier is used by {@link
-@@ -2909,6 +2929,9 @@ public class TelephonyManager {
+@@ -2909,6 +2928,9 @@ public class TelephonyManager {
       */
      @UnsupportedAppUsage
      public boolean isNetworkRoaming(int subId) {
@@ -1574,7 +1563,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
          int phoneId = SubscriptionManager.getPhoneId(subId);
          return getTelephonyProperty(phoneId, TelephonyProperties.operator_is_roaming(), false);
      }
-@@ -4015,6 +4038,9 @@ public class TelephonyManager {
+@@ -4015,6 +4037,9 @@ public class TelephonyManager {
       */
      @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
      public String getSimOperatorNumericForPhone(int phoneId) {
@@ -1584,7 +1573,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
          return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
      }
  
-@@ -4053,6 +4079,9 @@ public class TelephonyManager {
+@@ -4053,6 +4078,9 @@ public class TelephonyManager {
       */
      @UnsupportedAppUsage
      public String getSimOperatorNameForPhone(int phoneId) {
@@ -1594,7 +1583,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb
          return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
      }
  
-@@ -4087,6 +4116,10 @@ public class TelephonyManager {
+@@ -4087,6 +4115,10 @@ public class TelephonyManager {
       */
      @UnsupportedAppUsage
      public static String getSimCountryIsoForPhone(int phoneId) {

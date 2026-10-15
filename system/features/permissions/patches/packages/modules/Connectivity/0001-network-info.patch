@@ -1,9 +1,9 @@
 diff --git a/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..96913ea0d3ab32faf813ce5d492abbb3e48993d2
+index 0000000000000000000000000000000000000000..ef583df8aa49829cd61696da27fa5216f6d0b62b
 --- /dev/null
 +++ b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,152 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -36,8 +36,7 @@ index 0000000000000000000000000000000000000000..96913ea0d3ab32faf813ce5d492abbb3
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP})
-+ * for the reads Tethering answers.
++ * The network info permission ({@link #OP}) for the reads Tethering answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
@@ -295,7 +294,7 @@ index 14809fb611743a5badf900f6159b060168dc1a0f..ec5a2848fc4007a4ed01c2f99493f2c6
      }
  
 diff --git a/service/src/com/android/server/ConnectivityService.java b/service/src/com/android/server/ConnectivityService.java
-index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..da5c52917ed7159d7799d25639ecaf348ba159f5 100644
+index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..4b97880a4e955d14de788e4d7a62955acd482992 100644
 --- a/service/src/com/android/server/ConnectivityService.java
 +++ b/service/src/com/android/server/ConnectivityService.java
 @@ -283,6 +283,7 @@ import android.net.QosSocketInfo;
@@ -393,8 +392,8 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..da5c52917ed7159d7799d25639ecaf34
              if (null != nc
                      && nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)
                      && !result.containsKey(nai.network)) {
-+                // This API does not verify the package; the network info
-+                // permission takes the uid's own.
++                // This API does not verify the package; the network info permission takes the uid's
++                // own.
                  result.put(
                          nai.network,
 -                        createWithSensitiveInfoSanitizedIfNecessaryWhenParceled(
@@ -635,10 +634,10 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..da5c52917ed7159d7799d25639ecaf34
              case CALLBACK_BLK_CHANGED: {
 diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..5ffa317852e938783e65525731ce0f3400b800fe
+index 0000000000000000000000000000000000000000..da88a5d482af0c98b47753e65e7c6d6aa69a7cd2
 --- /dev/null
 +++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
-@@ -0,0 +1,173 @@
+@@ -0,0 +1,172 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -672,10 +671,9 @@ index 0000000000000000000000000000000000000000..5ffa317852e938783e65525731ce0f34
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP})
-+ * for the reads ConnectivityService and NetworkStatsService answer,
-+ * and basic phone info ({@link #PHONE}) for the mobile network type and subscription
-+ * id ConnectivityService hands out.
++ * The network info permission ({@link #OP}) for the reads ConnectivityService and
++ * NetworkStatsService answer, and basic phone info ({@link #PHONE}) for the mobile network type and
++ * subscription id ConnectivityService hands out.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every

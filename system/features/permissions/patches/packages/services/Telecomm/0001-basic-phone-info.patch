@@ -89,7 +89,7 @@ index 0000000000000000000000000000000000000000..0889c747bb991ad6303b088e7fd6f5a5
 +    }
 +}
 diff --git a/src/com/android/server/telecom/TelecomServiceImpl.java b/src/com/android/server/telecom/TelecomServiceImpl.java
-index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af7e330b65 100644
+index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..6b72497a46c7253e8d1875f1043e9c82f7baf2c9 100644
 --- a/src/com/android/server/telecom/TelecomServiceImpl.java
 +++ b/src/com/android/server/telecom/TelecomServiceImpl.java
 @@ -53,6 +53,7 @@ import android.os.Binder;
@@ -100,7 +100,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af
  import android.os.ParcelFileDescriptor;
  import android.os.Process;
  import android.os.RemoteException;
-@@ -225,8 +226,64 @@ public class TelecomServiceImpl {
+@@ -225,8 +226,63 @@ public class TelecomServiceImpl {
          return uid;
      }
  
@@ -129,10 +129,9 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af
 +    }
 +
 +    /**
-+     * Whether the basic phone info
-+     * refuses the call state an app reads through {@code method} without
-+     * READ_PHONE_STATE (target SDK 30 or lower); refused in any mode, idle, as these getters
-+     * never throw there. An app holding the Phone permission and uids below 10000 are never
++     * Whether the basic phone info refuses the call state an app reads through {@code method}
++     * without READ_PHONE_STATE (target SDK 30 or lower); refused in any mode, idle, as these
++     * getters never throw there. An app holding the Phone permission and uids below 10000 are never
 +     * refused (LujarchPhoneInfo).
 +     *
 +     * @param verifiedPackage the caller's package as the method verified it, else null
@@ -165,7 +164,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af
          @Override
          public boolean hasForegroundServiceDelegation(
                  PhoneAccountHandle handle,
-@@ -1584,6 +1641,11 @@ public class TelecomServiceImpl {
+@@ -1584,6 +1640,11 @@ public class TelecomServiceImpl {
                      throw new SecurityException("This method can only be used for applications "
                              + "targeting API version 30 or less.");
                  }
@@ -177,7 +176,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af
                  event.setResult(ApiStats.RESULT_NORMAL);
                  synchronized (mLock) {
                      return mCallsManager.getCallState();
-@@ -1627,6 +1689,11 @@ public class TelecomServiceImpl {
+@@ -1627,6 +1688,11 @@ public class TelecomServiceImpl {
                          throw new SecurityException("getCallState API requires READ_PHONE_STATE"
                                  + " for API version 31+");
                      }

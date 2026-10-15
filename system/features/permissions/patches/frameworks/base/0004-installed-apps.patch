@@ -1,5 +1,5 @@
 diff --git a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
-index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..5998ae469ce5b77815ee4fe95c939286a965500c 100644
+index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..4eef1033518a3f2005643b59ca10fd87f2929caf 100644
 --- a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
 +++ b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
 @@ -219,6 +219,7 @@ import com.android.server.accessibility.magnification.MagnificationController;
@@ -42,11 +42,11 @@ index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..5998ae469ce5b77815ee4fe95c939286
                  }
              }
 +        }
-+        // Stock hands every enabled service to any app, which
-+        // names the apps the user enabled as accessibility services. For an app the
-+        // Installed apps permission restricts, a service stays only when its package
-+        // stays in the permission's lists (LujarchAppList#hides: lenient keeps system
-+        // services, strict the allow-set; both keep the app's own). Decided outside mLock.
++        // Stock hands every enabled service to any app, which names the apps the user enabled as
++        // accessibility services. For an app the Installed apps permission restricts, a service
++        // stays only when its package stays in the permission's lists (LujarchAppList#hides:
++        // lenient keeps system services, strict the allow-set; both keep the app's own). Decided
++        // outside mLock.
 +        final int callingUid = Binder.getCallingUid();
 +        if (result.isEmpty() || Binder.getCallingPid() == OWN_PROCESS_ID
 +                || UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
@@ -64,7 +64,7 @@ index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..5998ae469ce5b77815ee4fe95c939286
  
      @Override
 diff --git a/services/core/java/com/android/server/accounts/AccountManagerService.java b/services/core/java/com/android/server/accounts/AccountManagerService.java
-index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58f2cb6475 100644
+index 308996d8c23505cd1b95c93ea2d2024a70bef538..1ddab34929d2ab36db8105afa0f6632cadbfd3f8 100644
 --- a/services/core/java/com/android/server/accounts/AccountManagerService.java
 +++ b/services/core/java/com/android/server/accounts/AccountManagerService.java
 @@ -100,6 +100,7 @@ import android.os.UserManager;
@@ -87,9 +87,9 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58
                      new OnInterestingAppOpChangedListener());
          }
  
-+        // Account lists follow the installed apps
-+        // permission (lujarchFilterAccounts); apps cache getAccounts() until the accounts
-+        // data changes, so a change of the permission's mode drops those caches.
++        // Account lists follow the installed apps permission (lujarchFilterAccounts); apps cache
++        // getAccounts() until the accounts data changes, so a change of the permission's mode drops
++        // those caches.
 +        try {
 +            mAppOpsManager.startWatchingMode(AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS, null,
 +                    (op, packageName) -> AccountManager.invalidateLocalAccountsDataCaches());
@@ -105,10 +105,10 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58
          final long identityToken = clearCallingIdentity();
          try {
              UserAccounts accounts = getUserAccounts(userId);
-+            // The packages that asked for or were given the
-+            // authenticator's account name apps; an authenticator the installed apps
-+            // permission restricts gets only the packages the permission's lists keep, judged
-+            // on a copy of the visibility cache outside the account locks.
++            // The packages that asked for or were given the authenticator's account name apps; an
++            // authenticator the installed apps permission restricts gets only the packages the
++            // permission's lists keep, judged on a copy of the visibility cache outside the account
++            // locks.
 +            final int lujarchMode = LujarchAppList.mode(mContext, callingUid, null);
 +            final Map<String, Integer> kept;
              synchronized (accounts.dbLock) {
@@ -131,10 +131,10 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58
          final PackageManagerInternal pmInternal =
                  LocalServices.getService(PackageManagerInternal.class);
          if (!CompatChanges.isChangeEnabled(ENFORCE_PACKAGE_VISIBILITY_FILTERING, callingUid)) {
-+            // Below target SDK 34 stock answers whether the
-+            // package is installed (account types, visibility queries); an app the
-+            // Installed apps permission restricts learns only of packages the permission's
-+            // lists keep. From 34 on, package visibility below carries the permission.
++            // Below target SDK 34 stock answers whether the package is installed (account types,
++            // visibility queries); an app the Installed apps permission restricts learns only of
++            // packages the permission's lists keep. From 34 on, package visibility below carries
++            // the permission.
              return pmInternal.getPackageUid(
 -                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID;
 +                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID
@@ -143,7 +143,7 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58
          }
          final boolean canAccess = !pmInternal.filterAppAccess(targetPkgName, callingUid, userId);
          if (!canAccess && Log.isLoggable(TAG, Log.DEBUG)) {
-@@ -6399,12 +6431,54 @@ public class AccountManagerService
+@@ -6399,12 +6431,53 @@ public class AccountManagerService
          }
          Map<Account, Integer> secondPass =
                  filterSharedAccounts(accounts, firstPass, callingUid, callingPackage);
@@ -155,13 +155,12 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58
      }
  
 +    /**
-+     * An account's type names the app that authenticates it
-+     * (com.whatsapp, org.telegram.messenger, ...), and account visibility lets an app see
-+     * accounts no package visibility check covers (an app holding READ_CONTACTS sees every
-+     * account whose type manages contacts). For an app the installed apps permission
-+     * restricts, an account stays only when its authenticator's package stays in the
-+     * permission's lists ({@link LujarchAppList#hides}: lenient keeps system authenticators,
-+     * strict keeps the allow-set; both keep the app's own).
++     * An account's type names the app that authenticates it (com.whatsapp, org.telegram.messenger,
++     * ...), and account visibility lets an app see accounts no package visibility check covers (an
++     * app holding READ_CONTACTS sees every account whose type manages contacts). For an app the
++     * installed apps permission restricts, an account stays only when its authenticator's package
++     * stays in the permission's lists ({@link LujarchAppList#hides}: lenient keeps system
++     * authenticators, strict keeps the allow-set; both keep the app's own).
 +     */
 +    private void lujarchFilterAccounts(UserAccounts accounts, Map<Account, Integer> visible,
 +            int callingUid, @Nullable String callingPackage) {
@@ -330,7 +329,7 @@ index 0000000000000000000000000000000000000000..eb98d080d51865ffe2cb03585ca0bf8b
 +    }
 +}
 diff --git a/services/core/java/com/android/server/pm/AppsFilterBase.java b/services/core/java/com/android/server/pm/AppsFilterBase.java
-index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0cee437f54b 100644
+index 32795d030d8703f0253fdef1a8912d3a9677732e..5c8b0c7e6093b355ff2b8a21b683543ac25af53e 100644
 --- a/services/core/java/com/android/server/pm/AppsFilterBase.java
 +++ b/services/core/java/com/android/server/pm/AppsFilterBase.java
 @@ -24,10 +24,21 @@ import static com.android.server.pm.AppsFilterUtils.requestsQueryAllPackages;
@@ -383,7 +382,7 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
  
  /**
   * AppsFilter is the entity responsible for filtering visibility between apps based on declarations
-@@ -73,6 +93,435 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+@@ -73,6 +93,430 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
      // With each new rebuild the delay doubles until it reaches max delay.
      protected static final int CACHE_REBUILD_DELAY_MAX_MS = 10000;
  
@@ -402,11 +401,10 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    private static volatile SparseIntArray sLujarchQueryModes = new SparseIntArray();
 +    // Sorted appIds a restricted caller may always see, besides itself and core
 +    // uids (< FIRST_APPLICATION_UID, handled earlier in shouldFilterApplication):
-+    // GmsCore/GSF (many apps call Play services APIs), the WebView providers
-+    // (the current one is among them), the default launcher and the enabled
-+    // IMEs. Published as a
-+    // volatile immutable array so the hot path reads it without locking; it is
-+    // recomputed only off the hot path (boot, mode change and a TTL refresh).
++    // GmsCore/GSF (many apps call Play services APIs), the WebView providers (the current one is
++    // among them), the default launcher and the enabled IMEs. Published as a volatile immutable
++    // array so the hot path reads it without locking; it is recomputed only off the hot path (boot,
++    // mode change and a TTL refresh).
 +    private static volatile int[] sLujarchAllowedAppIds = new int[0];
 +    private static volatile long sLujarchAllowedRefreshedAt = 0;
 +    private static final long LUJARCH_ALLOWED_TTL_MS = 60_000;
@@ -433,9 +431,8 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +            Process.LAST_APPLICATION_UID - Process.FIRST_APPLICATION_UID + 1);
 +
 +    /**
-+     * Store the system context and handler used to
-+     * reach AppOps and to run the off-hot-path allow-set refresh. Called from
-+     * {@link AppsFilterImpl#create}.
++     * Store the system context and handler used to reach AppOps and to run the off-hot-path
++     * allow-set refresh. Called from {@link AppsFilterImpl#create}.
 +     */
 +    protected static void lujarchSetContext(@Nullable Context context, @Nullable Handler handler) {
 +        sLujarchContext = context;
@@ -443,9 +440,9 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    }
 +
 +    /**
-+     * The effective OP_LUJARCH_INSTALLED_APPS mode
-+     * for a calling uid. Absent from the cache means the default MODE_ALLOWED,
-+     * so only uids the user restricted are enforced. Reads cached state only.
++     * The effective OP_LUJARCH_INSTALLED_APPS mode for a calling uid. Absent from the cache means
++     * the default MODE_ALLOWED, so only uids the user restricted are enforced. Reads cached state
++     * only.
 +     */
 +    protected int getLujarchQueryMode(int callingUid) {
 +        // Lock-free volatile read; the referenced array is never mutated in
@@ -454,9 +451,9 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    }
 +
 +    /**
-+     * Whether a restricted caller may always see the
-+     * given target appId (the minimal set it needs to run). Reads the volatile
-+     * snapshot without locking and triggers an off-hot-path refresh when stale.
++     * Whether a restricted caller may always see the given target appId (the minimal set it needs
++     * to run). Reads the volatile snapshot without locking and triggers an off-hot-path refresh
++     * when stale.
 +     */
 +    protected boolean isLujarchQueryAllowedTarget(int targetAppId) {
 +        final int[] allowed = sLujarchAllowedAppIds;
@@ -515,13 +512,11 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    }
 +
 +    /**
-+     * Note OP_LUJARCH_INSTALLED_APPS for an app's own
-+     * visibility check of another app, at most once per interval per app, so the
-+     * access lands in history (as an access when allowed, a rejection when
-+     * ignored or errored). Checks evaluated by the system on an app's behalf
-+     * (the binder caller is not the app, e.g. visibility lists built at install)
-+     * are not the app's queries and are not noted. The note itself runs on the
-+     * handler, off the hot path.
++     * Note OP_LUJARCH_INSTALLED_APPS for an app's own visibility check of another app, at most once
++     * per interval per app, so the access lands in history (as an access when allowed, a rejection
++     * when ignored or errored). Checks evaluated by the system on an app's behalf (the binder
++     * caller is not the app, e.g. visibility lists built at install) are not the app's queries and
++     * are not noted. The note itself runs on the handler, off the hot path.
 +     */
 +    protected void maybeNoteLujarchQuery(int callingUid) {
 +        if (Binder.getCallingUid() != callingUid) {
@@ -588,9 +583,8 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    }
 +
 +    /**
-+     * Seed the installed apps mode cache from AppOps
-+     * and start watching for mode changes. Any failure leaves the cache empty,
-+     * i.e. nothing is enforced (fail open). Runs at system-ready.
++     * Seed the installed apps mode cache from AppOps and start watching for mode changes. Any
++     * failure leaves the cache empty, i.e. nothing is enforced (fail open). Runs at system-ready.
 +     */
 +    protected static void lujarchOnSystemReady() {
 +        final Context context = sLujarchContext;
@@ -705,9 +699,9 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
 +    }
 +
 +    /**
-+     * Recompute the sorted allow-set of appIds a
-+     * restricted caller may always see. Runs off the hot path. Each member is
-+     * resolved defensively; a member that cannot be resolved is simply omitted.
++     * Recompute the sorted allow-set of appIds a restricted caller may always see. Runs off the hot
++     * path. Each member is resolved defensively; a member that cannot be resolved is simply
++     * omitted.
 +     */
 +    private static void refreshLujarchAllowedAppIds() {
 +        final Context context = sLujarchContext;
@@ -819,7 +813,7 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
      /**
       * This contains a list of app UIDs that are implicitly queryable because another app explicitly
       * interacted with it. For example, if application A starts a service in application B,
-@@ -364,6 +813,35 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+@@ -364,6 +808,35 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                  // if the caller is pcc uid, use the visibility of its app uid
                  callingUid = UserHandle.getUid(userId, packageSetting.getAppId());
              }
@@ -856,15 +850,15 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
              if (mCacheReady && mCacheEnabled) {
                  if (!shouldFilterApplicationUsingCache(callingUid,
 diff --git a/services/core/java/com/android/server/pm/AppsFilterImpl.java b/services/core/java/com/android/server/pm/AppsFilterImpl.java
-index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..73e4ec59b32c761befd1bb0505bdc46af3c3ca2e 100644
+index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..fccc8fc87905c0ef104e06ccff4c083057c14c51 100644
 --- a/services/core/java/com/android/server/pm/AppsFilterImpl.java
 +++ b/services/core/java/com/android/server/pm/AppsFilterImpl.java
 @@ -450,6 +450,9 @@ public final class AppsFilterImpl extends AppsFilterLocked implements Watchable,
          AppsFilterImpl appsFilter = new AppsFilterImpl(featureConfig,
                  forcedQueryablePackageNames, forceSystemAppsQueryable, null,
                  injector.getHandler());
-+        // Keep the system context and handler to
-+        // reach AppOpsManager for the installed apps permission (see onSystemReady).
++        // Keep the system context and handler to reach AppOpsManager for the installed apps
++        // permission (see onSystemReady).
 +        lujarchSetContext(injector.getContext(), injector.getHandler());
          featureConfig.setAppsFilter(appsFilter);
          return appsFilter;
@@ -874,8 +868,8 @@ index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..73e4ec59b32c761befd1bb0505bdc46a
          updateEntireShouldFilterCacheAsync(pmInternal,
                  PACKAGE_MANAGER_APPS_FILTER_CACHE_BUILD_REPORTED__EVENT_TYPE__BOOT);
 +
-+        // Seed the installed apps mode cache and
-+        // start watching for mode changes now that AppOps is available.
++        // Seed the installed apps mode cache and start watching for mode changes now that AppOps is
++        // available.
 +        lujarchOnSystemReady();
      }
  

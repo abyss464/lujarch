@@ -1,18 +1,16 @@
 diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-index 212fae2c5a9b358e92a16888a0487d41a309ce24..0be0ca58bc9f4f60d5c09a1c5b31dd38932ceaf2 100644
+index 212fae2c5a9b358e92a16888a0487d41a309ce24..0012d58f2eb5b92414027fceab175927a32921d2 100644
 --- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
 +++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-@@ -351,6 +351,72 @@ public final class TelephonyPermissions {
+@@ -351,6 +351,70 @@ public final class TelephonyPermissions {
                  + " does not meet the requirements to access device identifiers.");
      }
  
 +    /**
-+     * Returns the effective OP_LUJARCH_DEVICE_IDS
-+     * mode for the caller, or {@link AppOpsManager#MODE_ALLOWED} when the caller
-+     * is a core uid (uid 0/1000 or any shared system uid), no package of the
-+     * uid can be found, or the AppOps lookup fails, so any failure keeps
-+     * device-id reads working (fail open). The op is noted so the access lands
-+     * in history.
++     * Returns the effective OP_LUJARCH_DEVICE_IDS mode for the caller, or
++     * {@link AppOpsManager#MODE_ALLOWED} when the caller is a core uid (uid 0/1000 or any shared
++     * system uid), no package of the uid can be found, or the AppOps lookup fails, so any failure
++     * keeps device-id reads working (fail open). The op is noted so the access lands in history.
 +     */
 +    private static int checkLujarchDeviceIdsMode(Context context, int uid, String callingPackage,
 +            String callingFeatureId, String message) {
@@ -75,17 +73,16 @@ index 212fae2c5a9b358e92a16888a0487d41a309ce24..0be0ca58bc9f4f60d5c09a1c5b31dd38
      /**
       * Checks whether the app with the given pid/uid can read device identifiers.
       *
-@@ -375,6 +441,24 @@ public final class TelephonyPermissions {
+@@ -375,6 +439,23 @@ public final class TelephonyPermissions {
          int uid = Binder.getCallingUid();
          int pid = Binder.getCallingPid();
  
-+        // OP_LUJARCH_DEVICE_IDS gates device
-+        // identifiers (IMEI/MEID, serial, ICCID, subscriber id) for every
-+        // reader, including the privileged READ_PRIVILEGED_PHONE_STATE path that
-+        // GmsCore uses. MODE_IGNORED returns null the way legacy apps get null
-+        // (return false so callers hand back placeholder/null); MODE_ERRORED
-+        // throws as for a missing permission. System/core uids are never gated,
-+        // and any lookup failure falls through to the stock checks (fail open).
++        // OP_LUJARCH_DEVICE_IDS gates device identifiers (IMEI/MEID, serial, ICCID, subscriber id)
++        // for every reader, including the privileged READ_PRIVILEGED_PHONE_STATE path that GmsCore
++        // uses. MODE_IGNORED returns null the way legacy apps get null (return false so callers
++        // hand back placeholder/null); MODE_ERRORED throws as for a missing permission. System/core
++        // uids are never gated, and any lookup failure falls through to the stock checks (fail
++        // open).
 +        switch (checkLujarchDeviceIdsMode(context, uid, callingPackage, callingFeatureId,
 +                message)) {
 +            case AppOpsManager.MODE_IGNORED:

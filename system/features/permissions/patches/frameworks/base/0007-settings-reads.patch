@@ -309,7 +309,7 @@ index 0000000000000000000000000000000000000000..04f82cfcbb52989bba60f7c794a10803
 +    }
 +}
 diff --git a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
-index 8ddd1673ea15f14dc5eeca5f0b1ba23da56d226b..b15ec5fbee8e9f5f66f4cfd7d177d427d92f80fe 100644
+index 8ddd1673ea15f14dc5eeca5f0b1ba23da56d226b..8e5b37cec94b0b42b14c81c17c992e85e78c9d36 100644
 --- a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
 +++ b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
 @@ -473,6 +473,11 @@ public class SettingsProvider extends ContentProvider {
@@ -448,15 +448,14 @@ index 8ddd1673ea15f14dc5eeca5f0b1ba23da56d226b..b15ec5fbee8e9f5f66f4cfd7d177d427
              }
  
              return result;
-@@ -2916,6 +2924,95 @@ public class SettingsProvider extends ContentProvider {
+@@ -2916,6 +2924,94 @@ public class SettingsProvider extends ContentProvider {
          return redactedSettingsMap;
      }
  
 +    /**
-+     * The reader of a settings key a Lujarch permission covers, or null when nothing covers
-+     * this read: another key, a uid below 10000, a system or
-+     * platform-signed app (the callers {@link #enforceSettingReadable} exempts). A failed
-+     * lookup allows (logged).
++     * The reader of a settings key a Lujarch permission covers, or null when nothing covers this
++     * read: another key, a uid below 10000, a system or platform-signed app (the callers
++     * {@link #enforceSettingReadable} exempts). A failed lookup allows (logged).
 +     */
 +    @Nullable
 +    private LujarchSettingsPermissions.Reader lujarchReaderForKey(@Nullable String name) {

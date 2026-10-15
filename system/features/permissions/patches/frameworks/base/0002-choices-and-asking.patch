@@ -1,5 +1,5 @@
 diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
-index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806b3658f7c 100644
+index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..1c2ae381f1c2c741220a781dd03403246ec62934 100644
 --- a/services/core/java/com/android/server/appop/AppOpsService.java
 +++ b/services/core/java/com/android/server/appop/AppOpsService.java
 @@ -290,6 +290,9 @@ public class AppOpsService extends IAppOpsService.Stub {
@@ -20,21 +20,18 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
  
          if (AppOpsManager.NOTE_OP_COLLECTION_ENABLED) {
              mNoteOpCallerStacktracesFile = new File(SystemServiceManager.ensureSystemDir(),
-@@ -2974,6 +2978,78 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -2974,6 +2978,74 @@ public class AppOpsService extends IAppOpsService.Stub {
          return appId == Process.ROOT_UID || appId == Process.SYSTEM_UID;
      }
  
 +    /**
-+     * The mode to evaluate when a uid mode other
-+     * than the op's default is set. The permission system owns uid modes; the
-+     * user's choice is the package mode. The
-+     * result is the stricter of the two, so a restriction holds on
-+     * permission-backed ops whose uid mode the permission policy keeps
-+     * rewriting. Stock returns the uid mode alone here; while no restrictive
-+     * package mode is set the result is the same. Only enforcement uses this
-+     * (checkOp, noteOp, startOp and their proxy paths); raw reads keep the
-+     * stored modes, which the permission policy synchronizes against. uid 0
-+     * and 1000 are never restricted, and a failed lookup keeps the uid mode.
++     * The mode to evaluate when a uid mode other than the op's default is set. The permission
++     * system owns uid modes; the user's choice is the package mode. The result is the stricter of
++     * the two, so a restriction holds on permission-backed ops whose uid mode the permission policy
++     * keeps rewriting. Stock returns the uid mode alone here; while no restrictive package mode is
++     * set the result is the same. Only enforcement uses this (checkOp, noteOp, startOp and their
++     * proxy paths); raw reads keep the stored modes, which the permission policy synchronizes
++     * against. uid 0 and 1000 are never restricted, and a failed lookup keeps the uid mode.
 +     */
 +    @GuardedBy("this")
 +    private int lujarchStricterMode(int uid, int switchCode, @Nullable String packageName,
@@ -54,12 +51,11 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
 +    }
 +
 +    /**
-+     * The stricter of a uid mode and a package
-+     * mode (errored > ignored > foreground > allowed). A package mode equal to
-+     * the op's default, or MODE_DEFAULT, is no opinion. A package mode never
-+     * loosens the uid mode: foreground only narrows allowed, and a package
-+     * mode never turns MODE_DEFAULT (defer to the permission) into an allow.
-+     * PermissionPolicyService keeps the same notion of stricter.
++     * The stricter of a uid mode and a package mode (errored > ignored > foreground > allowed). A
++     * package mode equal to the op's default, or MODE_DEFAULT, is no opinion. A package mode never
++     * loosens the uid mode: foreground only narrows allowed, and a package mode never turns
++     * MODE_DEFAULT (defer to the permission) into an allow. PermissionPolicyService keeps the same
++     * notion of stricter.
 +     */
 +    @VisibleForTesting
 +    static int lujarchStricterMode(int uidMode, int packageMode, int defaultMode) {
@@ -99,7 +95,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
      @Override
      public int checkOperationRaw(int code, int uid, String packageName,
              @Nullable String attributionTag) {
-@@ -3107,7 +3183,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3107,7 +3179,7 @@ public class AppOpsService extends IAppOpsService.Stub {
                  if (rawUidMode != AppOpsManager.opToDefaultMode(code)) {
                      return raw ? rawUidMode :
                          evaluateForegroundMode(/* uid= */ uid, /* op= */ code,
@@ -108,7 +104,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  }
              }
  
-@@ -3126,7 +3202,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3126,7 +3198,7 @@ public class AppOpsService extends IAppOpsService.Stub {
                      evaluateForegroundMode(
                          /* uid= */ uid,
                          /* op= */op.op,
@@ -117,7 +113,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
          }
      }
  
-@@ -3168,12 +3244,14 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3168,12 +3240,14 @@ public class AppOpsService extends IAppOpsService.Stub {
                      getPersistentDeviceIdForOp(virtualDeviceId, switchCode), switchCode);
  
              if (rawUidMode != AppOpsManager.opToDefaultMode(switchCode)) {
@@ -134,7 +130,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
          }
      }
  
-@@ -3529,10 +3607,12 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3529,10 +3603,12 @@ public class AppOpsService extends IAppOpsService.Stub {
                  final int uidMode =
                          uidState.evalMode(
                                  code,
@@ -151,7 +147,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  if (uidMode != AppOpsManager.MODE_ALLOWED) {
                      if (DEBUG) Slog.d(TAG, "noteOperation: uid reject #" + uidMode + " for code "
                              + switchCode + " (" + code + ") uid " + uid + " package "
-@@ -3550,18 +3630,17 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3550,18 +3626,17 @@ public class AppOpsService extends IAppOpsService.Stub {
              } else {
                  final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
                          : op;
@@ -176,7 +172,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                      scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
                              virtualDeviceId, flags, mode);
                      // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
-@@ -4174,7 +4253,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4174,7 +4249,8 @@ public class AppOpsService extends IAppOpsService.Stub {
                              uidState.uid, getPersistentDeviceIdForOp(virtualDeviceId, switchCode),
                              switchCode))
                      != AppOpsManager.opToDefaultMode(switchCode)) {
@@ -186,7 +182,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  if (!shouldStartForMode(uidMode, startIfModeDefault)) {
                      if (DEBUG) {
                          Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
-@@ -4191,13 +4271,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4191,13 +4267,10 @@ public class AppOpsService extends IAppOpsService.Stub {
              } else {
                  final Op switchOp =
                          switchCode != code ? getOpLocked(ops, switchCode, uid, true) : op;
@@ -204,7 +200,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  if (mode != AppOpsManager.MODE_ALLOWED
                          && (!startIfModeDefault || mode != MODE_DEFAULT)) {
                      if (DEBUG) {
-@@ -4207,6 +4284,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4207,6 +4280,8 @@ public class AppOpsService extends IAppOpsService.Stub {
                                  + AppOpsManager.flagsToString(flags));
                      }
                      attributedOp.rejected(uidState.getState(), flags, 1);
@@ -213,7 +209,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                      scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
                              virtualDeviceId, flags, mode, startType, attributionFlags,
                              attributionChainId);
-@@ -4308,10 +4387,12 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4308,10 +4383,12 @@ public class AppOpsService extends IAppOpsService.Stub {
                  final int uidMode =
                          uidState.evalMode(
                                  code,
@@ -230,7 +226,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  if (!shouldStartForMode(uidMode, startIfModeDefault)) {
                      if (DEBUG) {
                          Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
-@@ -4323,13 +4404,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4323,13 +4400,10 @@ public class AppOpsService extends IAppOpsService.Stub {
              } else {
                  final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
                          : op;
@@ -248,7 +244,7 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806
                  if (mode != AppOpsManager.MODE_ALLOWED
                          && (!startIfModeDefault || mode != MODE_DEFAULT)) {
                      if (DEBUG) {
-@@ -4337,6 +4415,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4337,6 +4411,9 @@ public class AppOpsService extends IAppOpsService.Stub {
                                  + switchCode + " (" + code + ") uid " + uid + " package "
                                  + packageName + " flags: " + AppOpsManager.flagsToString(flags));
                      }

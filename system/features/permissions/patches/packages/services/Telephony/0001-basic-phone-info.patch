@@ -1,5 +1,5 @@
 diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
-index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb84694aab59c 100644
+index 242cf4107a634a706db67aff03371f17167f4900..fbfc3655208462fc77435d0a6c4333c2c053adcd 100644
 --- a/src/com/android/phone/PhoneInterfaceManager.java
 +++ b/src/com/android/phone/PhoneInterfaceManager.java
 @@ -73,6 +73,7 @@ import android.os.LocaleList;
@@ -142,19 +142,18 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = getPhone(subId);
-@@ -3716,6 +3765,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -3716,6 +3765,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSubscriptionCarrierName");
  
-+        // The carrier name is basic phone info; refused, null
-+        // (unknown).
++        // The carrier name is basic phone info; refused, null (unknown).
 +        if (lujarchRefusesPhoneInfo("getSubscriptionCarrierName")) {
 +            return null;
 +        }
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = getPhone(subId);
-@@ -3730,6 +3784,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -3730,6 +3783,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSubscriptionSpecificCarrierId");
  
@@ -165,19 +164,18 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = getPhone(subId);
-@@ -3746,6 +3804,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -3746,6 +3803,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION,
                  "getSubscriptionSpecificCarrierName");
  
-+        // The carrier name is basic phone info; refused, null
-+        // (unknown).
++        // The carrier name is basic phone info; refused, null (unknown).
 +        if (lujarchRefusesPhoneInfo("getSubscriptionSpecificCarrierName")) {
 +            return null;
 +        }
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = getPhone(subId);
-@@ -3776,6 +3839,97 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -3776,6 +3837,96 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          }
      }
  
@@ -203,9 +201,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
 +    }
 +
 +    /**
-+     * The basic phone info mode
-+     * for a read the binder caller makes through one of {@code methods}, the
-+     * ITelephony methods that reach the getter; MODE_ALLOWED on any other call. An app holding
++     * The basic phone info mode for a read the binder caller makes through one of {@code methods},
++     * the ITelephony methods that reach the getter; MODE_ALLOWED on any other call. An app holding
 +     * the Phone permission and uids below 10000 are allowed (LujarchPhoneInfo). Call before
 +     * clearCallingIdentity.
 +     *
@@ -275,7 +272,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
      //
      // Internal helper methods.
      //
-@@ -4198,6 +4352,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -4198,6 +4349,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "isConcurrentVoiceAndDataAllowed");
  
@@ -286,7 +283,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              return getPhoneFromSubIdOrDefault(subId).isConcurrentVoiceAndDataAllowed();
-@@ -5474,6 +5632,14 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -5474,6 +5629,14 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(callingPackage,
                  PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getNetworkTypeForSubscriber");
  
@@ -301,7 +298,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = getPhone(subId);
-@@ -5503,10 +5669,18 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -5503,10 +5666,18 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      public int getDataNetworkTypeForSubscriber(int subId, String callingPackage,
              String callingFeatureId) {
          String functionName = "getDataNetworkTypeForSubscriber";
@@ -324,7 +321,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
                  loge("getDataNetworkTypeForSubscriber: missing permission " + callingPackage);
                  return TelephonyManager.NETWORK_TYPE_UNKNOWN;
              }
-@@ -5540,10 +5714,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -5540,10 +5711,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      public int getVoiceNetworkTypeForSubscriber(int subId, String callingPackage,
              String callingFeatureId) {
          String functionName = "getVoiceNetworkTypeForSubscriber";
@@ -346,7 +343,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
                  return TelephonyManager.NETWORK_TYPE_UNKNOWN;
              }
          }
-@@ -5584,6 +5765,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -5584,6 +5762,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                      PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "hasIccCardUsingSlotIndex");
          }
  
@@ -357,7 +354,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              final Phone phone = PhoneFactory.getPhone(slotIndex);
-@@ -7084,6 +7269,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7084,6 +7266,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      @Override
      public boolean isUserDataEnabled(int subId) {
          String functionName = "isUserDataEnabled";
@@ -365,7 +362,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          try {
              try {
                  mApp.enforceCallingOrSelfPermission(permission.READ_BASIC_PHONE_STATE,
-@@ -7091,11 +7277,20 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7091,11 +7274,20 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
              } catch (SecurityException e) {
                  mApp.enforceCallingOrSelfPermission(permission.ACCESS_NETWORK_STATE, functionName);
              }
@@ -386,7 +383,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
  
          final long identity = Binder.clearCallingIdentity();
          try {
-@@ -7125,6 +7320,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7125,6 +7317,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      @Override
      public boolean isDataEnabled(int subId) {
          String functionName = "isDataEnabled";
@@ -394,7 +391,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          try {
              try {
                  mApp.enforceCallingOrSelfPermission(
-@@ -7135,6 +7331,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7135,6 +7328,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                      mApp.enforceCallingOrSelfPermission(
                              android.Manifest.permission.READ_PHONE_STATE,
                              functionName);
@@ -402,7 +399,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
                  } catch (SecurityException e2) {
                      mApp.enforceCallingOrSelfPermission(
                              permission.READ_BASIC_PHONE_STATE, functionName);
-@@ -7142,11 +7339,25 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7142,11 +7336,25 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
              }
          } catch (SecurityException e) {
              enforceReadPrivilegedPermission(functionName);
@@ -428,7 +425,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              int phoneId = SubscriptionManager.getPhoneId(subId);
-@@ -7177,6 +7388,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7177,6 +7385,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      public boolean isDataEnabledForReason(int subId,
              @TelephonyManager.DataEnabledReason int reason) {
          String functionName = "isDataEnabledForReason";
@@ -436,7 +433,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          try {
              try {
                  mApp.enforceCallingOrSelfPermission(
-@@ -7187,6 +7399,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7187,6 +7396,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                          functionName);
              }
          } catch (SecurityException e) {
@@ -444,7 +441,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
              try {
                  mApp.enforceCallingOrSelfPermission(android.Manifest.permission.READ_PHONE_STATE,
                          functionName);
-@@ -7202,6 +7415,21 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -7202,6 +7412,21 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                      PackageManager.FEATURE_TELEPHONY_DATA, "isDataEnabledForReason");
          }
  
@@ -466,7 +463,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              int phoneId = SubscriptionManager.getPhoneId(subId);
-@@ -8084,6 +8312,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -8084,6 +8309,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
       * @param subId
       */
      public boolean isImsRegistered(int subId) {
@@ -478,7 +475,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          Phone phone = getPhone(subId);
          if (phone != null) {
              return phone.isImsRegistered();
-@@ -8135,6 +8368,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -8135,6 +8365,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
       * @return the VoWiFi calling availability.
       */
      public boolean isWifiCallingAvailable(int subId) {
@@ -490,7 +487,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              Phone phone = getPhone(subId);
-@@ -8152,6 +8390,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -8152,6 +8387,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
       * @return the VT calling availability.
       */
      public boolean isVideoTelephonyAvailable(int subId) {
@@ -502,7 +499,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              Phone phone = getPhone(subId);
-@@ -9312,6 +9555,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -9312,6 +9552,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getSignalStrength");
  
@@ -514,7 +511,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          final long identity = Binder.clearCallingIdentity();
          try {
              Phone p = getPhone(subId);
-@@ -9370,6 +9618,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -9370,6 +9615,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      @Override
      public boolean isDataRoamingEnabled(int subId) {
          String functionName = "isDataRoamingEnabled";
@@ -522,7 +519,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          try {
              try {
                  mApp.enforceCallingOrSelfPermission(
-@@ -9380,6 +9629,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -9380,6 +9626,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                          permission.READ_BASIC_PHONE_STATE, functionName);
              }
          } catch (SecurityException e) {
@@ -530,7 +527,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
              TelephonyPermissions.enforceCallingOrSelfReadPhoneStatePermissionOrCarrierPrivilege(
                      mApp, subId, functionName);
          }
-@@ -9387,6 +9637,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -9387,6 +9634,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "isDataRoamingEnabled");
  
@@ -547,13 +544,13 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          boolean isEnabled = false;
          final long identity = Binder.clearCallingIdentity();
          try {
-@@ -9487,6 +9747,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -9487,6 +9744,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                          mApp, "getUiccCardsInfo")) {
                      throw new SecurityException("Caller does not have permission.");
                  } else {
 +                    // The sanitized copy READ_BASIC_PHONE_STATE reaches is basic phone info;
-+                    // refused, as if that permission were missing: errored
-+                    // throws as above, ignored answers no cards.
++                    // refused, as if that permission were missing: errored throws as above, ignored
++                    // answers no cards.
 +                    final int lujarch =
 +                            lujarchPhoneInfo(callingPackage, null, "getUiccCardsInfo");
 +                    if (lujarch == AppOpsManager.MODE_ERRORED) {
@@ -564,7 +561,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
                      hasOnlyReadBasicPermission = true;
                  }
              }
-@@ -10637,6 +10907,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -10637,6 +10904,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_MESSAGING, "getMmsUAProfUrl");
  
@@ -577,7 +574,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          //TODO investigate if this API should require proper permission check in R b/133791609
          final long identity = Binder.clearCallingIdentity();
          try {
-@@ -10658,6 +10934,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -10658,6 +10931,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_MESSAGING, "getMmsUserAgent");
  
@@ -590,7 +587,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..edeb3376ea6cc99ce85bcb63c35eb846
          //TODO investigate if this API should require proper permission check in R b/133791609
          final long identity = Binder.clearCallingIdentity();
          try {
-@@ -12538,6 +12820,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+@@ -12538,6 +12817,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                      PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSimStateForSlotIndex");
          }
  
