@@ -125,3 +125,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Allowed with a custom profile | 已允许（自定义配置） | 許可（カスタム プロファイル） |
 | Restore default profile | 恢复默认配置 | デフォルトのプロファイルに戻す |
 | Mount namespace | 挂载命名空间 | マウント名前空間 |
+| Files | 文件 | ファイル |
+| Music | 音乐 | 音楽 |
+| App Store | 应用商店 | アプリストア |
+| Choose again | 重新选择 | 選択し直す |
