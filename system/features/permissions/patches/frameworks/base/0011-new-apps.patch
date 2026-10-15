@@ -40,10 +40,10 @@ index 136fd4ad1b293ae5a2653cf84c801806b3658f7c..956ed086638211cc158141ac163f9eb0
          mHistoricalRegistry.systemReady(mContext.getContentResolver());
 diff --git a/services/core/java/com/android/server/appop/LujarchNewApps.java b/services/core/java/com/android/server/appop/LujarchNewApps.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..d262b085ff92b8baf7cdaf2daad476e7ff528805
+index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1150f6726
 --- /dev/null
 +++ b/services/core/java/com/android/server/appop/LujarchNewApps.java
-@@ -0,0 +1,165 @@
+@@ -0,0 +1,191 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -102,13 +102,20 @@ index 0000000000000000000000000000000000000000..d262b085ff92b8baf7cdaf2daad476e7
 +
 +    private static final String[] KEYS = {
 +        "sensors", "clipboard", "installed_apps", "device_ids", "device_info", "network_info",
-+        "phone_info", "autostart",
++        "phone_info", "install", "autostart",
 +    };
 +    private static final int[] OPS = {
 +        AppOpsManager.OP_LUJARCH_SENSORS, AppOpsManager.OP_READ_CLIPBOARD,
 +        AppOpsManager.OP_LUJARCH_INSTALLED_APPS, AppOpsManager.OP_LUJARCH_DEVICE_IDS,
 +        AppOpsManager.OP_LUJARCH_DEVICE_INFO, AppOpsManager.OP_LUJARCH_NETWORK_INFO,
-+        AppOpsManager.OP_LUJARCH_PHONE_INFO, AppOpsManager.OP_LUJARCH_AUTOSTART,
++        AppOpsManager.OP_LUJARCH_PHONE_INFO, AppOpsManager.OP_LUJARCH_INSTALL,
++        AppOpsManager.OP_LUJARCH_AUTOSTART,
++    };
++    /** Each key's value while the user has not set it (settings.toml's defaults). */
++    private static final int[] DEFAULTS = {
++        AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT,
++        AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT,
++        AppOpsManager.MODE_DEFAULT, NOT_CHANGED, AppOpsManager.MODE_DEFAULT,
 +    };
 +
 +    private final Context mContext;
@@ -132,7 +139,7 @@ index 0000000000000000000000000000000000000000..d262b085ff92b8baf7cdaf2daad476e7
 +            final boolean vpn = hasVpnService(packageName, userId);
 +            for (int i = 0; i < OPS.length; i++) {
 +                int mode = Settings.Secure.getIntForUser(mContext.getContentResolver(),
-+                        PREFIX + KEYS[i], AppOpsManager.MODE_DEFAULT, userId);
++                        PREFIX + KEYS[i], DEFAULTS[i], userId);
 +                if (mode == NOT_CHANGED) {
 +                    continue;
 +                }
@@ -141,6 +148,15 @@ index 0000000000000000000000000000000000000000..d262b085ff92b8baf7cdaf2daad476e7
 +                    mode = AppOpsManager.MODE_ALLOWED;
 +                }
 +                mService.setMode(OPS[i], uid, packageName, mode);
++                if (OPS[i] == AppOpsManager.OP_LUJARCH_INSTALL
++                        && requests(packageName, userId,
++                                android.Manifest.permission.REQUEST_INSTALL_PACKAGES)) {
++                    // An app installing from unknown sources also needs Android's own switch,
++                    // on unless its installs are not allowed, as Settings sets it.
++                    mService.setMode(AppOpsManager.OP_REQUEST_INSTALL_PACKAGES, uid, packageName,
++                            mode == AppOpsManager.MODE_ERRORED
++                                    ? AppOpsManager.MODE_ERRORED : AppOpsManager.MODE_ALLOWED);
++                }
 +            }
 +            final int network = Settings.Secure.getIntForUser(mContext.getContentResolver(),
 +                    KEY_NETWORK, 0, userId);
@@ -152,6 +168,16 @@ index 0000000000000000000000000000000000000000..d262b085ff92b8baf7cdaf2daad476e7
 +            Slog.e(TAG, "defaults for new apps not set for " + packageName, e);
 +        } finally {
 +            Binder.restoreCallingIdentity(token);
++        }
++    }
++
++    private boolean requests(String packageName, int userId, String permission) {
++        try {
++            final String[] requested = mContext.getPackageManager().getPackageInfoAsUser(
++                    packageName, PackageManager.GET_PERMISSIONS, userId).requestedPermissions;
++            return requested != null && List.of(requested).contains(permission);
++        } catch (PackageManager.NameNotFoundException e) {
++            return false;
 +        }
 +    }
 +

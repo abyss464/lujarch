@@ -42,8 +42,13 @@ class NewAppDefaultsActivity : CollapsingToolbarBaseActivity() {
 }
 
 class NewAppDefaultsFragment : PreferenceFragmentCompat() {
-    /** One row: its settings key, its title and the choices it offers. */
-    private data class Row(val key: String, val title: CharSequence, val choices: List<Int>)
+    /** One row: its settings key, its title, the choices it offers and its value while unset. */
+    private data class Row(
+        val key: String,
+        val title: CharSequence,
+        val choices: List<Int>,
+        val default: Int = AppOpsManager.MODE_DEFAULT,
+    )
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         val ctx = requireContext()
@@ -66,7 +71,7 @@ class NewAppDefaultsFragment : PreferenceFragmentCompat() {
                     isPersistent = false
                     entries = labels.toTypedArray()
                     entryValues = row.choices.map { it.toString() }.toTypedArray()
-                    value = read(ctx, row.key, AppOpsManager.MODE_DEFAULT).toString()
+                    value = read(ctx, row.key, row.default).toString()
                     summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
                     setOnPreferenceChangeListener { _, v -> write(ctx, row.key, (v as String).toInt()) }
                 }
@@ -120,6 +125,8 @@ class NewAppDefaultsFragment : PreferenceFragmentCompat() {
             Row("network_info", group(ctx, "LUJARCH_NETWORK_INFO"), noForeground),
             Row("phone_info", getString(R.string.lujarch_basic_phone_info), listOf(AppOpsManager.MODE_ALLOWED,
                 AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_ERRORED)),
+            Row("install", getString(R.string.lujarch_install_unknown_apps), listOf(AppOpsManager.MODE_ALLOWED,
+                AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_ERRORED), NOT_CHANGED),
             Row("autostart", getString(R.string.lujarch_autostart), listOf(AppOpsManager.MODE_ALLOWED,
                 AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_ERRORED)),
         ).map { it.copy(choices = listOf(NOT_CHANGED) + it.choices) }

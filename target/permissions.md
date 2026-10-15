@@ -248,7 +248,7 @@ state.
 ### PERM-18 Defaults for new apps
 
 - Home: Settings > Apps > Defaults for new apps
-- Switch: per permission, special app access and background control of this file, and network access: the choice a new app starts with, or Not changed
+- Switch: per permission of this file, basic phone info, Install unknown apps, Autostart and network access: the choice a new app starts with, or Not changed
 - Default: Ask every time for Motion and environment sensors, Clipboard, Installed apps, Device identifiers, Device info, Network info, basic phone info and Autostart; Not changed for the rest
 - Verify: vm
 

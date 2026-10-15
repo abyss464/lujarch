@@ -24,6 +24,7 @@
     <string name="lujarch_choice_deny">Don\u2019t allow</string>
     <string name="lujarch_basic_phone_info">Basic phone info</string>
     <string name="lujarch_basic_phone_info_only">Basic phone info only</string>
+    <string name="lujarch_install_unknown_apps">Install unknown apps</string>
     <string name="lujarch_autostart">Autostart</string>
     <string name="lujarch_new_app_network">Mobile data &amp; Wi\u2011Fi</string>
     <string name="lujarch_new_app_no_network">Without network access</string>

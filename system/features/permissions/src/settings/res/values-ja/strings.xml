@@ -24,6 +24,7 @@
     <string name="lujarch_choice_deny">"許可しない"</string>
     <string name="lujarch_basic_phone_info">"電話の基本情報"</string>
     <string name="lujarch_basic_phone_info_only">"電話の基本情報のみ"</string>
+    <string name="lujarch_install_unknown_apps">"不明なアプリのインストール"</string>
     <string name="lujarch_autostart">"自動起動"</string>
     <string name="lujarch_new_app_network">"モバイルデータと Wi-Fi"</string>
     <string name="lujarch_new_app_no_network">"ネットワーク アクセスなし"</string>

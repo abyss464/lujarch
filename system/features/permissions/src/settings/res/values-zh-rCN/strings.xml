@@ -24,6 +24,7 @@
     <string name="lujarch_choice_deny">"不允许"</string>
     <string name="lujarch_basic_phone_info">"基本电话信息"</string>
     <string name="lujarch_basic_phone_info_only">"仅基本电话信息"</string>
+    <string name="lujarch_install_unknown_apps">"安装未知应用"</string>
     <string name="lujarch_autostart">"自启动"</string>
     <string name="lujarch_new_app_network">"移动数据和 WLAN"</string>
     <string name="lujarch_new_app_no_network">"禁止访问网络"</string>

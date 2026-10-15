@@ -60,6 +60,12 @@ type = "int"
 default = 3
 item = "PERM-18"
 
+[new_app_install]
+table = "secure"
+type = "int"
+default = -1
+item = "PERM-18"
+
 [new_app_autostart]
 table = "secure"
 type = "int"
