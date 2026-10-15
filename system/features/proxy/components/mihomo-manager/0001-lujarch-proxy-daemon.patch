@@ -1,0 +1,267 @@
+diff --git a/src/apply.rs b/src/apply.rs
+index 434a1c51f6bc95e97a1f4134285373239f941f48..015a8634a6b9e9482fa2b5285e307f9fa42aeee9 100644
+--- a/src/apply.rs
++++ b/src/apply.rs
+@@ -56,8 +56,8 @@ impl Core for ApiCore {
+         }
+         match platform::service_state().as_deref() {
+             Some("running") => Ok(()),
+-            Some(other) => bail!("init.svc.{} = {other}", platform::ANDROID_SERVICE),
+-            None => bail!("init.svc.{} not set", platform::ANDROID_SERVICE),
++            Some(other) => bail!("{} = {other}", platform::ANDROID_STATE_PROP),
++            None => bail!("{} not set", platform::ANDROID_STATE_PROP),
+         }
+     }
+ }
+diff --git a/src/main.rs b/src/main.rs
+index f3f2587235ade555198bada1ab98b66c5e8281c1..24afac38c41786827a545e792b56cef94b7da328 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -23,17 +23,17 @@ use platform::{Layout, Overrides, Profile};
+ #[derive(Parser)]
+ #[command(name = "mihomo-manager", about = "Mihomo proxy configuration manager")]
+ struct Cli {
+-    /// Manager data directory [desktop: ~/.config/mihomo-manager, android: /data/fuxios/mihomo/manager]
++    /// Manager data directory [desktop: ~/.config/mihomo-manager, android: /data/lujarch/proxy/manager]
+     #[arg(short, long, global = true)]
+     dir: Option<PathBuf>,
+ 
+     /// Core runtime directory holding the live config.yaml and config.last-good.yaml
+-    /// [desktop: ~/.config/mihomo, android: /data/fuxios/mihomo]
++    /// [desktop: ~/.config/mihomo, android: /data/lujarch/proxy]
+     #[arg(long, global = true)]
+     runtime_dir: Option<PathBuf>,
+ 
+     /// mihomo core binary used for validation and probing
+-    /// [desktop: mihomo in PATH, android: /product/bin/mihomo; env MIHOMO_MANAGER_CORE]
++    /// [desktop: mihomo in PATH, android: /system_ext/bin/lujarch_proxy_core; env MIHOMO_MANAGER_CORE]
+     #[arg(long, global = true)]
+     core: Option<PathBuf>,
+ 
+@@ -274,11 +274,11 @@ enum ClassifyAction {
+ 
+ #[derive(Subcommand)]
+ enum CoreAction {
+-    /// setprop persist.fuxios.mihomo.enable 1 and wait for the controller
++    /// Not on Android: the proxy is turned on in Settings
+     Start,
+-    /// setprop persist.fuxios.mihomo.enable 0
++    /// Not on Android: the proxy is turned off in Settings
+     Stop,
+-    /// Stop, then start
++    /// Ask the proxy daemon to restart the core and wait for the controller
+     Restart,
+     /// Service state and controller health
+     Status,
+@@ -1131,11 +1131,11 @@ fn cmd_rollback(layout: &Layout) -> Result<()> {
+ }
+ 
+ fn cmd_core(layout: &Layout, action: CoreAction) -> Result<()> {
+-    use platform::{ANDROID_ENABLE_PROP, ANDROID_SERVICE};
++    use platform::{ANDROID_ENABLE_PROP, ANDROID_STATE_PROP};
+     let needs_service = !matches!(action, CoreAction::Status);
+     if needs_service && !layout.android_service {
+         anyhow::bail!(
+-            "core start/stop drives the Android init service `{ANDROID_SERVICE}`; \
++            "core start/stop/restart drives the proxy daemon on Android; \
+              on desktop use the system service manager"
+         );
+     }
+@@ -1149,49 +1149,27 @@ fn cmd_core(layout: &Layout, action: CoreAction) -> Result<()> {
+         }
+         false
+     };
+-    let start = || -> Result<()> {
+-        if let Some(p) = &layout.secret_file {
+-            platform::ensure_secret(p)?;
+-        }
+-        if !layout.live_config.exists() {
+-            println!("No live config yet; building one first");
+-            let built = build::assemble_for(layout)?;
+-            print_built(&built);
+-            let opts = apply::ApplyOptions {
+-                output: layout.live_config.clone(),
+-                reload: false,
+-                health_timeout: std::time::Duration::from_secs(1),
+-            };
+-            apply::apply(layout, &built.yaml, built.rules, &core, &opts, &mut |l| {
+-                println!("{l}")
+-            })?;
+-        }
+-        platform::setprop(ANDROID_ENABLE_PROP, "1")?;
+-        if wait_api(true) {
+-            println!("Core: running, controller up");
+-            Ok(())
+-        } else {
+-            anyhow::bail!(
+-                "controller did not come up within 10s (init.svc.{ANDROID_SERVICE} = {})",
+-                platform::service_state().unwrap_or_else(|| "?".into())
+-            )
+-        }
+-    };
+-    let stop = || -> Result<()> {
+-        platform::setprop(ANDROID_ENABLE_PROP, "0")?;
+-        wait_api(false);
+-        println!(
+-            "Core: stopped (init.svc.{ANDROID_SERVICE} = {})",
+-            platform::service_state().unwrap_or_else(|| "?".into())
+-        );
+-        Ok(())
+-    };
++    let state = || platform::getprop(ANDROID_STATE_PROP).unwrap_or_else(|| "?".into());
+     match action {
+-        CoreAction::Start => start(),
+-        CoreAction::Stop => stop(),
++        CoreAction::Start | CoreAction::Stop => anyhow::bail!(
++            "the proxy is turned on and off in Settings > Network & internet > Proxy ({ANDROID_ENABLE_PROP} = {})",
++            platform::getprop(ANDROID_ENABLE_PROP).unwrap_or_else(|| "-".into())
++        ),
+         CoreAction::Restart => {
+-            stop()?;
+-            start()
++            if platform::getprop(ANDROID_ENABLE_PROP).as_deref() != Some("1") {
++                anyhow::bail!("the proxy is off; it is turned on in Settings > Network & internet > Proxy");
++            }
++            if let Some(p) = &layout.secret_file {
++                platform::ensure_secret(p)?;
++            }
++            platform::request_restart(&layout.runtime_dir)?;
++            wait_api(false);
++            if wait_api(true) {
++                println!("Core: restarted, controller up");
++                Ok(())
++            } else {
++                anyhow::bail!("controller did not come up within 10s ({ANDROID_STATE_PROP} = {})", state())
++            }
+         }
+         CoreAction::Status => {
+             print_core_status(layout, &core);
+@@ -1204,8 +1182,8 @@ fn print_core_status(layout: &Layout, core: &apply::ApiCore) {
+     if layout.android_service {
+         println!(
+             "Service: {} = {} | {} = {}",
+-            format!("init.svc.{}", platform::ANDROID_SERVICE),
+-            platform::service_state().unwrap_or_else(|| "-".into()),
++            platform::ANDROID_STATE_PROP,
++            platform::getprop(platform::ANDROID_STATE_PROP).unwrap_or_else(|| "-".into()),
+             platform::ANDROID_ENABLE_PROP,
+             platform::getprop(platform::ANDROID_ENABLE_PROP).unwrap_or_else(|| "-".into()),
+         );
+@@ -2763,14 +2741,14 @@ fn cmd_rotate_secret(layout: &Layout) -> Result<Rotation> {
+         return Ok(Rotation { reloaded: false, restarted: false, files });
+     }
+     let stop_start = || -> Result<()> {
+-        platform::setprop(platform::ANDROID_ENABLE_PROP, "0")?;
++        platform::request_restart(&layout.runtime_dir)?;
+         for _ in 0..50 {
+             if old_api.as_ref().is_none_or(|a| !a.connected()) && !new_api.connected() {
+                 break;
+             }
+             std::thread::sleep(std::time::Duration::from_millis(200));
+         }
+-        platform::setprop(platform::ANDROID_ENABLE_PROP, "1")
++        Ok(())
+     };
+     stop_start()?;
+     if up_with_new(50) {
+@@ -2782,9 +2760,9 @@ fn cmd_rotate_secret(layout: &Layout) -> Result<Rotation> {
+     let _ = stop_start();
+     anyhow::bail!(
+         "the core did not answer with the new secret; the previous secret and configuration are back \
+-         (init.svc.{} = {})",
+-        platform::ANDROID_SERVICE,
+-        platform::service_state().unwrap_or_else(|| "?".into())
++         ({} = {})",
++        platform::ANDROID_STATE_PROP,
++        platform::getprop(platform::ANDROID_STATE_PROP).unwrap_or_else(|| "?".into())
+     )
+ }
+ 
+diff --git a/src/platform.rs b/src/platform.rs
+index 4531ef04434f863c92e079085a2e388045b22c02..e7942ae6186f112cb8e863e2fa70aa8e90696bb1 100644
+--- a/src/platform.rs
++++ b/src/platform.rs
+@@ -11,15 +11,19 @@ use std::path::{Path, PathBuf};
+ // ── Device contract (Android) ───────────────────────────────────────────────
+ 
+ /// mihomo core binary on the device. Single source of truth for the core path.
+-pub const ANDROID_CORE_BIN: &str = "/product/bin/mihomo";
++pub const ANDROID_CORE_BIN: &str = "/system_ext/bin/lujarch_proxy_core";
+ /// Runtime directory handed to the core with `-d`.
+-pub const ANDROID_RUNTIME_DIR: &str = "/data/fuxios/mihomo";
++pub const ANDROID_RUNTIME_DIR: &str = "/data/lujarch/proxy";
+ /// Manager data directory (providers.yaml, routing.yaml, config.yaml, reference/, cache/).
+-pub const ANDROID_DATA_DIR: &str = "/data/fuxios/mihomo/manager";
+-/// init service name; state is read from `init.svc.<name>`.
+-pub const ANDROID_SERVICE: &str = "fuxios_mihomo";
+-/// Property that starts (1) or stops (0) the init service.
+-pub const ANDROID_ENABLE_PROP: &str = "persist.fuxios.mihomo.enable";
++pub const ANDROID_DATA_DIR: &str = "/data/lujarch/proxy/manager";
++/// The daemon that runs the core; the core's state is in `ANDROID_STATE_PROP`.
++pub const ANDROID_SERVICE: &str = "lujarch_proxy";
++/// The core's state as the daemon publishes it.
++pub const ANDROID_STATE_PROP: &str = "lujarch.proxy.state";
++/// The proxy's switch as the system mirrors it; set only in Settings.
++pub const ANDROID_ENABLE_PROP: &str = "lujarch.setting.proxy.enabled";
++/// The daemon restarts the core when this file appears in the runtime directory.
++pub const ANDROID_RESTART_REQUEST: &str = "restart.request";
+ /// External controller address on the device.
+ pub const ANDROID_CONTROLLER: &str = "127.0.0.1:9090";
+ 
+@@ -240,9 +244,18 @@ pub fn setprop(name: &str, value: &str) -> anyhow::Result<()> {
+     Ok(())
+ }
+ 
+-/// `init.svc.<service>` value, e.g. `running`, `stopped`, `restarting`.
++/// The core's state: `running` while a core runs (its current or its last working
++/// configuration), else the daemon's state, e.g. `off`, `starting`, `crash-loop`.
+ pub fn service_state() -> Option<String> {
+-    getprop(&format!("init.svc.{ANDROID_SERVICE}"))
++    getprop(ANDROID_STATE_PROP).map(|s| match s.as_str() {
++        "running" | "fallback" => "running".to_string(),
++        _ => s,
++    })
++}
++
++/// Asks the daemon to restart the core.
++pub fn request_restart(runtime_dir: &Path) -> anyhow::Result<()> {
++    write_atomic(&runtime_dir.join(ANDROID_RESTART_REQUEST), b"request\n")
+ }
+ 
+ #[cfg(test)]
+@@ -253,13 +266,13 @@ mod tests {
+     fn android_layout_uses_contract_paths() {
+         let l = Layout::resolve_for(&Overrides::default(), true, None);
+         assert_eq!(l.profile, Profile::Android);
+-        assert_eq!(l.data_dir, PathBuf::from("/data/fuxios/mihomo/manager"));
+-        assert_eq!(l.live_config, PathBuf::from("/data/fuxios/mihomo/config.yaml"));
++        assert_eq!(l.data_dir, PathBuf::from("/data/lujarch/proxy/manager"));
++        assert_eq!(l.live_config, PathBuf::from("/data/lujarch/proxy/config.yaml"));
+         assert_eq!(
+             l.last_good,
+-            PathBuf::from("/data/fuxios/mihomo/config.last-good.yaml")
++            PathBuf::from("/data/lujarch/proxy/config.last-good.yaml")
+         );
+-        assert_eq!(l.secret_file, Some(PathBuf::from("/data/fuxios/mihomo/secret")));
++        assert_eq!(l.secret_file, Some(PathBuf::from("/data/lujarch/proxy/secret")));
+         assert_eq!(l.core_bin, PathBuf::from(ANDROID_CORE_BIN));
+         assert!(l.android_service);
+     }
+diff --git a/src/settings.rs b/src/settings.rs
+index c71a970cf485cfc901d32ee9e35d29ea27e36c2c..0d335d0a3489d4e72ed191024eb72098fd23bd75 100644
+--- a/src/settings.rs
++++ b/src/settings.rs
+@@ -1026,9 +1026,11 @@ pub fn installed(layout: &Layout) -> Json {
+ /// The launcher's settings (`launcher.conf` in the runtime dir: `key=value` lines) for
+ /// the Android profile: `ipv6-block=1|0` and `tun=1|0`. The launcher reads it at every
+ /// core start; it prohibits global IPv6 only while the core captures traffic, so a core
+-/// without its TUN (the owner's choice, D-024 round 3) leaves IPv6 alone.
++/// without its TUN (the owner's choice, D-024 round 3) leaves IPv6 alone. On a device
++/// with the proxy daemon there is no launcher: the IPv6 block is a switch of the system
++/// and the daemon reads the TUN from the installed configuration.
+ pub fn write_launcher(layout: &Layout, cfg: &Config) -> Result<Option<PathBuf>> {
+-    if layout.profile != Profile::Android {
++    if layout.profile != Profile::Android || layout.android_service {
+         return Ok(None);
+     }
+     let block = cfg.android.as_ref().and_then(|a| a.ipv6_block).unwrap_or(true);

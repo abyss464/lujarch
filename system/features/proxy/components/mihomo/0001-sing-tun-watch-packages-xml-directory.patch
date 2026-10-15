@@ -1,0 +1,13 @@
+diff --git a/vendor/github.com/metacubex/sing-tun/packages_android.go b/vendor/github.com/metacubex/sing-tun/packages_android.go
+index 7f7fba90840621b097ff1a820914f8e3f7bf7460..b4f8e68dfe238fd3f5fecc6355e0b010caef6e14 100644
+--- a/vendor/github.com/metacubex/sing-tun/packages_android.go
++++ b/vendor/github.com/metacubex/sing-tun/packages_android.go
+@@ -46,7 +46,7 @@ func (m *packageManager) Start() error {
+ func (m *packageManager) startWatcher() error {
+ 	watcher, err := fswatch.NewWatcher(fswatch.Options{
+ 		Path:     []string{"/data/system/packages.xml"},
+-		Direct:   true,
++		Direct:   false,
+ 		Callback: m.packagesUpdated,
+ 		Logger:   m.logger,
+ 	})

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="action_close">关闭</string>
+    <string name="action_retry">重试</string>
+    <string name="apps_hide_system">隐藏系统应用</string>
+    <string name="apps_none">没有匹配的应用</string>
+    <string name="apps_search_hint">搜索应用</string>
+    <string name="apps_show_system">显示系统应用</string>
+    <string name="delay_ms">%1$d 毫秒</string>
+    <string name="delay_timeout">超时</string>
+    <string name="error_details">详细信息</string>
+    <string name="error_load_apps">无法加载应用列表</string>
+    <string name="error_page">无法打开此页面。</string>
+    <string name="error_unexpected_sentence">发生意外错误。</string>
+    <string name="format_speed">%1$s/秒</string>
+    <string name="format_up_down">"↑ %1$s   ↓ %2$s"</string>
+    <string name="list_separator">"、"</string>
+    <!-- Common -->
+    <string name="loading">正在加载…</string>
+    <string name="menu_refresh">刷新</string>
+    <string name="menu_search">搜索</string>
+    <string name="quoted_name">“%1$s”</string>
+    <string name="time_just_now">刚刚</string>
+    <string name="error_service_title">Lujarch 系统服务不可用</string>
+</resources>

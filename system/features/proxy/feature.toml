@@ -1,0 +1,13 @@
+prefix = "PRX"
+
+# Programs built outside the tree (process/layout.md, Components); pinned in lock.toml.
+[components.mihomo]
+build = "go"
+module = "lujarch_proxy_core"
+tags = ["with_gvisor"]
+version_vars = ["github.com/metacubex/mihomo/constant.Version"]
+
+[components.mihomo-manager]
+build = "cargo"
+module = "lujarch_proxy_manager"
+binary = "mihomo-manager"

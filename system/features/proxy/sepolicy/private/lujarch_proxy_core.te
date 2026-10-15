@@ -1,0 +1,46 @@
+# lujarch_proxy_core: the proxy core, run by lujarch_proxy. A denial here stops the core, and the
+# daemon then leaves the phone on direct connectivity.
+type lujarch_proxy_core, domain, coredomain;
+type lujarch_proxy_core_exec, system_file_type, exec_type, file_type;
+net_domain(lujarch_proxy_core)
+
+# stdout and stderr are the daemon's pipe.
+allow lujarch_proxy_core lujarch_proxy:fd use;
+allow lujarch_proxy_core lujarch_proxy:fifo_file { getattr ioctl write };
+
+# Its data: configurations, geodata, cache, the control key.
+allow lujarch_proxy_core system_data_file:dir search;
+allow lujarch_proxy_core lujarch_proxy_data_file:dir create_dir_perms;
+allow lujarch_proxy_core lujarch_proxy_data_file:file create_file_perms;
+
+# The capability set it inherits. No DAC bypass: it reads /data/system/packages.xml
+# (system:system 0660) through the system group, and the rules below only grant reading it.
+allow lujarch_proxy_core self:global_capability_class_set { net_admin net_raw net_bind_service };
+
+# The virtual network interface and its routes and rules.
+allow lujarch_proxy_core tun_device:chr_file rw_file_perms;
+# domain.te narrows tun_device ioctls to FIOCLEX/FIONCLEX for every domain.
+allowxperm lujarch_proxy_core tun_device:chr_file ioctl { TUNSETIFF TUNGETIFF };
+# The interface's stack probes offload features of the interfaces (ethtool).
+allowxperm lujarch_proxy_core self:udp_socket ioctl SIOCETHTOOL;
+allow lujarch_proxy_core self:tun_socket create_socket_perms_no_ioctl;
+allow lujarch_proxy_core self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read nlmsg_readpriv nlmsg_write };
+
+# Listening sockets: the mixed port, the controller, DNS.
+allow lujarch_proxy_core self:tcp_socket { create_stream_socket_perms listen accept };
+allow lujarch_proxy_core self:udp_socket create_socket_perms;
+
+# Per-app rules: the uid that owns each connection, from sock_diag (kernels before 6.13 check
+# nlmsg_read) and /proc/net/{tcp,udp}{,6}; the uid's package from the package database.
+allow lujarch_proxy_core self:netlink_tcpdiag_socket { create_socket_perms_no_ioctl nlmsg_read };
+allow lujarch_proxy_core proc_net_tcp_udp:file r_file_perms;
+allow lujarch_proxy_core system_data_file:dir r_dir_perms;
+allow lujarch_proxy_core system_data_file:file { r_file_perms watch };
+allow lujarch_proxy_core packages_list_file:file r_file_perms;
+allow lujarch_proxy_core system_userdir_file:dir r_dir_perms;
+
+allow lujarch_proxy_core proc_net:file r_file_perms;
+allow lujarch_proxy_core proc_stat:file r_file_perms;
+# The Go runtime sizes its threads by the CPU quota of its cgroup.
+allow lujarch_proxy_core cgroup:dir search;
+allow lujarch_proxy_core cgroup:file r_file_perms;

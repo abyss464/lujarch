@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ids of fields made in code in page dialogs: a field with an id keeps what the owner
+     entered when the page is recreated. -->
+<resources>
+    <item name="px_custom_any_type" type="id" />
+    <item name="px_custom_contains" type="id" />
+    <item name="px_custom_fallback" type="id" />
+    <item name="px_custom_key" type="id" />
+    <item name="px_custom_value" type="id" />
+    <item name="px_edit_text" type="id" />
+    <item name="px_key_number" type="id" />
+    <item name="px_key_text" type="id" />
+    <item name="px_key_url" type="id" />
+    <item name="px_manual_append" type="id" />
+    <item name="px_manual_country" type="id" />
+    <item name="px_manual_datacenter" type="id" />
+    <item name="px_manual_hand" type="id" />
+    <item name="px_manual_name" type="id" />
+    <item name="px_manual_probe" type="id" />
+    <item name="px_manual_residential" type="id" />
+    <item name="px_manual_starlink" type="id" />
+    <item name="px_policy_pattern" type="id" />
+    <item name="px_policy_servers" type="id" />
+    <item name="px_retarget_by_pattern" type="id" />
+    <item name="px_retarget_by_target" type="id" />
+    <item name="px_retarget_pattern" type="id" />
+    <item name="px_rule_new_set" type="id" />
+    <item name="px_rule_no_resolve" type="id" />
+    <item name="px_rule_pattern" type="id" />
+    <item name="px_rule_position" type="id" />
+    <item name="px_rules_check_domain" type="id" />
+    <item name="px_rule_set_position" type="id" />
+    <item name="px_rule_target_name" type="id" />
+    <item name="px_rule_type" type="id" />
+    <item name="px_sniffer_override" type="id" />
+    <item name="px_sniffer_ports" type="id" />
+</resources>

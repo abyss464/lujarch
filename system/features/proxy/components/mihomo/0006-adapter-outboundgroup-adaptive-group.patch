@@ -1,0 +1,2707 @@
+diff --git a/adapter/outboundgroup/adaptive.go b/adapter/outboundgroup/adaptive.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..ab2f48376460fd094189ae04422651331f302202
+--- /dev/null
++++ b/adapter/outboundgroup/adaptive.go
+@@ -0,0 +1,819 @@
++package outboundgroup
++
++// The adaptive group: for each new connection it uses the
++// member with the lowest expected time to a working connection on the network
++// the phone is on, learned from the connections that go through it, races a
++// second member when that is expected to pay, and keeps separate statistics
++// per network. adaptive_model.go has the model, adaptive_conn.go the racing
++// connection.
++
++import (
++	"context"
++	"crypto/tls"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"math"
++	"net"
++	"net/netip"
++	"net/url"
++	"strings"
++	"sync"
++	"time"
++
++	"github.com/metacubex/mihomo/adapter/outbound"
++	"github.com/metacubex/mihomo/common/utils"
++	"github.com/metacubex/mihomo/component/dialer"
++	"github.com/metacubex/mihomo/component/iface"
++	C "github.com/metacubex/mihomo/constant"
++	P "github.com/metacubex/mihomo/constant/provider"
++	"github.com/metacubex/mihomo/log"
++)
++
++// AdaptiveOption: the group's own keys (seconds, milliseconds, percent).
++type AdaptiveOption struct {
++	FastHalfLife  int      `group:"fast-half-life,omitempty"`
++	SlowHalfLife  int      `group:"slow-half-life,omitempty"`
++	RaceCost      int      `group:"race-cost,omitempty"`
++	Hysteresis    int      `group:"hysteresis,omitempty"`
++	ProbeInterval int      `group:"probe-interval,omitempty"`
++	DialTimeout   int      `group:"dial-timeout,omitempty"`
++	LastResort    []string `group:"last-resort,omitempty"`
++}
++
++func defaultAdaptiveOption() AdaptiveOption {
++	p := DefaultAdaptiveParams()
++	return AdaptiveOption{
++		FastHalfLife:  int(p.FastHalfLife / time.Second),
++		SlowHalfLife:  int(p.SlowHalfLife / time.Second),
++		RaceCost:      int(p.RaceCost / time.Millisecond),
++		Hysteresis:    int(math.Round(p.Hysteresis * 100)),
++		ProbeInterval: int(p.ProbeInterval / time.Second),
++		DialTimeout:   int(p.DialTimeout / time.Millisecond),
++	}
++}
++
++func (o AdaptiveOption) params() (AdaptiveParams, error) {
++	check := func(name string, v, lo, hi int) error {
++		if v < lo || v > hi {
++			return fmt.Errorf("%s must be between %d and %d (got %d)", name, lo, hi, v)
++		}
++		return nil
++	}
++	for _, err := range []error{
++		check("fast-half-life", o.FastHalfLife, 5, 3600),
++		check("slow-half-life", o.SlowHalfLife, o.FastHalfLife, 86400),
++		check("race-cost", o.RaceCost, 0, 60000),
++		check("hysteresis", o.Hysteresis, 0, 100),
++		check("dial-timeout", o.DialTimeout, 1000, 30000),
++	} {
++		if err != nil {
++			return AdaptiveParams{}, err
++		}
++	}
++	if o.ProbeInterval != 0 {
++		if err := check("probe-interval", o.ProbeInterval, 30, 86400); err != nil {
++			return AdaptiveParams{}, err
++		}
++	}
++	return AdaptiveParams{
++		FastHalfLife:  time.Duration(o.FastHalfLife) * time.Second,
++		SlowHalfLife:  time.Duration(o.SlowHalfLife) * time.Second,
++		RaceCost:      time.Duration(o.RaceCost) * time.Millisecond,
++		Hysteresis:    float64(o.Hysteresis) / 100,
++		ProbeInterval: time.Duration(o.ProbeInterval) * time.Second,
++		DialTimeout:   time.Duration(o.DialTimeout) * time.Millisecond,
++	}, nil
++}
++
++// adaptiveState is a group's statistics. It is kept by group name for the
++// life of the process, so a configuration reload keeps what was learned.
++type adaptiveState struct {
++	mu       sync.Mutex
++	networks map[string]*networkStats
++}
++
++var adaptiveStates sync.Map // group name -> *adaptiveState
++
++// adaptiveMaxNetworks bounds the networks a group remembers (the least
++// recently used one is forgotten).
++const adaptiveMaxNetworks = 8
++
++// network returns the statistics of one network (s.mu held).
++func (s *adaptiveState) network(key, class string, now time.Time) *networkStats {
++	n := s.networks[key]
++	if n == nil {
++		if len(s.networks) >= adaptiveMaxNetworks {
++			oldest := ""
++			for k, v := range s.networks {
++				if oldest == "" || v.lastUsed.Before(s.networks[oldest].lastUsed) {
++					oldest = k
++				}
++			}
++			delete(s.networks, oldest)
++		}
++		n = newNetworkStats()
++		n.class = class
++		s.networks[key] = n
++	}
++	n.lastUsed = now
++	return n
++}
++
++// AdaptiveNetwork names the network connections leave through: its class
++// (wifi, cellular, ethernet, other) and a key. A Wi-Fi or Ethernet network is
++// told apart by its IPv4 subnet, so home and elsewhere keep their own history;
++// mobile data is one network (its address changes with every attach). A
++// package variable so tests can set it.
++var AdaptiveNetwork = defaultAdaptiveNetwork
++
++func interfaceClass(name string) string {
++	switch {
++	case strings.HasPrefix(name, "wlan"), strings.HasPrefix(name, "wl"):
++		return "wifi"
++	case strings.HasPrefix(name, "rmnet"), strings.HasPrefix(name, "ccmni"), strings.HasPrefix(name, "wwan"),
++		strings.HasPrefix(name, "pdp"), strings.HasPrefix(name, "seth"):
++		return "cellular"
++	case strings.HasPrefix(name, "eth"), strings.HasPrefix(name, "en"), strings.HasPrefix(name, "usb"),
++		strings.HasPrefix(name, "rndis"):
++		return "ethernet"
++	}
++	return "other"
++}
++
++func defaultAdaptiveNetwork() (key, class string) {
++	name := ""
++	if f := dialer.DefaultInterfaceFinder.Load(); f != nil {
++		name = f.FindInterfaceName(netip.IPv4Unspecified())
++	}
++	if name == "" || name == "<invalid>" {
++		name = dialer.DefaultInterface.Load()
++	}
++	if name == "" || name == "<invalid>" {
++		return "default", "other"
++	}
++	class = interfaceClass(name)
++	switch class {
++	case "cellular":
++		return class, class
++	case "wifi", "ethernet":
++		if ifc, err := iface.ResolveInterface(name); err == nil {
++			for _, a := range ifc.Addresses {
++				if a.Addr().Is4() && !a.Addr().IsLinkLocalUnicast() {
++					return class + " " + a.Masked().String(), class
++				}
++			}
++		}
++		return class, class
++	}
++	return name, class
++}
++
++type Adaptive struct {
++	*GroupBase
++	params         AdaptiveParams
++	option         AdaptiveOption
++	lastResort     map[string]bool
++	testUrl        string
++	expectedStatus string
++	disableUDP     bool
++	state          *adaptiveState
++
++	pinMu  sync.Mutex
++	pinned string
++
++	probeMu sync.Mutex
++	probing map[string]bool // members with a probe in flight
++
++	teardownMu sync.Mutex
++	tornDown   map[string]time.Time // Hysteria 2 members whose QUIC connection the group closed
++}
++
++func NewAdaptive(option GroupCommonOption, opt AdaptiveOption, emptyFallback C.Proxy, providers []P.ProxyProvider) (*Adaptive, error) {
++	params, err := opt.params()
++	if err != nil {
++		return nil, fmt.Errorf("%s: %w", option.Name, err)
++	}
++	lr := map[string]bool{}
++	for _, n := range opt.LastResort {
++		lr[n] = true
++	}
++	st, _ := adaptiveStates.LoadOrStore(option.Name, &adaptiveState{networks: map[string]*networkStats{}})
++	return &Adaptive{
++		GroupBase: NewGroupBase(GroupBaseOption{
++			Name:           option.Name,
++			Type:           C.Adaptive,
++			Hidden:         option.Hidden,
++			Icon:           option.Icon,
++			Filter:         option.Filter,
++			ExcludeFilter:  option.ExcludeFilter,
++			ExcludeType:    option.ExcludeType,
++			TestTimeout:    option.TestTimeout,
++			MaxFailedTimes: option.MaxFailedTimes,
++			EmptyFallback:  emptyFallback,
++			Providers:      providers,
++		}),
++		params:         params,
++		option:         opt,
++		lastResort:     lr,
++		testUrl:        option.URL,
++		expectedStatus: option.ExpectedStatus,
++		disableUDP:     option.DisableUDP,
++		state:          st.(*adaptiveState),
++		probing:        map[string]bool{},
++		tornDown:       map[string]time.Time{},
++	}, nil
++}
++
++func (g *Adaptive) members(touch bool) ([]AdaptiveMember, []C.Proxy) {
++	proxies := g.GetProxies(touch)
++	members := make([]AdaptiveMember, len(proxies))
++	for i, p := range proxies {
++		members[i] = AdaptiveMember{Name: p.Name(), LastResort: g.lastResort[p.Name()]}
++	}
++	return members, proxies
++}
++
++func (g *Adaptive) pin() string {
++	g.pinMu.Lock()
++	defer g.pinMu.Unlock()
++	return g.pinned
++}
++
++// plan orders the members for a connection now; commit moves the hysteresis
++// state (connections do, looks do not).
++func (g *Adaptive) plan(touch, commit bool) (Plan, []C.Proxy, netKey) {
++	now := time.Now()
++	key, class := AdaptiveNetwork()
++	members, proxies := g.members(touch)
++	g.state.mu.Lock()
++	n := g.state.network(key, class, now)
++	before := n.current
++	pl := n.plan(now, g.params, members, g.pin(), commit)
++	if commit {
++		n.connections++
++	}
++	after := n.current
++	g.state.mu.Unlock()
++	if commit && before != after && before != "" {
++		// Not silent: a change of the member connections try first is logged
++		// with its reason (the level the phone's configuration logs).
++		log.Warnln("[%s] %s: %s first, was %s (%s)", g.Name(), key, after, before, pl.Reason)
++	}
++	return pl, proxies, netKey{key, class}
++}
++
++// netKey is a network's key and class.
++type netKey struct{ key, class string }
++
++// DialContext implements C.ProxyAdapter
++func (g *Adaptive) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
++	pl, proxies, key := g.plan(true, true)
++	ordered := make([]C.Proxy, len(pl.Order))
++	for k, i := range pl.Order {
++		ordered[k] = proxies[i]
++	}
++	g.maybeProbe(key)
++	rec := &adaptiveRec{g: g, key: key}
++	c := newAdaptiveConn(rec, metadata, ordered, pl.Deadline, pl.RaceAfter, g.params.DialTimeout, g)
++	conn, err := c.dial(ctx)
++	if err != nil {
++		return nil, fmt.Errorf("%s: %w", g.Name(), err)
++	}
++	return conn, nil
++}
++
++// ListenPacketContext implements C.ProxyAdapter: members in the plan's order,
++// the next one only when a member cannot be dialed (packets carry no first
++// byte to race on).
++func (g *Adaptive) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
++	pl, proxies, key := g.plan(true, true)
++	g.maybeProbe(key)
++	var lastErr error
++	for _, i := range pl.Order {
++		p := proxies[i]
++		if !p.SupportUDP() {
++			continue
++		}
++		md := *metadata
++		pc, err := p.ListenPacketContext(ctx, &md)
++		if err == nil {
++			*metadata = md
++			pc.AppendToChains(g)
++			return pc, nil
++		}
++		lastErr = err
++		if ctx.Err() == nil {
++			g.observe(key, p, false, 0)
++		} else {
++			break
++		}
++	}
++	if lastErr == nil {
++		lastErr = C.ErrNotSupport
++	}
++	return nil, fmt.Errorf("%s: %w", g.Name(), lastErr)
++}
++
++// adaptiveRec records a connection's attempts into the network it started on.
++type adaptiveRec struct {
++	g   *Adaptive
++	key netKey
++}
++
++func (r *adaptiveRec) observe(p C.Proxy, success bool, latency time.Duration) {
++	r.g.observe(r.key, p, success, latency)
++}
++
++func (r *adaptiveRec) censored(p C.Proxy, silent time.Duration) {
++	now := time.Now()
++	g := r.g
++	g.state.mu.Lock()
++	st := g.state.network(r.key.key, r.key.class, now).member(p.Name())
++	before := st.down
++	st.observeCensored(now, g.params, silent)
++	entered := before < 0.5 && st.down >= 0.5
++	g.state.mu.Unlock()
++	if entered {
++		g.teardown(r.key, p)
++	}
++}
++
++func (r *adaptiveRec) finished(raced, notFirst, failed bool) {
++	r.g.state.mu.Lock()
++	defer r.g.state.mu.Unlock()
++	n := r.g.state.network(r.key.key, r.key.class, time.Now())
++	if raced {
++		n.raced++
++	}
++	if notFirst {
++		n.secondWins++
++	}
++	if failed {
++		n.failed++
++	}
++}
++
++func (g *Adaptive) observe(key netKey, p C.Proxy, success bool, latency time.Duration) {
++	now := time.Now()
++	g.state.mu.Lock()
++	st := g.state.network(key.key, key.class, now).member(p.Name())
++	before := st.down
++	if success && latency < 0 {
++		// A first byte without a comparable time: counts as a success only.
++		st.windowUpdate(now, g.params, true)
++		st.fast.add(now, g.params.FastHalfLife, true)
++		st.slow.add(now, g.params.SlowHalfLife, true)
++		st.lastSample, st.lastSuccess = now, now
++		st.successes++
++	} else {
++		st.observe(now, g.params, success, latency)
++	}
++	entered := before < 0.5 && st.down >= 0.5
++	g.state.mu.Unlock()
++	if entered {
++		g.teardown(key, p)
++	}
++}
++
++// adaptiveTeardownEvery bounds how often one member's QUIC connection is
++// closed by the group.
++const adaptiveTeardownEvery = 30 * time.Second
++
++// teardown closes the QUIC connection of a Hysteria 2 member whose path the
++// group now believes in a loss window. Every stream of a Hysteria 2 member
++// shares that connection: on a stalled one they hang until its idle timeout
++// (30 s), apps' long-lived connections included; closed, they end at once and
++// their apps reconnect through the group, and the member's next attempt dials
++// a new connection (a new UDP flow). Patch 0004 does the same when the
++// default interface changes.
++func (g *Adaptive) teardown(key netKey, p C.Proxy) {
++	if p.Type() != C.Hysteria2 {
++		return
++	}
++	now := time.Now()
++	g.teardownMu.Lock()
++	if last, ok := g.tornDown[p.Name()]; ok && now.Sub(last) < adaptiveTeardownEvery {
++		g.teardownMu.Unlock()
++		return
++	}
++	g.tornDown[p.Name()] = now
++	g.teardownMu.Unlock()
++	if !outbound.CloseHysteria2Connection(p.Adapter()) {
++		return
++	}
++	log.Warnln("[%s] %s: %s is in a loss window, its QUIC connection closed", g.Name(), key.key, p.Name())
++}
++
++// ---- probes ----
++
++// maybeProbe measures the stale members (adaptive_model.go, stale) while the
++// group is in use: it runs only when a connection goes through the group, so
++// an idle group sends nothing. Each member has at most one probe in flight;
++// a probe's result is a measurement, so the member is not stale afterwards.
++// A pinned group does not probe: its choice is fixed, and the page's group
++// test measures every member when the owner asks.
++func (g *Adaptive) maybeProbe(key netKey) {
++	if g.params.ProbeInterval <= 0 || g.pin() != "" {
++		return
++	}
++	now := time.Now()
++	members, proxies := g.members(false)
++	g.state.mu.Lock()
++	n := g.state.network(key.key, key.class, now)
++	stale := n.stale(now, g.params, members)
++	deadlines := make([]time.Duration, len(stale))
++	for k, i := range stale {
++		deadlines[k] = time.Duration(n.members[members[i].Name].estimate(now, g.params).Deadline * float64(time.Millisecond))
++	}
++	g.state.mu.Unlock()
++	for k, i := range stale {
++		p, deadline := proxies[i], deadlines[k]
++		g.probeMu.Lock()
++		if g.probing[p.Name()] {
++			g.probeMu.Unlock()
++			continue
++		}
++		g.probing[p.Name()] = true
++		g.probeMu.Unlock()
++		g.state.mu.Lock()
++		g.state.network(key.key, key.class, now).probes++
++		g.state.mu.Unlock()
++		go func() {
++			defer func() {
++				g.probeMu.Lock()
++				delete(g.probing, p.Name())
++				g.probeMu.Unlock()
++			}()
++			g.probeOne(key, p, g.testUrl, deadline)
++		}()
++	}
++}
++
++// probeOne measures one member the way connections are measured: the time
++// from the dial to the first byte of the answer to a TLS ClientHello (or to an
++// HTTP HEAD for an http:// test address), and for TLS the time from there to
++// the end of the server's first flight (the handshake done). A few kilobytes;
++// the connection is closed as soon as the handshake is.
++func (g *Adaptive) probeOne(key netKey, p C.Proxy, rawURL string, deadline time.Duration) (time.Duration, bool) {
++	ttfb, rest, err := adaptiveProbe(p, rawURL, g.params.DialTimeout)
++	if err != nil && ttfb > 0 && classifyEnd(err) != endPath {
++		// The far side answered and ended the handshake its own way (an alert,
++		// a close, something that is not TLS): the path carried it.
++		err = nil
++	}
++	// As a connection's attempt: the first byte within the deadline, and the
++	// rest of the server's first flight within the deadline after it.
++	ok := err == nil && ttfb <= deadline && rest <= deadline
++	if ok {
++		g.observe(key, p, true, ttfb)
++	} else {
++		g.observe(key, p, false, 0)
++	}
++	if err != nil {
++		log.Debugln("[%s] probe of %s: %v", g.Name(), p.Name(), err)
++	}
++	return ttfb, ok
++}
++
++type firstByteConn struct {
++	net.Conn
++	once sync.Once
++	at   chan time.Time
++}
++
++func (c *firstByteConn) Read(b []byte) (int, error) {
++	n, err := c.Conn.Read(b)
++	if n > 0 {
++		c.once.Do(func() { c.at <- time.Now() })
++	}
++	return n, err
++}
++
++// adaptiveProbe returns the time to the first byte and, for an https address,
++// the time from the first byte to the end of the server's first flight.
++func adaptiveProbe(p C.Proxy, rawURL string, limit time.Duration) (time.Duration, time.Duration, error) {
++	u, err := url.Parse(rawURL)
++	if err != nil {
++		return 0, 0, err
++	}
++	port := u.Port()
++	if port == "" {
++		switch u.Scheme {
++		case "https":
++			port = "443"
++		case "http":
++			port = "80"
++		default:
++			return 0, 0, fmt.Errorf("%s: scheme not supported", rawURL)
++		}
++	}
++	md := &C.Metadata{NetWork: C.TCP}
++	if err := md.SetRemoteAddress(net.JoinHostPort(u.Hostname(), port)); err != nil {
++		return 0, 0, err
++	}
++	ctx, cancel := context.WithTimeout(context.Background(), limit)
++	defer cancel()
++	start := time.Now()
++	conn, err := p.DialContext(ctx, md)
++	if err != nil {
++		return 0, 0, err
++	}
++	defer conn.Close()
++	_ = conn.SetDeadline(start.Add(limit))
++	fb := &firstByteConn{Conn: conn, at: make(chan time.Time, 1)}
++	done := make(chan error, 1)
++	go func() {
++		if u.Scheme == "https" {
++			// The path is measured, not the server: the certificate is not
++			// checked, and nothing is sent after the handshake.
++			tc := tls.Client(fb, &tls.Config{ServerName: u.Hostname(), NextProtos: []string{"h2", "http/1.1"}, InsecureSkipVerify: true})
++			done <- tc.HandshakeContext(ctx)
++			return
++		}
++		path := u.EscapedPath()
++		if path == "" {
++			path = "/"
++		}
++		req := "HEAD " + path + " HTTP/1.1\r\nHost: " + u.Host + "\r\nConnection: close\r\n\r\n"
++		if _, err := fb.Write([]byte(req)); err != nil {
++			done <- err
++			return
++		}
++		_, err := fb.Read(make([]byte, 1))
++		done <- err
++	}()
++	var first time.Time
++	select {
++	case first = <-fb.at:
++	case err := <-done:
++		select {
++		case first = <-fb.at:
++			if u.Scheme == "https" {
++				// The handshake ended with the first read: done or failed there.
++				return first.Sub(start), time.Since(first), err
++			}
++			return first.Sub(start), 0, nil
++		default:
++		}
++		if err == nil {
++			err = errors.New("no answer")
++		}
++		return 0, 0, err
++	case <-ctx.Done():
++		return 0, 0, ctx.Err()
++	}
++	if u.Scheme != "https" {
++		return first.Sub(start), 0, nil
++	}
++	select {
++	case err := <-done:
++		// The server's first flight is in (the handshake is done), or the
++		// handshake failed on the way (err).
++		return first.Sub(start), time.Since(first), err
++	case <-ctx.Done():
++		return first.Sub(start), 0, ctx.Err()
++	}
++}
++
++// URLTest implements ProxyGroup: the group test of the pages (GET
++// /group/{name}/delay) probes every member the way the group measures them and
++// feeds the results into its statistics; the reply is each member's time to
++// the first byte.
++func (g *Adaptive) URLTest(ctx context.Context, rawURL string, expectedStatus utils.IntRanges[uint16]) (map[string]uint16, error) {
++	if rawURL == "" {
++		rawURL = g.testUrl
++	}
++	k, class := AdaptiveNetwork()
++	key := netKey{k, class}
++	members, proxies := g.members(false)
++	now := time.Now()
++	g.state.mu.Lock()
++	n := g.state.network(k, class, now)
++	deadlines := make([]time.Duration, len(members))
++	for i, m := range members {
++		deadlines[i] = time.Duration(n.members[m.Name].estimate(now, g.params).Deadline * float64(time.Millisecond))
++	}
++	n.probes += uint64(len(members))
++	g.state.mu.Unlock()
++	var wg sync.WaitGroup
++	var mu sync.Mutex
++	out := map[string]uint16{}
++	for i, p := range proxies {
++		i, p := i, p
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			ttfb, ok := g.probeOne(key, p, rawURL, deadlines[i])
++			if ok {
++				mu.Lock()
++				// 0 would read as a failed test to the controller's clients.
++				ms := ttfb.Milliseconds()
++				if ms < 1 {
++					ms = 1
++				} else if ms > math.MaxUint16 {
++					ms = math.MaxUint16
++				}
++				out[p.Name()] = uint16(ms)
++				mu.Unlock()
++			}
++		}()
++	}
++	wg.Wait()
++	if len(out) == 0 {
++		return out, fmt.Errorf("get delay: all proxies timeout")
++	}
++	return out, nil
++}
++
++// ---- C.ProxyAdapter, ProxyGroup, SelectAble ----
++
++// Now implements ProxyGroup: the member a connection would use first now.
++func (g *Adaptive) Now() string {
++	pl, proxies, _ := g.plan(false, false)
++	if len(pl.Order) == 0 {
++		return ""
++	}
++	return proxies[pl.Order[0]].Name()
++}
++
++// Unwrap implements C.ProxyAdapter
++func (g *Adaptive) Unwrap(metadata *C.Metadata, touch bool) C.Proxy {
++	pl, proxies, _ := g.plan(touch, false)
++	return proxies[pl.Order[0]]
++}
++
++// SupportUDP implements C.ProxyAdapter
++func (g *Adaptive) SupportUDP() bool {
++	if g.disableUDP {
++		return false
++	}
++	pl, proxies, _ := g.plan(false, false)
++	for _, i := range pl.Order {
++		if proxies[i].SupportUDP() {
++			return true
++		}
++	}
++	return false
++}
++
++// IsL3Protocol implements C.ProxyAdapter
++func (g *Adaptive) IsL3Protocol(metadata *C.Metadata) bool {
++	return g.Unwrap(metadata, false).IsL3Protocol(metadata)
++}
++
++// Set pins a member (PUT /proxies/{group}); ForceSet("") returns to the model.
++func (g *Adaptive) Set(name string) error {
++	for _, p := range g.GetProxies(false) {
++		if p.Name() == name {
++			g.ForceSet(name)
++			return nil
++		}
++	}
++	return errors.New("proxy not exist")
++}
++
++func (g *Adaptive) ForceSet(name string) {
++	g.pinMu.Lock()
++	g.pinned = name
++	g.pinMu.Unlock()
++}
++
++func (g *Adaptive) Providers() []P.ProxyProvider {
++	return g.providers
++}
++
++func (g *Adaptive) Proxies() []C.Proxy {
++	return g.GetProxies(false)
++}
++
++// MarshalJSON implements C.ProxyAdapter: the usual group fields and, under
++// "adaptive", the parameters and per network the statistics, the order a
++// connection would take now and why.
++func (g *Adaptive) MarshalJSON() ([]byte, error) {
++	now := time.Now()
++	key, class := AdaptiveNetwork()
++	members, _ := g.members(false)
++	all := make([]string, len(members))
++	var lastResort []string
++	for i, m := range members {
++		all[i] = m.Name
++		if m.LastResort {
++			lastResort = append(lastResort, m.Name)
++		}
++	}
++	pinned := g.pin()
++
++	g.state.mu.Lock()
++	g.state.network(key, class, now) // the current network is always listed
++	var networks []map[string]any
++	for k, n := range g.state.networks {
++		pl := n.plan(now, g.params, members, pinned, false)
++		order := make([]string, len(pl.Order))
++		raceAfter := map[string]int64{}
++		for j, i := range pl.Order {
++			order[j] = members[i].Name
++			raceAfter[members[i].Name] = pl.RaceAfter[j].Milliseconds()
++		}
++		ms := make([]map[string]any, len(members))
++		for i, m := range members {
++			e := pl.Est[i]
++			st := n.members[m.Name]
++			state := "unknown"
++			switch {
++			case e.Known && e.P < adaptiveDownP:
++				state = "failing"
++			case e.Known:
++				state = "ok"
++			}
++			row := map[string]any{
++				"name":        m.Name,
++				"lastResort":  m.LastResort,
++				"state":       state,
++				"success":     round3(e.P),
++				"successFast": round3(e.PFast),
++				"successSlow": round3(e.PSlow),
++				"down":        round3(e.Down),
++				"latency":     math.Round(e.Latency),
++				"spread":      math.Round(e.Spread),
++				"deadline":    math.Round(e.Deadline),
++				"cost":        math.Round(e.Cost),
++				"known":       e.Known,
++			}
++			if st != nil {
++				row["successes"] = st.successes
++				row["failures"] = st.failures
++				row["lastSample"] = unixMilli(st.lastSample)
++				row["lastLatency"] = math.Round(st.lastLatency)
++			}
++			if d, ok := raceAfter[m.Name]; ok {
++				row["raceAfter"] = d
++			}
++			ms[i] = row
++		}
++		now1 := ""
++		if len(order) > 0 {
++			now1 = order[0]
++		}
++		networks = append(networks, map[string]any{
++			"key":         k,
++			"class":       n.class,
++			"current":     k == key,
++			"lastUsed":    unixMilli(n.lastUsed),
++			"now":         now1,
++			"reason":      pl.Reason,
++			"order":       order,
++			"members":     ms,
++			"connections": n.connections,
++			"raced":       n.raced,
++			"notFirst":    n.secondWins,
++			"failed":      n.failed,
++			"probes":      n.probes,
++		})
++	}
++	g.state.mu.Unlock()
++
++	nowName := ""
++	for _, n := range networks {
++		if n["current"] == true {
++			nowName, _ = n["now"].(string)
++		}
++	}
++	o := g.option
++	return json.Marshal(map[string]any{
++		"type":           g.Type().String(),
++		"now":            nowName,
++		"all":            all,
++		"testUrl":        g.testUrl,
++		"expectedStatus": g.expectedStatus,
++		"fixed":          pinned,
++		"hidden":         g.Hidden(),
++		"icon":           g.Icon(),
++		"emptyFallback":  g.EmptyFallback().Name(),
++		"adaptive": map[string]any{
++			"network":    key,
++			"lastResort": lastResort,
++			"params": map[string]any{
++				"fast-half-life": o.FastHalfLife,
++				"slow-half-life": o.SlowHalfLife,
++				"race-cost":      o.RaceCost,
++				"hysteresis":     o.Hysteresis,
++				"probe-interval": o.ProbeInterval,
++				"dial-timeout":   o.DialTimeout,
++			},
++			"networks": networks,
++		},
++	})
++}
++
++func round3(x float64) float64 { return math.Round(x*1000) / 1000 }
++
++func unixMilli(t time.Time) int64 {
++	if t.IsZero() {
++		return 0
++	}
++	return t.UnixMilli()
++}
++
++var _ ProxyGroup = (*Adaptive)(nil)
++var _ SelectAble = (*Adaptive)(nil)
+diff --git a/adapter/outboundgroup/adaptive_conn.go b/adapter/outboundgroup/adaptive_conn.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..cba494a397f9df37c5a333f994ba860b4068a2e2
+--- /dev/null
++++ b/adapter/outboundgroup/adaptive_conn.go
+@@ -0,0 +1,1276 @@
++package outboundgroup
++
++// The connection of an adaptive group: it tries the members
++// in the plan's order and keeps the first one that delivers a byte from
++// upstream.
++//
++// Why the first byte and not the dial: a Hysteria 2 member dials instantly
++// while its QUIC connection is up (a new stream is local), whether or not its
++// packets arrive; only the answer shows that the path works. A VLESS member's
++// dial is its TCP and Reality handshake. The first byte measures both the same
++// way, and it is what the owner waits for.
++//
++// Racing is safe only where sending the client's first flight twice is: a TLS
++// ClientHello opens a handshake that the losing connection abandons before any
++// application data exists. So a connection whose first bytes are TLS handshake
++// records is raced (the records go to every live attempt; anything else waits
++// for the winner); any other first flight goes to one member only, and only a
++// failed dial moves it to the next. The write that completes the first TLS
++// record returns once the winner is known, so the tunnel logs and counts the
++// connection under the member that carries it.
++//
++// How an attempt that ends before its first byte counts (a loss window on
++// mobile data ends attempts in all these ways):
++//   - The far side closed it cleanly, or the Hysteria 2 server answered with an
++//     error status (a destination its ACL refuses): the far side answered, so
++//     the path works. It decides the connection; the client reads the end.
++//   - The path failed: the QUIC connection under a Hysteria 2 stream ended
++//     (idle timeout, reset, closed), a timeout, an unreachable network. The
++//     member failed; the next one gets the first flight at once.
++//   - A reset or a cut connection: the path or the far side. The member counts
++//     as failed and the next one is tried, unless the next one ends the same
++//     way: two entries ending the connection alike is the destination's answer
++//     (the server has one exit), and neither counts as failed.
++//
++// A first byte is not the whole answer on a lossy path: a raced TLS connection
++// counts as a success only once the path carried the handshake on (the client
++// wrote its next flight after reading the server's, and the server's next bytes
++// came back), each step within the member's deadline; a step that does not
++// come is a stall, which counts as a failure of the member (the connection
++// itself stays: its TLS session belongs to that member). A first byte that
++// comes after the member's deadline, while another attempt is still within
++// its own, is held: the other attempt wins if it answers, the late one only if
++// nothing better comes.
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"io"
++	"net"
++	"os"
++	"strings"
++	"sync"
++	"syscall"
++	"time"
++
++	N "github.com/metacubex/mihomo/common/net"
++	C "github.com/metacubex/mihomo/constant"
++	"github.com/metacubex/mihomo/log"
++
++	"github.com/metacubex/quic-go"
++	"github.com/metacubex/sing/common/buf"
++)
++
++var errAdaptiveAllFailed = errors.New("every member failed")
++
++const (
++	adaptiveModeOpen   = iota // nothing written yet
++	adaptiveModeRace          // the first flight is TLS handshake records: raced
++	adaptiveModeSingle        // anything else: one member only
++)
++
++// adaptiveMaxFlight bounds the handshake bytes kept for attempts that connect
++// later; a first flight larger than this is not raced.
++const adaptiveMaxFlight = 16 << 10
++
++// What the end of an attempt before its first byte says (see the top).
++const (
++	endAnswer  = iota // the far side ended it: the path works
++	endPath           // the path failed
++	endUnclear        // the path or the far side
++)
++
++// classifyEnd tells an attempt's end before any byte apart.
++func classifyEnd(err error) int {
++	if err == nil || errors.Is(err, io.EOF) {
++		return endAnswer
++	}
++	// Hysteria 2's TCP response with an error status ("remote error: <message>",
++	// sing-quic hysteria2 clientConn.Read), and a TLS alert from the member's
++	// server (crypto/tls words it the same way): the server answered.
++	if strings.HasPrefix(err.Error(), "remote error: ") {
++		return endAnswer
++	}
++	var (
++		idle  *quic.IdleTimeoutError
++		hs    *quic.HandshakeTimeoutError
++		reset *quic.StatelessResetError
++		trans *quic.TransportError
++		app   *quic.ApplicationError
++		vn    *quic.VersionNegotiationError
++		ne    net.Error
++	)
++	switch {
++	case errors.As(err, &idle), errors.As(err, &hs), errors.As(err, &reset),
++		errors.As(err, &trans), errors.As(err, &app), errors.As(err, &vn):
++		return endPath // the QUIC connection under the stream ended
++	case errors.Is(err, os.ErrDeadlineExceeded), errors.Is(err, context.DeadlineExceeded),
++		errors.Is(err, syscall.ETIMEDOUT), errors.Is(err, syscall.EHOSTUNREACH),
++		errors.Is(err, syscall.ENETUNREACH), errors.Is(err, syscall.ENETDOWN),
++		errors.Is(err, syscall.EHOSTDOWN):
++		return endPath
++	case errors.As(err, &ne) && ne.Timeout():
++		return endPath
++	}
++	return endUnclear
++}
++
++type adaptiveRecorder interface {
++	// observe records an attempt's outcome; latency < 0: a success without a
++	// latency sample (the first byte of a connection that is not TLS).
++	observe(proxy C.Proxy, success bool, latency time.Duration)
++	// censored records an attempt closed while still silent after silent.
++	censored(proxy C.Proxy, silent time.Duration)
++	// finished is called once per connection when it has a member, failed or
++	// was closed before either.
++	finished(raced, notFirst, failed bool)
++}
++
++const (
++	attemptDialing = iota
++	attemptConnected
++	attemptDead
++)
++
++type adaptiveAttempt struct {
++	pos       int
++	proxy     C.Proxy
++	start     time.Time
++	connectAt time.Time
++	wait      time.Duration // time it waited for the client's first flight
++	cancel    context.CancelFunc
++	race      *time.Timer
++	deadline  *time.Timer
++	hard      *time.Timer
++
++	conn    C.Conn
++	state   int
++	missed  bool // its deadline passed without a first byte (a failure was recorded)
++	flight  bool // it has been sent a TLS first flight
++	errored bool // it ended before a byte with a path or unclear error
++	late    bool // its first byte came after its deadline and is held
++
++	wmu  sync.Mutex // serialises writes to conn until the connection writes directly
++	sent int        // bytes of the first flight written (guarded by wmu and c.mu)
++
++	firstDone chan struct{}
++	first     []byte
++	firstErr  error
++	firstOff  int // read by the client's Read only
++}
++
++type adaptiveConn struct {
++	rec       adaptiveRecorder
++	md        C.Metadata
++	proxies   []C.Proxy
++	deadline  []time.Duration
++	raceAfter []time.Duration
++	hard      time.Duration
++
++	mu         sync.Mutex
++	outer      []C.ProxyAdapter
++	attempts   []*adaptiveAttempt
++	next       int
++	flight     []byte
++	emptyWrite bool
++	mode       int
++	tls        tlsRecords
++	connected  chan struct{}
++	connOnce   sync.Once
++	decided    chan struct{} // closed once: winner chosen, failed or closed
++	winner     *adaptiveAttempt
++	answered   bool // the winner's end is the connection's answer (no byte)
++	direct     bool // the winner has the whole first flight: writes go straight to it
++	err        error
++	closed     bool
++	reported   bool
++	raced      bool
++	rd, wd     time.Time
++	rdChange   chan struct{}
++	wdChange   chan struct{}
++	born       time.Time
++
++	pending []*adaptiveAttempt // unclear ends whose failure waits for the outcome
++	unclear *adaptiveAttempt   // the first unclear end after a first flight
++	held    *adaptiveAttempt   // a late first byte kept in case nothing better comes
++
++	// The stall watch of a raced winner: phase 1 waits for the client's next
++	// flight after it read the server's first bytes, phase 2 for the server's
++	// answer to it; each within the winner's deadline.
++	watch      *adaptiveAttempt
++	watchPhase int
++	watchTimer *time.Timer
++	watchLat   time.Duration
++	delivered  bool // the client has read the winner's first bytes
++}
++
++func newAdaptiveConn(rec adaptiveRecorder, md *C.Metadata, proxies []C.Proxy, deadline, raceAfter []time.Duration, hard time.Duration, group C.ProxyAdapter) *adaptiveConn {
++	return &adaptiveConn{
++		rec:       rec,
++		md:        *md,
++		proxies:   proxies,
++		deadline:  deadline,
++		raceAfter: raceAfter,
++		hard:      hard,
++		outer:     []C.ProxyAdapter{group},
++		connected: make(chan struct{}),
++		decided:   make(chan struct{}),
++		rdChange:  make(chan struct{}),
++		wdChange:  make(chan struct{}),
++		born:      time.Now(),
++	}
++}
++
++// trace logs one event of the connection at debug level; times count from
++// the connection's start.
++func (c *adaptiveConn) trace(a *adaptiveAttempt, format string, args ...any) {
++	if log.Level() != log.DEBUG {
++		return
++	}
++	name := "-"
++	if a != nil {
++		name = a.proxy.Name()
++	}
++	log.Debugln("[%s] %s %s +%v: %s", c.outer[0].Name(), c.md.RemoteAddress(), name,
++		time.Since(c.born).Round(time.Millisecond), fmt.Sprintf(format, args...))
++}
++
++// dial starts the first attempt and returns once one attempt has connected; it
++// fails when every member failed or ctx ends first.
++func (c *adaptiveConn) dial(ctx context.Context) (C.Conn, error) {
++	c.mu.Lock()
++	c.startNext()
++	c.mu.Unlock()
++	select {
++	case <-c.connected:
++		c.mu.Lock()
++		err := c.err
++		c.mu.Unlock()
++		if err != nil {
++			_ = c.Close()
++			return nil, err
++		}
++		return c, nil
++	case <-ctx.Done():
++		_ = c.Close()
++		return nil, ctx.Err()
++	}
++}
++
++// ---- attempts (c.mu held) ----
++
++// live counts attempts still within their deadline.
++func (c *adaptiveConn) live() int {
++	n := 0
++	for _, a := range c.attempts {
++		if a.state != attemptDead && !a.missed {
++			n++
++		}
++	}
++	return n
++}
++
++// canFailover: another member may still get this connection.
++func (c *adaptiveConn) canFailover() bool {
++	return !c.closed && c.winner == nil && c.err == nil && c.next < len(c.proxies) && c.mode != adaptiveModeSingle
++}
++
++func (c *adaptiveConn) startNext() {
++	if !c.canFailover() || c.live() >= adaptiveMaxParallel {
++		return
++	}
++	pos := c.next
++	c.next++
++	if len(c.attempts) > 0 {
++		c.raced = true
++	}
++	a := &adaptiveAttempt{pos: pos, proxy: c.proxies[pos], start: time.Now(), firstDone: make(chan struct{})}
++	ctx, cancel := context.WithTimeout(context.Background(), c.hard)
++	a.cancel = cancel
++	a.race = time.AfterFunc(c.raceAfter[pos], func() { c.onRace(a) })
++	a.deadline = time.AfterFunc(c.deadline[pos], func() { c.onDeadline(a) })
++	a.hard = time.AfterFunc(c.hard, func() { c.onHard(a) })
++	c.attempts = append(c.attempts, a)
++	c.trace(a, "start (deadline %v)", c.deadline[pos])
++	md := c.md
++	go func() {
++		conn, err := a.proxy.DialContext(ctx, &md)
++		c.onDial(a, conn, err)
++	}()
++}
++
++func (a *adaptiveAttempt) stopTimers() {
++	a.race.Stop()
++	a.deadline.Stop()
++	a.hard.Stop()
++}
++
++// rearm restarts an attempt's clock after it waited for the client: its race,
++// deadline and hard limit count from the moment it could be answered.
++func (c *adaptiveConn) rearm(a *adaptiveAttempt, now time.Time) {
++	a.wait = now.Sub(a.connectAt)
++	base := now.Sub(a.start) - a.wait // the dial's own time
++	a.race.Reset(c.raceAfter[a.pos] - base)
++	a.deadline.Reset(c.deadline[a.pos] - base)
++	a.hard.Reset(c.hard - base)
++}
++
++func (c *adaptiveConn) kill(a *adaptiveAttempt) {
++	if a.state == attemptDead {
++		return
++	}
++	a.state = attemptDead
++	a.stopTimers()
++	a.cancel()
++	if a.conn != nil {
++		_ = a.conn.Close()
++	}
++}
++
++// attributable: silence of this attempt says something about its path. An
++// unfinished dial does; a connected attempt only once it was sent a TLS first
++// flight, which the server answers at once.
++func (c *adaptiveConn) attributable(a *adaptiveAttempt) bool {
++	return a.state == attemptDialing || (a.state == attemptConnected && a.flight)
++}
++
++// censor records what the silence of an attempt closed before its deadline
++// says (c.mu held).
++func (c *adaptiveConn) censor(a *adaptiveAttempt, now time.Time) {
++	if a.state == attemptDead || a.missed || a.late || !c.attributable(a) {
++		return
++	}
++	silent := now.Sub(a.start) - a.wait
++	if a.state == attemptDialing || a.wait == 0 {
++		silent = now.Sub(a.start)
++	}
++	c.rec.censored(a.proxy, silent)
++}
++
++// flushPending records the failures of attempts that ended unclearly, or
++// drops them when the connection's outcome says the far side ended them.
++func (c *adaptiveConn) flushPending(record bool) {
++	if record {
++		for _, a := range c.pending {
++			c.rec.observe(a.proxy, false, 0)
++		}
++	}
++	c.pending = nil
++}
++
++func (c *adaptiveConn) fail(err error) {
++	if c.err != nil || c.winner != nil || c.closed {
++		return
++	}
++	if err == nil {
++		err = errAdaptiveAllFailed
++	}
++	c.err = err
++	for _, a := range c.attempts {
++		c.kill(a)
++	}
++	c.flushPending(true)
++	c.connOnce.Do(func() { close(c.connected) })
++	close(c.decided)
++	c.report(true)
++	c.trace(nil, "failed: %v", err)
++}
++
++func (c *adaptiveConn) report(failed bool) {
++	if c.reported {
++		return
++	}
++	c.reported = true
++	c.rec.finished(c.raced, c.winner != nil && !c.answered && c.winner.pos > 0, failed)
++}
++
++// settle starts the next member if one may follow, gives the connection to a
++// held late answer when nothing within its deadline is left, and ends the
++// connection when no attempt is left.
++func (c *adaptiveConn) settle(lastErr error) {
++	if c.winner != nil || c.err != nil || c.closed {
++		return
++	}
++	c.startNext()
++	if c.held != nil && c.live() == 0 {
++		c.win(c.held, time.Now())
++		return
++	}
++	for _, a := range c.attempts {
++		if a.state != attemptDead {
++			return
++		}
++	}
++	c.fail(lastErr)
++}
++
++// decide makes a the winner (c.mu held): the other attempts close.
++func (c *adaptiveConn) decide(a *adaptiveAttempt, now time.Time) {
++	c.winner = a
++	for _, o := range c.attempts {
++		if o != a {
++			c.censor(o, now)
++			c.kill(o)
++		}
++	}
++	a.stopTimers()
++	if a.sent == len(c.flight) {
++		c.direct = true
++	}
++	close(c.decided)
++	c.report(false)
++}
++
++// win gives the connection to an attempt that delivered its first bytes.
++func (c *adaptiveConn) win(a *adaptiveAttempt, now time.Time) {
++	switch {
++	case a.missed:
++		// A late answer: its failure is recorded, the connection takes it.
++	case a.flight && c.mode == adaptiveModeRace:
++		// A success once the path carries the handshake on (the stall watch).
++		c.watch = a
++		c.watchPhase = 1
++		c.watchLat = now.Sub(a.start) - a.wait
++		d := c.deadline[a.pos]
++		c.watchTimer = time.AfterFunc(d, func() { c.onStall(a) })
++	default:
++		// The server spoke first: the path works, but the time includes
++		// whatever the client and the server waited for.
++		c.rec.observe(a.proxy, true, -1)
++	}
++	c.flushPending(true)
++	c.decide(a, now)
++	c.trace(a, "carries the connection (%d bytes first)", len(a.first))
++}
++
++// answer gives the connection to an attempt whose end is the far side's
++// answer (the client reads it); record: the path counts as working.
++func (c *adaptiveConn) answer(a *adaptiveAttempt, now time.Time, record bool) {
++	if record {
++		c.rec.observe(a.proxy, true, -1)
++	}
++	c.answered = true
++	c.flushPending(false)
++	c.decide(a, now)
++	c.trace(a, "the far side's answer: %v", a.firstErr)
++}
++
++func (c *adaptiveConn) onRace(a *adaptiveAttempt) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if a.state == attemptDead || a.pos != c.next-1 || !c.attributable(a) {
++		return
++	}
++	c.startNext()
++}
++
++func (c *adaptiveConn) onDeadline(a *adaptiveAttempt) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if a.state == attemptDead || a.missed || c.winner != nil || c.closed || !c.attributable(a) {
++		return
++	}
++	a.missed = true
++	c.rec.observe(a.proxy, false, 0)
++	c.trace(a, "deadline passed")
++	if c.held != nil && c.live() == 0 {
++		c.win(c.held, time.Now())
++		return
++	}
++	c.startNext()
++}
++
++func (c *adaptiveConn) onHard(a *adaptiveAttempt) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if a.state == attemptDead || c.winner != nil || c.closed {
++		return
++	}
++	if a.late {
++		// Nothing better came in time: the held answer takes the connection.
++		c.win(a, time.Now())
++		return
++	}
++	if !c.attributable(a) {
++		// Connected and still waiting for the client: its clock starts with the
++		// first flight (rearm).
++		return
++	}
++	if !a.missed {
++		a.missed = true
++		c.rec.observe(a.proxy, false, 0)
++	}
++	c.kill(a)
++	c.settle(os.ErrDeadlineExceeded)
++}
++
++func (c *adaptiveConn) onDial(a *adaptiveAttempt, conn C.Conn, err error) {
++	c.mu.Lock()
++	if a.state == attemptDead || c.closed || c.err != nil || (c.winner != nil && c.winner != a) {
++		c.mu.Unlock()
++		if conn != nil {
++			_ = conn.Close()
++		}
++		return
++	}
++	if err != nil {
++		c.trace(a, "dial failed: %v", err)
++		if !a.missed {
++			a.missed = true
++			c.rec.observe(a.proxy, false, 0)
++		}
++		c.kill(a)
++		if c.winner == a {
++			// The one member of a connection that is not raced could not be
++			// dialed: the client gets the error on its next read or write.
++			a.firstErr = err
++			close(a.firstDone)
++			c.err = err
++		} else {
++			c.settle(err)
++		}
++		c.mu.Unlock()
++		return
++	}
++	a.conn = conn
++	a.state = attemptConnected
++	a.connectAt = time.Now()
++	for _, o := range c.outer {
++		conn.AppendToChains(o)
++	}
++	if c.mode == adaptiveModeRace {
++		a.flight = true // the flight so far is replayed to it below
++	}
++	c.connOnce.Do(func() { close(c.connected) })
++	c.mu.Unlock()
++	// Read first: a server that speaks first may be writing already.
++	go c.readFirst(a)
++	_ = c.writeFlight(a)
++}
++
++// readFirst reads the attempt's first bytes: the first attempt to get any wins.
++func (c *adaptiveConn) readFirst(a *adaptiveAttempt) {
++	b := make([]byte, 16<<10)
++	n, err := a.conn.Read(b)
++	// A raced connection's first flight is a TLS ClientHello, so the answer is
++	// TLS records: bytes that end inside a record are a flight whose rest has
++	// not come yet, which on a lossy path may never come (the phone's hung
++	// connections, and the e2e replay: 701 bytes of a 7 KB flight, then
++	// nothing). The attempt stays unanswered until its bytes end at a record
++	// boundary; meanwhile the race goes on.
++	for n > 0 && n < len(b) && err == nil && c.racing() && tlsCut(b[:n]) {
++		var m int
++		m, err = a.conn.Read(b[n:])
++		n += m
++	}
++	now := time.Now()
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	defer close(a.firstDone)
++	if a.state == attemptDead && c.winner != a {
++		return
++	}
++	if n > 0 {
++		a.first = b[:n]
++		if c.winner != nil || c.err != nil || c.closed {
++			return // the single member of a connection that is not raced
++		}
++		if a.missed {
++			for _, o := range c.attempts {
++				if o != a && o.state != attemptDead && !o.missed {
++					// Late, and another attempt is still within its deadline: a
++					// late first byte is a lossy path, whose next round trips are
++					// likely lost too. Kept in case nothing better comes.
++					a.late = true
++					c.held = a
++					c.trace(a, "late first byte held")
++					return
++				}
++			}
++		}
++		c.win(a, now)
++		return
++	}
++	if err == nil {
++		err = io.ErrUnexpectedEOF
++	}
++	a.firstErr = err
++	if c.winner == a {
++		return // the client reads the member's own end of the connection
++	}
++	if c.winner != nil || c.err != nil || c.closed {
++		c.kill(a)
++		return
++	}
++	class := classifyEnd(err)
++	c.trace(a, "ended before a byte: %v", err)
++	inTime := a.flight && !a.missed
++	switch {
++	case inTime && class == endAnswer:
++		// The far side answered the first flight with an end before the
++		// member's deadline (a destination the server refuses or cannot
++		// reach): the destination's answer, not a lost path; the group chooses
++		// paths. The client gets it; no other member is tried.
++		c.answer(a, now, true)
++		return
++	case inTime && class == endUnclear && c.unclear != nil:
++		// A second entry ended the connection the same way: the destination.
++		c.answer(a, now, false)
++		return
++	}
++	if !a.missed {
++		a.missed = true
++		a.errored = true
++		if class == endPath {
++			c.rec.observe(a.proxy, false, 0)
++		} else {
++			c.pending = append(c.pending, a)
++			if inTime && class == endUnclear {
++				c.unclear = a
++			}
++		}
++	}
++	c.kill(a)
++	c.settle(err)
++}
++
++// writeFlight sends the part of the first flight the attempt has not had yet
++// (and the empty first write of a client that spoke nothing yet).
++func (c *adaptiveConn) writeFlight(a *adaptiveAttempt) error {
++	a.wmu.Lock()
++	defer a.wmu.Unlock()
++	c.mu.Lock()
++	if a.state != attemptConnected {
++		c.mu.Unlock()
++		return nil
++	}
++	end := len(c.flight)
++	chunk := c.flight[a.sent:end:end]
++	empty := c.emptyWrite && end == 0 && a.sent == 0
++	c.mu.Unlock()
++	var err error
++	if len(chunk) > 0 {
++		_, err = a.conn.Write(chunk)
++	} else if empty {
++		_, err = a.conn.Write(nil)
++	}
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if err != nil {
++		if c.winner != a && a.state != attemptDead {
++			c.trace(a, "write failed: %v", err)
++			if !a.missed && classifyEnd(err) == endPath {
++				a.missed = true
++				c.rec.observe(a.proxy, false, 0)
++			}
++			c.kill(a)
++			c.settle(err)
++		}
++		return err
++	}
++	a.sent = end
++	return nil
++}
++
++// ---- the stall watch (c.mu held) ----
++
++// clientWrote: the client sends its next flight after it read the server's
++// first bytes; the server has the winner's deadline to answer it.
++func (c *adaptiveConn) clientWrote(n int) {
++	if c.watch == nil || c.watchPhase != 1 || !c.delivered || n == 0 {
++		return
++	}
++	c.watchPhase = 2
++	c.watchTimer.Reset(c.deadline[c.watch.pos])
++}
++
++// serverWrote: bytes came back after the client's next flight: the path
++// carries the connection, the attempt's success counts.
++func (c *adaptiveConn) serverWrote() {
++	if c.watch == nil || c.watchPhase != 2 {
++		return
++	}
++	c.rec.observe(c.watch.proxy, true, c.watchLat)
++	c.trace(c.watch, "carried on")
++	c.endWatch()
++}
++
++func (c *adaptiveConn) endWatch() {
++	if c.watch != nil {
++		c.watchTimer.Stop()
++		c.watch = nil
++	}
++}
++
++func (c *adaptiveConn) onStall(a *adaptiveAttempt) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if c.watch != a || c.closed {
++		return
++	}
++	// The handshake stopped after the first byte: a lossy path. The member
++	// failed; the connection stays with it (its TLS session is there).
++	c.rec.observe(a.proxy, false, 0)
++	c.trace(a, "stalled after the first byte (phase %d)", c.watchPhase)
++	c.endWatch()
++}
++
++// ---- writes ----
++
++// Write sends the client's bytes. Before a winner: TLS handshake records to
++// every connected attempt (kept for those still dialing); other bytes wait for
++// the winner. The write that completes the first record waits for it too.
++func (c *adaptiveConn) Write(b []byte) (int, error) {
++	c.mu.Lock()
++	switch {
++	case c.closed:
++		c.mu.Unlock()
++		return 0, net.ErrClosed
++	case c.direct:
++		w := c.winner
++		c.clientWrote(len(b))
++		c.mu.Unlock()
++		return w.conn.Write(b)
++	case c.err != nil:
++		err := c.err
++		c.mu.Unlock()
++		return 0, err
++	case c.winner != nil:
++		w := c.winner
++		c.clientWrote(len(b))
++		c.mu.Unlock()
++		return c.writeWinner(w, b)
++	}
++	if len(b) == 0 {
++		if c.mode == adaptiveModeOpen {
++			c.emptyWrite = true
++		}
++		targets := c.connectedAttempts()
++		c.mu.Unlock()
++		for _, a := range targets {
++			_ = c.writeFlight(a)
++		}
++		return 0, nil
++	}
++	if c.mode == adaptiveModeOpen {
++		if !isTLSHandshake(b) {
++			c.single()
++			c.mu.Unlock()
++			return c.Write(b)
++		}
++		c.mode = adaptiveModeRace
++		now := time.Now()
++		for _, a := range c.attempts {
++			if a.state == attemptConnected {
++				a.flight = true
++				c.rearm(a, now)
++			}
++		}
++	}
++	hs := c.tls.take(b)
++	if len(c.flight)+hs > adaptiveMaxFlight {
++		c.single()
++		c.mu.Unlock()
++		return c.Write(b)
++	}
++	c.flight = append(c.flight, b[:hs]...)
++	complete := c.tls.complete
++	targets := c.connectedAttempts()
++	c.mu.Unlock()
++	for _, a := range targets {
++		_ = c.writeFlight(a)
++	}
++	if hs == len(b) && !complete {
++		return len(b), nil
++	}
++	// A complete first record, or bytes behind the handshake: the rest goes to
++	// the winner once there is one.
++	w, err := c.waitWinner(true)
++	if err != nil {
++		return 0, err
++	}
++	if _, err := c.writeWinner(w, b[hs:]); err != nil {
++		return hs, err
++	}
++	return len(b), nil
++}
++
++// writeWinner gives the winner what it lacks of the first flight, then b.
++func (c *adaptiveConn) writeWinner(w *adaptiveAttempt, b []byte) (int, error) {
++	if !c.waitConnected(w) {
++		c.mu.Lock()
++		err := c.err
++		c.mu.Unlock()
++		if err == nil {
++			err = errAdaptiveAllFailed
++		}
++		return 0, err
++	}
++	if err := c.writeFlight(w); err != nil {
++		return 0, err
++	}
++	c.mu.Lock()
++	if w.sent == len(c.flight) {
++		c.direct = true
++	}
++	c.mu.Unlock()
++	if len(b) == 0 {
++		return 0, nil
++	}
++	return w.conn.Write(b)
++}
++
++// single keeps one attempt for a first flight that may not be sent twice: the
++// best connected one, else the best still dialing (c.mu held).
++func (c *adaptiveConn) single() {
++	c.mode = adaptiveModeSingle
++	var keep *adaptiveAttempt
++	for _, a := range c.attempts {
++		switch {
++		case a.state == attemptConnected && (keep == nil || keep.state != attemptConnected):
++			keep = a
++		case a.state == attemptDialing && keep == nil:
++			keep = a
++		}
++	}
++	for _, a := range c.attempts {
++		if a != keep {
++			c.kill(a)
++		}
++	}
++	if keep == nil {
++		c.fail(errAdaptiveAllFailed)
++		return
++	}
++	// A dial still running keeps its context (bounded by the dial timeout);
++	// without a first flight to answer at once, the member has no deadline.
++	keep.stopTimers()
++	c.winner = keep
++	c.held = nil
++	c.flushPending(true)
++	close(c.decided)
++	c.report(false)
++}
++
++// waitConnected waits for the winner of a single-member connection that is
++// still dialing (bounded by its dial context).
++func (c *adaptiveConn) waitConnected(a *adaptiveAttempt) bool {
++	for {
++		c.mu.Lock()
++		state, closed := a.state, c.closed
++		c.mu.Unlock()
++		switch {
++		case closed:
++			return false
++		case state == attemptConnected:
++			return true
++		case state == attemptDead:
++			return false
++		}
++		select {
++		case <-c.connected:
++		case <-time.After(20 * time.Millisecond):
++		}
++	}
++}
++
++func (c *adaptiveConn) connectedAttempts() []*adaptiveAttempt {
++	var out []*adaptiveAttempt
++	for _, a := range c.attempts {
++		if a.state == attemptConnected {
++			out = append(out, a)
++		}
++	}
++	return out
++}
++
++// waitWinner waits for the decision, bounded by the write or read deadline.
++func (c *adaptiveConn) waitWinner(write bool) (*adaptiveAttempt, error) {
++	for {
++		c.mu.Lock()
++		switch {
++		case c.winner != nil:
++			w := c.winner
++			c.mu.Unlock()
++			return w, nil
++		case c.closed:
++			c.mu.Unlock()
++			return nil, net.ErrClosed
++		case c.err != nil:
++			err := c.err
++			c.mu.Unlock()
++			return nil, err
++		}
++		dl, change := c.rd, c.rdChange
++		if write {
++			dl, change = c.wd, c.wdChange
++		}
++		c.mu.Unlock()
++		if !waitUntil(c.decided, change, dl) {
++			return nil, os.ErrDeadlineExceeded
++		}
++	}
++}
++
++// waitUntil waits for done or change; false when the deadline passed first.
++func waitUntil(done, change <-chan struct{}, deadline time.Time) bool {
++	var timeout <-chan time.Time
++	if !deadline.IsZero() {
++		d := time.Until(deadline)
++		if d <= 0 {
++			return false
++		}
++		t := time.NewTimer(d)
++		defer t.Stop()
++		timeout = t.C
++	}
++	select {
++	case <-done:
++	case <-change:
++	case <-timeout:
++		return false
++	}
++	return true
++}
++
++// ---- reads ----
++
++func (c *adaptiveConn) Read(b []byte) (int, error) {
++	w, err := c.waitWinner(false)
++	if err != nil {
++		return 0, err
++	}
++	for !isClosed(w.firstDone) {
++		c.mu.Lock()
++		dl, change := c.rd, c.rdChange
++		c.mu.Unlock()
++		if !waitUntil(w.firstDone, change, dl) {
++			return 0, os.ErrDeadlineExceeded
++		}
++	}
++	if w.firstOff < len(w.first) {
++		n := copy(b, w.first[w.firstOff:])
++		w.firstOff += n
++		if w.firstOff == len(w.first) {
++			c.mu.Lock()
++			c.delivered = true
++			c.mu.Unlock()
++		}
++		return n, nil
++	}
++	if w.firstErr != nil {
++		return 0, w.firstErr
++	}
++	n, err := w.conn.Read(b)
++	if n > 0 {
++		c.mu.Lock()
++		c.serverWrote()
++		c.mu.Unlock()
++	}
++	return n, err
++}
++
++func isClosed(ch <-chan struct{}) bool {
++	select {
++	case <-ch:
++		return true
++	default:
++		return false
++	}
++}
++
++func (c *adaptiveConn) ReadBuffer(buffer *buf.Buffer) error {
++	n, err := c.Read(buffer.FreeBytes())
++	buffer.Truncate(n)
++	if n > 0 && err == io.EOF {
++		return nil
++	}
++	return err
++}
++
++func (c *adaptiveConn) WriteBuffer(buffer *buf.Buffer) error {
++	defer buffer.Release()
++	_, err := c.Write(buffer.Bytes())
++	return err
++}
++
++// ---- net.Conn ----
++
++func (c *adaptiveConn) Close() error {
++	c.mu.Lock()
++	if c.closed {
++		c.mu.Unlock()
++		return nil
++	}
++	w := c.winner
++	if w == nil && c.err == nil {
++		c.flushPending(true)
++		close(c.decided)
++		c.report(false)
++	}
++	if c.watch != nil {
++		// Closed before the watch ended: no stall was seen.
++		c.rec.observe(c.watch.proxy, true, c.watchLat)
++		c.endWatch()
++	}
++	c.closed = true
++	now := time.Now()
++	for _, a := range c.attempts {
++		if a != w {
++			if w == nil {
++				c.censor(a, now)
++			}
++			c.kill(a)
++		}
++	}
++	c.connOnce.Do(func() { close(c.connected) })
++	var conn C.Conn
++	if w != nil {
++		w.stopTimers()
++		w.cancel()
++		w.state = attemptDead
++		conn = w.conn
++	}
++	c.mu.Unlock()
++	if conn != nil {
++		return conn.Close()
++	}
++	return nil
++}
++
++// view is the connection that stands for this one: the winner, else the
++// first connected attempt.
++func (c *adaptiveConn) view() C.Conn {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if c.winner != nil && c.winner.conn != nil {
++		return c.winner.conn
++	}
++	for _, a := range c.attempts {
++		if a.conn != nil && a.state == attemptConnected {
++			return a.conn
++		}
++	}
++	return nil
++}
++
++func (c *adaptiveConn) LocalAddr() net.Addr {
++	if v := c.view(); v != nil {
++		return v.LocalAddr()
++	}
++	return &net.TCPAddr{}
++}
++
++func (c *adaptiveConn) RemoteAddr() net.Addr {
++	if v := c.view(); v != nil {
++		return v.RemoteAddr()
++	}
++	return &net.TCPAddr{}
++}
++
++func (c *adaptiveConn) SetDeadline(t time.Time) error {
++	_ = c.SetReadDeadline(t)
++	return c.SetWriteDeadline(t)
++}
++
++func (c *adaptiveConn) winnerConn() C.Conn {
++	if c.winner != nil && c.winner.state != attemptDead {
++		return c.winner.conn
++	}
++	return nil
++}
++
++func (c *adaptiveConn) SetReadDeadline(t time.Time) error {
++	c.mu.Lock()
++	c.rd = t
++	close(c.rdChange)
++	c.rdChange = make(chan struct{})
++	conn := c.winnerConn()
++	c.mu.Unlock()
++	if conn != nil {
++		return conn.SetReadDeadline(t)
++	}
++	return nil
++}
++
++func (c *adaptiveConn) SetWriteDeadline(t time.Time) error {
++	c.mu.Lock()
++	c.wd = t
++	close(c.wdChange)
++	c.wdChange = make(chan struct{})
++	conn := c.winnerConn()
++	c.mu.Unlock()
++	if conn != nil {
++		return conn.SetWriteDeadline(t)
++	}
++	return nil
++}
++
++// ---- C.Connection ----
++
++func (c *adaptiveConn) Chains() C.Chain {
++	if v := c.view(); v != nil {
++		return v.Chains()
++	}
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	chain := C.Chain{}
++	for _, o := range c.outer {
++		chain = append(chain, o.Name())
++	}
++	return chain
++}
++
++func (c *adaptiveConn) ProviderChains() C.Chain {
++	if v := c.view(); v != nil {
++		return v.ProviderChains()
++	}
++	return C.Chain{}
++}
++
++func (c *adaptiveConn) AppendToChains(a C.ProxyAdapter) {
++	c.mu.Lock()
++	c.outer = append(c.outer, a)
++	var conns []C.Conn
++	for _, at := range c.attempts {
++		if at.conn != nil && at.state == attemptConnected {
++			conns = append(conns, at.conn)
++		}
++	}
++	c.mu.Unlock()
++	for _, conn := range conns {
++		conn.AppendToChains(a)
++	}
++}
++
++func (c *adaptiveConn) RemoteDestination() string {
++	if v := c.view(); v != nil {
++		return v.RemoteDestination()
++	}
++	return ""
++}
++
++// NeedHandshake makes the tunnel write the client's first bytes right after
++// the dial, which lets the race be decided before the connection is logged.
++func (c *adaptiveConn) NeedHandshake() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return c.mode == adaptiveModeOpen
++}
++
++// Once decided, the first bytes delivered and the stall watch over, the relay
++// reads and writes the winner directly.
++func (c *adaptiveConn) ReaderReplaceable() bool {
++	c.mu.Lock()
++	w, watching := c.winner, c.watch != nil
++	c.mu.Unlock()
++	return w != nil && !watching && isClosed(w.firstDone) && w.firstErr == nil && w.firstOff >= len(w.first)
++}
++
++func (c *adaptiveConn) WriterReplaceable() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return c.direct && c.watch == nil
++}
++
++func (c *adaptiveConn) ReaderPossiblyReplaceable() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return !c.closed && c.err == nil
++}
++
++func (c *adaptiveConn) WriterPossiblyReplaceable() bool {
++	return c.ReaderPossiblyReplaceable()
++}
++
++func (c *adaptiveConn) Upstream() any {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	if c.winner != nil && c.winner.conn != nil {
++		return c.winner.conn
++	}
++	return nil
++}
++
++var (
++	_ C.Conn         = (*adaptiveConn)(nil)
++	_ N.ExtendedConn = (*adaptiveConn)(nil)
++)
++
++// racing: the first flight is TLS handshake records (the race mode).
++func (c *adaptiveConn) racing() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return c.mode == adaptiveModeRace
++}
++
++// ---- TLS records ----
++
++// tlsCut: b begins with TLS records and ends inside one (its header or its
++// body). Anything that does not look like TLS records is never cut.
++func tlsCut(b []byte) bool {
++	i := 0
++	for i < len(b) {
++		if b[i] < 0x14 || b[i] > 0x17 || (i+1 < len(b) && b[i+1] != 0x03) {
++			return false
++		}
++		if len(b)-i < 5 {
++			return true
++		}
++		i += 5 + (int(b[i+3])<<8 | int(b[i+4]))
++	}
++	return i > len(b)
++}
++
++func isTLSHandshake(b []byte) bool {
++	return len(b) > 0 && b[0] == 0x16 && (len(b) < 2 || b[1] == 0x03)
++}
++
++// tlsRecords follows the record boundaries of the client's first flight.
++type tlsRecords struct {
++	hdr      [5]byte
++	hdrLen   int
++	need     int  // body bytes of the current record still to come
++	stopped  bool // a record that is neither handshake nor change_cipher_spec began
++	complete bool // at least one whole record has passed
++}
++
++// take returns how many leading bytes of b belong to handshake or
++// change_cipher_spec records; what follows (application data, alerts) is
++// never sent twice.
++func (t *tlsRecords) take(b []byte) int {
++	if t.stopped {
++		return 0
++	}
++	i := 0
++	for i < len(b) {
++		if t.need > 0 {
++			n := t.need
++			if n > len(b)-i {
++				n = len(b) - i
++			}
++			t.need -= n
++			i += n
++			if t.need == 0 {
++				t.complete = true
++			}
++			continue
++		}
++		if t.hdrLen == 0 && b[i] != 0x16 && b[i] != 0x14 {
++			t.stopped = true
++			return i
++		}
++		t.hdr[t.hdrLen] = b[i]
++		t.hdrLen++
++		i++
++		if t.hdrLen == len(t.hdr) {
++			t.need = int(t.hdr[3])<<8 | int(t.hdr[4])
++			t.hdrLen = 0
++			if t.need == 0 {
++				t.complete = true
++			}
++		}
++	}
++	return i
++}
+diff --git a/adapter/outboundgroup/adaptive_model.go b/adapter/outboundgroup/adaptive_model.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..261e1dc1abbf9614897999eae0e3d15b6464ed69
+--- /dev/null
++++ b/adapter/outboundgroup/adaptive_model.go
+@@ -0,0 +1,526 @@
++package outboundgroup
++
++// The cost model of the adaptive group. Pure logic: no I/O,
++// every function takes the time it works at, so the group, its tests and the
++// replay of recorded path measurements run the same code.
++//
++// What is estimated, per network and member: the time from the start of a
++// connection attempt to the first byte from upstream (the moment the owner's
++// connection works), and the probability that this first byte arrives before
++// the member's deadline. Everything else follows from those two numbers:
++//
++//   - The deadline D after which an attempt is presumed lost is TCP's
++//     retransmission timeout applied to that time (RFC 6298: mean plus four
++//     mean deviations, at least one second), capped by dial-timeout.
++//   - The expected time to a working connection when members are tried one
++//     after another is minimised by trying them in ascending order of
++//     latency + D·(1−p)/p (the classic order for sequential search: expected
++//     time spent on a member divided by its chance of success). That is the
++//     member's cost; the group prefers the cheapest.
++//   - A second member is started while the first is still silent when the
++//     time it is expected to save exceeds race-cost, the price of a second
++//     connection expressed in milliseconds.
++//
++// The probability comes from two parts. How reliable the member is while its
++// path is up: decayed counts of successes and failures on two time scales, the
++// lower estimate used. And whether its path is in a loss window now (some paths lose
++// whole minutes): a two-state belief updated only by what
++// the member does, never by time alone. A failure of a member that rarely
++// fails makes a window likely, a second one in a row makes it near certain,
++// and only successes end it; an isolated failure among successes moves little.
++
++import (
++	"math"
++	"sort"
++	"time"
++)
++
++// AdaptiveParams are the group's tunables (config keys of an adaptive group).
++type AdaptiveParams struct {
++	// FastHalfLife and SlowHalfLife: after this long a success or failure counts
++	// half. The group takes the lower of the two success estimates, so a burst of
++	// failures moves it within about FastHalfLife, and a member that failed comes
++	// back only as the slow estimate forgets (about SlowHalfLife).
++	FastHalfLife time.Duration
++	SlowHalfLife time.Duration
++	// RaceCost is what a second parallel connection is worth, in time: one is
++	// started when the time it is expected to save is at least this much.
++	RaceCost time.Duration
++	// Hysteresis: the current member is kept unless another one's cost is lower
++	// by this fraction (0.2: 20% lower).
++	Hysteresis float64
++	// ProbeInterval: while the group is in use, a member without a measurement
++	// on the current network for this long is measured with a probe; 0: never.
++	ProbeInterval time.Duration
++	// DialTimeout caps every deadline: an attempt is given up after this long.
++	DialTimeout time.Duration
++}
++
++// DefaultAdaptiveParams are the values a group gets for keys it leaves out.
++func DefaultAdaptiveParams() AdaptiveParams {
++	return AdaptiveParams{
++		FastHalfLife:  60 * time.Second,
++		SlowHalfLife:  300 * time.Second,
++		RaceCost:      150 * time.Millisecond,
++		Hysteresis:    0.2,
++		ProbeInterval: 300 * time.Second,
++		DialTimeout:   5 * time.Second,
++	}
++}
++
++const (
++	// Prior of an unmeasured member: 90% success with the weight of two attempts,
++	// and a first byte after about a second with a wide spread. It is neither
++	// trusted (a measured member with a known good record costs less) nor ignored
++	// (a member that is failing costs more, so the unmeasured one is tried).
++	adaptivePriorP          = 0.9
++	adaptivePriorWeight     = 2.0
++	adaptivePriorLatency    = 1000.0 // ms
++	adaptivePriorSpread     = 500.0  // ms
++	adaptivePriorLatWeight  = 0.25
++	adaptiveMinDeadline     = 1000.0 // ms, RFC 6298's lower bound of the RTO
++	adaptiveMinP            = 0.02
++	adaptiveDownP           = 0.5 // below this a member counts as failing
++	adaptiveMaxParallel     = 2   // attempts waiting for a first byte at once
++	adaptiveLatencyHalfLife = 6   // latency is forgotten this many times slower than failures
++	adaptiveRaceGrid        = 24  // points between 0 and D where a race start is considered
++
++	// The loss-window belief (memberStats.down). Before an attempt counts, the
++	// belief grows by the chance that a window began since the member's
++	// previous attempt, 1 − e^(−gap/adaptiveWindowOnset) (at most to
++	// adaptiveWindowPrior): 0.1% after 10 s, 3% after 5 minutes. Then the
++	// outcome weighs in: inside a window an attempt succeeds with
++	// adaptiveWindowP (some packets pass), outside it fails with the member's
++	// own failure rate (1 − its slow estimate). For a member that fails 1% of
++	// the time and is tried every 10 s, one failure makes a window about 8%
++	// likely, the second in a row about 80%; one failure after 5 quiet minutes
++	// about 70%.
++	adaptiveWindowOnset = 3 * time.Hour
++	adaptiveWindowPrior = 0.5
++	adaptiveWindowFirst = 0.25 // before a member's first attempt on a network
++	adaptiveWindowP     = 0.1
++	adaptiveWindowMax   = 0.99 // never certain: three successes in a row end any window
++)
++
++// decayed is an exponentially time-decayed pair of counts.
++type decayed struct {
++	s, f float64
++	t    time.Time
++}
++
++func decayFactor(dt, halfLife time.Duration) float64 {
++	if dt <= 0 || halfLife <= 0 {
++		return 1
++	}
++	return math.Exp2(-float64(dt) / float64(halfLife))
++}
++
++func (d decayed) at(now time.Time, halfLife time.Duration) (s, f float64) {
++	if d.t.IsZero() {
++		return 0, 0
++	}
++	k := decayFactor(now.Sub(d.t), halfLife)
++	return d.s * k, d.f * k
++}
++
++func (d *decayed) add(now time.Time, halfLife time.Duration, success bool) {
++	if success {
++		d.addWeighted(now, halfLife, 1, 0)
++	} else {
++		d.addWeighted(now, halfLife, 0, 1)
++	}
++}
++
++func (d *decayed) addWeighted(now time.Time, halfLife time.Duration, s, f float64) {
++	d.s, d.f = d.at(now, halfLife)
++	d.t = now
++	d.s += s
++	d.f += f
++}
++
++// memberStats is what the group knows about one member on one network.
++type memberStats struct {
++	fast, slow decayed
++	// Latency to the first byte of successful attempts: time-weighted mean and
++	// mean deviation (as TCP's SRTT and RTTVAR), with their decayed weight.
++	latW, latMean, latDev float64
++	latT                  time.Time
++
++	lastSample, lastSuccess, lastFailure time.Time
++	lastLatency                          float64
++	successes, failures                  uint64 // undecayed, for the pages
++
++	// down: the belief that the member's path is in a loss window now. It
++	// changes only with an attempt's outcome (windowUpdate, windowSilence), at
++	// downT.
++	down  float64
++	downT time.Time
++}
++
++// windowUpdate moves the loss-window belief by one outcome at now (before the
++// outcome enters the counts), and tells whether the outcome belongs to the
++// counts of the member's reliability while up: a failure while a window is
++// already believed is the window's, not the member's.
++func (m *memberStats) windowUpdate(now time.Time, p AdaptiveParams, success bool) bool {
++	prior, q := m.windowPrior(now, p)
++	if success {
++		m.down = prior * adaptiveWindowP / (prior*adaptiveWindowP + (1-prior)*(1-q))
++	} else {
++		m.down = prior * (1 - adaptiveWindowP) / (prior*(1-adaptiveWindowP) + (1-prior)*q)
++	}
++	m.down = math.Min(m.down, adaptiveWindowMax)
++	m.downT = now
++	return success || prior < 0.5
++}
++
++// windowSilence moves the belief by an attempt closed while still silent after
++// t ms (another member answered first): outside a window that silence has the
++// member's own chance, a failure or a first byte later than t; inside one it
++// is almost certain. A member that answers in 150 ms and stays silent for 600
++// counts about as a failure, one silent for 100 ms not at all.
++func (m *memberStats) windowSilence(now time.Time, p AdaptiveParams, e Estimate, t float64) bool {
++	prior, q := m.windowPrior(now, p)
++	s := e.survival(t)
++	up := q + (1-q)*s
++	in := (1 - adaptiveWindowP) + adaptiveWindowP*s
++	m.down = math.Min(prior*in/(prior*in+(1-prior)*up), adaptiveWindowMax)
++	m.downT = now
++	return prior < 0.5
++}
++
++// windowPrior is the belief before an outcome at now: the last one, grown by
++// the chance that a window began since; and the member's failure rate while up.
++func (m *memberStats) windowPrior(now time.Time, p AdaptiveParams) (prior, q float64) {
++	prior = m.down
++	if !m.downT.IsZero() {
++		began := 1 - math.Exp(-float64(now.Sub(m.downT))/float64(adaptiveWindowOnset))
++		prior = math.Max(prior, math.Min(prior+(1-prior)*began, adaptiveWindowPrior))
++	} else {
++		prior = adaptiveWindowFirst
++	}
++	ss, sf := m.slow.at(now, p.SlowHalfLife)
++	q = math.Min(math.Max(1-betaMean(ss, sf), 0.005), 0.5)
++	return prior, q
++}
++
++// observe records one attempt: success with its time to the first byte, or failure.
++func (m *memberStats) observe(now time.Time, p AdaptiveParams, success bool, latency time.Duration) {
++	if m.windowUpdate(now, p, success) {
++		m.fast.add(now, p.FastHalfLife, success)
++		m.slow.add(now, p.SlowHalfLife, success)
++	}
++	m.lastSample = now
++	if !success {
++		m.lastFailure = now
++		m.failures++
++		return
++	}
++	m.lastSuccess = now
++	m.successes++
++	x := float64(latency) / float64(time.Millisecond)
++	m.lastLatency = x
++	w := m.latW * decayFactor(now.Sub(m.latT), p.SlowHalfLife*adaptiveLatencyHalfLife)
++	if w <= 0 {
++		m.latMean, m.latDev = x, x/2
++	} else {
++		dev := math.Abs(x - m.latMean)
++		m.latMean = (w*m.latMean + x) / (w + 1)
++		m.latDev = (w*m.latDev + dev) / (w + 1)
++	}
++	m.latW = w + 1
++	m.latT = now
++}
++
++// observeCensored records an attempt that was closed while still silent,
++// after silent (another member answered first, or the client gave up): as
++// much of a failure as its silence makes likely. Its expected count of
++// failures, P(failed | silent for that long), goes to the failures and the
++// rest to the successes, without a latency sample. Without it a member that
++// loses every race to a working one would never be seen failing.
++func (m *memberStats) observeCensored(now time.Time, p AdaptiveParams, silent time.Duration) {
++	e := m.estimate(now, p)
++	t := float64(silent) / float64(time.Millisecond)
++	if !m.windowSilence(now, p, e, t) {
++		return // a window was believed: its silence says nothing of the member
++	}
++	w := e.failedGivenSilent(t)
++	m.fast.addWeighted(now, p.FastHalfLife, 1-w, w)
++	m.slow.addWeighted(now, p.SlowHalfLife, 1-w, w)
++}
++
++// failedGivenSilent is P(the attempt has failed | no first byte after t ms).
++func (e Estimate) failedGivenSilent(t float64) float64 {
++	if t >= e.Deadline {
++		return 1
++	}
++	return (1 - e.P) / ((1 - e.P) + e.P*e.survival(t))
++}
++
++// Estimate is the model's view of one member on one network at one moment.
++type Estimate struct {
++	P        float64 // probability of a first byte before the deadline
++	PFast    float64 // reliability while up, fast scale
++	PSlow    float64 // reliability while up, slow scale
++	Down     float64 // belief that the path is in a loss window now
++	Latency  float64 // ms to the first byte, successful attempts
++	Spread   float64 // ms, mean deviation
++	Deadline float64 // ms
++	Cost     float64 // ms, latency + deadline·(1−p)/p
++	Known    bool    // measured on this network (weight left in the estimates)
++}
++
++func betaMean(s, f float64) float64 {
++	return (adaptivePriorP*adaptivePriorWeight + s) / (adaptivePriorWeight + s + f)
++}
++
++func (m *memberStats) estimate(now time.Time, p AdaptiveParams) Estimate {
++	var e Estimate
++	if m == nil {
++		m = &memberStats{}
++	}
++	fs, ff := m.fast.at(now, p.FastHalfLife)
++	ss, sf := m.slow.at(now, p.SlowHalfLife)
++	e.PFast = betaMean(fs, ff)
++	e.PSlow = betaMean(ss, sf)
++	e.Down = m.down
++	e.P = math.Max((1-m.down)*math.Min(e.PFast, e.PSlow)+m.down*adaptiveWindowP, adaptiveMinP)
++	w := 0.0
++	if !m.latT.IsZero() {
++		w = m.latW * decayFactor(now.Sub(m.latT), p.SlowHalfLife*adaptiveLatencyHalfLife)
++	}
++	e.Latency = (adaptivePriorLatWeight*adaptivePriorLatency + w*m.latMean) / (adaptivePriorLatWeight + w)
++	e.Spread = (adaptivePriorLatWeight*adaptivePriorSpread + w*m.latDev) / (adaptivePriorLatWeight + w)
++	e.Deadline = math.Min(math.Max(e.Latency+4*e.Spread, adaptiveMinDeadline), float64(p.DialTimeout)/float64(time.Millisecond))
++	e.Cost = e.Latency + e.Deadline*(1-e.P)/e.P
++	e.Known = ss+sf > 0.05 || w > 0.05
++	return e
++}
++
++// survival is P(a successful attempt's first byte comes later than t ms),
++// modelling the latency as log-normal with the estimate's mean and spread (a
++// mean deviation is about 0.8 standard deviations).
++func (e Estimate) survival(t float64) float64 {
++	if t <= 0 {
++		return 1
++	}
++	mean := math.Max(e.Latency, 1)
++	sd := math.Max(e.Spread*1.25, 1)
++	s2 := math.Log(1 + (sd*sd)/(mean*mean))
++	mu := math.Log(mean) - s2/2
++	z := (math.Log(t) - mu) / math.Sqrt(s2)
++	return 0.5 * math.Erfc(z/math.Sqrt2)
++}
++
++// RaceStart is when, after the start of an attempt with estimate a, the next
++// member (estimate b) is worth starting in parallel: the earliest time t at
++// which P(a has failed | still silent at t) · p_b · (D_a − t), the time the
++// early start saves if a has failed and b works, reaches raceCost. It is D_a
++// (no race: b follows once a is presumed lost) when that never happens.
++func RaceStart(a, b Estimate, raceCost time.Duration) time.Duration {
++	cost := float64(raceCost) / float64(time.Millisecond)
++	for i := 0; i < adaptiveRaceGrid; i++ {
++		t := a.Deadline * float64(i) / adaptiveRaceGrid
++		if a.failedGivenSilent(t)*b.P*(a.Deadline-t) >= cost {
++			return time.Duration(t * float64(time.Millisecond))
++		}
++	}
++	return time.Duration(a.Deadline * float64(time.Millisecond))
++}
++
++// Reasons for the member the group uses (the pages word them).
++const (
++	ReasonPinned     = "pinned"      // the owner chose it
++	ReasonLearning   = "learning"    // nothing measured on this network yet: configuration order
++	ReasonBest       = "best"        // lowest expected time to a working connection
++	ReasonKept       = "kept"        // another is cheaper, but not by the hysteresis margin
++	ReasonLastResort = "last-resort" // every other member is failing
++)
++
++// AdaptiveMember is a member as the planner sees it.
++type AdaptiveMember struct {
++	Name       string
++	LastResort bool
++}
++
++// Plan is the order in which one connection tries the members, with each
++// attempt's deadline and the moment after its start at which the next one is
++// raced; Reason says why the first one leads.
++type Plan struct {
++	Order     []int // indexes into the member list
++	Deadline  []time.Duration
++	RaceAfter []time.Duration
++	Reason    string
++	Est       []Estimate // per member (same index as the member list)
++}
++
++// networkStats holds one network's statistics of every member plus the
++// hysteresis state (the member the group used last there).
++type networkStats struct {
++	class    string // wifi, cellular, ethernet, other
++	members  map[string]*memberStats
++	current  string
++	lastUsed time.Time
++
++	// Counters for the pages, since the core started.
++	connections, raced, secondWins, probes, failed uint64
++}
++
++func newNetworkStats() *networkStats {
++	return &networkStats{members: map[string]*memberStats{}}
++}
++
++func (n *networkStats) member(name string) *memberStats {
++	m := n.members[name]
++	if m == nil {
++		m = &memberStats{}
++		n.members[name] = m
++	}
++	return m
++}
++
++// plan orders the members for a new connection at now. commit: this plan is
++// used for a connection (the hysteresis state follows it); false only looks.
++func (n *networkStats) plan(now time.Time, p AdaptiveParams, members []AdaptiveMember, pinned string, commit bool) Plan {
++	pl := Plan{Est: make([]Estimate, len(members))}
++	known := false
++	for i, m := range members {
++		pl.Est[i] = n.members[m.Name].estimate(now, p)
++		if pl.Est[i].Known && !m.LastResort {
++			known = true
++		}
++	}
++	finish := func() Plan {
++		pl.Deadline = make([]time.Duration, len(pl.Order))
++		pl.RaceAfter = make([]time.Duration, len(pl.Order))
++		for k, i := range pl.Order {
++			e := pl.Est[i]
++			pl.Deadline[k] = time.Duration(e.Deadline * float64(time.Millisecond))
++			if k+1 < len(pl.Order) {
++				pl.RaceAfter[k] = RaceStart(e, pl.Est[pl.Order[k+1]], p.RaceCost)
++			} else {
++				pl.RaceAfter[k] = pl.Deadline[k]
++			}
++		}
++		if commit && len(pl.Order) > 0 && pl.Reason != ReasonPinned {
++			n.current = members[pl.Order[0]].Name
++		}
++		return pl
++	}
++	if pinned != "" {
++		for i, m := range members {
++			if m.Name == pinned {
++				pl.Order = []int{i}
++				pl.Reason = ReasonPinned
++				return finish()
++			}
++		}
++	}
++
++	var primary, resort []int
++	for i, m := range members {
++		if m.LastResort {
++			resort = append(resort, i)
++		} else {
++			primary = append(primary, i)
++		}
++	}
++	byCost := func(list []int) {
++		sort.SliceStable(list, func(a, b int) bool { return pl.Est[list[a]].Cost < pl.Est[list[b]].Cost })
++	}
++	byCost(primary)
++	byCost(resort)
++	if len(primary) == 0 {
++		pl.Order = resort
++		pl.Reason = ReasonBest
++		return finish()
++	}
++
++	if !known {
++		// Nothing measured here: every member has the prior, so the configuration
++		// order stands (the stable sort kept it).
++		pl.Order = append(append([]int{}, primary...), resort...)
++		pl.Reason = ReasonLearning
++		return finish()
++	}
++
++	first := primary[0]
++	pl.Reason = ReasonBest
++	for k, i := range primary {
++		if members[i].Name == n.current && i != first {
++			if pl.Est[first].Cost >= (1-p.Hysteresis)*pl.Est[i].Cost {
++				// The current member stays first: the better one is not better by
++				// the margin. A failing current member's cost has already grown by
++				// its deadline, so a burst moves the group at once.
++				primary = append([]int{i}, append(append([]int{}, primary[:k]...), primary[k+1:]...)...)
++				pl.Reason = ReasonKept
++			}
++			break
++		}
++	}
++
++	allDown := true
++	for _, i := range primary {
++		if pl.Est[i].P >= adaptiveDownP {
++			allDown = false
++			break
++		}
++	}
++	if allDown && len(resort) > 0 {
++		// Every own entry is failing: the last resort is raced next to the best
++		// of them, which still wins when it answers first.
++		pl.Order = append(append([]int{primary[0]}, resort...), primary[1:]...)
++		pl.Reason = ReasonLastResort
++		return finish()
++	}
++	pl.Order = append(append([]int{}, primary...), resort...)
++	return finish()
++}
++
++// stale lists the members worth a probe at now, stalest first (never the
++// last resort; none when probing is off): a member not measured on this
++// network for ProbeInterval (or never), and, measured at the fast time scale
++// (half of it while its path is believed in a loss window), a member that
++// would lead again if it worked: one whose latency beats the current member's
++// cost by the hysteresis margin. A member in a window comes back only through
++// such successes.
++func (n *networkStats) stale(now time.Time, p AdaptiveParams, members []AdaptiveMember) []int {
++	if p.ProbeInterval <= 0 {
++		return nil
++	}
++	curCost := 0.0 // no current member: nothing to watch for
++	if cur := n.members[n.current]; cur != nil {
++		curCost = cur.estimate(now, p).Cost
++	}
++	var out []int
++	for i, m := range members {
++		if m.LastResort {
++			continue
++		}
++		st := n.members[m.Name]
++		if st == nil || st.lastSample.IsZero() {
++			out = append(out, i)
++			continue
++		}
++		age := now.Sub(st.lastSample)
++		every := p.FastHalfLife
++		if st.down >= 0.5 {
++			every /= 2 // in a window: its end is seen within half the fast half-life
++		}
++		watch := m.Name != n.current && age >= every && st.estimate(now, p).Latency < (1-p.Hysteresis)*curCost
++		if age >= p.ProbeInterval || watch {
++			out = append(out, i)
++		}
++	}
++	sort.SliceStable(out, func(a, b int) bool {
++		sa, sb := n.members[members[out[a]].Name], n.members[members[out[b]].Name]
++		var ta, tb time.Time
++		if sa != nil {
++			ta = sa.lastSample
++		}
++		if sb != nil {
++			tb = sb.lastSample
++		}
++		return ta.Before(tb)
++	})
++	return out
++}
+diff --git a/adapter/outboundgroup/parser.go b/adapter/outboundgroup/parser.go
+index e97f8da04b9f321e0a637837beabc1b3749d3b63..56622471dd4ef461d66e9e85dbb760167558a619 100644
+--- a/adapter/outboundgroup/parser.go
++++ b/adapter/outboundgroup/parser.go
+@@ -166,8 +166,9 @@ func ParseProxyGroup(config map[string]any, proxyMap map[string]C.Proxy, provide
+ 			groupOption.URL = C.DefaultTestURL
+ 		}
+ 
+-		// select don't need auto health check
+-		if groupOption.Type != "select" && groupOption.Type != "relay" {
++		// select don't need auto health check; nor adaptive, which
++		// learns from its connections and probes only while it is in use
++		if groupOption.Type != "select" && groupOption.Type != "relay" && groupOption.Type != "adaptive" {
+ 			if groupOption.Interval == 0 {
+ 				groupOption.Interval = 300
+ 			}
+@@ -213,6 +214,13 @@ func ParseProxyGroup(config map[string]any, proxyMap map[string]C.Proxy, provide
+ 			return nil, err
+ 		}
+ 		return NewLoadBalance(groupOption, opt, emptyFallback, providers)
++	case "adaptive":
++		opt := defaultAdaptiveOption()
++		err = decoder.Decode(config, &opt)
++		if err != nil {
++			return nil, err
++		}
++		return NewAdaptive(groupOption, opt, emptyFallback, providers)
+ 	case "relay":
+ 		return nil, fmt.Errorf("%w: The group [%s] with relay type was removed, please using dialer-proxy instead", errType, groupName)
+ 	default:
+diff --git a/constant/adapters.go b/constant/adapters.go
+index 9b0b70ce4948bded42b902b471039b9c643ff522..2d8e737d31ee279c88ba3ea84a7ddd3df409f3a1 100644
+--- a/constant/adapters.go
++++ b/constant/adapters.go
+@@ -55,6 +55,9 @@ const (
+ 	ZeroTier
+ 	EasyTier
+ 	GostRelay
++
++	// the adaptive group (adapter/outboundgroup/adaptive.go)
++	Adaptive
+ )
+ 
+ const (
+@@ -246,6 +249,8 @@ func (at AdapterType) String() string {
+ 		return "Relay"
+ 	case Selector:
+ 		return "Selector"
++	case Adaptive:
++		return "Adaptive"
+ 	case Fallback:
+ 		return "Fallback"
+ 	case URLTest:
+diff --git a/hub/route/groups.go b/hub/route/groups.go
+index 5d5e5b817fa559ffb20fb537d0c33ced81d42940..c0ce0164e4f0f5fe0b0d5946bac3f16582f6ff7e 100644
+--- a/hub/route/groups.go
++++ b/hub/route/groups.go
+@@ -59,7 +59,9 @@ func getGroupDelay(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+ 
+-	if selectAble, ok := proxy.Adapter().(outboundgroup.SelectAble); ok && proxy.Type() != C.Selector {
++	// testing an adaptive group measures its members; the owner's pin
++	// stays (DELETE /proxies/{name} removes it).
++	if selectAble, ok := proxy.Adapter().(outboundgroup.SelectAble); ok && proxy.Type() != C.Selector && proxy.Type() != C.Adaptive {
+ 		selectAble.ForceSet("")
+ 		cachefile.Cache().SetSelected(proxy.Name(), "")
+ 	}

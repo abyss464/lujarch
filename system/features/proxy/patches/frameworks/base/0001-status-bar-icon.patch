@@ -1,0 +1,291 @@
+diff --git a/packages/SystemUI/Android.bp b/packages/SystemUI/Android.bp
+index 9382f88c38efb5b8360e5622363814c33ac1d363..975a02ba07e81c645dadd80f6a3d24198393866a 100644
+--- a/packages/SystemUI/Android.bp
++++ b/packages/SystemUI/Android.bp
+@@ -489,6 +489,7 @@ android_library {
+         "//frameworks/libs/systemui:compilelib",
+         "com.android.systemui.bundle.phone_api",
+         "SystemUI-res",
++        "lujarch_proxy_aidl-java",
+         "WifiTrackerLib",
+         "WindowManager-Shell",
+         "PlatformAnimationLib",
+diff --git a/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy.xml b/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..216971566de352eca0f25705e0a991dcdb16507b
+--- /dev/null
++++ b/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- The proxy while it runs: the globe of its Quick Settings tile and its row in Network &
++     internet, drawn as SystemUI draws its own status icons. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="17dp"
++    android:height="17dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1H8v-2h2c0.55,0 1,-0.45 1,-1V7h2c1.1,0 2,-0.9 2,-2v-0.41c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z" />
++</vector>
+diff --git a/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy_warning.xml b/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy_warning.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..e08fc7a580e13d56e4ff5b004caa8495644388da
+--- /dev/null
++++ b/packages/SystemUI/res/drawable/stat_sys_lujarch_proxy_warning.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- The proxy while it is on but not running: the same globe with the exclamation mark Wi-Fi and
++     mobile data carry without internet. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="17dp"
++    android:height="17dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <!-- The globe at 3/4 size, centred at (10, 12). -->
++    <group
++        android:pivotX="12"
++        android:pivotY="12"
++        android:scaleX="0.75"
++        android:scaleY="0.75"
++        android:translateX="-2">
++        <path
++            android:fillColor="#FFFFFFFF"
++            android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1H8v-2h2c0.55,0 1,-0.45 1,-1V7h2c1.1,0 2,-0.9 2,-2v-0.41c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z" />
++    </group>
++    <!-- The exclamation mark: a bar and a dot. -->
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M19.5,7.5h2v8h-2zM19.5,17.5h2v2h-2z" />
++</vector>
+diff --git a/packages/SystemUI/res/values-ja/lujarch_strings.xml b/packages/SystemUI/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..1dc710de788dae0f3f65878a7d432fc34eef9086
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_proxy_title">プロキシ</string>
++    <string name="lujarch_proxy_on">プロキシ オン</string>
++    <string name="lujarch_proxy_not_running">プロキシは実行されていません</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8c5311a6e4bfd55f69f7253e8a124fb945356534
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_proxy_title">代理</string>
++    <string name="lujarch_proxy_on">代理已开启</string>
++    <string name="lujarch_proxy_not_running">代理未运行</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_strings.xml b/packages/SystemUI/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8127b72eb756036dbe40fde02032042eb4d43fcb
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_strings.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- The proxy's status bar slot, also its key in System icons. -->
++    <string name="lujarch_proxy_slot" translatable="false">lujarch_proxy</string>
++    <string name="lujarch_proxy_title">Proxy</string>
++    <string name="lujarch_proxy_on">Proxy on</string>
++    <string name="lujarch_proxy_not_running">Proxy not running</string>
++</resources>
+diff --git a/packages/SystemUI/res/xml/status_bar_prefs.xml b/packages/SystemUI/res/xml/status_bar_prefs.xml
+index 76f78409e49e0dd4aa5780fde50264d78184cc9b..c8e983b781d2f266980f025ac47005ef9d4304fe 100644
+--- a/packages/SystemUI/res/xml/status_bar_prefs.xml
++++ b/packages/SystemUI/res/xml/status_bar_prefs.xml
+@@ -108,6 +108,11 @@
+         android:key="vpn"
+         android:title="@string/legacy_vpn_name" />
+ 
++    <com.android.systemui.tuner.StatusBarSwitch
++        android:icon="@drawable/stat_sys_lujarch_proxy"
++        android:key="@string/lujarch_proxy_slot"
++        android:title="@string/lujarch_proxy_title" />
++
+     <com.android.systemui.tuner.StatusBarSwitch
+         android:icon="@*android:drawable/ic_battery"
+         android:key="battery"
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..535df587c239385e095014fbc954531569e942ab
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java
+@@ -0,0 +1,74 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.phone;
++
++import android.os.Handler;
++import android.os.IBinder;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.util.Log;
++
++import org.lujarch.proxy.IProxy;
++import org.lujarch.proxy.IProxyListener;
++
++import java.util.function.Consumer;
++
++/** The proxy's state from lujarch_proxy, for its status bar icon (PRX-19). */
++final class LujarchProxyIcon {
++    private static final String TAG = "lujarch_proxy";
++    private static final String SERVICE = "lujarch_proxy";
++
++    private LujarchProxyIcon() {}
++
++    /** Tells listener, on handler, every state of the proxy; "" while the service is gone. */
++    static void watch(Handler handler, Consumer<String> listener) {
++        Thread thread = new Thread(() -> connect(handler, listener), "lujarch_proxy_icon");
++        thread.setDaemon(true);
++        thread.start();
++    }
++
++    private static void connect(Handler handler, Consumer<String> listener) {
++        IBinder binder = ServiceManager.waitForService(SERVICE);
++        if (binder == null) {
++            Log.e(TAG, SERVICE + " is not there; the status bar shows no proxy icon");
++            return;
++        }
++        try {
++            binder.linkToDeath(() -> {
++                handler.post(() -> listener.accept(""));
++                watch(handler, listener);
++            }, 0);
++            IProxy.Stub.asInterface(binder).watch(new IProxyListener.Stub() {
++                @Override
++                public void onState(String state) {
++                    handler.post(() -> listener.accept(state));
++                }
++            });
++        } catch (RemoteException e) {
++            Log.e(TAG, "cannot follow the proxy's state", e);
++        }
++    }
++
++    /** The icon shows while the proxy runs, and while it is on but not running. */
++    static boolean running(String state) {
++        return IProxy.STATE_RUNNING.equals(state) || IProxy.STATE_FALLBACK.equals(state);
++    }
++
++    static boolean failing(String state) {
++        return IProxy.STATE_NO_CONFIG.equals(state) || IProxy.STATE_CRASH_LOOP.equals(state);
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarPolicy.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarPolicy.java
+index 79e1c25ead1dad19686165a6beba887153dd7cf0..e14f4721f793e367dd0c1549bcf92a664c966b6c 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarPolicy.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PhoneStatusBarPolicy.java
+@@ -135,6 +135,7 @@ public class PhoneStatusBarPolicy
+     private final String mSlotScreenRecord;
+     private final String mSlotConnectedDisplay;
+     private final String mSlotFirewall;
++    private final String mSlotLujarchProxy;
+     private final int mDisplayId;
+     private final SharedPreferences mSharedPreferences;
+     private final DateFormatUtil mDateFormatUtil;
+@@ -260,6 +261,7 @@ public class PhoneStatusBarPolicy
+         mSlotScreenRecord = resources.getString(
+                 com.android.internal.R.string.status_bar_screen_record);
+         mSlotFirewall = resources.getString(R.string.status_bar_firewall_slot);
++        mSlotLujarchProxy = resources.getString(R.string.lujarch_proxy_slot);
+ 
+         mDisplayId = displayId;
+         mSharedPreferences = sharedPreferences;
+@@ -364,6 +366,11 @@ public class PhoneStatusBarPolicy
+         mIconController.setIcon(mSlotFirewall, R.drawable.stat_sys_firewall, null);
+         mIconController.setIconVisibility(mSlotFirewall, mFirewallVisible);
+ 
++        // The proxy (PRX-19): a globe while it runs, with a warning while it is on but not running.
++        mIconController.setIcon(mSlotLujarchProxy, R.drawable.stat_sys_lujarch_proxy, null);
++        mIconController.setIconVisibility(mSlotLujarchProxy, false);
++        LujarchProxyIcon.watch(mHandler, this::updateLujarchProxy);
++
+         mRotationLockController.addCallback(this);
+         mBluetooth.addCallback(this);
+         mProvisionedController.addCallback(this);
+@@ -449,6 +456,19 @@ public class PhoneStatusBarPolicy
+         return mResources.getString(R.string.accessibility_quick_settings_alarm, dateString);
+     }
+ 
++    private void updateLujarchProxy(String state) {
++        boolean running = LujarchProxyIcon.running(state);
++        boolean failing = LujarchProxyIcon.failing(state);
++        if (running || failing) {
++            mIconController.setIcon(mSlotLujarchProxy,
++                    running ? R.drawable.stat_sys_lujarch_proxy
++                            : R.drawable.stat_sys_lujarch_proxy_warning,
++                    mResources.getString(running ? R.string.lujarch_proxy_on
++                            : R.string.lujarch_proxy_not_running));
++        }
++        mIconController.setIconVisibility(mSlotLujarchProxy, running || failing);
++    }
++
+     private void updateVolumeZen() {
+         int zen = mZenController.getZen();
+         updateRingerAndAlarmIcons(zen);

@@ -1,0 +1,30 @@
+diff --git a/component/dialer/dialer.go b/component/dialer/dialer.go
+index 6a05c8bc1e5f6af0a185698a6233be1a9d310e52..3fe51d1f816aad5ae1fb2b4077be4c1ad8916eca 100644
+--- a/component/dialer/dialer.go
++++ b/component/dialer/dialer.go
+@@ -383,6 +383,25 @@ func parseAddr(ctx context.Context, network, address string, preferResolver reso
+ 		return nil, "-1", err
+ 	}
+ 
++	// An address literal needs no lookup: it is dialed as given, also while
++	// `ipv6: false` keeps the resolver from returning IPv6 addresses (that
++	// setting is about DNS answers; a node configured with an IPv6 server
++	// address is meant to be reached over IPv6).
++	if ip, err := netip.ParseAddr(host); err == nil {
++		ip = ip.Unmap()
++		switch network {
++		case "tcp4", "udp4":
++			if !ip.Is4() {
++				return nil, "-1", fmt.Errorf("dns resolve failed: %w", resolver.ErrIPVersion)
++			}
++		case "tcp6", "udp6":
++			if !ip.Is6() {
++				return nil, "-1", fmt.Errorf("dns resolve failed: %w", resolver.ErrIPVersion)
++			}
++		}
++		return []netip.Addr{ip}, port, nil
++	}
++
+ 	if preferResolver == nil {
+ 		preferResolver = resolver.ProxyServerHostResolver
+ 	}
