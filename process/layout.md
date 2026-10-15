@@ -109,7 +109,8 @@ system/device/<device>/
 from its stock release at `vendor/extra/device/<device>/stock/<path in the release>`, and generates
 `vendor/extra/product.mk` and `vendor/extra/BoardConfigExtra.mk`, the two files LineageOS
 includes from there. They include every feature's `product.mk` and `board.mk`, `core` first, a
-feature limited to some devices only for their products, and each device's own for its product.
+feature limited to some devices only for their products, and each device's own for its product;
+`product.mk` first sets `LUJARCH_ARCH`, the product's architecture from its `device.toml`.
 Makefiles and `Android.bp` files name the staged paths. `vendor/extra` is never edited in the tree.
 
 ## Patches

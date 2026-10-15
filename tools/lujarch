@@ -891,8 +891,8 @@ def extra_files(host):
         only = load_toml(meta).get("devices") if meta.is_file() else None
         return [device_config(d)["product"] for d in only] if only else None
 
-    def guarded(makefile, line):
-        out = []
+    def guarded(makefile, line, head=()):
+        out = list(head)
         ordered = sorted(features, key=lambda f: (f != "core", f))
         for name in ordered:
             if f"features/{name}/{makefile}" not in files:
@@ -915,7 +915,13 @@ def extra_files(host):
     files.update(rename_files(host, features))
     if "features/branding/Android.bp" in files:
         files["features/branding/generated/version.rc"] = version_rc()
-    files["product.mk"] = guarded("product.mk", "$(call inherit-product, {path})").encode()
+    arch = []
+    for path in sorted((SYSTEM / "device").glob("*/device.toml")):
+        config = load_toml(path)
+        arch += [f"ifeq ($(TARGET_PRODUCT),{config['product']})",
+                 f"LUJARCH_ARCH := {config.get('arch', 'arm64')}", "endif"]
+    files["product.mk"] = guarded("product.mk", "$(call inherit-product, {path})",
+                                  head=arch).encode()
     files["BoardConfigExtra.mk"] = guarded("board.mk", "include {path}").encode()
     return files
 

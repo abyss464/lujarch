@@ -33,8 +33,8 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   restarts it with its data kept. The SELinux policy of `system_ext` is the module
   `selinux_policy_system_ext`.
 
-The virtual device has no Xiaomi hardware, no Qualcomm TEE, no bootloader of its own, no Google
-apps (they exist only for arm64), no arm64-only programs, and no real performance or battery.
+The virtual device has no Xiaomi hardware, no Qualcomm TEE, no bootloader of its own, no arm64-only
+programs, and no real performance or battery.
 Items about those carry `Verify: phone`.
 
 ### 3. Phone

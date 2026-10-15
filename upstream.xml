@@ -3,6 +3,7 @@
   <remote name="aosp" fetch="https://android.googlesource.com" review="android-review.googlesource.com" revision="refs/tags/android-17.0.0_r1"/>
   <remote name="github" fetch=".." review="review.lineageos.org"/>
   <remote name="private" fetch="ssh://git@github.com"/>
+  <remote name="mindthegapps" fetch="https://gitlab.com/MindTheGapps"/>
   
   <default remote="github" revision="refs/heads/lineage-24.0" sync-j="4" sync-c="true"/>
   
@@ -1283,6 +1284,7 @@
   <project name="trusty/vendor/google/aosp" remote="aosp" revision="93e3ca36bc59e5d357b226e4e5254f8e478213f2" upstream="refs/tags/android-17.0.0_r1" dest-branch="refs/tags/android-17.0.0_r1" groups="pdk,trusty">
     <copyfile src="lk_inc.mk" dest="lk_inc.mk"/>
   </project>
+  <project name="vendor_gapps" path="vendor/gapps" remote="mindthegapps" revision="bfa45ac32a845d5fa429e652bcd7f97cb9154527" upstream="refs/heads/cinnamonbun" dest-branch="refs/heads/cinnamonbun" clone-depth="1"/>
   
   <contactinfo bugurl="go/repo-bug"/>
 </manifest>

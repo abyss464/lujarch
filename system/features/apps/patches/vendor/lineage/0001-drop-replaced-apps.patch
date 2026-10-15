@@ -1,0 +1,50 @@
+diff --git a/config/common.mk b/config/common.mk
+index d1a2dbbf5ae39d0c6751658232c4193a9e5b546e..acc356b4f63b0796b95b3ff85f73453dc6328d7d 100644
+--- a/config/common.mk
++++ b/config/common.mk
+@@ -142,9 +142,9 @@ PRODUCT_PACKAGES += \
+ 
+ # Lineage packages
+ ifeq ($(PRODUCT_IS_ATV),)
++# Lujarch (APP-4): no browser of LineageOS'
+ PRODUCT_PACKAGES += \
+-    ExactCalculator \
+-    Jelly
++    ExactCalculator
+ endif
+ 
+ ifeq ($(PRODUCT_IS_AUTOMOTIVE),)
+diff --git a/config/common_mobile_full.mk b/config/common_mobile_full.mk
+index 4de1d42f5e8884617184531a143e0774b1a70206..1ef25bc9f59431fb821b8350432faddc693e6b75 100644
+--- a/config/common_mobile_full.mk
++++ b/config/common_mobile_full.mk
+@@ -7,13 +7,12 @@ PRODUCT_SIZE := full
+ $(call inherit-product-if-exists, external/google-fonts/google-sans-flex/fonts.mk)
+ 
+ # Apps
++# Lujarch (APP-4): no calendar or music app of LineageOS'
+ PRODUCT_PACKAGES += \
+     Camelot \
+-    Etar \
+     Profiles \
+     Recorder \
+-    Seedvault \
+-    Twelve
++    Seedvault
+ 
+ ifneq ($(PRODUCT_NO_CAMERA),true)
+ PRODUCT_PACKAGES += \
+diff --git a/config/telephony.mk b/config/telephony.mk
+index 688184679bec1627d149a90b3f16078512f65d03..206cb2eaf5c6169fad228e859fb699d8726aea0c 100644
+--- a/config/telephony.mk
++++ b/config/telephony.mk
+@@ -12,8 +12,8 @@ PRODUCT_PACKAGES += \
+     apns-conf.xml
+ 
+ # Telephony packages
++# Lujarch (APP-4): no messaging app of LineageOS'
+ PRODUCT_PACKAGES += \
+-    messaging \
+     Stk
+ 
+ # Default ringtone
