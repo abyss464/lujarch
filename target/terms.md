@@ -147,6 +147,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Lyrics | 歌词 | 歌詞 |
 | Media | 媒体 | メディア |
 | Fit app icons | 适配应用图标 | アプリアイコンを揃える |
+| Wallpaper & style | 壁纸与风格 | 壁紙とスタイル |
 | Icon | 图标 | アイコン |
 | Original | 原始 | オリジナル |
 | Fitted | 适配 | 調整 |

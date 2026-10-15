@@ -1,0 +1,27 @@
+prefix = "BRD"
+
+# Texts that name the system (BRD-1). In the resource directories of each, every string whose
+# text names LineageOS says Lujarch in its place, in every locale; the strings under keep name
+# the LineageOS project itself and stay.
+[renames.lineage-sdk]
+package = "lineageos.platform"
+res = ["lineage-sdk/lineage/res/res"]
+keep = ["lineage_api_level"]
+
+[renames.lineageparts]
+package = "org.lineageos.lineageparts"
+res = ["packages/apps/LineageParts/res"]
+keep = [
+    "anonymous_statistics_summary",
+    "anonymous_statistics_title",
+    "anonymous_statistics_warning",
+    "privacy_settings_category",
+]
+
+[renames.setupwizard]
+package = "org.lineageos.setupwizard"
+res = ["packages/apps/SetupWizard/app/src/main/res"]
+
+[renames.updater]
+package = "org.lineageos.updater"
+res = ["packages/apps/Updater/app/src/main/res"]

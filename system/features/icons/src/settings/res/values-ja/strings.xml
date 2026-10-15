@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="icons_app_icon_title">アイコン</string>
+    <string name="icons_original">オリジナル</string>
+    <string name="icons_fitted">調整</string>
+    <string name="icons_redrawn">再描画</string>
+    <string name="icons_app_icon_footer">このアプリのアイコンは 1 枚の画像です。[再描画] ではロゴを単色の背景に 1 色で描き、[調整] では画像をアプリ自身の色の背景に配置します。ロゴではない画像は調整されます。</string>
+    <string name="icons_off">アプリアイコンを揃える: オフ</string>
+    <string name="icons_off_summary">[壁紙とスタイル] でオンにすると、このアプリのアイコンを選択できます</string>
+    <string name="icons_fit_title">アプリアイコンを揃える</string>
+    <string name="icons_fit_summary">1 枚の画像のアプリアイコンを他のアイコンと同じ形にします</string>
+    <string name="icons_fit_keywords">アイコン, 形, 従来のアイコン, アダプティブ アイコン, icon, adaptive icon</string>
+    <string name="icons_wallpaper_and_style">壁紙とスタイル</string>
+    <string name="icons_error_load">アプリのアイコンを読み込めませんでした</string>
+    <string name="icons_error_set">アプリのアイコンを変更できませんでした</string>
+</resources>

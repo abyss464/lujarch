@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App info row and page title: the app's icon, as the system fits it [CHAR LIMIT=30] -->
+    <string name="icons_app_icon_title">Icon</string>
+    <!-- Icon choice: the app's own icon [CHAR LIMIT=30] -->
+    <string name="icons_original">Original</string>
+    <!-- Icon choice: the app's picture placed on a ground of its colors [CHAR LIMIT=30] -->
+    <string name="icons_fitted">Fitted</string>
+    <!-- Icon choice: the app's logo drawn in one color on a plain ground [CHAR LIMIT=30] -->
+    <string name="icons_redrawn">Redrawn</string>
+    <!-- Footer of an app's Icon page [CHAR LIMIT=NONE] -->
+    <string name="icons_app_icon_footer">This app\'s icon is a single picture. Redrawn draws its logo in one color on a plain ground; Fitted places the picture on a ground of its own colors. A picture that is not a logo is fitted.</string>
+    <!-- Row on an app's Icon page while Fit app icons is off [CHAR LIMIT=40] -->
+    <string name="icons_off">Fit app icons is off</string>
+    <!-- Summary of that row: where the switch is [CHAR LIMIT=NONE] -->
+    <string name="icons_off_summary">Turn it on in Wallpaper &amp; style to choose this app\'s icon</string>
+    <!-- Settings search result for Wallpaper & style's switch [CHAR LIMIT=40] -->
+    <string name="icons_fit_title">Fit app icons</string>
+    <!-- Summary of that search result [CHAR LIMIT=NONE] -->
+    <string name="icons_fit_summary">Give app icons that are single pictures the shape of all others</string>
+    <!-- Settings search keywords for Fit app icons [CHAR LIMIT=NONE] -->
+    <string name="icons_fit_keywords">icon, shape, legacy icon, adaptive icon</string>
+    <!-- Screen title of that search result: Android's Wallpaper & style [CHAR LIMIT=40] -->
+    <string name="icons_wallpaper_and_style">Wallpaper &amp; style</string>
+    <!-- Error: what failed when the page could not read the app's icon choice [CHAR LIMIT=NONE] -->
+    <string name="icons_error_load">Couldn\'t read the app\'s icon</string>
+    <!-- Error: what failed when the app's icon choice could not be changed [CHAR LIMIT=NONE] -->
+    <string name="icons_error_set">Couldn\'t change the app\'s icon</string>
+</resources>

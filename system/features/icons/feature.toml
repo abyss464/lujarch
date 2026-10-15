@@ -1,0 +1,5 @@
+prefix = "ICON"
+
+# The Android Notification Icon Project's monochrome notification icons (ICON-2).
+[prebuilts.anip]
+module = "lujarch_icons_anip"

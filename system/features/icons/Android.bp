@@ -1,0 +1,29 @@
+license {
+    name: "lujarch_icons_anip_license",
+    license_kinds: ["SPDX-license-identifier-Apache-2.0"],
+    license_text: [
+        "src/anip/NOTICE",
+        "src/anip/LICENSE",
+    ],
+}
+
+// SystemUI reads the bundle as it is released (ICON-2).
+prebuilt_etc {
+    name: "lujarch_icons_anip",
+    licenses: ["lujarch_icons_anip_license"],
+    src: "prebuilt/common/lujarch_icons_anip",
+    filename: "anip-bundle.zip",
+    sub_dir: "lujarch/icons",
+    system_ext_specific: true,
+}
+
+// The Icon page of App info and the search entry of Fit app icons in Lujarch Settings.
+android_library {
+    name: "LujarchIconsSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: ["LujarchSettingsPages"],
+    libs: ["LujarchSettingsContribution"],
+}
