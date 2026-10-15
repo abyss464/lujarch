@@ -86,3 +86,24 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Explain why apps stop | 说明应用停止的原因 | アプリが停止した理由を表示 |
 | Decided by Android | 由 Android 决定 | Android が決定 |
 | Lock | 锁定 | ロック |
+| Network & internet | 网络和互联网 | ネットワークとインターネット |
+| Proxy | 代理 | プロキシ |
+| Use proxy | 使用代理 | プロキシを使用 |
+| Rule | 规则 | ルール |
+| Global | 全局 | グローバル |
+| Direct | 直连 | 直接接続 |
+| Exit node for Global | 全局出口节点 | グローバル モードの出口ノード |
+| Follow the rules | 按规则分流 | ルールに従う |
+| Reject | 拒绝 | 拒否 |
+| Proxy group | 代理组 | プロキシ グループ |
+| Bypass the proxy entirely | 完全绕过代理 | プロキシを完全にバイパス |
+| Apps that use the proxy | 使用代理的应用 | プロキシを使うアプリ |
+| Node | 节点 | ノード |
+| Subscriptions | 订阅 | サブスクリプション |
+| Connections | 连接 | 接続 |
+| Logs | 日志 | ログ |
+| Core settings | 内核设置 | コア設定 |
+| Repair after network changes | 网络变化后修复 | ネットワーク変更後に修復 |
+| Block IPv6 while the proxy runs | 代理运行时阻止 IPv6 | プロキシの実行中は IPv6 をブロック |
+| Change the control key | 更换控制密钥 | 制御キーを変更 |
+| System icons | 系统图标 | システムアイコン |
