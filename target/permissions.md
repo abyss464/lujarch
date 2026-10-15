@@ -197,8 +197,9 @@ Every app that can install or update apps is listed, app stores included.
 
 Each access Android records for apps that has no page of its own elsewhere (vibrating, keeping
 the phone awake, playing audio, showing pop-up messages and the like) is listed here with the apps
-that use it. An access that has its own page in Special app access or the permission manager is
-chosen only there.
+that use it. When it is not allowed, Android ignores the app's requests for it. An access that has
+its own page in Special app access or the permission manager is chosen only there; an access
+Android records but does not enforce is not listed.
 
 ### PERM-14 Restricted settings can be locked
 

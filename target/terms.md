@@ -69,6 +69,10 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Device identifiers | 设备标识符 | デバイス ID |
 | Device info | 设备信息 | デバイス情報 |
 | Network info | 网络信息 | ネットワーク情報 |
+| Other access | 其他访问 | その他のアクセス |
+| Show pop-up messages | 显示弹出消息 | ポップアップ メッセージの表示 |
+| Returned empty data | 返回了空数据 | 空のデータを返しました |
+| Asked | 已询问 | 確認しました |
 | Autostart | 自启动 | 自動起動 |
 | Defaults for new apps | 新应用的默认设置 | 新しいアプリのデフォルト |
 | Not changed | 不更改 | 変更しない |
