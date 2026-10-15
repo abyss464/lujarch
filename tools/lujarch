@@ -1346,6 +1346,9 @@ def cmd_build(args):
     lunch = f"{device['product']}-{release_config(tree)}-{variant}"
     if not args.modules and device.get("platform") == "cuttlefish":
         args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
+    elif args.modules and "module-info" not in args.modules:
+        # vm sync finds what the modules install in module-info.json.
+        args.modules = [*args.modules, "module-info"]
     modules = " ".join(shlex.quote(m) for m in args.modules)
 
     lock_path = host.path_of("build", "lock")
@@ -1567,6 +1570,8 @@ def provision(host_out):
         ["settings", "put", "secure", "user_setup_complete", "1"],
         ["settings", "put", "global", "device_provisioned", "1"],
         ["settings", "put", "global", "development_settings_enabled", "1"],
+        # LineageOS' setup wizard comes back at every start while it is enabled.
+        ["pm", "disable-user", "--user", "0", "org.lineageos.setupwizard"],
         ["svc", "power", "stayon", "true"],
         ["input", "keyevent", "KEYCODE_WAKEUP"],
         ["wm", "dismiss-keyguard"],
@@ -1664,9 +1669,16 @@ def vm_sync(host, info, host_out, modules):
     if not wait_booted(host_out, 600):
         die("the virtual device did not come back after the copy")
     provision(host_out)
-    relabel = adb(host_out, "shell", "restorecon", "-v", *["/" + f for f in files])
-    if relabel.stdout.strip():
-        # Labels of new file contexts are applied after the start that loaded them.
+    # Labels of new file contexts can be set only once the start loaded them, on writable
+    # partitions again (a start mounts them read-only).
+    remount = adb(host_out, "remount", timeout=300)
+    if remount.returncode:
+        die(f"adb remount: {(remount.stdout + remount.stderr).strip()}")
+    before = adb(host_out, "shell", "ls", "-Z", *["/" + f for f in files]).stdout
+    relabel = adb(host_out, "shell", "restorecon", *["/" + f for f in files])
+    if relabel.returncode:
+        die(f"restorecon: {(relabel.stdout + relabel.stderr).strip()}")
+    if adb(host_out, "shell", "ls", "-Z", *["/" + f for f in files]).stdout != before:
         log("relabelled with the new file contexts; restarting the virtual device once more")
         adb(host_out, "reboot", timeout=60)
         time.sleep(10)
