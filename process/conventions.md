@@ -36,20 +36,30 @@ of its own only when it needs its own process or user id.
 ## Settings
 
 - Every switch a user sets is declared once, in its feature's `settings.toml`, with its key,
-  type, default and the target item it implements.
+  table, type, default and the target item it implements:
+
+  ```toml
+  [enabled]              # the key: lujarch_<feature>_enabled
+  table = "global"       # global or secure
+  type = "bool"          # bool, int or string
+  default = false
+  item = "PRX-1"
+  ```
 - Values live in Android's Settings provider under `lujarch_<feature>_<key>`: `Secure` for
   choices that belong to the user, `Global` for device-wide ones.
 - Switches set in recovery live in `/metadata/lujarch/safe-boot/`, the one place recovery and
   the system both reach.
-- Native services never read user choices from properties or files: the feature's daemon
-  observes the setting and applies it. System properties carry build facts and runtime state,
-  never a user's choice.
+- The system mirrors every `Global` switch, read-only, into the property
+  `lujarch.setting.<feature>.<key>` (`core`'s settings mirror). Init and native services read a
+  user's choice only from its mirror and never write it; no other property and no file holds a
+  user's choice. Other system properties carry build facts and runtime state.
 - Data that is not a switch (a proxy configuration, a sync configuration, a database) lives in
   the feature's data directory.
 
 ## Services and IPC
 
-- Long-running on-device code is a C++ daemon, started by init, in its own SELinux domain.
+- Long-running on-device code is a C++ daemon, one per feature, started by init, in its own
+  SELinux domain, built on `core`'s daemon base.
   Third-party programs (proxy core, sync engine) are supervised by a Lujarch daemon; no shell
   script runs as a service.
 - Each daemon exposes one stable AIDL interface registered with servicemanager. Callers are

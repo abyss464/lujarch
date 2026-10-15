@@ -1,0 +1,3 @@
+# The mirror of Lujarch's Global settings: system_server writes it, init and the system read it.
+system_internal_prop(lujarch_setting_prop)
+set_prop(system_server, lujarch_setting_prop)

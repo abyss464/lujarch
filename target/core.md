@@ -115,9 +115,8 @@ runs under an enforcing policy. About phone shows the status as Enforcing.
 - Default: none
 - Verify: phone
 
-Every partition, APEX and app in a release is signed with the owner's keys, except the third-party
-apps the image ships with their developers' signatures (the Google apps and the adopted apps of
-apps.md).
+Every partition, APEX and app in a release is signed with the owner's keys, except the Google
+apps of apps.md, which the image ships with Google's signatures.
 
 ### CORE-11 The image holds the product and nothing else
 

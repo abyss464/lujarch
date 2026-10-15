@@ -52,8 +52,9 @@ system/features/<feature>/
   Lujarch Settings. Its manifest registers what it adds to App info and search as application
   meta-data `org.lujarch.settings.contribution.<feature>` naming its `Contribution` class.
 - `core` is the feature of the rules that hold everywhere (target/core.md): the settings
-  registry, the page framework of Lujarch's pages in Settings, the AIDL base of the daemons,
-  the AID table, shared SELinux macros.
+  registry and its mirror, the page framework of Lujarch's pages in Settings with the App info
+  rows and search entries features contribute, the daemon base, the AID table, shared SELinux
+  macros.
 - A feature that applies to some devices only says so in `feature.toml`; the build of another
   device leaves it out.
 - A feature's patches cover every upstream project it changes, including device projects

@@ -1,0 +1,16 @@
+diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
+index 4bb406fc598d41dee71cc551812a0897af2c3044..bc3fe0dbf14255811984b8a43202ad88d995fe6a 100644
+--- a/services/java/com/android/server/SystemServer.java
++++ b/services/java/com/android/server/SystemServer.java
+@@ -3168,6 +3168,11 @@ public final class SystemServer implements Dumpable {
+             reportWtf("Making " + externalServer + " ready", e);
+         }
+ 
++        t.traceBegin("StartLujarchServices");
++        mSystemServiceManager.startServiceFromJar("org.lujarch.core.LujarchSystemService",
++                "/system_ext/framework/lujarch-services.jar");
++        t.traceEnd();
++
+         // It is now time to start up the app processes...
+ 
+         t.traceBegin("MakeLockSettingsServiceReady");
