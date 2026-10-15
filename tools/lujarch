@@ -1776,13 +1776,6 @@ def cmd_build(args):
     device = device_config(args.device)
     variant = lock_file()["build"]["variant"]
     lunch = f"{device['product']}-{release_config(tree)}-{variant}"
-    if not args.modules and device.get("platform") == "cuttlefish":
-        args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
-    elif args.modules and "module-info" not in args.modules:
-        # vm sync finds what the modules install in module-info.json.
-        args.modules = [*args.modules, "module-info"]
-    modules = " ".join(shlex.quote(m) for m in args.modules)
-
     lock_path = host.path_of("build", "lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock = open(lock_path, "a")
@@ -1791,6 +1784,20 @@ def cmd_build(args):
     except BlockingIOError:
         log(f"another build holds {lock_path}; waiting")
         fcntl.flock(lock, fcntl.LOCK_EX)
+
+    if not args.modules and device.get("platform") == "cuttlefish":
+        args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
+    elif args.modules:
+        # vm sync finds what the modules install in module-info.json, and copies the boot image
+        # unit whole (module_files).
+        brought = ["module-info"]
+        last = device_info_path(host, args.device)
+        if last.is_file():
+            product = Path(json.loads(last.read_text())["product_out"])
+            if all((product / f).is_file() for f in ("module-info.json", BOOT_CLASSPATH)):
+                brought += module_files(host, product, args.modules)[0]
+        args.modules += [m for m in brought if m not in args.modules]
+    modules = " ".join(shlex.quote(m) for m in args.modules)
 
     prepare_tree(host)
     verify_tree(tree)
@@ -2038,36 +2045,93 @@ def provision(host_out):
         "-c", "android.intent.category.HOME")
 
 
-def installed_files(host, info, modules):
-    """The files the named modules install into the vm image, with the modules they require,
-    as paths relative to the product directory."""
-    product = Path(info["product_out"])
+BOOT_IMAGE = "dex_bootjars"
+BOOT_CLASSPATH = "system/etc/classpaths/bootclasspath.pb"
+
+
+def proto_fields(data):
+    """The (number, value) of each varint and length-delimited field of a protobuf message."""
+    i = 0
+
+    def varint():
+        nonlocal i
+        value = shift = 0
+        while True:
+            byte = data[i]
+            i += 1
+            value |= (byte & 0x7F) << shift
+            shift += 7
+            if byte < 0x80:
+                return value
+
+    while i < len(data):
+        key = varint()
+        if key & 7 == 0:
+            yield key >> 3, varint()
+        elif key & 7 == 2:
+            size = varint()
+            yield key >> 3, data[i:i + size]
+            i += size
+        else:
+            die(f"protobuf wire type {key & 7} is not read")
+
+
+def boot_classpath(product):
+    """The image's boot classpath jars, as paths from the root, from the classpath configuration
+    the system derives its BOOTCLASSPATH from (ExportedClasspathsJars, Jar.path)."""
+    config = product / BOOT_CLASSPATH
+    if not config.is_file():
+        die(f"no {config}: the device's full build writes it")
+    return {path.decode() for number, jar in proto_fields(config.read_bytes()) if number == 1
+            for field, path in proto_fields(jar) if field == 1}
+
+
+def module_files(host, product, modules):
+    """The modules to build and copy for the named ones, the files they install into the image
+    with the modules they require (paths relative to the product directory), and the names
+    module-info.json does not know. The runtime uses the boot image only with the jars it was
+    compiled from, so a module of the boot image unit (the boot image and the boot classpath jars
+    of the system partition) brings the whole unit."""
     module_info = json.loads((product / "module-info.json").read_text())
     tree_product = os.path.relpath(product, host.tree)
-    files, seen, queue = [], set(), list(modules)
-    while queue:
-        name = queue.pop()
-        if name in seen:
-            continue
-        seen.add(name)
-        entry = module_info.get(name)
-        if entry is None:
-            die(f"no module {name} in {product / 'module-info.json'}")
-        queue += entry.get("required") or []
-        for path in entry.get("installed") or []:
-            rel = os.path.relpath(path, tree_product)
-            if rel.startswith("..") or rel.split("/", 1)[0] in (
-                    "system_other", "fake_packages", "obj", "testcases", "data", "symbols"):
+    named = [m for m in dict.fromkeys(modules) if m in module_info]
+    unknown = [m for m in dict.fromkeys(modules) if m not in module_info]
+
+    def own(name):
+        rels = (os.path.relpath(path, tree_product)
+                for path in module_info.get(name, {}).get("installed") or [])
+        return [rel for rel in rels if not rel.startswith("..") and rel.split("/", 1)[0] not in (
+            "system_other", "fake_packages", "obj", "testcases", "data", "symbols")]
+
+    def installs(names):
+        files, seen, queue = [], set(), list(names)
+        while queue:
+            name = queue.pop()
+            if name in seen or name not in module_info:
                 continue
-            if rel not in files:
-                files.append(rel)
-    return product, files
+            seen.add(name)
+            queue += module_info[name].get("required") or []
+            for rel in own(name):
+                if rel not in files:
+                    files.append(rel)
+        return files
+
+    jars = {os.path.join(tree_product, p.lstrip("/")) for p in boot_classpath(product)
+            if p.startswith("/system/")}
+    unit = [BOOT_IMAGE, *sorted(name for name, entry in module_info.items()
+                                if jars.intersection(entry.get("installed") or []))]
+    if set(installs(named)).intersection(rel for name in unit for rel in own(name)):
+        named += [m for m in unit if m not in named]
+    return named, installs(named), unknown
 
 
 def vm_sync(host, info, host_out, modules):
     """Copies what the named modules install into the running virtual device, keeping its data,
     and restarts it."""
-    product, files = installed_files(host, info, modules)
+    product = Path(info["product_out"])
+    synced, files, unknown = module_files(host, product, modules)
+    if unknown:
+        die(f"no module {', '.join(unknown)} in {product / 'module-info.json'}")
     if not files:
         die("the modules install nothing into the image")
     missing = [f for f in files if not (product / f).is_file()]
@@ -2090,6 +2154,13 @@ def vm_sync(host, info, host_out, modules):
         if remount.returncode:
             die(f"adb remount: {(remount.stdout + remount.stderr).strip()}")
     for rel in files:
+        if (product / rel).is_symlink():
+            target = os.readlink(product / rel)
+            link = adb(host_out, "shell", "ln", "-sfn", target, "/" + rel)
+            if link.returncode:
+                die(f"ln -s {target} /{rel}: {(link.stdout + link.stderr).strip()}")
+            log(f"linked /{rel} to {target}")
+            continue
         push = adb(host_out, "push", str(product / rel), "/" + rel, timeout=600)
         if push.returncode:
             die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
@@ -2117,7 +2188,7 @@ def vm_sync(host, info, host_out, modules):
         if not wait_booted(host_out, 600):
             die("the virtual device did not come back after relabelling")
         provision(host_out)
-    log(f"synced {len(files)} files of {' '.join(modules)}; adb 127.0.0.1:{ADB_PORT}")
+    log(f"synced {len(files)} files of {' '.join(synced)}; adb 127.0.0.1:{ADB_PORT}")
     return 0
 
 
