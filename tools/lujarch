@@ -1293,7 +1293,15 @@ get_build_var PRODUCT_OUT > {shlex.quote(str(product_out_file))} || exit 1
 m -j{jobs} {modules}
 """
     env = dict(os.environ)
+    built_at = str(int(time.time()))
     env.update({
+        # What a build writes names no person, computer or time zone; its build number is the
+        # time it started.
+        "TZ": "UTC",
+        "BUILD_USERNAME": "lujarch",
+        "BUILD_HOSTNAME": "lujarch",
+        "BUILD_DATETIME": built_at,
+        "BUILD_NUMBER": built_at,
         "LC_ALL": "C",
         "USE_CCACHE": "1",
         "CCACHE_EXEC": "/usr/bin/ccache",
