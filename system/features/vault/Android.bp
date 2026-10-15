@@ -1,0 +1,55 @@
+// Lujarch Vault: the KeePass and Aegis reader, 2FA codes and autofill. An app of its own, so that
+// what it decrypts lives in its process and data only.
+android_app {
+    name: "LujarchVault",
+    srcs: ["src/app/org/**/*.kt"],
+    resource_dirs: ["src/app/res"],
+    manifest: "src/app/AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    system_ext_specific: true,
+    jni_libs: ["liblujarch_vault_jni"],
+    use_embedded_native_libs: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "androidx.autofill_autofill",
+        "lujarch_sync_aidl-java",
+        "zxing-core",
+    ],
+    optimize: {
+        proguard_flags_files: ["src/app/proguard.flags"],
+    },
+}
+
+// Argon2, the key derivation of KeePass databases: the reference implementation (CC0 or
+// Apache 2.0, src/app/jni/argon2/LICENSE) behind the vault's JNI entry point.
+cc_library_shared {
+    name: "liblujarch_vault_jni",
+    srcs: [
+        "src/app/jni/argon2_jni.c",
+        "src/app/jni/argon2/src/argon2.c",
+        "src/app/jni/argon2/src/core.c",
+        "src/app/jni/argon2/src/encoding.c",
+        "src/app/jni/argon2/src/ref.c",
+        "src/app/jni/argon2/src/thread.c",
+        "src/app/jni/argon2/src/blake2/blake2b.c",
+    ],
+    local_include_dirs: ["src/app/jni/argon2/include"],
+    header_libs: ["jni_headers"],
+    cflags: [
+        "-O3",
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+    stl: "none",
+    sdk_version: "current",
+}
+
+// Lujarch Vault is the autofill service of a fresh phone (VLT-7).
+runtime_resource_overlay {
+    name: "LujarchVaultAndroidOverlay",
+    manifest: "src/overlay/android/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/android/res"],
+    system_ext_specific: true,
+}

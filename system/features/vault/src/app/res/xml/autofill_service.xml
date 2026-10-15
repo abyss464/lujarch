@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Autofill service: settings open the vault; inline suggestions for keyboards that ask (Gboard). -->
+<autofill-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="org.lujarch.vault.ui.VaultActivity"
+    android:supportsInlineSuggestions="true" />

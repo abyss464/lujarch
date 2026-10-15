@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A 2FA account: its name, and (when adding) the key and its parameters. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp">
+        <TextView
+            style="@style/CodeFieldLabel"
+            android:text="@string/codes_field_issuer" />
+        <EditText
+            android:id="@+id/issuer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:singleLine="true" />
+        <TextView
+            style="@style/CodeFieldLabel"
+            android:text="@string/codes_field_account" />
+        <EditText
+            android:id="@+id/account"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:singleLine="true" />
+        <LinearLayout
+            android:id="@+id/otp_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_secret" />
+            <EditText
+                android:id="@+id/secret"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no"
+                android:inputType="textVisiblePassword|textNoSuggestions"
+                android:singleLine="true" />
+            <TextView
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_type" />
+            <Spinner
+                android:id="@+id/type"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:entries="@array/code_types" />
+            <TextView
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_algorithm" />
+            <Spinner
+                android:id="@+id/algorithm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:entries="@array/code_algorithms" />
+            <TextView
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_digits" />
+            <EditText
+                android:id="@+id/digits"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="number"
+                android:singleLine="true"
+                android:text="6" />
+            <TextView
+                android:id="@+id/period_label"
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_period" />
+            <EditText
+                android:id="@+id/period"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="number"
+                android:singleLine="true"
+                android:text="30" />
+            <TextView
+                android:id="@+id/counter_label"
+                style="@style/CodeFieldLabel"
+                android:text="@string/codes_field_counter" />
+            <EditText
+                android:id="@+id/counter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="number"
+                android:singleLine="true"
+                android:text="0" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

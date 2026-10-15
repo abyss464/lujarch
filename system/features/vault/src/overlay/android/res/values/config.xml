@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Read by SettingsProvider when autofill_service is unset (a fresh /data):
+        Lujarch Vault becomes the autofill service. The running phone keeps its
+        setting until the user picks the service in Settings.
+    -->
+    <string name="config_defaultAutofillService" translatable="false">org.lujarch.vault/org.lujarch.vault.autofill.VaultAutofillService</string>
+</resources>

@@ -23,11 +23,11 @@ cc_binary {
     name: "lujarch_sync",
     srcs: ["src/daemon/*.cpp"],
     static_libs: [
+        "android.hardware.health-V4-ndk",
         "liblujarch_daemon",
         "lujarch_sync_aidl-ndk",
     ],
     shared_libs: [
-        "android.hardware.health-V4-ndk",
         "libbase",
         "libbinder_ndk",
         "libcrypto",
