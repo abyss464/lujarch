@@ -1,0 +1,642 @@
+diff --git a/data/etc/privapp-permissions-platform.xml b/data/etc/privapp-permissions-platform.xml
+index 593c84d2dc00f7d8f54be28c643526a30e524ec6..04b5aa49cbfd881d101d9f96e69d3731c96a9739 100644
+--- a/data/etc/privapp-permissions-platform.xml
++++ b/data/etc/privapp-permissions-platform.xml
+@@ -129,6 +129,7 @@ applications that come with the platform
+         <permission name="android.permission.PACKAGE_USAGE_STATS"/>
+         <permission name="android.permission.READ_SYSTEM_GRAMMATICAL_GENDER"/>
+         <permission name="android.permission.RESOLVE_COMPONENT_FOR_UID"/>
++        <permission name="android.permission.PACKAGE_VERIFICATION_AGENT"/>
+     </privapp-permissions>
+ 
+     <privapp-permissions package="com.android.phone">
+diff --git a/packages/PackageInstaller/AndroidManifest.xml b/packages/PackageInstaller/AndroidManifest.xml
+index 16dc409f600aad6c85a1a2273fe9283c98084e3c..960600dce8c92f440ed0cfb399f2f0e8914fa658 100644
+--- a/packages/PackageInstaller/AndroidManifest.xml
++++ b/packages/PackageInstaller/AndroidManifest.xml
+@@ -27,6 +27,7 @@
+     <uses-permission android:name="android.permission.RESOLVE_COMPONENT_FOR_UID" />
+     <uses-permission android:name="com.google.android.permission.INSTALL_WEARABLE_PACKAGES" />
+     <uses-permission android:name="android.permission.SET_DEVELOPER_VERIFICATION_USER_RESPONSE" />
++    <uses-permission android:name="android.permission.PACKAGE_VERIFICATION_AGENT" />
+ 
+     <application android:name=".PackageInstallerApplication"
+             android:label="@string/app_name"
+@@ -38,6 +39,29 @@
+             android:forceQueryable="true"
+             android:directBootAware="true">
+ 
++        <receiver android:name=".lujarch.LujarchInstallVerifier"
++            android:exported="true"
++            android:permission="android.permission.BIND_PACKAGE_VERIFIER">
++            <intent-filter>
++                <action android:name="android.intent.action.PACKAGE_NEEDS_VERIFICATION" />
++                <data android:mimeType="application/vnd.android.package-archive" />
++            </intent-filter>
++        </receiver>
++
++        <receiver android:name=".lujarch.LujarchInstallResults"
++            android:exported="true"
++            android:permission="android.permission.BIND_PACKAGE_VERIFIER">
++            <intent-filter>
++                <action android:name="android.intent.action.PACKAGE_VERIFIED" />
++                <data android:mimeType="application/vnd.android.package-archive" />
++            </intent-filter>
++        </receiver>
++
++        <activity android:name=".lujarch.LujarchInstallQuestionActivity"
++            android:exported="false"
++            android:excludeFromRecents="true"
++            android:theme="@style/Theme.AlertDialogActivity" />
++
+         <receiver android:name=".common.TemporaryFileManager"
+             android:exported="false">
+             <intent-filter>
+diff --git a/packages/PackageInstaller/res/values-ja/lujarch_strings.xml b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..462ac550682cbc135e6f3b40a298d4845f9ff059
+--- /dev/null
++++ b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">"インストールの確認"</string>
++    <string name="lujarch_install_question">"「%1$s」に「%2$s」のインストールを許可しますか？"</string>
++    <string name="lujarch_install_until_answered">"インストールは回答を待ち、回答がなければ拒否されます。"</string>
++    <string name="lujarch_install_version">"バージョン %1$s"</string>
++    <string name="lujarch_install_signature_same">"インストール済みのアプリと同じ署名、または新しいアプリです"</string>
++    <string name="lujarch_install_signature_changed">"インストール済みのアプリと署名が異なります"</string>
++    <string name="lujarch_install_allow">"インストール"</string>
++    <string name="lujarch_install_deny">"インストールしない"</string>
++    <string name="lujarch_install_refused">"「%1$s」はインストールされませんでした"</string>
++    <string name="lujarch_install_refused_text">"[不明なアプリのインストール] で「%1$s」によるインストールが許可されていません"</string>
++    <string name="lujarch_install_unanswered_text">"待ち時間内に回答がありませんでした"</string>
++</resources>
+diff --git a/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..9c3a949c5667605d9049393ce77bc122b2685ba5
+--- /dev/null
++++ b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">"安装询问"</string>
++    <string name="lujarch_install_question">"要让“%1$s”安装“%2$s”吗？"</string>
++    <string name="lujarch_install_until_answered">"安装会等待您的回答，未回答则会被拒绝。"</string>
++    <string name="lujarch_install_version">"版本 %1$s"</string>
++    <string name="lujarch_install_signature_same">"签名与已安装的应用相同，或是新应用"</string>
++    <string name="lujarch_install_signature_changed">"签名与已安装的应用不同"</string>
++    <string name="lujarch_install_allow">"安装"</string>
++    <string name="lujarch_install_deny">"不安装"</string>
++    <string name="lujarch_install_refused">"“%1$s”未安装"</string>
++    <string name="lujarch_install_refused_text">"“安装未知应用”不允许“%1$s”安装应用"</string>
++    <string name="lujarch_install_unanswered_text">"未在等待时长内回答"</string>
++</resources>
+diff --git a/packages/PackageInstaller/res/values/lujarch_strings.xml b/packages/PackageInstaller/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..69653b8da00e86bcf841fc50fbb9ab385268b423
+--- /dev/null
++++ b/packages/PackageInstaller/res/values/lujarch_strings.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">Install questions</string>
++    <string name="lujarch_install_question">Let %1$s install %2$s?</string>
++    <string name="lujarch_install_until_answered">The install waits for your answer, and is refused without one.</string>
++    <string name="lujarch_install_version">Version %1$s</string>
++    <string name="lujarch_install_signature_same">Signed like the installed app, or a new app</string>
++    <string name="lujarch_install_signature_changed">Signed differently from the installed app</string>
++    <string name="lujarch_install_allow">Install</string>
++    <string name="lujarch_install_deny">Don\u2019t install</string>
++    <string name="lujarch_install_refused">%1$s was not installed</string>
++    <string name="lujarch_install_refused_text">Install unknown apps does not allow %1$s to install apps</string>
++    <string name="lujarch_install_unanswered_text">No answer within the wait time</string>
++</resources>
+diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..402cf9c6180eb431b36119cc58ae56bbd86f451e
+--- /dev/null
++++ b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
+@@ -0,0 +1,329 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.packageinstaller.lujarch
++
++import android.app.Activity
++import android.app.AlertDialog
++import android.app.AppOpsManager
++import android.app.KeyguardManager
++import android.app.Notification
++import android.app.NotificationChannel
++import android.app.NotificationManager
++import android.app.PendingIntent
++import android.content.BroadcastReceiver
++import android.content.Context
++import android.content.Intent
++import android.content.IntentFilter
++import android.content.pm.PackageInfo
++import android.content.pm.PackageManager
++import android.net.Uri
++import android.os.Bundle
++import android.os.PowerManager
++import android.os.Process
++import android.os.UserHandle
++import android.provider.Settings
++import android.util.Log
++import com.android.packageinstaller.R
++import java.io.File
++import java.util.concurrent.Executors
++
++/**
++ * Install unknown apps set to "Ask every time": every install and update by that app waits for
++ * the user. The system's install verifier reads the installer's choice: Allow lets the install
++ * go on, Don't allow refuses it with a notification, and Ask every time holds it for the wait
++ * the user chose and asks; without an answer in time the install is refused.
++ */
++object LujarchInstalls {
++    const val TAG = "lujarch_permissions"
++    const val OP = "android:lujarch_install"
++    const val SETTING_WAIT = "lujarch_permissions_install_wait_minutes"
++    private const val DEFAULT_WAIT_MINUTES = 10
++    private const val CHANNEL = "lujarch_install"
++
++    const val EXTRA_ID = "org.lujarch.permissions.extra.VERIFICATION_ID"
++    const val EXTRA_INSTALLER = "org.lujarch.permissions.extra.INSTALLER"
++    const val EXTRA_LABEL = "org.lujarch.permissions.extra.LABEL"
++    const val EXTRA_VERSION = "org.lujarch.permissions.extra.VERSION"
++    const val EXTRA_SIGNATURE_CHANGED = "org.lujarch.permissions.extra.SIGNATURE_CHANGED"
++    const val EXTRA_ALLOW = "org.lujarch.permissions.extra.ALLOW"
++    const val ACTION_ANSWER = "org.lujarch.permissions.action.INSTALL_ANSWER"
++
++    /** Closes the question of the install [EXTRA_ID] once it has its result. */
++    const val ACTION_CLOSE = "org.lujarch.permissions.action.INSTALL_CLOSE"
++
++    /** The installs waiting for an answer, by verification id: the installer's and app's names. */
++    private const val ASKED = "lujarch_install_asked"
++
++    val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "lujarch-install") }
++
++    fun waitMillis(context: Context): Long {
++        val minutes = Settings.Global.getInt(context.contentResolver, SETTING_WAIT, DEFAULT_WAIT_MINUTES)
++        return minutes.coerceIn(1, 60) * 60_000L
++    }
++
++    fun channel(context: Context): NotificationManager {
++        val nm = context.getSystemService(NotificationManager::class.java)!!
++        nm.createNotificationChannel(
++            NotificationChannel(CHANNEL, context.getString(R.string.lujarch_install_channel), NotificationManager.IMPORTANCE_HIGH)
++        )
++        return nm
++    }
++
++    fun asked(context: Context, id: Int, installer: CharSequence, app: CharSequence) {
++        context.getSharedPreferences(ASKED, Context.MODE_PRIVATE)
++            .edit()
++            .putString(id.toString(), "$installer\n$app")
++            .apply()
++    }
++
++    /** Ends the wait of [id]: the installer's and app's names while it was waiting, else null. */
++    fun unasked(context: Context, id: Int): Pair<String, String>? {
++        val prefs = context.getSharedPreferences(ASKED, Context.MODE_PRIVATE)
++        val names = prefs.getString(id.toString(), null) ?: return null
++        prefs.edit().remove(id.toString()).apply()
++        return names.substringBefore('\n') to names.substringAfter('\n')
++    }
++
++    fun answer(context: Context, id: Int, allow: Boolean) {
++        unasked(context, id)
++        context.getSystemService(NotificationManager::class.java)!!.cancel(TAG, id)
++        try {
++            context.packageManager.verifyPendingInstall(
++                id,
++                if (allow) PackageManager.VERIFICATION_ALLOW else PackageManager.VERIFICATION_REJECT,
++            )
++            Log.i(TAG, "install $id ${if (allow) "allowed" else "refused"} by the user")
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "install $id: the answer was not taken", e)
++        }
++    }
++
++    fun notifyRefused(
++        context: Context,
++        installer: CharSequence,
++        app: CharSequence,
++        id: Int,
++        unanswered: Boolean = false,
++    ) {
++        val text =
++            if (unanswered) context.getString(R.string.lujarch_install_unanswered_text)
++            else context.getString(R.string.lujarch_install_refused_text, installer)
++        val n =
++            Notification.Builder(context, CHANNEL)
++                .setSmallIcon(R.drawable.ic_file_download)
++                .setContentTitle(context.getString(R.string.lujarch_install_refused, app))
++                .setContentText(text)
++                .setAutoCancel(true)
++                .build()
++        channel(context).notify(TAG, id, n)
++    }
++}
++
++/** The system's install verifier. */
++class LujarchInstallVerifier : BroadcastReceiver() {
++    private companion object {
++        // PackageManager's verification extras outside the system API.
++        const val EXTRA_INSTALLER_UID = "android.content.pm.extra.VERIFICATION_INSTALLER_UID"
++        const val EXTRA_INSTALLER_PACKAGE = "android.content.pm.extra.VERIFICATION_INSTALLER_PACKAGE"
++        const val EXTRA_PACKAGE_NAME = "android.content.pm.extra.VERIFICATION_PACKAGE_NAME"
++    }
++
++    override fun onReceive(context: Context, intent: Intent) {
++        if (intent.action != Intent.ACTION_PACKAGE_NEEDS_VERIFICATION) return
++        val pending = goAsync()
++        LujarchInstalls.executor.execute {
++            try {
++                verify(context.applicationContext, intent)
++            } finally {
++                pending.finish()
++            }
++        }
++    }
++
++    private fun verify(context: Context, intent: Intent) {
++        val id = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_ID, -1)
++        if (id < 0) return
++        val pm = context.packageManager
++        val installerUid = intent.getIntExtra(EXTRA_INSTALLER_UID, -1)
++        val installer = intent.getStringExtra(EXTRA_INSTALLER_PACKAGE)
++        val packageName = intent.getStringExtra(EXTRA_PACKAGE_NAME)
++        val mode =
++            if (installer == null || UserHandle.getAppId(installerUid) < Process.FIRST_APPLICATION_UID) {
++                AppOpsManager.MODE_ALLOWED
++            } else {
++                try {
++                    context
++                        .getSystemService(AppOpsManager::class.java)!!
++                        .unsafeCheckOpRawNoThrow(LujarchInstalls.OP, installerUid, installer)
++                } catch (e: RuntimeException) {
++                    Log.e(LujarchInstalls.TAG, "install $id: choice of $installer not read; allowed", e)
++                    AppOpsManager.MODE_ALLOWED
++                }
++            }
++        if (mode == AppOpsManager.MODE_ALLOWED || mode == AppOpsManager.MODE_FOREGROUND) {
++            pm.verifyPendingInstall(id, PackageManager.VERIFICATION_ALLOW)
++            return
++        }
++        val archive = archive(pm, intent)
++        val app = archive?.applicationInfo?.loadLabel(pm) ?: packageName ?: "?"
++        val installerLabel =
++            try {
++                pm.getApplicationInfo(installer!!, 0).loadLabel(pm)
++            } catch (e: Exception) {
++                installer ?: "?"
++            }
++        if (mode != AppOpsManager.MODE_DEFAULT) {
++            pm.verifyPendingInstall(id, PackageManager.VERIFICATION_REJECT)
++            Log.i(LujarchInstalls.TAG, "install $id of $packageName by $installer refused")
++            LujarchInstalls.channel(context)
++            LujarchInstalls.notifyRefused(context, installerLabel, app, id)
++            return
++        }
++        // Ask every time: held for the user's wait, refused without an answer.
++        pm.extendVerificationTimeout(id, PackageManager.VERIFICATION_REJECT, LujarchInstalls.waitMillis(context))
++        val installed = packageName?.let { installedInfo(pm, it) }
++        val changed = installed != null && archive != null && signatureChanged(installed, archive)
++        val question =
++            Intent(context, LujarchInstallQuestionActivity::class.java)
++                .putExtra(LujarchInstalls.EXTRA_ID, id)
++                .putExtra(LujarchInstalls.EXTRA_INSTALLER, installerLabel)
++                .putExtra(LujarchInstalls.EXTRA_LABEL, app)
++                .putExtra(LujarchInstalls.EXTRA_VERSION, archive?.versionName)
++                .putExtra(LujarchInstalls.EXTRA_SIGNATURE_CHANGED, changed)
++                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
++        Log.i(LujarchInstalls.TAG, "install $id of $packageName by $installer: asking")
++        LujarchInstalls.asked(context, id, installerLabel, app)
++        val keyguard = context.getSystemService(KeyguardManager::class.java)!!
++        val power = context.getSystemService(PowerManager::class.java)!!
++        if (power.isInteractive && !keyguard.isKeyguardLocked) {
++            try {
++                context.startActivity(question)
++                return
++            } catch (e: RuntimeException) {
++                Log.w(LujarchInstalls.TAG, "install $id: question not shown as a dialog", e)
++            }
++        }
++        val open = PendingIntent.getActivity(context, id, question, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
++        val n =
++            Notification.Builder(context, "lujarch_install")
++                .setSmallIcon(R.drawable.ic_file_download)
++                .setContentTitle(context.getString(R.string.lujarch_install_question, installerLabel, app))
++                .setContentText(context.getString(R.string.lujarch_install_until_answered))
++                .setContentIntent(open)
++                .setVisibility(Notification.VISIBILITY_SECRET)
++                .build()
++        LujarchInstalls.channel(context).notify(LujarchInstalls.TAG, id, n)
++    }
++
++    private fun archive(pm: PackageManager, intent: Intent): PackageInfo? {
++        val path = intent.data?.path ?: return null
++        val file = File(path).let { f ->
++            if (f.isDirectory) f.listFiles()?.firstOrNull { it.name.endsWith(".apk") } else f
++        } ?: return null
++        return try {
++            pm.getPackageArchiveInfo(file.path, PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
++                ?.also {
++                    it.applicationInfo?.sourceDir = file.path
++                    it.applicationInfo?.publicSourceDir = file.path
++                }
++        } catch (e: RuntimeException) {
++            Log.w(LujarchInstalls.TAG, "staged APK not read", e)
++            null
++        }
++    }
++
++    private fun installedInfo(pm: PackageManager, packageName: String): PackageInfo? =
++        try {
++            pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
++        } catch (e: PackageManager.NameNotFoundException) {
++            null
++        }
++
++    private fun signatureChanged(installed: PackageInfo, archive: PackageInfo): Boolean {
++        val a = installed.signingInfo?.apkContentsSigners?.toSet() ?: return false
++        val b = archive.signingInfo?.apkContentsSigners?.toSet() ?: return false
++        return a != b
++    }
++}
++
++/**
++ * The result of an install the system verified: one still waiting for the user ran out of time,
++ * so its question closes and a notification says it was refused.
++ */
++class LujarchInstallResults : BroadcastReceiver() {
++    override fun onReceive(context: Context, intent: Intent) {
++        if (intent.action != Intent.ACTION_PACKAGE_VERIFIED) return
++        val id = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_ID, -1)
++        val (installer, app) = LujarchInstalls.unasked(context, id) ?: return
++        context.sendBroadcast(
++            Intent(LujarchInstalls.ACTION_CLOSE)
++                .setPackage(context.packageName)
++                .putExtra(LujarchInstalls.EXTRA_ID, id)
++        )
++        val result = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_RESULT, PackageManager.VERIFICATION_REJECT)
++        if (result == PackageManager.VERIFICATION_ALLOW) {
++            context.getSystemService(NotificationManager::class.java)!!.cancel(LujarchInstalls.TAG, id)
++            return
++        }
++        Log.i(LujarchInstalls.TAG, "install $id of $app by $installer refused: no answer in time")
++        LujarchInstalls.notifyRefused(context, installer, app, id, unanswered = true)
++    }
++}
++
++/** The question about one install, in the look of the installer's own dialog. */
++class LujarchInstallQuestionActivity : Activity() {
++    private var id = -1
++
++    /** The install's result came first: the question has nothing left to decide. */
++    private val closer =
++        object : BroadcastReceiver() {
++            override fun onReceive(context: Context, intent: Intent) {
++                if (intent.getIntExtra(LujarchInstalls.EXTRA_ID, -2) == id) finish()
++            }
++        }
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        id = intent.getIntExtra(LujarchInstalls.EXTRA_ID, -1)
++        if (id < 0) {
++            finish()
++            return
++        }
++        registerReceiver(closer, IntentFilter(LujarchInstalls.ACTION_CLOSE), Context.RECEIVER_NOT_EXPORTED)
++        val installer = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_INSTALLER)
++        val app = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_LABEL)
++        val version = intent.getStringExtra(LujarchInstalls.EXTRA_VERSION)
++        val changed = intent.getBooleanExtra(LujarchInstalls.EXTRA_SIGNATURE_CHANGED, false)
++        val lines =
++            listOfNotNull(
++                version?.let { getString(R.string.lujarch_install_version, it) },
++                getString(if (changed) R.string.lujarch_install_signature_changed else R.string.lujarch_install_signature_same),
++            )
++        AlertDialog.Builder(this)
++            .setTitle(getString(R.string.lujarch_install_question, installer, app))
++            .setMessage(lines.joinToString("\n"))
++            .setPositiveButton(R.string.lujarch_install_allow) { _, _ -> LujarchInstalls.answer(this, id, true) }
++            .setNegativeButton(R.string.lujarch_install_deny) { _, _ -> LujarchInstalls.answer(this, id, false) }
++            .setOnDismissListener { finish() }
++            .show()
++    }
++
++    override fun onDestroy() {
++        if (id >= 0) unregisterReceiver(closer)
++        super.onDestroy()
++    }
++}
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
+index 6dd5e371d8a68a24854d24bb9b902e5bb018fe3f..e22ae57595083a21138a5b05beb0152e1da64dbd 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppInfoPage.kt
+@@ -16,6 +16,10 @@
+ 
+ package com.android.settingslib.spaprivileged.template.app
+ 
++import com.android.settingslib.spa.widget.preference.RadioPreferences
++import com.android.settingslib.spa.widget.preference.ListPreferenceOption
++import com.android.settingslib.spa.widget.preference.ListPreferenceModel
++import androidx.compose.runtime.mutableIntStateOf
+ import android.content.pm.ApplicationInfo
+ import android.os.Bundle
+ import androidx.annotation.VisibleForTesting
+@@ -148,6 +152,24 @@ internal fun <T : AppRecord> TogglePermissionAppListModel<T>.TogglePermissionApp
+         val record = rememberRecord(app).value ?: return@AppInfoPage
+         val isAllowed = isAllowed(record)
+         val isChangeable by rememberIsChangeable(record)
++        val choices = choices()
++        if (choices.isNotEmpty()) {
++            val current = choice(record)
++            val title = stringResource(switchTitleResId)
++            val selected = remember { mutableIntStateOf(current() ?: choices.first().first) }
++            selected.intValue = current() ?: selected.intValue
++            RadioPreferences(object : ListPreferenceModel {
++                override val title = title
++                override val enabled = { isChangeable }
++                override val options = choices.map { ListPreferenceOption(it.first, it.second) }
++                override val selectedId = selected
++                override val onIdSelected: (Int) -> Unit = {
++                    selected.intValue = it
++                    setChoice(record, it)
++                }
++            })
++            return@AppInfoPage
++        }
+         val switchModel = object : SwitchPreferenceModel {
+             override val title = stringResource(switchTitleResId)
+             override val checked = isAllowed
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
+index 478ff4c98c3b98dae9eb2ad36f3567f62aea0d67..5f51c9ece95ec5c1d24457ca316681bc9ac84e7e 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppList.kt
+@@ -25,6 +25,7 @@ import com.android.settingslib.spa.framework.common.SettingsEntryBuilder
+ import com.android.settingslib.spa.framework.common.SettingsPageProvider
+ import com.android.settingslib.spa.framework.compose.rememberContext
+ import com.android.settingslib.spa.framework.util.asyncMapItem
++import com.android.settingslib.spa.widget.scaffold.MoreOptionsScope
+ import com.android.settingslib.spaprivileged.model.app.AppRecord
+ import com.android.settingslib.spaprivileged.model.enterprise.EnhancedConfirmation
+ import com.android.settingslib.spaprivileged.model.enterprise.Restrictions
+@@ -37,6 +38,17 @@ interface TogglePermissionAppListModel<T : AppRecord> {
+     val pageTitleResId: Int
+     val switchTitleResId: Int
+     val footerResId: Int
++
++    /** Choices the app's page offers in place of the switch, as (value, label); empty: none. */
++    @Composable fun choices(): List<Pair<Int, String>> = emptyList()
++
++    /** The app's current choice, when [choices] are offered. */
++    @Composable fun choice(record: T): () -> Int? = { null }
++
++    fun setChoice(record: T, value: Int) {}
++
++    /** Items the App List page adds to its menu. */
++    @Composable fun MoreOptions(scope: MoreOptionsScope) {}
+     val switchRestrictionKeys: List<String>
+         get() = emptyList()
+ 
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
+index cd3ac358f3a55c52f17731cd4e2015c453a5886b..7b1bfb1dfc19bf895a0400116aea4af722429333 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/template/app/TogglePermissionAppListPage.kt
+@@ -129,6 +129,7 @@ internal fun <T : AppRecord> TogglePermissionAppListModel<T>.TogglePermissionApp
+             )
+         },
+         showSystemAppsInitially = showSystemAppsInitially,
++        moreOptions = { MoreOptions(this) },
+         appList = appList,
+     )
+ }
+@@ -150,6 +151,11 @@ internal class TogglePermissionInternalAppListModel<T : AppRecord>(
+ 
+     @Composable
+     fun getSummary(record: T): () -> CharSequence {
++        val choices = listModel.choices()
++        if (choices.isNotEmpty()) {
++            val current = listModel.choice(record)
++            return { choices.firstOrNull { it.first == current() }?.second ?: context.getPlaceholder() }
++        }
+         val allowed = listModel.isAllowed(record)
+         val restrictions =
+             listModel.getRestrictions(
+diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
+index 4c63493439e274e7df270bd63fa3c1f2c31d7290..c2bd60abb16562beebb76e6c7a0b65cda2aadfaa 100644
+--- a/services/core/java/com/android/server/pm/VerifyingSession.java
++++ b/services/core/java/com/android/server/pm/VerifyingSession.java
+@@ -330,6 +330,11 @@ final class VerifyingSession {
+             }
+         }
+ 
++        if (!requiredVerifierPackagesOverridden) {
++            lujarchKeepVerifiersHoldingAgentPermission(snapshot, requiredVerifierPackages,
++                    verifierUserId);
++        }
++
+         for (String requiredVerifierPackage : requiredVerifierPackages) {
+             final int requiredUid = snapshot.getPackageUid(requiredVerifierPackage,
+                     MATCH_DEBUG_TRIAGED_MISSING, verifierUserId);
+@@ -597,6 +602,37 @@ final class VerifyingSession {
+         return true;
+     }
+ 
++    /**
++     * Only required verifiers that hold PACKAGE_VERIFICATION_AGENT count. The verification
++     * broadcast goes out with that receiver permission, so a required verifier without it never
++     * receives the request and its turn ends only at the verifier timeout. Filtered per session,
++     * where grants are final: PackageManagerService picks the required verifiers in its
++     * constructor, before an update's first boot grants the permission to a new package. The list
++     * is left as is when no verifier holds the permission (an empty list leaves the session
++     * without a timeout), and on any failure.
++     */
++    private static void lujarchKeepVerifiersHoldingAgentPermission(@NonNull Computer snapshot,
++            @NonNull List<String> requiredVerifierPackages, int userId) {
++        try {
++            final List<String> holding = new ArrayList<>();
++            for (String pkg : requiredVerifierPackages) {
++                final int uid = snapshot.getPackageUid(pkg, MATCH_DEBUG_TRIAGED_MISSING, userId);
++                if (uid >= 0 && snapshot.checkUidPermission(
++                        android.Manifest.permission.PACKAGE_VERIFICATION_AGENT, uid)
++                        == PackageManager.PERMISSION_GRANTED) {
++                    holding.add(pkg);
++                }
++            }
++            if (!holding.isEmpty() && holding.size() < requiredVerifierPackages.size()) {
++                Slog.i(TAG, "Required verifiers without PACKAGE_VERIFICATION_AGENT are not"
++                        + " waited for; verifying with " + holding);
++                requiredVerifierPackages.retainAll(holding);
++            }
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "lujarch: verifier permission filter failed, keeping all verifiers", e);
++        }
++    }
++
+     /**
+      * Check whether package verification has been enabled.
+      *

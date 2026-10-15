@@ -1,0 +1,16 @@
+diff --git a/service/java/com/android/ecm/EnhancedConfirmationService.java b/service/java/com/android/ecm/EnhancedConfirmationService.java
+index 11468a6476778982fcda64cbd886da5e19283c65..2c7f1bc8bf8a3ddb0f9a709a746e7a132ceee3cc 100644
+--- a/service/java/com/android/ecm/EnhancedConfirmationService.java
++++ b/service/java/com/android/ecm/EnhancedConfirmationService.java
+@@ -374,7 +374,10 @@ public class EnhancedConfirmationService extends SystemService {
+             Preconditions.checkStringNotEmpty(packageName, "packageName cannot be null or empty");
+ 
+             try {
+-                if (isPackageEcmGuarded(packageName, userId)) {
++                // A locked app (errored, which only the user's Lock in Settings writes) stays
++                // locked: seeing the restriction does not let it be cleared.
++                if (isPackageEcmGuarded(packageName, userId)
++                        && getAppEcmState(packageName, userId) != EcmState.ECM_STATE_GUARDED) {
+                     setAppEcmState(packageName, EcmState.ECM_STATE_GUARDED_AND_ACKNOWLEDGED,
+                             userId);
+                 }

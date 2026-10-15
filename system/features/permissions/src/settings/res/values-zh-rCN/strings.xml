@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="lujarch_new_app_defaults">"新应用的默认设置"</string>
+    <string name="lujarch_not_changed">"不更改"</string>
+    <string name="lujarch_choice_allow">"允许"</string>
+    <string name="lujarch_choice_foreground">"仅在使用该应用时允许"</string>
+    <string name="lujarch_choice_ask">"每次都询问"</string>
+    <string name="lujarch_choice_empty">"返回空数据"</string>
+    <string name="lujarch_choice_deny">"不允许"</string>
+    <string name="lujarch_basic_phone_info">"基本电话信息"</string>
+    <string name="lujarch_basic_phone_info_only">"仅基本电话信息"</string>
+    <string name="lujarch_install_unknown_apps">"安装未知应用"</string>
+    <string name="lujarch_autostart">"自启动"</string>
+    <string name="lujarch_new_app_network">"移动数据和 WLAN"</string>
+    <string name="lujarch_new_app_no_network">"禁止访问网络"</string>
+    <string name="lujarch_new_app_no_wifi">"禁用 WLAN 数据"</string>
+    <string name="lujarch_new_app_no_mobile">"禁用移动数据"</string>
+    <string name="lujarch_new_app_no_vpn">"禁用 VPN 数据"</string>
+    <string name="lujarch_list_separator">"、"</string>
+    <string name="lujarch_new_app_defaults_footer">"您安装的应用在首次运行前就采用这些设置。系统自带的应用和应用更新保留各自的设置。应用不会被问到其角色所需的访问：默认桌面应用不会被问到“已安装的应用”，默认短信应用不会被问到“自启动”和基本电话信息，默认电话应用不会被问到基本电话信息，带 VPN 服务的应用不会被问到“网络信息”。"</string>
+</resources>

@@ -298,17 +298,21 @@ def check_files(findings):
         text = read_text(path)
         if text is None:
             continue
-        cjk_allowed = (
-            name in CJK_ALLOWED_FILES
-            or "/res/values-zh-rCN/" in f"/{name}"
-            or "/res/values-ja/" in f"/{name}"
-        )
+        def translation(file):
+            return "/res/values-zh-rCN/" in f"/{file}" or "/res/values-ja/" in f"/{file}"
+
+        cjk_allowed = name in CJK_ALLOWED_FILES or translation(name)
+        # In a patch, the translation files it changes.
+        patched = None
         for n, line in enumerate(text.split("\n"), 1):
+            if path.suffix == ".patch" and line.startswith("diff --git "):
+                patched = line.rsplit(" b/", 1)[-1]
             for pattern in LEGACY:
                 if pattern.search(line):
                     findings.add(path, n, "legacy name; the system is Lujarch")
                     break
-            if not cjk_allowed and CJK_RE.search(line):
+            if not (cjk_allowed or (patched and translation(patched))) and CJK_RE.search(line):
+
                 findings.add(path, n, "Chinese or Japanese text outside the READMEs and terms.md")
 
 

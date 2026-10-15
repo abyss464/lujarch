@@ -1,0 +1,191 @@
+diff --git a/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..c5631a117a973ee7713da4b63db1c7df211a81ac
+--- /dev/null
++++ b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
+@@ -0,0 +1,154 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.nfc;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.Log;
++
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * The network info permission ({@link #OP}) for the reads the NFC service answers.
++ *
++ * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
++ * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
++ * window), and at once when the stored mode differs from the one last noted; in between only
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
++ * lookup allows (logged). A framework that does not know the op (an image older than the op)
++ * throws for its name, which allows (logged once).
++ */
++public final class LujarchNetworkInfo {
++
++    private static final String TAG = "LujarchNetworkInfo";
++
++    /** The op's public name. */
++    public static final String OP = "android:lujarch_network_info";
++
++    private static final long NOTE_INTERVAL_MS = 60_000L;
++    private static final long REFUSED_NOTE_INTERVAL_MS = 2_000L;
++
++    /** Last note per uid: elapsed realtime and the stored mode then. */
++    private static final ConcurrentHashMap<Integer, long[]> sLastNote = new ConcurrentHashMap<>();
++
++    private static volatile boolean sUnknownOpLogged;
++
++    private LujarchNetworkInfo() {
++    }
++
++    /**
++     * The permission's mode for this read: {@link AppOpsManager#MODE_ALLOWED},
++     * {@link AppOpsManager#MODE_IGNORED} (answer with empty data) or
++     * {@link AppOpsManager#MODE_ERRORED} (throw where the API can, else empty data).
++     * Never throws.
++     *
++     * @param uid the reading app's uid
++     * @param packageName its package as the API verified it, or null to take the uid's first
++     * @param attributionTag its attribution tag, if known
++     */
++    public static int decide(@NonNull Context context, int uid, @Nullable String packageName,
++            @Nullable String attributionTag) {
++        if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++            return AppOpsManager.MODE_ALLOWED;
++        }
++        try {
++            final AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final String pkg = packageName != null ? packageName : firstPackage(context, uid);
++            if (pkg == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            final int raw = appOps.unsafeCheckOpRawNoThrow(OP, uid, pkg);
++            final long now = SystemClock.elapsedRealtime();
++            final long[] last = sLastNote.get(uid);
++            // Foreground-only needs a note to be resolved against the uid's state.
++            final long interval = raw == AppOpsManager.MODE_ALLOWED
++                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
++            if (last != null && last[1] == raw && now - last[0] < interval
++                    && raw != AppOpsManager.MODE_FOREGROUND) {
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
++            }
++            sLastNote.put(uid, new long[] {now, raw});
++            // The NFC process lacks UPDATE_APP_OPS_STATS, so it cannot note another uid's op;
++            // a proxy note records the app's read (untrusted proxy) and asks as a note does.
++            final int mode = appOps.noteProxyOpNoThrow(OP, pkg, uid, attributionTag, null);
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
++        } catch (RuntimeException e) {
++            if (isUnknownOp(e)) {
++                if (!sUnknownOpLogged) {
++                    sUnknownOpLogged = true;
++                    Log.w(TAG, OP + " is not an op of this system; network info allowed", e);
++                }
++            } else {
++                Log.w(TAG, OP + " of uid " + uid + " not decided; allowed", e);
++            }
++            return AppOpsManager.MODE_ALLOWED;
++        }
++    }
++
++    /** {@link #decide} is anything but {@link AppOpsManager#MODE_ALLOWED}. */
++    public static boolean refuses(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        return decide(context, uid, packageName, attributionTag) != AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * {@link #refuses} for a getter that throws for a missing permission: errored (deny)
++     * throws {@link SecurityException} as that getter does.
++     */
++    public static boolean refusesOrThrows(@NonNull Context context, int uid,
++            @Nullable String packageName, @Nullable String attributionTag) {
++        final int mode = decide(context, uid, packageName, attributionTag);
++        if (mode == AppOpsManager.MODE_ERRORED) {
++            throw new SecurityException("uid " + uid + " is denied network info (" + OP + ")");
++        }
++        return mode != AppOpsManager.MODE_ALLOWED;
++    }
++
++    private static boolean isUnknownOp(RuntimeException e) {
++        return e instanceof IllegalArgumentException && e.getMessage() != null
++                && e.getMessage().startsWith("Unknown operation string");
++    }
++
++    @Nullable
++    private static String firstPackage(Context context, int uid) {
++        final PackageManager pm = context.getPackageManager();
++        if (pm == null) {
++            return null;
++        }
++        // The caller may not see packages by uid (package visibility); the system does.
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final String[] packages = pm.getPackagesForUid(uid);
++            return packages != null && packages.length > 0 ? packages[0] : null;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++}
+diff --git a/NfcNci/src/com/android/nfc/NfcService.java b/NfcNci/src/com/android/nfc/NfcService.java
+index 9dc6a3cd6ab560e1db5b6909bfbaa721a45d888b..a7f8ac1bff380c812d6fc84e7f21d872106bb105 100644
+--- a/NfcNci/src/com/android/nfc/NfcService.java
++++ b/NfcNci/src/com/android/nfc/NfcService.java
+@@ -2795,6 +2795,9 @@ public class NfcService implements DeviceHostListener, ForegroundUtils.Callback
+ 
+         @Override
+         public boolean isNfcSecureEnabled() throws RemoteException {
++            if (lujarchRefuses()) {
++                return false;
++            }
+             synchronized (NfcService.this) {
+                 int current_userId = ActivityManager.getCurrentUser();
+                 if (mUserId != current_userId) {
+@@ -2971,9 +2974,16 @@ public class NfcService implements DeviceHostListener, ForegroundUtils.Callback
+ 
+         @Override
+         public int getState() throws RemoteException {
++            if (lujarchRefuses()) {
++                return NfcAdapter.STATE_OFF;
++            }
+             return mState.get();
+         }
+ 
++        private boolean lujarchRefuses() {
++            return LujarchNetworkInfo.refuses(mContext, Binder.getCallingUid(), null, null);
++        }
++
+         @Override
+         protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
+             NfcService.this.dump(fd, pw, args);

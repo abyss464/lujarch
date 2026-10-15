@@ -1,0 +1,237 @@
+diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
+index 136fd4ad1b293ae5a2653cf84c801806b3658f7c..956ed086638211cc158141ac163f9eb0bbbe21f3 100644
+--- a/services/core/java/com/android/server/appop/AppOpsService.java
++++ b/services/core/java/com/android/server/appop/AppOpsService.java
+@@ -293,6 +293,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+ 
+     private final LujarchAsk mLujarchAsk;
+ 
++    private final LujarchNewApps mLujarchNewApps;
++
+     /**
+      * Pool for {@link AttributedOp.OpEventProxyInfoPool} to avoid to constantly reallocate new
+      * objects
+@@ -1064,6 +1066,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+         mRecentAccessesFile = new AtomicFile(recentAccessesFile, "appops_accesses");
+         mRecentAccessPersistence = new AppOpsRecentAccessPersistence(mRecentAccessesFile, this);
+         mLujarchAsk = new LujarchAsk(context);
++        mLujarchNewApps = new LujarchNewApps(context, this);
+ 
+         if (AppOpsManager.NOTE_OP_COLLECTION_ENABLED) {
+             mNoteOpCallerStacktracesFile = new File(SystemServiceManager.ensureSystemDir(),
+@@ -1154,8 +1157,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 }
+             }
+         }
++        mLujarchNewApps.onPackageAdded(pkgName, uid, pi);
+     }
+ 
++
+     private void onPackageRemoved(String pkgName, int uid) {
+         synchronized (AppOpsService.this) {
+             packageRemovedLocked(uid, pkgName);
+@@ -1178,6 +1183,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 VirtualDeviceManagerInternal.class);
+         mAppOpsCheckingService.systemReady();
+         initializeUidStates();
++        mLujarchNewApps.systemReady();
+ 
+         mConstants.startMonitoring(mContext.getContentResolver());
+         mHistoricalRegistry.systemReady(mContext.getContentResolver());
+diff --git a/services/core/java/com/android/server/appop/LujarchNewApps.java b/services/core/java/com/android/server/appop/LujarchNewApps.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1150f6726
+--- /dev/null
++++ b/services/core/java/com/android/server/appop/LujarchNewApps.java
+@@ -0,0 +1,191 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.appop;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.app.role.OnRoleHoldersChangedListener;
++import android.app.role.RoleManager;
++import android.content.Context;
++import android.content.Intent;
++import android.content.pm.ApplicationInfo;
++import android.content.pm.PackageInfo;
++import android.content.pm.PackageManager;
++import android.net.NetworkPolicyManager;
++import android.net.VpnService;
++import android.os.Binder;
++import android.os.UserHandle;
++import android.provider.Settings;
++import android.util.Slog;
++
++import com.android.internal.os.BackgroundThread;
++
++import java.util.List;
++
++/**
++ * Defaults for new apps: an app the user installs starts with the choices of Settings > Apps >
++ * Defaults for new apps before it first runs; apps that come with the system and updates keep
++ * their choices. An app is not asked about what its role needs: the default home app about
++ * installed apps, the default SMS app about autostart and basic phone info, the default phone
++ * app about basic phone info, an app with a VPN service about network info.
++ */
++final class LujarchNewApps {
++    private static final String TAG = "lujarch_permissions";
++
++    /** Settings.Secure, per user: the mode a new app starts with, or {@link #NOT_CHANGED}. */
++    static final String PREFIX = "lujarch_permissions_new_app_";
++    static final int NOT_CHANGED = -1;
++
++    /** Settings.Secure, per user: the network restrictions a new app starts with (0: none). */
++    static final String KEY_NETWORK = PREFIX + "network";
++
++    private static final String[] KEYS = {
++        "sensors", "clipboard", "installed_apps", "device_ids", "device_info", "network_info",
++        "phone_info", "install", "autostart",
++    };
++    private static final int[] OPS = {
++        AppOpsManager.OP_LUJARCH_SENSORS, AppOpsManager.OP_READ_CLIPBOARD,
++        AppOpsManager.OP_LUJARCH_INSTALLED_APPS, AppOpsManager.OP_LUJARCH_DEVICE_IDS,
++        AppOpsManager.OP_LUJARCH_DEVICE_INFO, AppOpsManager.OP_LUJARCH_NETWORK_INFO,
++        AppOpsManager.OP_LUJARCH_PHONE_INFO, AppOpsManager.OP_LUJARCH_INSTALL,
++        AppOpsManager.OP_LUJARCH_AUTOSTART,
++    };
++    /** Each key's value while the user has not set it (settings.toml's defaults). */
++    private static final int[] DEFAULTS = {
++        AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT,
++        AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_DEFAULT,
++        AppOpsManager.MODE_DEFAULT, NOT_CHANGED, AppOpsManager.MODE_DEFAULT,
++    };
++
++    private final Context mContext;
++    private final AppOpsService mService;
++
++    LujarchNewApps(@NonNull Context context, @NonNull AppOpsService service) {
++        mContext = context;
++        mService = service;
++    }
++
++    /** A package was installed or updated; a new app of the user gets the defaults. */
++    void onPackageAdded(@NonNull String packageName, int uid, @Nullable PackageInfo pi) {
++        if (pi == null || pi.applicationInfo == null
++                || (pi.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
++                || pi.firstInstallTime != pi.lastUpdateTime) {
++            return;
++        }
++        final int userId = UserHandle.getUserId(uid);
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final boolean vpn = hasVpnService(packageName, userId);
++            for (int i = 0; i < OPS.length; i++) {
++                int mode = Settings.Secure.getIntForUser(mContext.getContentResolver(),
++                        PREFIX + KEYS[i], DEFAULTS[i], userId);
++                if (mode == NOT_CHANGED) {
++                    continue;
++                }
++                if (vpn && OPS[i] == AppOpsManager.OP_LUJARCH_NETWORK_INFO
++                        && mode == AppOpsManager.MODE_DEFAULT) {
++                    mode = AppOpsManager.MODE_ALLOWED;
++                }
++                mService.setMode(OPS[i], uid, packageName, mode);
++                if (OPS[i] == AppOpsManager.OP_LUJARCH_INSTALL
++                        && requests(packageName, userId,
++                                android.Manifest.permission.REQUEST_INSTALL_PACKAGES)) {
++                    // An app installing from unknown sources also needs Android's own switch,
++                    // on unless its installs are not allowed, as Settings sets it.
++                    mService.setMode(AppOpsManager.OP_REQUEST_INSTALL_PACKAGES, uid, packageName,
++                            mode == AppOpsManager.MODE_ERRORED
++                                    ? AppOpsManager.MODE_ERRORED : AppOpsManager.MODE_ALLOWED);
++                }
++            }
++            final int network = Settings.Secure.getIntForUser(mContext.getContentResolver(),
++                    KEY_NETWORK, 0, userId);
++            if (network != 0) {
++                mContext.getSystemService(NetworkPolicyManager.class).addUidPolicy(uid, network);
++            }
++            Slog.i(TAG, packageName + " (" + uid + ") starts with the defaults for new apps");
++        } catch (RuntimeException e) {
++            Slog.e(TAG, "defaults for new apps not set for " + packageName, e);
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++
++    private boolean requests(String packageName, int userId, String permission) {
++        try {
++            final String[] requested = mContext.getPackageManager().getPackageInfoAsUser(
++                    packageName, PackageManager.GET_PERMISSIONS, userId).requestedPermissions;
++            return requested != null && List.of(requested).contains(permission);
++        } catch (PackageManager.NameNotFoundException e) {
++            return false;
++        }
++    }
++
++    private boolean hasVpnService(String packageName, int userId) {
++        final List<?> services = mContext.getPackageManager().queryIntentServicesAsUser(
++                new Intent(VpnService.SERVICE_INTERFACE).setPackage(packageName),
++                PackageManager.MATCH_DISABLED_COMPONENTS, userId);
++        return !services.isEmpty();
++    }
++
++    /** From now on, a new holder of a role is not asked about what the role needs. */
++    void systemReady() {
++        try {
++            final RoleManager roles = mContext.getSystemService(RoleManager.class);
++            final OnRoleHoldersChangedListener listener = (role, user) ->
++                    BackgroundThread.getHandler().post(() -> onRoleHoldersChanged(roles, role, user));
++            roles.addOnRoleHoldersChangedListenerAsUser(BackgroundThread.getExecutor(), listener,
++                    UserHandle.ALL);
++        } catch (RuntimeException e) {
++            Slog.e(TAG, "role holders not watched", e);
++        }
++    }
++
++    private void onRoleHoldersChanged(RoleManager roles, String role, UserHandle user) {
++        final int[] ops;
++        switch (role) {
++            case RoleManager.ROLE_HOME:
++                ops = new int[] {AppOpsManager.OP_LUJARCH_INSTALLED_APPS};
++                break;
++            case RoleManager.ROLE_SMS:
++                ops = new int[] {AppOpsManager.OP_LUJARCH_AUTOSTART,
++                        AppOpsManager.OP_LUJARCH_PHONE_INFO};
++                break;
++            case RoleManager.ROLE_DIALER:
++                ops = new int[] {AppOpsManager.OP_LUJARCH_PHONE_INFO};
++                break;
++            default:
++                return;
++        }
++        try {
++            final PackageManager pm = mContext.getPackageManager();
++            for (String holder : roles.getRoleHoldersAsUser(role, user)) {
++                final int uid = pm.getPackageUidAsUser(holder, user.getIdentifier());
++                for (int op : ops) {
++                    if (mService.checkOperationRaw(op, uid, holder, null)
++                            == AppOpsManager.MODE_DEFAULT) {
++                        mService.setMode(op, uid, holder, AppOpsManager.MODE_ALLOWED);
++                        Slog.i(TAG, holder + " holds " + role + ": "
++                                + AppOpsManager.opToPublicName(op) + " allowed");
++                    }
++                }
++            }
++        } catch (PackageManager.NameNotFoundException | RuntimeException e) {
++            Slog.e(TAG, "holders of " + role + " not checked", e);
++        }
++    }
++}

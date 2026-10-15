@@ -1,0 +1,379 @@
+diff --git a/services/core/java/com/android/server/appop/AppOpHistoryHelper.java b/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
+index bd8d0c9832c5ebf2fa835b2e19649c727debf29a..487038e4ca74ad7933183e4f648344acb6280946 100644
+--- a/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
++++ b/services/core/java/com/android/server/appop/AppOpHistoryHelper.java
+@@ -98,7 +98,10 @@ public class AppOpHistoryHelper {
+     private final Random mRandom = new Random();
+     // time window interval for aggregation
+     private long mQuantizationMillis;
+-    private long mHistoryRetentionMillis;
++    // Changed at run time by setRetention; read by queries and the write handler.
++    private volatile long mHistoryRetentionMillis;
++    // The database size above which the oldest rows go; it grows with the retention.
++    private volatile long mMaxDatabaseSizeBytes = SqliteWriteHandler.MAX_DATABASE_SIZE_BYTES;
+     private final File mDatabaseFile;
+     private final Context mContext;
+     private final AppOpHistoryDbHelper mDbHelper;
+@@ -127,6 +130,22 @@ public class AppOpHistoryHelper {
+         ensurePeriodicJobsAreScheduled();
+     }
+ 
++    /**
++     * The user's history length and the database size limit that
++
++     * goes with it. Queries use the new length at once; a shorter one also deletes the rows
++     * past it now rather than at the next daily deletion.
++     */
++    void setRetention(long historyRetentionMillis, long maxDatabaseSizeBytes) {
++        final long previous = mHistoryRetentionMillis;
++        mHistoryRetentionMillis = historyRetentionMillis;
++        mMaxDatabaseSizeBytes = maxDatabaseSizeBytes;
++        if (historyRetentionMillis < previous) {
++            mSqliteWriteHandler.removeMessages(DELETE_EXPIRED_ENTRIES_PERIODIC);
++            mSqliteWriteHandler.sendEmptyMessage(DELETE_EXPIRED_ENTRIES_PERIODIC);
++        }
++    }
++
+     void incrementOpAccessedCount(int op, int uid, @NonNull String packageName,
+             @NonNull String deviceId, @Nullable String attributionTag, int uidState, int flags,
+             long accessTime, int attributionFlags, long attributionChainId, int accessCount,
+@@ -493,7 +512,7 @@ public class AppOpHistoryHelper {
+ 
+         private void ensureDatabaseSize() {
+             long databaseSize = mDatabaseFile.length();
+-            if (databaseSize > MAX_DATABASE_SIZE_BYTES) {
++            if (databaseSize > mMaxDatabaseSizeBytes) {
+                 mDbHelper.execSQL(AppOpHistoryTable.DELETE_TABLE_DATA_LEAST_RECENT_ENTRIES);
+             }
+         }
+diff --git a/services/core/java/com/android/server/appop/DiscreteOpsRegistry.java b/services/core/java/com/android/server/appop/DiscreteOpsRegistry.java
+index 760dee3cba64e27d286432716c80752a51bff233..354ee1cc27aea234676f2a6ab3e36257beb62524 100644
+--- a/services/core/java/com/android/server/appop/DiscreteOpsRegistry.java
++++ b/services/core/java/com/android/server/appop/DiscreteOpsRegistry.java
+@@ -209,45 +209,26 @@ abstract class DiscreteOpsRegistry {
+     }
+ 
+     private void setDiscreteHistoryParameters(DeviceConfig.Properties p) {
+-        if (p.getKeyset().contains(PROPERTY_DISCRETE_HISTORY_CUTOFF)) {
+-            sDiscreteHistoryCutoff = p.getLong(PROPERTY_DISCRETE_HISTORY_CUTOFF,
+-                    DEFAULT_DISCRETE_HISTORY_CUTOFF);
+-            if (!Build.IS_DEBUGGABLE && !mDebugMode) {
+-                sDiscreteHistoryCutoff = min(MAXIMUM_DISCRETE_HISTORY_CUTOFF,
+-                        sDiscreteHistoryCutoff);
+-            }
+-        } else {
+-            sDiscreteHistoryCutoff = DEFAULT_DISCRETE_HISTORY_CUTOFF;
+-        }
+-        if (p.getKeyset().contains(PROPERTY_DISCRETE_HISTORY_QUANTIZATION)) {
+-            sDiscreteHistoryQuantization = p.getLong(PROPERTY_DISCRETE_HISTORY_QUANTIZATION,
+-                    DEFAULT_DISCRETE_HISTORY_QUANTIZATION);
+-            if (!Build.IS_DEBUGGABLE && !mDebugMode) {
+-                sDiscreteHistoryQuantization = max(DEFAULT_DISCRETE_HISTORY_QUANTIZATION,
+-                        sDiscreteHistoryQuantization);
+-            }
+-        } else {
+-            sDiscreteHistoryQuantization = DEFAULT_DISCRETE_HISTORY_QUANTIZATION;
+-        }
+-        sDiscreteFlags = p.getKeyset().contains(PROPERTY_DISCRETE_FLAGS)
+-                ? p.getInt(PROPERTY_DISCRETE_FLAGS, OP_FLAGS_DISCRETE) : OP_FLAGS_DISCRETE;
+-        String opsListConfig = p.getString(PROPERTY_DISCRETE_OPS_LIST, null);
+-        sDiscreteOps = opsListConfig == null ? getDefaultOpsList() : parseOpsList(opsListConfig);
+-
++        // Pinned in code: GmsCore (and anything else holding WRITE_DEVICE_CONFIG) can push
++        // privacy flags that would shrink the recorded ops, shorten retention or drop access
++        // flags.
++        sDiscreteHistoryCutoff = DEFAULT_DISCRETE_HISTORY_CUTOFF;
++        sDiscreteHistoryQuantization = DEFAULT_DISCRETE_HISTORY_QUANTIZATION;
++        sDiscreteFlags = AppOpsManager.OP_FLAGS_ALL;
++        sDiscreteOps = getDefaultOpsList();
+         Arrays.sort(sDiscreteOps);
+     }
+ 
+     /**
+-     * @return an array of app ops captured into discrete database.
++     * @return an array of app ops captured into discrete database: every op.
++
+      */
+     private static int[] getDefaultOpsList() {
+-        IntArray discreteOpsArray = new IntArray();
+-        discreteOpsArray.addAll(getDefaultLegacyOps());
+-
+-        if (Flags.enableSqliteAppopsAccesses()) {
+-            discreteOpsArray.addAll(IMPORTANT_OPS_FOR_SECURITY);
++        int[] ops = new int[AppOpsManager._NUM_OP];
++        for (int i = 0; i < ops.length; i++) {
++            ops[i] = i;
+         }
+-        return discreteOpsArray.toArray();
++        return ops;
+     }
+ 
+     private static int[] getDefaultLegacyOps() {
+diff --git a/services/core/java/com/android/server/appop/HistoricalRegistry.java b/services/core/java/com/android/server/appop/HistoricalRegistry.java
+index 53fe55756a3958390a9303068868664abc618fa9..9608adf5b9eb671838fc9d035a4f0c7b1cdd7363 100644
+--- a/services/core/java/com/android/server/appop/HistoricalRegistry.java
++++ b/services/core/java/com/android/server/appop/HistoricalRegistry.java
+@@ -132,6 +132,18 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+             Duration.ofMinutes(15).toMillis();
+     private static final long DEFAULT_HISTORY_RETENTION_MILLIS = Duration.ofDays(7).toMillis();
+     private static final long MAXIMUM_HISTORY_RETENTION_MILLIS = Duration.ofDays(30).toMillis();
++    /**
++     * The user's history length in days. Only {@link #LUJARCH_HISTORY_DAYS} are taken; anything
++     * else, or no value, is the default of 7 days. It replaces the privacy DeviceConfig
++     * retention, which a server-side flag sync writes.
++     */
++    @VisibleForTesting
++    static final String LUJARCH_HISTORY_DAYS_SETTING = "lujarch_permissions_history_days";
++    @VisibleForTesting
++    static final int[] LUJARCH_HISTORY_DAYS = {1, 7, 30, 90};
++    private static final int LUJARCH_DEFAULT_HISTORY_DAYS = 7;
++    /** Each history database's size limit for up to 7 days of history (stock: 50 MB). */
++    private static final long LUJARCH_WEEK_DATABASE_BYTES = 50L * 1024 * 1024;
+     private static final int DEFAULT_SHORT_INTERVAL_OP_FLAGS =
+             OP_FLAG_SELF | OP_FLAG_TRUSTED_PROXIED | OP_FLAG_TRUSTED_PROXY;
+     private static final String PROPERTY_LONG_INTERVAL_QUANTIZATION =
+@@ -191,6 +203,10 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+     private long mShortIntervalQuantizationMillis = DEFAULT_SHORT_INTERVAL_QUANTIZATION;
+     private long mLongIntervalQuantizationMillis = DEFAULT_LONG_INTERVAL_QUANTIZATION;
+     private long mHistoryRetentionMillis = DEFAULT_HISTORY_RETENTION_MILLIS;
++    // The retention in use, the user's history length; the pinned mHistoryRetentionMillis
++    // only seeds the helpers.
++
++    private volatile long mLujarchRetentionMillis = DEFAULT_HISTORY_RETENTION_MILLIS;
+     private int mShortIntervalAppOpFlags = DEFAULT_SHORT_INTERVAL_OP_FLAGS;
+     private volatile boolean mIsReady = false;
+     // App ops code configured to be captured for short interval ops database.
+@@ -235,6 +251,61 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+         mLongIntervalDatabaseFile = other.mLongIntervalDatabaseFile;
+     }
+ 
++    /**
++     * The user's history length in days: one of
++     * {@link #LUJARCH_HISTORY_DAYS}, else (unset, unreadable, another value) 7.
++     */
++    @VisibleForTesting
++    static int lujarchHistoryDays(int setting) {
++        for (int days : LUJARCH_HISTORY_DAYS) {
++            if (days == setting) {
++                return days;
++            }
++        }
++        return LUJARCH_DEFAULT_HISTORY_DAYS;
++    }
++
++    private static long lujarchHistoryRetentionMillis(@Nullable ContentResolver resolver) {
++        int setting = LUJARCH_DEFAULT_HISTORY_DAYS;
++        if (resolver != null) {
++            try {
++                setting = Settings.Global.getInt(resolver, LUJARCH_HISTORY_DAYS_SETTING,
++                        LUJARCH_DEFAULT_HISTORY_DAYS);
++            } catch (RuntimeException e) {
++                Slog.w(TAG, "lujarch: " + LUJARCH_HISTORY_DAYS_SETTING + " unreadable", e);
++            }
++        }
++        final int days = lujarchHistoryDays(setting);
++        if (days != setting) {
++            Slog.w(TAG, "lujarch: " + LUJARCH_HISTORY_DAYS_SETTING + "=" + setting
++                    + " is not a choice; keeping " + days + " days");
++        }
++        return Duration.ofDays(days).toMillis();
++    }
++
++    /**
++     * Each history database's size limit for a retention: 50 MB for up to 7 days, and as much
++     * per week for longer ones. Above the limit the oldest rows go first.
++     */
++    @VisibleForTesting
++    static long lujarchMaxDatabaseBytes(long retentionMillis) {
++        final long week = Duration.ofDays(7).toMillis();
++        if (retentionMillis <= week) {
++            return LUJARCH_WEEK_DATABASE_BYTES;
++        }
++        return LUJARCH_WEEK_DATABASE_BYTES * retentionMillis / week;
++    }
++
++    private void applyLujarchHistoryDays(@NonNull ContentResolver resolver) {
++        final long retention = lujarchHistoryRetentionMillis(resolver);
++        final long maxBytes = lujarchMaxDatabaseBytes(retention);
++        mLujarchRetentionMillis = retention;
++        mShortIntervalHistoryHelper.setRetention(retention, maxBytes);
++        mLongIntervalHistoryHelper.setRetention(retention, maxBytes);
++        Slog.i(TAG, "lujarch: app op history kept " + Duration.ofMillis(retention).toDays()
++                + " days, at most " + maxBytes / (1024 * 1024) + " MB per database");
++    }
++
+     @Override
+     public void systemReady(@NonNull ContentResolver resolver) {
+         setHistoricalRegistryMode(resolver);
+@@ -247,6 +318,15 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+                 mHistoryRetentionMillis);
+         mLongIntervalHistoryHelper.systemReady(mLongIntervalQuantizationMillis,
+                 mHistoryRetentionMillis);
++        applyLujarchHistoryDays(resolver);
++        resolver.registerContentObserver(
++                Settings.Global.getUriFor(LUJARCH_HISTORY_DAYS_SETTING), false,
++                new ContentObserver(FgThread.getHandler()) {
++                    @Override
++                    public void onChange(boolean selfChange) {
++                        applyLujarchHistoryDays(resolver);
++                    }
++                });
+         // migrate discrete ops from xml or sqlite to unified-schema sqlite database.
+         if (DiscreteOpsXmlRegistry.getDiscreteOpsDir().exists()) {
+             Slog.i(TAG, "migrate discrete ops from xml to unified sqlite.");
+@@ -284,85 +364,36 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+     }
+ 
+     private void setHistoricalRegistryMode(@NonNull ContentResolver resolver) {
++        // Not taken from Settings.Global.APPOP_HISTORY_PARAMETERS: any WRITE_SECURE_SETTINGS
++        // holder (GmsCore, Play Store) can write it, and a disabled mode there stops recording
++        // and clears all history.
+         final String setting = Settings.Global.getString(resolver,
+                 Settings.Global.APPOP_HISTORY_PARAMETERS);
+-        if (setting == null) {
+-            return;
+-        }
+-        String modeValue = null;
+-        final String[] parameters = setting.split(",");
+-        for (String parameter : parameters) {
+-            final String[] parts = parameter.split("=");
+-            if (parts.length == 2) {
+-                final String key = parts[0].trim();
+-                if (key.equals(Settings.Global.APPOP_HISTORY_MODE)) {
+-                    modeValue = parts[1].trim();
+-                } else {
+-                    Slog.w(TAG, "Unknown or Deprecated parameter: " + parameter);
+-                }
+-            }
+-        }
+-
+-        if (DEBUG) {
+-            Slog.d(TAG, "Historical registry mode " + modeValue);
+-        }
+-        if (modeValue != null) {
+-            int oldMode = mMode;
+-            mMode = AppOpsManager.parseHistoricalMode(modeValue);
+-            if (oldMode != mMode && mMode == AppOpsManager.HISTORICAL_MODE_DISABLED) {
+-                Slog.i(TAG, "Historical registry mode is disabled, clearing history.");
+-                clearAllHistory();
+-            }
++        if (setting != null) {
++            Slog.w(TAG, "Ignoring " + Settings.Global.APPOP_HISTORY_PARAMETERS + "=" + setting);
+         }
+     }
+ 
+     private void setHistoryParameters(DeviceConfig.Properties p) {
+-        // read history retention millis.
++        // Pinned in code: GmsCore pushes privacy DeviceConfig flags that would narrow the
++        // recorded ops, drop access flags, shorten retention or coarsen buckets.
+         mHistoryRetentionMillis = getAppOpsHistoryRetentionMillis(p);
+-        // read quantization millis for short interval app ops db.
+         mShortIntervalQuantizationMillis = getShortIntervalQuantizationMillis(p);
+-        // read quantization millis for long interval app ops db.
+-        if (p.getKeyset().contains(PROPERTY_LONG_INTERVAL_QUANTIZATION)) {
+-            mLongIntervalQuantizationMillis = p.getLong(
+-                    PROPERTY_LONG_INTERVAL_QUANTIZATION,
+-                    DEFAULT_LONG_INTERVAL_QUANTIZATION);
+-            if (!Build.IS_DEBUGGABLE) {
+-                mLongIntervalQuantizationMillis = max(
+-                        DEFAULT_LONG_INTERVAL_QUANTIZATION,
+-                        mLongIntervalQuantizationMillis);
+-            }
+-        }
+-        if (DEBUG) {
+-            Slog.d(TAG, "Long interval quantization millis: " + mLongIntervalQuantizationMillis);
+-        }
+-
+-        // read app op flags to be captured in short interval app ops db.
+-        if (p.getKeyset().contains(PROPERTY_DISCRETE_FLAGS)) {
+-            mShortIntervalAppOpFlags = p.getInt(PROPERTY_DISCRETE_FLAGS,
+-                    DEFAULT_SHORT_INTERVAL_OP_FLAGS);
+-        }
+-
+-        if (p.getKeyset().contains(PROPERTY_SHORT_INTERVAL_APP_OPS_LIST)) {
+-            String opsListConfig = p.getString(PROPERTY_SHORT_INTERVAL_APP_OPS_LIST, null);
+-            if (DEBUG) {
+-                Slog.d(TAG, "Short interval ops list : " + opsListConfig);
+-            }
+-            mShortIntervalAppOpsArray = opsListConfig == null
+-                    ? getShortIntervalAppOpsList() : parseOpsList(opsListConfig);
+-        } else {
+-            mShortIntervalAppOpsArray = getShortIntervalAppOpsList();
+-        }
++        mLongIntervalQuantizationMillis = DEFAULT_LONG_INTERVAL_QUANTIZATION;
++        mShortIntervalAppOpFlags = OP_FLAGS_ALL;
++        mShortIntervalAppOpsArray = getShortIntervalAppOpsList();
+         Arrays.sort(mShortIntervalAppOpsArray);
+     }
+ 
+     /**
+-     * @return an array of app ops captured into short interval app ops database.
++     * @return an array of app ops captured into short interval app ops database: every op.
+      */
+     private int[] getShortIntervalAppOpsList() {
+-        IntArray shortIntervalOps = new IntArray();
+-        shortIntervalOps.addAll(SHORT_INTERVAL_OPS);
+-        shortIntervalOps.addAll(IMPORTANT_OPS_FOR_SECURITY);
+-        return shortIntervalOps.toArray();
++        int[] ops = new int[AppOpsManager._NUM_OP];
++        for (int i = 0; i < ops.length; i++) {
++            ops[i] = i;
++        }
++        return ops;
+     }
+ 
+     private int[] parseOpsList(String opsList) {
+@@ -452,7 +483,7 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+                 && filterOp != AppOpsManager.OP_NONE) {
+             opCodes.add(filterOp);
+         }
+-        long beginTimeMillis = endTimeMillis - mHistoryRetentionMillis;
++        long beginTimeMillis = endTimeMillis - mLujarchRetentionMillis;
+         if (includeDiscreteOps) {
+             pw.println("------------Discrete App Ops-------------");
+             mShortIntervalHistoryHelper.dump(beginTimeMillis, endTimeMillis, pw, filterUid,
+@@ -779,19 +810,8 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+     }
+ 
+     private static long getShortIntervalQuantizationMillis(DeviceConfig.Properties p) {
+-        long quantizationMillis = DEFAULT_SHORT_INTERVAL_QUANTIZATION;
+-        if (p.getKeyset().contains(PROPERTY_SHORT_INTERVAL_QUANTIZATION)) {
+-            quantizationMillis = p.getLong(
+-                    PROPERTY_SHORT_INTERVAL_QUANTIZATION,
+-                    DEFAULT_SHORT_INTERVAL_QUANTIZATION);
+-            if (!Build.IS_DEBUGGABLE) {
+-                quantizationMillis = max(DEFAULT_SHORT_INTERVAL_QUANTIZATION, quantizationMillis);
+-            }
+-        }
+-        if (DEBUG) {
+-            Slog.d(TAG, "Short interval quantization millis: " + quantizationMillis);
+-        }
+-        return quantizationMillis;
++        // Pinned: GmsCore can push the privacy DeviceConfig namespace.
++        return DEFAULT_SHORT_INTERVAL_QUANTIZATION;
+     }
+ 
+     static long getAppOpsHistoryRetentionMillis() {
+@@ -800,19 +820,9 @@ public class HistoricalRegistry implements HistoricalRegistryInterface {
+     }
+ 
+     private static long getAppOpsHistoryRetentionMillis(DeviceConfig.Properties p) {
+-        long historyRetentionMillis = DEFAULT_HISTORY_RETENTION_MILLIS;
+-        if (p.getKeyset().contains(PROPERTY_HISTORY_RETENTION_MILLIS)) {
+-            historyRetentionMillis = p.getLong(PROPERTY_HISTORY_RETENTION_MILLIS,
+-                    DEFAULT_HISTORY_RETENTION_MILLIS);
+-            if (!Build.IS_DEBUGGABLE) {
+-                historyRetentionMillis = min(historyRetentionMillis,
+-                        MAXIMUM_HISTORY_RETENTION_MILLIS);
+-            }
+-        }
+-        if (DEBUG) {
+-            Slog.d(TAG, "History retention millis: " + historyRetentionMillis);
+-        }
+-        return historyRetentionMillis;
++        // Pinned: GmsCore can push the privacy DeviceConfig namespace.
++
++        return DEFAULT_HISTORY_RETENTION_MILLIS;
+     }
+ 
+     private boolean isNotReadyOrDisabled() {

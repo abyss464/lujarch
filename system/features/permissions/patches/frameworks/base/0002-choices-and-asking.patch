@@ -1,0 +1,482 @@
+diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
+index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..1c2ae381f1c2c741220a781dd03403246ec62934 100644
+--- a/services/core/java/com/android/server/appop/AppOpsService.java
++++ b/services/core/java/com/android/server/appop/AppOpsService.java
+@@ -290,6 +290,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+     final Handler mIoHandler;
+ 
+     private final AppOpsRecentAccessPersistence mRecentAccessPersistence;
++
++    private final LujarchAsk mLujarchAsk;
++
+     /**
+      * Pool for {@link AttributedOp.OpEventProxyInfoPool} to avoid to constantly reallocate new
+      * objects
+@@ -1060,6 +1063,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+         LockGuard.installLock(this, LockGuard.INDEX_APP_OPS);
+         mRecentAccessesFile = new AtomicFile(recentAccessesFile, "appops_accesses");
+         mRecentAccessPersistence = new AppOpsRecentAccessPersistence(mRecentAccessesFile, this);
++        mLujarchAsk = new LujarchAsk(context);
+ 
+         if (AppOpsManager.NOTE_OP_COLLECTION_ENABLED) {
+             mNoteOpCallerStacktracesFile = new File(SystemServiceManager.ensureSystemDir(),
+@@ -2974,6 +2978,74 @@ public class AppOpsService extends IAppOpsService.Stub {
+         return appId == Process.ROOT_UID || appId == Process.SYSTEM_UID;
+     }
+ 
++    /**
++     * The mode to evaluate when a uid mode other than the op's default is set. The permission
++     * system owns uid modes; the user's choice is the package mode. The result is the stricter of
++     * the two, so a restriction holds on permission-backed ops whose uid mode the permission policy
++     * keeps rewriting. Stock returns the uid mode alone here; while no restrictive package mode is
++     * set the result is the same. Only enforcement uses this (checkOp, noteOp, startOp and their
++     * proxy paths); raw reads keep the stored modes, which the permission policy synchronizes
++     * against. uid 0 and 1000 are never restricted, and a failed lookup keeps the uid mode.
++     */
++    @GuardedBy("this")
++    private int lujarchStricterMode(int uid, int switchCode, @Nullable String packageName,
++            int rawUidMode) {
++        if (packageName == null || isOpAllowedForUid(uid)) {
++            return rawUidMode;
++        }
++        try {
++            final int packageMode = mAppOpsCheckingService.getPackageMode(packageName,
++                    switchCode, UserHandle.getUserId(uid));
++            return lujarchStricterMode(rawUidMode, packageMode,
++                    AppOpsManager.opToDefaultMode(switchCode));
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "lujarch: package mode lookup failed for " + packageName, e);
++            return rawUidMode;
++        }
++    }
++
++    /**
++     * The stricter of a uid mode and a package mode (errored > ignored > foreground > allowed). A
++     * package mode equal to the op's default, or MODE_DEFAULT, is no opinion. A package mode never
++     * loosens the uid mode: foreground only narrows allowed, and a package mode never turns
++     * MODE_DEFAULT (defer to the permission) into an allow. PermissionPolicyService keeps the same
++     * notion of stricter.
++     */
++    @VisibleForTesting
++    static int lujarchStricterMode(int uidMode, int packageMode, int defaultMode) {
++        if (packageMode == defaultMode || packageMode == MODE_DEFAULT) {
++            return uidMode;
++        }
++        switch (packageMode) {
++            case MODE_ERRORED:
++                return MODE_ERRORED;
++            case MODE_IGNORED:
++                return uidMode == MODE_ERRORED ? MODE_ERRORED : MODE_IGNORED;
++            case MODE_FOREGROUND:
++                return uidMode == MODE_ALLOWED ? MODE_FOREGROUND : uidMode;
++            default:
++                return uidMode;
++        }
++    }
++
++    /**
++     * The package mode to evaluate: "ask every time" (MODE_DEFAULT on an askable op) is
++     * answered as MODE_IGNORED until the user answers.
++     */
++    private static int lujarchPackageMode(int switchCode, int packageMode) {
++        return packageMode == MODE_DEFAULT && AppOpsManager.isLujarchAskable(switchCode)
++                ? MODE_IGNORED : packageMode;
++    }
++
++    /** Asks the user about an access answered with empty data because its package mode asks. */
++    @GuardedBy("this")
++    private void lujarchAskIfAskingLocked(int switchCode, int uid, @NonNull String packageName,
++            @Nullable String attributionTag, int packageMode) {
++        if (packageMode == MODE_DEFAULT && AppOpsManager.isLujarchAskable(switchCode)) {
++            mLujarchAsk.requestLocked(switchCode, uid, packageName, attributionTag);
++        }
++    }
++
+     @Override
+     public int checkOperationRaw(int code, int uid, String packageName,
+             @Nullable String attributionTag) {
+@@ -3107,7 +3179,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 if (rawUidMode != AppOpsManager.opToDefaultMode(code)) {
+                     return raw ? rawUidMode :
+                         evaluateForegroundMode(/* uid= */ uid, /* op= */ code,
+-                        /* rawUidMode= */ rawUidMode);
++                        /* rawUidMode= */ lujarchStricterMode(uid, code, packageName, rawUidMode));
+                 }
+             }
+ 
+@@ -3126,7 +3198,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     evaluateForegroundMode(
+                         /* uid= */ uid,
+                         /* op= */op.op,
+-                        /* rawUidMode= */ packageMode);
++                        /* rawUidMode= */ lujarchPackageMode(op.op, packageMode));
+         }
+     }
+ 
+@@ -3168,12 +3240,14 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     getPersistentDeviceIdForOp(virtualDeviceId, switchCode), switchCode);
+ 
+             if (rawUidMode != AppOpsManager.opToDefaultMode(switchCode)) {
+-                return raw ? rawUidMode : evaluateForegroundMode(uid, switchCode, rawUidMode);
++                return raw ? rawUidMode : evaluateForegroundMode(uid, switchCode,
++                        lujarchStricterMode(uid, switchCode, packageName, rawUidMode));
+             }
+ 
+             int rawPackageMode = mAppOpsCheckingService.getPackageMode(packageName, switchCode,
+                     UserHandle.getUserId(uid));
+-            return raw ? rawPackageMode : evaluateForegroundMode(uid, switchCode, rawPackageMode);
++            return raw ? rawPackageMode : evaluateForegroundMode(uid, switchCode,
++                    lujarchPackageMode(switchCode, rawPackageMode));
+         }
+     }
+ 
+@@ -3529,10 +3603,12 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 final int uidMode =
+                         uidState.evalMode(
+                                 code,
+-                                getUidMode(
+-                                        uidState.uid,
+-                                        getPersistentDeviceIdForOp(virtualDeviceId, switchCode),
+-                                        switchCode));
++                                lujarchStricterMode(uid, switchCode, packageName,
++                                        getUidMode(
++                                                uidState.uid,
++                                                getPersistentDeviceIdForOp(virtualDeviceId,
++                                                        switchCode),
++                                                switchCode)));
+                 if (uidMode != AppOpsManager.MODE_ALLOWED) {
+                     if (DEBUG) Slog.d(TAG, "noteOperation: uid reject #" + uidMode + " for code "
+                             + switchCode + " (" + code + ") uid " + uid + " package "
+@@ -3550,18 +3626,17 @@ public class AppOpsService extends IAppOpsService.Stub {
+             } else {
+                 final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
+                         : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED) {
+                     if (DEBUG) Slog.d(TAG, "noteOperation: reject #" + mode + " for code "
+                             + switchCode + " (" + code + ") uid " + uid + " package "
+                             + packageName + " flags: " + AppOpsManager.flagsToString(flags));
+                     attributedOp.rejected(uidState.getState(), flags, notedCount);
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
+                     scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
+                             virtualDeviceId, flags, mode);
+                     // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
+@@ -4174,7 +4249,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+                             uidState.uid, getPersistentDeviceIdForOp(virtualDeviceId, switchCode),
+                             switchCode))
+                     != AppOpsManager.opToDefaultMode(switchCode)) {
+-                final int uidMode = uidState.evalMode(code, rawUidMode);
++                final int uidMode = uidState.evalMode(code,
++                        lujarchStricterMode(uid, switchCode, packageName, rawUidMode));
+                 if (!shouldStartForMode(uidMode, startIfModeDefault)) {
+                     if (DEBUG) {
+                         Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
+@@ -4191,13 +4267,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+             } else {
+                 final Op switchOp =
+                         switchCode != code ? getOpLocked(ops, switchCode, uid, true) : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED
+                         && (!startIfModeDefault || mode != MODE_DEFAULT)) {
+                     if (DEBUG) {
+@@ -4207,6 +4280,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+                                 + AppOpsManager.flagsToString(flags));
+                     }
+                     attributedOp.rejected(uidState.getState(), flags, 1);
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
+                     scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
+                             virtualDeviceId, flags, mode, startType, attributionFlags,
+                             attributionChainId);
+@@ -4308,10 +4383,12 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 final int uidMode =
+                         uidState.evalMode(
+                                 code,
+-                                getUidMode(
+-                                        uidState.uid,
+-                                        getPersistentDeviceIdForOp(virtualDeviceId, switchCode),
+-                                        switchCode));
++                                lujarchStricterMode(uid, switchCode, packageName,
++                                        getUidMode(
++                                                uidState.uid,
++                                                getPersistentDeviceIdForOp(virtualDeviceId,
++                                                        switchCode),
++                                                switchCode)));
+                 if (!shouldStartForMode(uidMode, startIfModeDefault)) {
+                     if (DEBUG) {
+                         Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
+@@ -4323,13 +4400,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+             } else {
+                 final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
+                         : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED
+                         && (!startIfModeDefault || mode != MODE_DEFAULT)) {
+                     if (DEBUG) {
+@@ -4337,6 +4411,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+                                 + switchCode + " (" + code + ") uid " + uid + " package "
+                                 + packageName + " flags: " + AppOpsManager.flagsToString(flags));
+                     }
++                    // The proxied app's only evaluation when this fails.
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
+                     return new SyncNotedAppOp(mode, code, attributionTag, packageName);
+                 }
+             }
+diff --git a/services/core/java/com/android/server/appop/LujarchAsk.java b/services/core/java/com/android/server/appop/LujarchAsk.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..b15fa729fec5b9c13c764ca0290094dac96c59aa
+--- /dev/null
++++ b/services/core/java/com/android/server/appop/LujarchAsk.java
+@@ -0,0 +1,115 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.appop;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.ActivityManager;
++import android.app.ActivityManagerInternal;
++import android.app.AppOpsManager;
++import android.app.BroadcastOptions;
++import android.content.Context;
++import android.content.Intent;
++import android.os.Handler;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.util.LongSparseLongArray;
++import android.util.Slog;
++
++import com.android.internal.os.BackgroundThread;
++import com.android.server.LocalServices;
++
++/**
++ * The questions of "ask every time": a package mode of MODE_DEFAULT on an op
++ * {@link AppOpsManager#isLujarchAskable} names. AppOpsService answers such an access with
++ * MODE_IGNORED and calls {@link #requestLocked}, which sends the question to the permission
++ * controller as the explicit broadcast {@link #ACTION_ASK}; no caller waits for an answer. The
++ * answer the user gives is written as the package's mode. Questions are limited per uid and op
++ * ({@link #MIN_INTERVAL_MS}) and sent from {@link BackgroundThread}, never under AppOpsService's
++ * lock, which guards this object's state.
++ */
++final class LujarchAsk {
++    private static final String TAG = "lujarch_permissions";
++
++    /** The question: an access to the op was answered with empty data and the user is asked. */
++    static final String ACTION_ASK = "org.lujarch.permissions.action.ASK";
++    /** The op's public name; the switch op of the access. */
++    static final String EXTRA_OP = "org.lujarch.permissions.extra.OP";
++    /** Whether the app was on screen when the question left. */
++    static final String EXTRA_FOREGROUND = "org.lujarch.permissions.extra.FOREGROUND";
++
++    /** At most one question per uid and op in this interval. */
++    static final long MIN_INTERVAL_MS = 30_000;
++
++    private final Context mContext;
++    private final Handler mHandler = BackgroundThread.getHandler();
++
++    /** Elapsed realtime of the last question per uid and op. */
++    private final LongSparseLongArray mLastRequest = new LongSparseLongArray();
++
++    LujarchAsk(@NonNull Context context) {
++        mContext = context;
++    }
++
++    /**
++     * An access to [switchCode] by [packageName] was answered with empty data because its package
++     * mode asks: asks the user, at most once per {@link #MIN_INTERVAL_MS} per uid and op. Only
++     * bookkeeping happens here; the broadcast goes out on {@link BackgroundThread}.
++     */
++    void requestLocked(int switchCode, int uid, @NonNull String packageName,
++            @Nullable String attributionTag) {
++        final long now = SystemClock.elapsedRealtime();
++        final long key = ((long) uid << 32) | (switchCode & 0xffffffffL);
++        final long last = mLastRequest.get(key, -1);
++        if (last >= 0 && now - last < MIN_INTERVAL_MS) {
++            return;
++        }
++        mLastRequest.put(key, now);
++        mHandler.post(() -> send(switchCode, uid, packageName));
++    }
++
++    private void send(int switchCode, int uid, @NonNull String packageName) {
++        final String opName = AppOpsManager.opToPublicName(switchCode);
++        try {
++            // The process state now: AppOps' own uid state keeps "top" for a settle time after
++            // the app left the screen, which would put a dialog over whatever came to the front.
++            final ActivityManagerInternal ami =
++                    LocalServices.getService(ActivityManagerInternal.class);
++            final boolean foreground = ami != null
++                    && ami.getUidProcessState(uid) <= ActivityManager.PROCESS_STATE_TOP;
++            final Intent intent = new Intent(ACTION_ASK)
++                    .setPackage(mContext.getPackageManager().getPermissionControllerPackageName())
++                    .addFlags(Intent.FLAG_RECEIVER_FOREGROUND
++                            | Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
++                    .putExtra(EXTRA_OP, opName)
++                    .putExtra(Intent.EXTRA_UID, uid)
++                    .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
++                    .putExtra(EXTRA_FOREGROUND, foreground);
++            Slog.i(TAG, "asking about " + packageName + " (" + uid + ") " + opName
++                    + (foreground ? " on screen" : " in the background"));
++            // The question may open a dialog over the app that asked.
++            final BroadcastOptions options = BroadcastOptions.makeBasic();
++            options.setBackgroundActivityStartsAllowed(true);
++            mContext.sendBroadcastAsUser(intent, UserHandle.getUserHandleForUid(uid), null,
++                    options.toBundle());
++
++        } catch (RuntimeException e) {
++            Slog.e(TAG, "question about " + packageName + " (" + uid + ") " + opName
++                    + " not sent", e);
++        }
++    }
++}
+diff --git a/services/core/java/com/android/server/policy/PermissionPolicyService.java b/services/core/java/com/android/server/policy/PermissionPolicyService.java
+index 55665a1ee8101bc2fa2350923ad0f1edd4770764..ba9edd62af0e99d7e30afe9226c296ba5e1ae21b 100644
+--- a/services/core/java/com/android/server/policy/PermissionPolicyService.java
++++ b/services/core/java/com/android/server/policy/PermissionPolicyService.java
+@@ -725,6 +725,32 @@ public final class PermissionPolicyService extends SystemService {
+         }
+     }
+ 
++    /**
++     * Whether {@code packageMode} is stricter than
++     * {@code permissionMode} (errored > ignored > foreground > allowed), the
++     * order AppOpsService.lujarchStricterMode enforces. MODE_DEFAULT is never
++     * stricter: it defers to the permission.
++     */
++    private static boolean isLujarchStricterMode(int packageMode, int permissionMode) {
++        final int rank = lujarchModeRank(packageMode);
++        return rank >= 0 && rank > lujarchModeRank(permissionMode);
++    }
++
++    private static int lujarchModeRank(int mode) {
++        switch (mode) {
++            case MODE_ALLOWED:
++                return 0;
++            case MODE_FOREGROUND:
++                return 1;
++            case MODE_IGNORED:
++                return 2;
++            case AppOpsManager.MODE_ERRORED:
++                return 3;
++            default:
++                return -1;
++        }
++    }
++
+     /**
+      * Synchronizes permission to app ops. You *must* always sync all packages
+      * in a shared UID at the same time to ensure proper synchronization.
+@@ -1066,7 +1092,10 @@ public final class PermissionPolicyService extends SystemService {
+                         mAppOpsCallback);
+                 final int newMode = mAppOpsManager.unsafeCheckOpRaw(AppOpsManager.opToPublicName(
+                         opCode), uid, packageName);
+-                if (newMode != mode) {
++                // A package mode stricter than the permission's mode is the user's restriction
++                // and stays; AppOpsService enforces the stricter of the uid and package modes.
++
++                if (newMode != mode && !isLujarchStricterMode(newMode, mode)) {
+                     // Work around incorrectly-set package mode. It never makes sense for app ops
+                     // related to runtime permissions, but can get in the way and we have to reset
+                     // it.
+diff --git a/services/permission/java/com/android/server/permission/access/appop/AppOpService.kt b/services/permission/java/com/android/server/permission/access/appop/AppOpService.kt
+index f4cea89f568a537718995918e33eff88c9cafc05..694297f75783ed9978275eb0652d25fd6b7f76ff 100644
+--- a/services/permission/java/com/android/server/permission/access/appop/AppOpService.kt
++++ b/services/permission/java/com/android/server/permission/access/appop/AppOpService.kt
+@@ -297,6 +297,24 @@ class AppOpService(private val service: AccessCheckingService) : AppOpsCheckingS
+         val appOpName = AppOpsManager.opToPublicName(appOpCode)
+ 
+         if (appOpCode in runtimeAppOpToPermissionNames) {
++            // The permission owns the uid mode of a runtime-permission op; the user's
++            // restriction of it is the package mode, and AppOpsService enforces the stricter
++            // of the two. A package mode stricter than the op's default is stored; the op's
++            // default or MODE_DEFAULT clears a stored one; every other write is dropped, so a
++            // package mode never grants more than the permission.
++            val defaultMode = AppOpsManager.opToDefaultMode(appOpCode)
++            val storedMode =
++                when {
++                    isLujarchStricterMode(mode, defaultMode) -> mode
++                    mode == defaultMode || mode == AppOpsManager.MODE_DEFAULT -> defaultMode
++                    else -> null
++                }
++            if (storedMode != null) {
++                service.mutateState {
++                    with(packagePolicy) { setAppOpMode(packageName, userId, appOpName, storedMode) }
++                }
++                return
++            }
+             Slog.w(
+                 LOG_TAG,
+                 "(packageName=$packageName, userId=$userId)'s appop state" +
+@@ -585,5 +603,26 @@ class AppOpService(private val service: AccessCheckingService) : AppOpsCheckingS
+ 
+     companion object {
+         private val LOG_TAG = AppOpService::class.java.simpleName
++
++        /**
++         * Whether [mode] is stricter than [than]
++
++         * (errored > ignored > foreground > allowed), the order
++         * AppOpsService.lujarchStricterMode enforces. MODE_DEFAULT and unknown
++         * modes are never stricter.
++         */
++        private fun isLujarchStricterMode(mode: Int, than: Int): Boolean {
++            val rank = lujarchModeRank(mode)
++            return rank >= 0 && rank > lujarchModeRank(than)
++        }
++
++        private fun lujarchModeRank(mode: Int): Int =
++            when (mode) {
++                AppOpsManager.MODE_ALLOWED -> 0
++                AppOpsManager.MODE_FOREGROUND -> 1
++                AppOpsManager.MODE_IGNORED -> 2
++                AppOpsManager.MODE_ERRORED -> 3
++                else -> -1
++            }
+     }
+ }

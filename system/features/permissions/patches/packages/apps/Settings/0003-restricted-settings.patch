@@ -1,0 +1,156 @@
+diff --git a/src/com/android/settings/spa/app/appinfo/AppInfoSettingsMoreOptions.kt b/src/com/android/settings/spa/app/appinfo/AppInfoSettingsMoreOptions.kt
+index 1a3dd6eaa1bd694da0b4c8435b88bac1be200fcf..b177ac1d30b02c873a34a4f977ca519766581794 100644
+--- a/src/com/android/settings/spa/app/appinfo/AppInfoSettingsMoreOptions.kt
++++ b/src/com/android/settings/spa/app/appinfo/AppInfoSettingsMoreOptions.kt
+@@ -17,19 +17,15 @@
+ package com.android.settings.spa.app.appinfo
+ 
+ import android.app.AppOpsManager
+-import android.app.ecm.EnhancedConfirmationManager
++import android.app.AlertDialog
+ import android.content.Context
+ import android.content.pm.ApplicationInfo
+-import android.content.pm.PackageManager
+ import android.os.UserManager
++import android.util.Log
+ import android.widget.Toast
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.State
+-import androidx.compose.runtime.getValue
+-import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.produceState
+-import androidx.compose.runtime.saveable.rememberSaveable
+-import androidx.compose.runtime.setValue
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.res.stringResource
+ import com.android.settings.R
+@@ -56,10 +52,9 @@ fun AppInfoSettingsMoreOptions(
+     packageManagers: IPackageManagers = PackageManagers,
+ ) {
+     val state = app.produceState(packageManagers).value ?: return
+-    var restrictedSettingsAllowed by rememberSaveable { mutableStateOf(false) }
+     if (!state.shownUninstallUpdates &&
+         !state.shownUninstallForAllUsers &&
+-        !(state.shouldShowAccessRestrictedSettings && !restrictedSettingsAllowed)
++        !state.shouldShowAccessRestrictedSettings
+     ) return
+     MoreOptionsAction {
+         val restrictions =
+@@ -80,37 +75,62 @@ fun AppInfoSettingsMoreOptions(
+                 packageInfoPresenter.startUninstallActivity(forAllUsers = true)
+             }
+         }
+-        if (state.shouldShowAccessRestrictedSettings && !restrictedSettingsAllowed) {
++        if (state.shouldShowAccessRestrictedSettings) {
+             MenuItem(text = stringResource(R.string.app_restricted_settings_lockscreen_title)) {
+-                app.allowRestrictedSettings(packageInfoPresenter.context) {
+-                    restrictedSettingsAllowed = true
+-                }
++                app.chooseRestrictedSettings(packageInfoPresenter.context)
+             }
+         }
+     }
+ }
+ 
+-private fun ApplicationInfo.allowRestrictedSettings(context: Context, onSuccess: () -> Unit) {
+-    AppInfoDashboardFragment.showLockScreen(context) {
+-        if (android.permission.flags.Flags.enhancedConfirmationModeApisEnabled()
+-                && android.security.Flags.extendEcmToAllSettings()) {
+-            val manager = context.getSystemService(EnhancedConfirmationManager::class.java)!!
+-            manager.clearRestriction(packageName)
+-        } else {
+-            context.appOpsManager.setMode(
+-                AppOpsManager.OP_ACCESS_RESTRICTED_SETTINGS,
+-                uid,
+-                packageName,
+-                AppOpsManager.MODE_ALLOWED,
+-            )
+-        }
+-        onSuccess()
+-        val toastString = context.getString(
+-            R.string.toast_allows_restricted_settings_successfully,
+-            loadLabel(context.packageManager),
++/**
++ * Allow restricted settings: Decided by Android (the install source decides), Allow (after the
++ * screen lock, as Android's own Allow) or Lock (closed whatever the install source). The choice is
++ * the app's mode of android:access_restricted_settings, which Enhanced Confirmation reads; Lock is
++ * its errored mode, which Android itself never writes.
++ */
++private fun ApplicationInfo.chooseRestrictedSettings(context: Context) {
++    val modes =
++        intArrayOf(AppOpsManager.MODE_DEFAULT, AppOpsManager.MODE_ALLOWED, AppOpsManager.MODE_ERRORED)
++    val labels =
++        arrayOf<CharSequence>(
++            context.getString(R.string.lujarch_restricted_decided_by_android),
++            context.getString(R.string.lujarch_choice_allow),
++            context.getString(R.string.lujarch_restricted_lock),
+         )
+-        Toast.makeText(context, toastString, Toast.LENGTH_LONG).show()
+-    }
++    @Suppress("DEPRECATION")
++    val current =
++        when (context.appOpsManager.unsafeCheckOpRawNoThrow(
++            AppOpsManager.OPSTR_ACCESS_RESTRICTED_SETTINGS, uid, packageName)) {
++            AppOpsManager.MODE_ALLOWED -> 1
++            AppOpsManager.MODE_ERRORED -> 2
++            else -> 0
++        }
++    AlertDialog.Builder(context)
++        .setTitle(R.string.app_restricted_settings_lockscreen_title)
++        .setSingleChoiceItems(labels, current) { dialog, which ->
++            dialog.dismiss()
++            if (which == current) return@setSingleChoiceItems
++            if (modes[which] == AppOpsManager.MODE_ALLOWED) {
++                AppInfoDashboardFragment.showLockScreen(context) {
++                    setRestrictedSettings(context, AppOpsManager.MODE_ALLOWED)
++                    val toastString = context.getString(
++                        R.string.toast_allows_restricted_settings_successfully,
++                        loadLabel(context.packageManager),
++                    )
++                    Toast.makeText(context, toastString, Toast.LENGTH_LONG).show()
++                }
++            } else {
++                setRestrictedSettings(context, modes[which])
++            }
++        }
++        .setNegativeButton(android.R.string.cancel, null)
++        .show()
++}
++
++private fun ApplicationInfo.setRestrictedSettings(context: Context, mode: Int) {
++    context.appOpsManager.setMode(AppOpsManager.OP_ACCESS_RESTRICTED_SETTINGS, uid, packageName, mode)
++    Log.i("lujarch_permissions", "$packageName restricted settings: $mode")
+ }
+ 
+ private data class AppInfoSettingsMoreOptionsState(
+@@ -145,7 +165,7 @@ private suspend fun ApplicationInfo.getMoreOptionsState(
+         )
+     }
+     val shouldShowAccessRestrictedSettingsDeferred = async {
+-        shouldShowAccessRestrictedSettings(context)
++        shouldShowAccessRestrictedSettings()
+     }
+     val isProfileOrDeviceOwner =
+         Utils.isProfileOrDeviceOwner(context.userManager, context.devicePolicyManager, packageName)
+@@ -178,19 +198,5 @@ private fun ApplicationInfo.isOtherUserHasInstallPackage(
+     .filter { !Utils.shouldHideUser(it.userHandle, userManager) }
+     .any { packageManagers.isPackageInstalledAsUser(packageName, it.id) }
+ 
+-private fun ApplicationInfo.shouldShowAccessRestrictedSettings(context: Context): Boolean {
+-    return if (android.permission.flags.Flags.enhancedConfirmationModeApisEnabled()
+-            && android.security.Flags.extendEcmToAllSettings()) {
+-        val manager = context.getSystemService(EnhancedConfirmationManager::class.java)!!
+-        try {
+-            manager.isClearRestrictionAllowed(packageName)
+-        } catch (e: PackageManager.NameNotFoundException) {
+-            // Package might have been archived
+-            false
+-        }
+-    } else {
+-        context.appOpsManager.noteOpNoThrow(
+-            AppOpsManager.OP_ACCESS_RESTRICTED_SETTINGS, uid, packageName, null, null
+-        ) == AppOpsManager.MODE_IGNORED
+-    }
+-}
++// Enhanced Confirmation trusts every app that came with the system, so only the others choose.
++private fun ApplicationInfo.shouldShowAccessRestrictedSettings(): Boolean = !isSystemApp

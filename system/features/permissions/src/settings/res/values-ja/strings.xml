@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="lujarch_new_app_defaults">"新しいアプリのデフォルト"</string>
+    <string name="lujarch_not_changed">"変更しない"</string>
+    <string name="lujarch_choice_allow">"許可する"</string>
+    <string name="lujarch_choice_foreground">"アプリの使用中のみ許可"</string>
+    <string name="lujarch_choice_ask">"毎回確認する"</string>
+    <string name="lujarch_choice_empty">"空のデータを返す"</string>
+    <string name="lujarch_choice_deny">"許可しない"</string>
+    <string name="lujarch_basic_phone_info">"電話の基本情報"</string>
+    <string name="lujarch_basic_phone_info_only">"電話の基本情報のみ"</string>
+    <string name="lujarch_install_unknown_apps">"不明なアプリのインストール"</string>
+    <string name="lujarch_autostart">"自動起動"</string>
+    <string name="lujarch_new_app_network">"モバイルデータと Wi-Fi"</string>
+    <string name="lujarch_new_app_no_network">"ネットワーク アクセスなし"</string>
+    <string name="lujarch_new_app_no_wifi">"Wi-Fi データなし"</string>
+    <string name="lujarch_new_app_no_mobile">"モバイルデータなし"</string>
+    <string name="lujarch_new_app_no_vpn">"VPN データなし"</string>
+    <string name="lujarch_list_separator">"、"</string>
+    <string name="lujarch_new_app_defaults_footer">"インストールしたアプリは、初回起動の前にこれらの設定で始まります。システムに付属のアプリとアップデートは、それぞれの設定を保持します。アプリは、そのロールに必要なアクセスについては確認されません。デフォルトのホームアプリはインストール済みアプリについて、デフォルトの SMS アプリは自動起動と電話の基本情報について、デフォルトの電話アプリは電話の基本情報について、VPN サービスを持つアプリはネットワーク情報について確認されません。"</string>
+</resources>

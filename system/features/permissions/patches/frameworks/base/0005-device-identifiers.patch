@@ -1,0 +1,99 @@
+diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+index 212fae2c5a9b358e92a16888a0487d41a309ce24..0012d58f2eb5b92414027fceab175927a32921d2 100644
+--- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
++++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+@@ -351,6 +351,70 @@ public final class TelephonyPermissions {
+                 + " does not meet the requirements to access device identifiers.");
+     }
+ 
++    /**
++     * Returns the effective OP_LUJARCH_DEVICE_IDS mode for the caller, or
++     * {@link AppOpsManager#MODE_ALLOWED} when the caller is a core uid (uid 0/1000 or any shared
++     * system uid), no package of the uid can be found, or the AppOps lookup fails, so any failure
++     * keeps device-id reads working (fail open). The op is noted so the access lands in history.
++     */
++    private static int checkLujarchDeviceIdsMode(Context context, int uid, String callingPackage,
++            String callingFeatureId, String message) {
++        try {
++            if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            AppOpsManager appOps = context.getSystemService(AppOpsManager.class);
++            if (appOps == null) {
++                return AppOpsManager.MODE_ALLOWED;
++            }
++            String pkg = callingPackage;
++            if (pkg == null) {
++                // The no-argument IDeviceIdentifiersPolicyService.getSerial()
++                // passes no package, and any app can call it directly; attribute
++                // the access to the uid's most restricted package so that path
++                // cannot bypass the permission.
++                pkg = lujarchMostRestrictedPackage(context, appOps, uid);
++                if (pkg == null) {
++                    return AppOpsManager.MODE_ALLOWED;
++                }
++            }
++            int mode = appOps.noteOpNoThrow(AppOpsManager.OPSTR_LUJARCH_DEVICE_IDS, uid,
++                    pkg, callingFeatureId, message);
++            if (mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED) {
++                return mode;
++            }
++        } catch (Exception e) {
++            Log.w(LOG_TAG, "lujarch_device_ids check failed, allowing", e);
++        }
++        return AppOpsManager.MODE_ALLOWED;
++    }
++
++    /**
++     * The package of {@code uid} whose
++     * OP_LUJARCH_DEVICE_IDS mode is the most restrictive (errored, then ignored),
++     * or its first package when none is restricted; {@code null} if the uid has
++     * no package. Checks without noting, so only the caller notes once.
++     */
++    private static String lujarchMostRestrictedPackage(Context context, AppOpsManager appOps,
++            int uid) {
++        String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
++        if (pkgs == null || pkgs.length == 0) {
++            return null;
++        }
++        String best = pkgs[0];
++        int bestRank = 0;
++        for (String p : pkgs) {
++            int m = appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_LUJARCH_DEVICE_IDS, uid, p);
++            int rank = m == AppOpsManager.MODE_ERRORED ? 2
++                    : m == AppOpsManager.MODE_IGNORED ? 1 : 0;
++            if (rank > bestRank) {
++                best = p;
++                bestRank = rank;
++            }
++        }
++        return best;
++    }
++
+     /**
+      * Checks whether the app with the given pid/uid can read device identifiers.
+      *
+@@ -375,6 +439,23 @@ public final class TelephonyPermissions {
+         int uid = Binder.getCallingUid();
+         int pid = Binder.getCallingPid();
+ 
++        // OP_LUJARCH_DEVICE_IDS gates device identifiers (IMEI/MEID, serial, ICCID, subscriber id)
++        // for every reader, including the privileged READ_PRIVILEGED_PHONE_STATE path that GmsCore
++        // uses. MODE_IGNORED returns null the way legacy apps get null (return false so callers
++        // hand back placeholder/null); MODE_ERRORED throws as for a missing permission. System/core
++        // uids are never gated, and any lookup failure falls through to the stock checks (fail
++        // open).
++        switch (checkLujarchDeviceIdsMode(context, uid, callingPackage, callingFeatureId,
++                message)) {
++            case AppOpsManager.MODE_IGNORED:
++                return false;
++            case AppOpsManager.MODE_ERRORED:
++                throwSecurityExceptionAsUidDoesNotHaveAccess(message, uid);
++                return false; // unreachable: the call above always throws
++            default:
++                break;
++        }
++
+         // If the calling package has carrier privileges for specified sub, then allow access.
+         if (checkCarrierPrivilegeForSubId(context, subId)) return true;
+ 

@@ -47,3 +47,37 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Notifications | 通知 | 通知 |
 | System updates | 系统更新 | システムアップデート |
 | Settings | 设置 | 設定 |
+| Allow | 允许 | 許可する |
+| Allow all the time | 始终允许 | 常に許可 |
+| Allow only while using the app | 仅在使用该应用时允许 | アプリの使用中のみ許可 |
+| Ask every time | 每次都询问 | 毎回確認する |
+| Return empty data | 返回空数据 | 空のデータを返す |
+| Don't allow | 不允许 | 許可しない |
+| Permission manager | 权限管理器 | 権限マネージャー |
+| Privacy dashboard | 隐私信息中心 | プライバシー ダッシュボード |
+| Special app access | 特殊应用权限 | 特別なアプリアクセス |
+| See more | 查看更多 | 詳細 |
+| Install unknown apps | 安装未知应用 | 不明なアプリのインストール |
+| App battery usage | 应用的电池使用情况 | アプリのバッテリー使用量 |
+| Mobile data & Wi-Fi | 移动数据和 WLAN | モバイルデータと Wi-Fi |
+| Allow restricted settings | 允许受限制的设置 | 制限付き設定を許可 |
+| Phone | 电话 | 電話 |
+| Basic phone info only | 仅基本电话信息 | 電話の基本情報のみ |
+| Motion and environment sensors | 运动和环境传感器 | モーションと環境のセンサー |
+| Clipboard | 剪贴板 | クリップボード |
+| Installed apps | 已安装的应用 | インストール済みアプリ |
+| Device identifiers | 设备标识符 | デバイス ID |
+| Device info | 设备信息 | デバイス情報 |
+| Network info | 网络信息 | ネットワーク情報 |
+| Other access | 其他访问 | その他のアクセス |
+| Show pop-up messages | 显示弹出消息 | ポップアップ メッセージの表示 |
+| Returned empty data | 返回了空数据 | 空のデータを返しました |
+| Asked | 已询问 | 確認しました |
+| Autostart | 自启动 | 自動起動 |
+| Defaults for new apps | 新应用的默认设置 | 新しいアプリのデフォルト |
+| Not changed | 不更改 | 変更しない |
+| Wait for an answer | 等待回答的时长 | 回答の待ち時間 |
+| Keep history | 记录保留时长 | 履歴の保持期間 |
+| Explain why apps stop | 说明应用停止的原因 | アプリが停止した理由を表示 |
+| Decided by Android | 由 Android 决定 | Android が決定 |
+| Lock | 锁定 | ロック |

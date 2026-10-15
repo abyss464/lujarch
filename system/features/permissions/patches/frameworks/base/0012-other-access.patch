@@ -1,0 +1,107 @@
+diff --git a/services/core/java/com/android/server/notification/NotificationManagerService.java b/services/core/java/com/android/server/notification/NotificationManagerService.java
+index c7997ff263a9e0c9179d16d022863a6b817f17fd..4b0e761151e6cda26c17fc8db702d70bb7318a95 100644
+--- a/services/core/java/com/android/server/notification/NotificationManagerService.java
++++ b/services/core/java/com/android/server/notification/NotificationManagerService.java
+@@ -4520,6 +4520,14 @@ public class NotificationManagerService extends SystemService {
+                 return false;
+             }
+ 
++            // A toast is the app's pop-up message, android:toast_window: noted, so the app is listed
++            // under Special app access > See more, and dropped when the user does not allow it.
++            if (!isSystemToast && mAppOps.noteOpNoThrow(AppOpsManager.OP_TOAST_WINDOW, callingUid,
++                    pkg, null, "toast") != AppOpsManager.MODE_ALLOWED) {
++                Slog.i(TAG, "Suppressing toast from package " + pkg + ": not allowed by the user");
++                return false;
++            }
++
+             if (blockToast(callingUid, isSystemToast, isAppRenderedToast,
+                     isPackageInForegroundForToast(callingUid))) {
+                 Slog.w(TAG, "Blocking custom toast from package " + pkg
+diff --git a/services/core/java/com/android/server/power/PowerManagerService.java b/services/core/java/com/android/server/power/PowerManagerService.java
+index d081e42d1bbca3f60d92b010cb779c8d64582d08..7d15d01c8b974e8f683453d9867fcb65916d89e5 100644
+--- a/services/core/java/com/android/server/power/PowerManagerService.java
++++ b/services/core/java/com/android/server/power/PowerManagerService.java
+@@ -50,6 +50,7 @@ import android.annotation.RequiresPermission;
+ import android.annotation.UserIdInt;
+ import android.app.ActivityManager;
+ import android.app.ActivityManager.ProcessState;
++import android.app.AppOpsManager;
+ import android.app.SynchronousUserSwitchObserver;
+ import android.app.compat.CompatChanges;
+ import android.compat.annotation.ChangeId;
+@@ -119,6 +120,7 @@ import android.service.dreams.DreamManagerInternal;
+ import android.sysprop.PowerProperties;
+ import android.telephony.TelephonyManager;
+ import android.util.ArrayMap;
++import android.util.ArraySet;
+ import android.util.IntArray;
+ import android.util.KeyValueListParser;
+ import android.util.LongArray;
+@@ -1549,6 +1551,7 @@ public final class PowerManagerService extends SystemService
+                             this, "PowerManagerService.WirelessChargerDetector"),
+                     mHandler);
+             mSettingsObserver = new SettingsObserver(mHandler);
++            lujarchWatchWakeLockChoices();
+ 
+             mLightsManager = getLocalService(LightsManager.class);
+             mAttentionLight = mLightsManager.getLight(LightsManager.LIGHT_ID_ATTENTION);
+@@ -5013,6 +5016,45 @@ public final class PowerManagerService extends SystemService
+         updateWakeLockDisabledStatesLocked(mWakeLocks);
+     }
+ 
++    /**
++     * The apps the user does not allow to keep the phone awake (android:wake_lock ignored or
++     * errored, under Special app access > See more), as "uid package". Their wake locks stay
++     * disabled, as those of a cached app do.
++     */
++    @GuardedBy("mLock")
++    private final ArraySet<String> mLujarchWakeLockRefused = new ArraySet<>();
++
++    private void lujarchWatchWakeLockChoices() {
++        mContext.getSystemService(AppOpsManager.class).startWatchingMode(
++                AppOpsManager.OP_WAKE_LOCK, null,
++                (op, packageName) -> mHandler.post(this::lujarchReadWakeLockChoices));
++        mHandler.post(this::lujarchReadWakeLockChoices);
++    }
++
++    private void lujarchReadWakeLockChoices() {
++        final ArraySet<String> refused = new ArraySet<>();
++        final List<AppOpsManager.PackageOps> all = mContext.getSystemService(AppOpsManager.class)
++                .getPackagesForOps(new int[] {AppOpsManager.OP_WAKE_LOCK});
++        if (all != null) {
++            for (AppOpsManager.PackageOps p : all) {
++                for (AppOpsManager.OpEntry e : p.getOps()) {
++                    if (e.getMode() == AppOpsManager.MODE_IGNORED
++                            || e.getMode() == AppOpsManager.MODE_ERRORED) {
++                        refused.add(p.getUid() + " " + p.getPackageName());
++                    }
++                }
++            }
++        }
++        synchronized (mLock) {
++            if (!refused.equals(mLujarchWakeLockRefused)) {
++                mLujarchWakeLockRefused.clear();
++                mLujarchWakeLockRefused.addAll(refused);
++                Slog.i(TAG, "Wake locks not allowed: " + refused);
++                updateWakeLockDisabledStatesLocked();
++            }
++        }
++    }
++
+     @GuardedBy("mLock")
+     private boolean setWakeLockDisabledStateLocked(WakeLock wakeLock) {
+         boolean disabled = false;
+@@ -5027,6 +5069,13 @@ public final class PowerManagerService extends SystemService
+             disabled = true;
+             return wakeLock.setDisabled(disabled);
+         }
++        if (!mLujarchWakeLockRefused.isEmpty()
++                && ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK)
++                        == PowerManager.PARTIAL_WAKE_LOCK || isScreenLock(wakeLock))
++                && mLujarchWakeLockRefused.contains(
++                        wakeLock.mOwnerUid + " " + wakeLock.mPackageName)) {
++            return wakeLock.setDisabled(true);
++        }
+         if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK)
+                 == PowerManager.PARTIAL_WAKE_LOCK) {
+             final int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
