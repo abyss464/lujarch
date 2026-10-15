@@ -294,10 +294,10 @@ index e8c59a5d7286db6c4947d687169154771dfeb5d0..e45ee087a45078e3941b968f768c1ee2
  
 diff --git a/core/java/com/android/internal/app/LujarchInfo.java b/core/java/com/android/internal/app/LujarchInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..8415c93d79027ede11b8f598c2bdeb3a27d6a390
+index 0000000000000000000000000000000000000000..138167d63fe674c37cf60e6505b7d2054db2e660
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchInfo.java
-@@ -0,0 +1,182 @@
+@@ -0,0 +1,183 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -398,15 +398,14 @@ index 0000000000000000000000000000000000000000..8415c93d79027ede11b8f598c2bdeb3a
 +            final long[] last = sLastNote.get(key);
 +            // Foreground-only needs a note to be resolved against the uid's state.
 +            final long interval = raw == AppOpsManager.MODE_ALLOWED
-+                    || raw == AppOpsManager.MODE_DEFAULT
 +                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
 +            if (last != null && last[1] == raw && now - last[0] < interval
 +                    && raw != AppOpsManager.MODE_FOREGROUND) {
-+                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
 +            }
 +            sLastNote.put(key, new long[] {now, raw});
 +            final int mode = appOps.noteOpNoThrow(op, uid, pkg, attributionTag, null);
-+            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
 +        } catch (RuntimeException e) {
 +            Log.w(TAG, op + " of uid " + uid + " not decided; allowed", e);
 +            return AppOpsManager.MODE_ALLOWED;
@@ -435,8 +434,10 @@ index 0000000000000000000000000000000000000000..8415c93d79027ede11b8f598c2bdeb3a
 +                return AppOpsManager.MODE_ALLOWED;
 +            }
 +            final int raw = appOps.unsafeCheckOpRawNoThrow(op, uid, pkg);
-+            return raw == AppOpsManager.MODE_DEFAULT || raw == AppOpsManager.MODE_FOREGROUND
-+                    ? AppOpsManager.MODE_ALLOWED : raw;
++            if (raw == AppOpsManager.MODE_DEFAULT) {
++                return AppOpsManager.MODE_IGNORED;
++            }
++            return raw == AppOpsManager.MODE_FOREGROUND ? AppOpsManager.MODE_ALLOWED : raw;
 +        } catch (RuntimeException e) {
 +            Log.w(TAG, op + " of uid " + uid + " not read; allowed", e);
 +            return AppOpsManager.MODE_ALLOWED;

@@ -79,10 +79,10 @@ index abb12e17de40e0e1c77df051c4fa2070949623aa..acc5c18cf9b9df8ca48d540f5bf8b07b
          return try {
 diff --git a/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..241ddf6e37a2314d2277f7b97b641282ae961d92
+index 0000000000000000000000000000000000000000..7d4185e544bab43f33bd1e6aea8d801aaa5d832f
 --- /dev/null
 +++ b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,153 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -175,15 +175,14 @@ index 0000000000000000000000000000000000000000..241ddf6e37a2314d2277f7b97b641282
 +            final long[] last = sLastNote.get(uid);
 +            // Foreground-only needs a note to be resolved against the uid's state.
 +            final long interval = raw == AppOpsManager.MODE_ALLOWED
-+                    || raw == AppOpsManager.MODE_DEFAULT
 +                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
 +            if (last != null && last[1] == raw && now - last[0] < interval
 +                    && raw != AppOpsManager.MODE_FOREGROUND) {
-+                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
 +            }
 +            sLastNote.put(uid, new long[] {now, raw});
 +            final int mode = appOps.noteOpNoThrow(OP, uid, pkg, attributionTag, null);
-+            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
 +        } catch (RuntimeException e) {
 +            if (isUnknownOp(e)) {
 +                if (!sUnknownOpLogged) {

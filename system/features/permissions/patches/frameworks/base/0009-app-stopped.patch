@@ -24,16 +24,17 @@ index 415aaa0243a7af300b7b309d2aa344b422bbf1b1..970d564c9634188d58d1f4339c7a2029
              final NotificationChannel parentalControlsChannel =
                      new NotificationChannel(
 diff --git a/core/res/res/values-ja/strings.xml b/core/res/res/values-ja/strings.xml
-index c85d23da472b45b69305ff8355a554a963801621..32e47c7bc42920835ed569d7f49040d4a17c6404 100644
+index c85d23da472b45b69305ff8355a554a963801621..f42c1746a642b3541fd24788fe3ca245f0e51e90 100644
 --- a/core/res/res/values-ja/strings.xml
 +++ b/core/res/res/values-ja/strings.xml
-@@ -2732,4 +2732,14 @@
+@@ -2732,4 +2732,15 @@
      <string name="lujarch_permgroupdesc_device_info">"このスマートフォンのモデル、システム ビルド、バッテリーなどの情報の読み取り"</string>
      <string name="lujarch_permgrouplab_network_info">"ネットワーク情報"</string>
      <string name="lujarch_permgroupdesc_network_info">"ネットワーク アドレス、VPN、Wi-Fi の詳細、データ使用量の合計の読み取り"</string>
 +    <string name="lujarch_permission_choice_empty">"空のデータを返す"</string>
 +    <string name="lujarch_permission_choice_deny">"許可しない"</string>
 +    <string name="lujarch_permission_choice_foreground">"アプリの使用中のみ許可"</string>
++    <string name="lujarch_permission_choice_ask">"毎回確認する"</string>
 +    <string name="lujarch_app_stopped">"「%1$s」が停止しました"</string>
 +    <string name="lujarch_app_stopped_reason">"停止する直前に、次の設定で拒否されました：%1$s。"</string>
 +    <string name="lujarch_app_stopped_item">"%1$s（%2$s）"</string>
@@ -43,16 +44,17 @@ index c85d23da472b45b69305ff8355a554a963801621..32e47c7bc42920835ed569d7f49040d4
 +    <string name="notification_channel_lujarch_app_stopped">"アプリが停止した理由"</string>
  </resources>
 diff --git a/core/res/res/values-zh-rCN/strings.xml b/core/res/res/values-zh-rCN/strings.xml
-index c4edcd8d52f0ac1e85f99eb0667812a1146948c3..4826d5311b1e8c1b679283e3438c357f325ef34a 100644
+index c4edcd8d52f0ac1e85f99eb0667812a1146948c3..bc046d7599951efd28ff11a1bfcd4f3f26edb0d9 100644
 --- a/core/res/res/values-zh-rCN/strings.xml
 +++ b/core/res/res/values-zh-rCN/strings.xml
-@@ -2732,4 +2732,14 @@
+@@ -2732,4 +2732,15 @@
      <string name="lujarch_permgroupdesc_device_info">"读取这部手机的型号、系统版本、电池等信息"</string>
      <string name="lujarch_permgrouplab_network_info">"网络信息"</string>
      <string name="lujarch_permgroupdesc_network_info">"读取网络地址、VPN、WLAN 详情和数据流量总量"</string>
 +    <string name="lujarch_permission_choice_empty">"返回空数据"</string>
 +    <string name="lujarch_permission_choice_deny">"不允许"</string>
 +    <string name="lujarch_permission_choice_foreground">"仅在使用该应用时允许"</string>
++    <string name="lujarch_permission_choice_ask">"每次都询问"</string>
 +    <string name="lujarch_app_stopped">"“%1$s”已停止运行"</string>
 +    <string name="lujarch_app_stopped_reason">"停止运行前的几秒内，它被以下设置拒绝：%1$s。"</string>
 +    <string name="lujarch_app_stopped_item">"%1$s（%2$s）"</string>
@@ -62,16 +64,17 @@ index c4edcd8d52f0ac1e85f99eb0667812a1146948c3..4826d5311b1e8c1b679283e3438c357f
 +    <string name="notification_channel_lujarch_app_stopped">"应用停止运行的原因"</string>
  </resources>
 diff --git a/core/res/res/values/strings.xml b/core/res/res/values/strings.xml
-index e8998d2c005d2bb38335616e684aeaa2adce9ce2..ba28a0bc03ba7e30cc0cd94147e172e101ac31c5 100644
+index e8998d2c005d2bb38335616e684aeaa2adce9ce2..a06686d6d698ee87f0a1b79e0b4a96a73d5f2c0c 100644
 --- a/core/res/res/values/strings.xml
 +++ b/core/res/res/values/strings.xml
-@@ -7334,4 +7334,14 @@
+@@ -7334,4 +7334,15 @@
      <string name="lujarch_permgroupdesc_device_info">read the model, system build, battery and other details of this phone</string>
      <string name="lujarch_permgrouplab_network_info">Network info</string>
      <string name="lujarch_permgroupdesc_network_info">read network addresses, VPN, Wi\u2011Fi details and data totals</string>
 +    <string name="lujarch_permission_choice_empty">Return empty data</string>
 +    <string name="lujarch_permission_choice_deny">Don\u2019t allow</string>
 +    <string name="lujarch_permission_choice_foreground">Allow only while using the app</string>
++    <string name="lujarch_permission_choice_ask">Ask every time</string>
 +    <string name="lujarch_app_stopped">%1$s stopped</string>
 +    <string name="lujarch_app_stopped_reason">In the seconds before it stopped, it was refused by %1$s.</string>
 +    <string name="lujarch_app_stopped_item">%1$s (%2$s)</string>
@@ -81,10 +84,10 @@ index e8998d2c005d2bb38335616e684aeaa2adce9ce2..ba28a0bc03ba7e30cc0cd94147e172e1
 +    <string name="notification_channel_lujarch_app_stopped">Why apps stopped</string>
  </resources>
 diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
-index f20a2b6a0e74fe8155c33d73ff446a4c47273f80..fe9ca9ba557bd6d6eb80517c638119ede3a16eec 100644
+index f20a2b6a0e74fe8155c33d73ff446a4c47273f80..684391a43567cd0d91cd075022e3fb44ca215046 100644
 --- a/core/res/res/values/symbols.xml
 +++ b/core/res/res/values/symbols.xml
-@@ -6626,4 +6626,17 @@
+@@ -6626,4 +6626,18 @@
    <java-symbol type="drawable" name="ic_cross_device_sync_airplane" />
    <!-- Disable the Video Capability over IWLAN when Wi-Fi Calling is turned off  -->
    <java-symbol type="bool" name="config_disable_video_capability_when_wfc_off" />
@@ -94,6 +97,7 @@ index f20a2b6a0e74fe8155c33d73ff446a4c47273f80..fe9ca9ba557bd6d6eb80517c638119ed
 +  <java-symbol type="string" name="lujarch_permission_choice_empty" />
 +  <java-symbol type="string" name="lujarch_permission_choice_deny" />
 +  <java-symbol type="string" name="lujarch_permission_choice_foreground" />
++  <java-symbol type="string" name="lujarch_permission_choice_ask" />
 +  <java-symbol type="string" name="lujarch_app_stopped" />
 +  <java-symbol type="string" name="lujarch_app_stopped_reason" />
 +  <java-symbol type="string" name="lujarch_app_stopped_item" />
@@ -295,10 +299,10 @@ index 245a64e98f5d2aa716dcdc36da7716568cf0a757..fce3376e240ec0993ee15684849fd55f
                      }
 diff --git a/services/core/java/com/android/server/am/LujarchCrashNotice.java b/services/core/java/com/android/server/am/LujarchCrashNotice.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..53fd08e03cc991bd30f4f315bb1cb43097faca8a
+index 0000000000000000000000000000000000000000..759af4b5a2078d2787197480971330a363553190
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchCrashNotice.java
-@@ -0,0 +1,338 @@
+@@ -0,0 +1,343 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -419,7 +423,8 @@ index 0000000000000000000000000000000000000000..53fd08e03cc991bd30f4f315bb1cb430
 +                    for (AppOpsManager.OpEntry e : po.getOps()) {
 +                        final int op = AppOpsManager.opToSwitch(e.getOp());
 +                        final int mode = e.getMode();
-+                        if (!isRestriction(mode) || mode == AppOpsManager.opToDefaultMode(op)) {
++                        if (!isRestriction(op, mode)
++                                || mode == AppOpsManager.opToDefaultMode(op)) {
 +                            continue;
 +                        }
 +                        long refused = e.getLastRejectTime(AppOpsManager.OP_FLAGS_ALL);
@@ -550,6 +555,8 @@ index 0000000000000000000000000000000000000000..53fd08e03cc991bd30f4f315bb1cb430
 +                return R.string.lujarch_permission_choice_deny;
 +            case AppOpsManager.MODE_FOREGROUND:
 +                return R.string.lujarch_permission_choice_foreground;
++            case AppOpsManager.MODE_DEFAULT:
++                return R.string.lujarch_permission_choice_ask;
 +            default:
 +                return R.string.lujarch_permission_choice_empty;
 +        }
@@ -631,9 +638,11 @@ index 0000000000000000000000000000000000000000..53fd08e03cc991bd30f4f315bb1cb430
 +        }
 +    }
 +
-+    /** A mode that refuses the app at least sometimes. */
-+    private static boolean isRestriction(int mode) {
++    /** A mode that refuses the app at least sometimes; "ask every time" until answered. */
++    private static boolean isRestriction(int op, int mode) {
 +        return mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED
-+                || mode == AppOpsManager.MODE_FOREGROUND;
++                || mode == AppOpsManager.MODE_FOREGROUND
++                || (mode == AppOpsManager.MODE_DEFAULT && AppOpsManager.isLujarchAskable(op));
 +    }
++
 +}

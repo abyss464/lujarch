@@ -1,217 +1,26 @@
 diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
-index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa331372ed7 100644
+index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..136fd4ad1b293ae5a2653cf84c801806b3658f7c 100644
 --- a/services/core/java/com/android/server/appop/AppOpsService.java
 +++ b/services/core/java/com/android/server/appop/AppOpsService.java
-@@ -290,6 +290,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -290,6 +290,9 @@ public class AppOpsService extends IAppOpsService.Stub {
      final Handler mIoHandler;
  
      private final AppOpsRecentAccessPersistence mRecentAccessPersistence;
 +
-+    /** The apps and ops set to ask every time. Guarded by this service's lock. */
 +    private final LujarchAsk mLujarchAsk;
 +
      /**
       * Pool for {@link AttributedOp.OpEventProxyInfoPool} to avoid to constantly reallocate new
       * objects
-@@ -1060,6 +1064,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -1060,6 +1063,7 @@ public class AppOpsService extends IAppOpsService.Stub {
          LockGuard.installLock(this, LockGuard.INDEX_APP_OPS);
          mRecentAccessesFile = new AtomicFile(recentAccessesFile, "appops_accesses");
          mRecentAccessPersistence = new AppOpsRecentAccessPersistence(mRecentAccessesFile, this);
-+        mLujarchAsk = new LujarchAsk(context, this,
-+                new File(recentAccessesFile.getParentFile(), "lujarch_ask.xml"));
++        mLujarchAsk = new LujarchAsk(context);
  
          if (AppOpsManager.NOTE_OP_COLLECTION_ENABLED) {
              mNoteOpCallerStacktracesFile = new File(SystemServiceManager.ensureSystemDir(),
-@@ -1174,6 +1180,8 @@ public class AppOpsService extends IAppOpsService.Stub {
-                 VirtualDeviceManagerInternal.class);
-         mAppOpsCheckingService.systemReady();
-         initializeUidStates();
-+        // Entries of packages removed before the package broadcasts are watched.
-+        mLujarchAsk.prune();
- 
-         mConstants.startMonitoring(mContext.getContentResolver());
-         mHistoricalRegistry.systemReady(mContext.getContentResolver());
-@@ -1474,6 +1482,7 @@ public class AppOpsService extends IAppOpsService.Stub {
-     private void packageRemovedLocked(int uid, String packageName) {
-         mIoHandler.post(PooledLambda.obtainRunnable(HistoricalRegistryInterface::clearHistory,
-                 mHistoricalRegistry, uid, packageName));
-+        mLujarchAsk.removePackageLocked(uid, packageName, "package removed");
- 
-         UidState uidState = mUidStates.get(uid);
-         if (uidState == null) {
-@@ -1527,6 +1536,7 @@ public class AppOpsService extends IAppOpsService.Stub {
-         }
- 
-         synchronized (this) {
-+            mLujarchAsk.removeUidLocked(uid, "uid removed");
-             if (mUidStates.indexOfKey(uid) >= 0) {
-                 mUidStates.get(uid).clear();
-                 mUidStates.remove(uid);
-@@ -2224,6 +2234,9 @@ public class AppOpsService extends IAppOpsService.Stub {
-                     uidState.uid, PERSISTENT_DEVICE_ID_DEFAULT, code, mode)) {
-                 return;
-             }
-+            // A changed uid mode ends "ask" for the uid's packages. Writes the store refuses
-+            // (runtime-permission ops) or that change nothing do not.
-+            mLujarchAsk.removeUidOpLocked(uidState.uid, code, "uid mode set");
-             // TODO(b/266164193): Ensure this behavior is device-aware after uid op mode for runtime
-             //  permissions is deprecated.
-             if (mode != MODE_ERRORED && mode != previousMode) {
-@@ -2486,6 +2499,16 @@ public class AppOpsService extends IAppOpsService.Stub {
- 
-     void setMode(int code, int uid, @NonNull String packageName, int mode,
-             @Nullable IAppOpsCallback permissionPolicyCallback) {
-+        setMode(code, uid, packageName, mode, permissionPolicyCallback, /* lujarchAsk */ false);
-+    }
-+
-+    /**
-+     * [lujarchAsk] is true only for the write of MODE_IGNORED that
-+     * {@link #setLujarchAsk} makes; every other accepted write of a package mode ends "ask" for
-+     * the package and op, whether it changes the mode or not.
-+     */
-+    private void setMode(int code, int uid, @NonNull String packageName, int mode,
-+            @Nullable IAppOpsCallback permissionPolicyCallback, boolean lujarchAsk) {
-         enforceManageAppOpsModes(Binder.getCallingPid(), Binder.getCallingUid(), uid);
-         verifyIncomingOp(code);
-         if (!isIncomingPackageValid(packageName, UserHandle.getUserId(uid))) {
-@@ -2521,6 +2544,9 @@ public class AppOpsService extends IAppOpsService.Stub {
-                     mAppOpsCheckingService.setPackageMode(op.packageName, op.op, mode,
-                             UserHandle.getUserId(op.uid));
-                 }
-+                if (!lujarchAsk) {
-+                    mLujarchAsk.removeLocked(op.uid, op.packageName, op.op, "mode set");
-+                }
-             }
-         }
- 
-@@ -2705,6 +2731,7 @@ public class AppOpsService extends IAppOpsService.Stub {
-                                     PERSISTENT_DEVICE_ID_DEFAULT,
-                                     code,
-                                     newMode);
-+                            mLujarchAsk.removeUidOpLocked(uidState.uid, code, "reset");
-                             for (String packageName : getPackagesForUid(uidState.uid)) {
-                                 callbacks = addCallbacks(callbacks, code, uidState.uid, packageName,
-                                         previousMode, mOpModeWatchers.get(code));
-@@ -2761,6 +2788,8 @@ public class AppOpsService extends IAppOpsService.Stub {
-                                     curOp.op,
-                                     newMode,
-                                     UserHandle.getUserId(curOp.uid));
-+                            mLujarchAsk.removeLocked(curOp.uid, curOp.packageName, curOp.op,
-+                                    "reset");
-                             changed = true;
-                             final int uid = curOp.uidState.uid;
-                             callbacks = addCallbacks(callbacks, curOp.op, uid, packageName,
-@@ -2965,6 +2994,109 @@ public class AppOpsService extends IAppOpsService.Stub {
-         }
-     }
- 
-+    /**
-+     * Asks the user about an access this service refused with [resultMode] when the "ask"
-+     * set holds it: the package's stored
-+     * mode of the op is MODE_IGNORED with an ask entry, and the uid mode, when one other than
-+     * the op's default is set (the permission), would let the access through by itself. A
-+     * refusal by the permission or by a restriction does not ask: answering would change
-+     * nothing. The access keeps MODE_IGNORED, return empty data; {@link LujarchAsk} only posts
-+     * the question (rate-limited), so no caller waits and no other lock is taken. Called from
-+     * the note, start and proxy paths (and the proxied dry run of a proxy start); checks
-+     * (checkOperation) never ask, as the system checks modes for its own purposes too.
-+     */
-+    @GuardedBy("this")
-+    private void lujarchAskIfHeldLocked(int code, int switchCode, int uid,
-+            @NonNull String packageName, @Nullable String attributionTag,
-+            @NonNull UidState uidState, int virtualDeviceId, int resultMode) {
-+        if (resultMode != MODE_IGNORED
-+                || !mLujarchAsk.containsLocked(uid, packageName, switchCode)) {
-+            return;
-+        }
-+        try {
-+            if (mAppOpsCheckingService.getPackageMode(packageName, switchCode,
-+                    UserHandle.getUserId(uid)) != MODE_IGNORED) {
-+                return;
-+            }
-+            final int rawUidMode = mAppOpsCheckingService.getUidMode(uid,
-+                    getPersistentDeviceIdForOp(virtualDeviceId, switchCode), switchCode);
-+            if (rawUidMode != AppOpsManager.opToDefaultMode(switchCode)) {
-+                final int uidOnly = uidState.evalMode(code, rawUidMode);
-+                if (uidOnly != MODE_ALLOWED && uidOnly != MODE_DEFAULT) {
-+                    return;
-+                }
-+            }
-+            mLujarchAsk.requestLocked(switchCode, uid, packageName, attributionTag);
-+        } catch (RuntimeException e) {
-+            Slog.w(TAG, "lujarch ask: " + packageName + " (" + uid + ") not asked", e);
-+        }
-+    }
-+
-+    /**
-+     * Puts the op of a package into the "ask" set (its package mode becomes MODE_IGNORED, the
-+     * answer until the user answers), or takes it out (the entry
-+     * only; the mode stays). MANAGE_APP_OPS_MODES, as setMode.
-+     */
-+    @Override
-+    public void setLujarchAsk(int code, int uid, String packageName, boolean ask) {
-+        enforceManageAppOpsModes(Binder.getCallingPid(), Binder.getCallingUid(), uid);
-+        verifyIncomingOp(code);
-+        Objects.requireNonNull(packageName);
-+        final int switchCode = AppOpsManager.opToSwitch(code);
-+        if (!ask) {
-+            synchronized (this) {
-+                mLujarchAsk.removeLocked(uid, packageName, switchCode, "unset");
-+            }
-+            return;
-+        }
-+        if (isOpAllowedForUid(uid)) {
-+            Slog.w(TAG, "lujarch ask: uid " + uid + " is never restricted; not set");
-+            return;
-+        }
-+        try {
-+            verifyAndGetBypass(uid, packageName, null);
-+        } catch (SecurityException e) {
-+            logVerifyAndGetBypassFailure(uid, e, "setLujarchAsk");
-+            return;
-+        }
-+        setMode(switchCode, uid, packageName, MODE_IGNORED, null, /* lujarchAsk */ true);
-+        synchronized (this) {
-+            // Only next to a stored MODE_IGNORED: the entry never stands for another answer.
-+            if (mAppOpsCheckingService.getPackageMode(packageName, switchCode,
-+                    UserHandle.getUserId(uid)) != MODE_IGNORED) {
-+                Slog.w(TAG, "lujarch ask: " + packageName + " (" + uid + ") "
-+                        + opToPublicName(switchCode) + " not set: the mode was not stored");
-+                return;
-+            }
-+            mLujarchAsk.addLocked(uid, packageName, switchCode);
-+        }
-+    }
-+
-+    /**
-+     * The "ask" set as package ops (each entry with the package's
-+     * stored mode), for [uid] or every uid (-1), for [packageName] when not null.
-+     * GET_APP_OPS_STATS unless the caller asks about itself, as getOpsForPackage.
-+     */
-+    @Override
-+    public List<AppOpsManager.PackageOps> getLujarchAsks(int uid, @Nullable String packageName) {
-+        enforceGetAppOpsStatsPermissionIfNeeded(uid, packageName);
-+        final ArrayMap<String, AppOpsManager.PackageOps> byPackage = new ArrayMap<>();
-+        synchronized (this) {
-+            for (LujarchAsk.Entry e : mLujarchAsk.snapshotLocked(uid, packageName)) {
-+                final String key = e.uid() + ":" + e.packageName();
-+                AppOpsManager.PackageOps p = byPackage.get(key);
-+                if (p == null) {
-+                    p = new AppOpsManager.PackageOps(e.packageName(), e.uid(), new ArrayList<>());
-+                    byPackage.put(key, p);
-+                }
-+                final int mode = mAppOpsCheckingService.getPackageMode(e.packageName(), e.op(),
-+                        UserHandle.getUserId(e.uid()));
-+                p.getOps().add(new OpEntry(e.op(), mode, Collections.emptyMap()));
-+            }
-+        }
-+        return new ArrayList<>(byPackage.values());
-+    }
-+
-     /**
-      * When querying the mode these should always be allowed and the checking service might not
-      * have information on them.
-@@ -2974,6 +3106,60 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -2974,6 +2978,78 @@ public class AppOpsService extends IAppOpsService.Stub {
          return appId == Process.ROOT_UID || appId == Process.SYSTEM_UID;
      }
  
@@ -269,10 +78,28 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
 +        }
 +    }
 +
++    /**
++     * The package mode to evaluate: "ask every time" (MODE_DEFAULT on an askable op) is
++     * answered as MODE_IGNORED until the user answers.
++     */
++    private static int lujarchPackageMode(int switchCode, int packageMode) {
++        return packageMode == MODE_DEFAULT && AppOpsManager.isLujarchAskable(switchCode)
++                ? MODE_IGNORED : packageMode;
++    }
++
++    /** Asks the user about an access answered with empty data because its package mode asks. */
++    @GuardedBy("this")
++    private void lujarchAskIfAskingLocked(int switchCode, int uid, @NonNull String packageName,
++            @Nullable String attributionTag, int packageMode) {
++        if (packageMode == MODE_DEFAULT && AppOpsManager.isLujarchAskable(switchCode)) {
++            mLujarchAsk.requestLocked(switchCode, uid, packageName, attributionTag);
++        }
++    }
++
      @Override
      public int checkOperationRaw(int code, int uid, String packageName,
              @Nullable String attributionTag) {
-@@ -3107,7 +3293,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3107,7 +3183,7 @@ public class AppOpsService extends IAppOpsService.Stub {
                  if (rawUidMode != AppOpsManager.opToDefaultMode(code)) {
                      return raw ? rawUidMode :
                          evaluateForegroundMode(/* uid= */ uid, /* op= */ code,
@@ -281,7 +108,16 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
                  }
              }
  
-@@ -3168,7 +3354,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3126,7 +3202,7 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     evaluateForegroundMode(
+                         /* uid= */ uid,
+                         /* op= */op.op,
+-                        /* rawUidMode= */ packageMode);
++                        /* rawUidMode= */ lujarchPackageMode(op.op, packageMode));
+         }
+     }
+ 
+@@ -3168,12 +3244,14 @@ public class AppOpsService extends IAppOpsService.Stub {
                      getPersistentDeviceIdForOp(virtualDeviceId, switchCode), switchCode);
  
              if (rawUidMode != AppOpsManager.opToDefaultMode(switchCode)) {
@@ -291,7 +127,14 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
              }
  
              int rawPackageMode = mAppOpsCheckingService.getPackageMode(packageName, switchCode,
-@@ -3529,15 +3716,19 @@ public class AppOpsService extends IAppOpsService.Stub {
+                     UserHandle.getUserId(uid));
+-            return raw ? rawPackageMode : evaluateForegroundMode(uid, switchCode, rawPackageMode);
++            return raw ? rawPackageMode : evaluateForegroundMode(uid, switchCode,
++                    lujarchPackageMode(switchCode, rawPackageMode));
+         }
+     }
+ 
+@@ -3529,10 +3607,12 @@ public class AppOpsService extends IAppOpsService.Stub {
                  final int uidMode =
                          uidState.evalMode(
                                  code,
@@ -308,23 +151,32 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
                  if (uidMode != AppOpsManager.MODE_ALLOWED) {
                      if (DEBUG) Slog.d(TAG, "noteOperation: uid reject #" + uidMode + " for code "
                              + switchCode + " (" + code + ") uid " + uid + " package "
-                             + packageName + " flags: " + AppOpsManager.flagsToString(flags));
-                     attributedOp.rejected(uidState.getState(), flags, notedCount);
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, uidMode);
-                     scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
-                             virtualDeviceId, flags, uidMode);
-                     // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
-@@ -3562,6 +3753,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -3550,18 +3630,17 @@ public class AppOpsService extends IAppOpsService.Stub {
+             } else {
+                 final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
+                         : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED) {
+                     if (DEBUG) Slog.d(TAG, "noteOperation: reject #" + mode + " for code "
                              + switchCode + " (" + code + ") uid " + uid + " package "
                              + packageName + " flags: " + AppOpsManager.flagsToString(flags));
                      attributedOp.rejected(uidState.getState(), flags, notedCount);
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, mode);
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
                      scheduleOpNotedIfNeededLocked(code, uid, packageName, attributionTag,
                              virtualDeviceId, flags, mode);
                      // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
-@@ -4174,7 +4367,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4174,7 +4253,8 @@ public class AppOpsService extends IAppOpsService.Stub {
                              uidState.uid, getPersistentDeviceIdForOp(virtualDeviceId, switchCode),
                              switchCode))
                      != AppOpsManager.opToDefaultMode(switchCode)) {
@@ -334,25 +186,34 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
                  if (!shouldStartForMode(uidMode, startIfModeDefault)) {
                      if (DEBUG) {
                          Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
-@@ -4183,6 +4377,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4191,13 +4271,10 @@ public class AppOpsService extends IAppOpsService.Stub {
+             } else {
+                 final Op switchOp =
+                         switchCode != code ? getOpLocked(ops, switchCode, uid, true) : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED
+                         && (!startIfModeDefault || mode != MODE_DEFAULT)) {
+                     if (DEBUG) {
+@@ -4207,6 +4284,8 @@ public class AppOpsService extends IAppOpsService.Stub {
                                  + AppOpsManager.flagsToString(flags));
                      }
                      attributedOp.rejected(uidState.getState(), flags, 1);
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, uidMode);
-                     scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
-                             virtualDeviceId, flags, uidMode, startType, attributionFlags,
-                             attributionChainId);
-@@ -4207,6 +4403,8 @@ public class AppOpsService extends IAppOpsService.Stub {
-                                 + AppOpsManager.flagsToString(flags));
-                     }
-                     attributedOp.rejected(uidState.getState(), flags, 1);
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, mode);
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
                      scheduleOpStartedIfNeededLocked(code, uid, packageName, attributionTag,
                              virtualDeviceId, flags, mode, startType, attributionFlags,
                              attributionChainId);
-@@ -4308,16 +4506,21 @@ public class AppOpsService extends IAppOpsService.Stub {
+@@ -4308,10 +4387,12 @@ public class AppOpsService extends IAppOpsService.Stub {
                  final int uidMode =
                          uidState.evalMode(
                                  code,
@@ -369,114 +230,40 @@ index 9d2d68a87bb4bc9bede72c49581cb9586e5da44b..417e2117ed381ff978c0d23fcec00aa3
                  if (!shouldStartForMode(uidMode, startIfModeDefault)) {
                      if (DEBUG) {
                          Slog.d(TAG, "startOperation: uid reject #" + uidMode + " for code "
-                                 + switchCode + " (" + code + ") uid " + uid + " package "
-                                 + packageName + " flags: " + AppOpsManager.flagsToString(flags));
-                     }
-+                    // The proxied app's only evaluation when this fails.
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, uidMode);
-                     return new SyncNotedAppOp(uidMode, code, attributionTag, packageName);
-                 }
+@@ -4323,13 +4404,10 @@ public class AppOpsService extends IAppOpsService.Stub {
              } else {
-@@ -4337,6 +4540,9 @@ public class AppOpsService extends IAppOpsService.Stub {
+                 final Op switchOp = switchCode != code ? getOpLocked(ops, switchCode, uid, true)
+                         : op;
+-                final int mode =
+-                        switchOp.uidState.evalMode(
+-                                switchOp.op,
+-                                mAppOpsCheckingService.getPackageMode(
+-                                        switchOp.packageName,
+-                                        switchOp.op,
+-                                        UserHandle.getUserId(switchOp.uid)));
++                final int packageMode = mAppOpsCheckingService.getPackageMode(
++                        switchOp.packageName, switchOp.op, UserHandle.getUserId(switchOp.uid));
++                final int mode = switchOp.uidState.evalMode(switchOp.op,
++                        lujarchPackageMode(switchOp.op, packageMode));
+                 if (mode != AppOpsManager.MODE_ALLOWED
+                         && (!startIfModeDefault || mode != MODE_DEFAULT)) {
+                     if (DEBUG) {
+@@ -4337,6 +4415,9 @@ public class AppOpsService extends IAppOpsService.Stub {
                                  + switchCode + " (" + code + ") uid " + uid + " package "
                                  + packageName + " flags: " + AppOpsManager.flagsToString(flags));
                      }
 +                    // The proxied app's only evaluation when this fails.
-+                    lujarchAskIfHeldLocked(code, switchCode, uid, packageName, attributionTag,
-+                            uidState, virtualDeviceId, mode);
++                    lujarchAskIfAskingLocked(switchOp.op, uid, packageName, attributionTag,
++                            packageMode);
                      return new SyncNotedAppOp(mode, code, attributionTag, packageName);
                  }
              }
-@@ -6023,6 +6229,13 @@ public class AppOpsService extends IAppOpsService.Stub {
-         pw.println("    Immediately write pending changes to storage.");
-         pw.println("  read-settings");
-         pw.println("    Read the last written settings, replacing current state in RAM.");
-+        pw.println("  lujarch-ask [--user <USER_ID>] <PACKAGE> <OP>");
-+        pw.println("    Ask the user when the package accesses the op;");
-+        pw.println("    the mode becomes ignore until the user answers.");
-+        pw.println("  lujarch-unask [--user <USER_ID>] <PACKAGE> <OP>");
-+        pw.println("    Stop asking; the mode stays as it is.");
-+        pw.println("  lujarch-asks [--user <USER_ID>] [<PACKAGE>]");
-+        pw.println("    Print the packages and ops the user is asked about, with their modes.");
-         pw.println("  options:");
-         pw.println("    <PACKAGE> an Android package name or its UID if prefixed by --uid");
-         pw.println("    <OP>      an AppOps operation.");
-@@ -6307,6 +6520,50 @@ public class AppOpsService extends IAppOpsService.Stub {
-                     }
-                     return 0;
-                 }
-+                case "lujarch-ask":
-+                case "lujarch-unask": {
-+                    int res = shell.parseUserPackageOp(true, err);
-+                    if (res < 0) {
-+                        return res;
-+                    }
-+                    if (shell.packageName == null) {
-+                        err.println("Error: a package name is required.");
-+                        return -1;
-+                    }
-+                    shell.mInterface.setLujarchAsk(shell.op, shell.packageUid, shell.packageName,
-+                            "lujarch-ask".equals(cmd));
-+                    return 0;
-+                }
-+                case "lujarch-asks": {
-+                    int uid = -1;
-+                    String packageName = null;
-+                    if (shell.peekNextArg() != null) {
-+                        int res = shell.parseUserPackageOp(false, err);
-+                        if (res < 0) {
-+                            return res;
-+                        }
-+                        if (shell.packageName == null) {
-+                            err.println("Error: a package name is required.");
-+                            return -1;
-+                        }
-+                        uid = shell.packageUid;
-+                        packageName = shell.packageName;
-+                    }
-+                    final List<AppOpsManager.PackageOps> asks =
-+                            shell.mInterface.getLujarchAsks(uid, packageName);
-+                    if (asks == null || asks.isEmpty()) {
-+                        pw.println("No entries.");
-+                        return 0;
-+                    }
-+                    for (AppOpsManager.PackageOps p : asks) {
-+                        for (AppOpsManager.OpEntry ent : p.getOps()) {
-+                            pw.println(p.getUid() + " " + p.getPackageName() + " "
-+                                    + AppOpsManager.opToName(ent.getOp()) + ": "
-+                                    + AppOpsManager.modeToName(ent.getMode()));
-+                        }
-+                    }
-+                    return 0;
-+                }
-                 default:
-                     return shell.handleDefaultCommands(cmd);
-             }
-@@ -6678,6 +6935,9 @@ public class AppOpsService extends IAppOpsService.Stub {
-                 pw.println("  AppOps policy not set.");
-             }
- 
-+            pw.println();
-+            mLujarchAsk.dumpLocked(pw);
-+
-             pw.println();
- 
-             if (dumpWatchers) {
-@@ -7171,6 +7431,7 @@ public class AppOpsService extends IAppOpsService.Stub {
-                     ClientUserRestrictionState opRestrictions = mOpUserRestrictions.valueAt(i);
-                     opRestrictions.removeUser(userHandle);
-                 }
-+                mLujarchAsk.removeUserLocked(userHandle, "user removed");
-                 removeUidsForUserLocked(userHandle);
-             }
-         }, REMOVE_USER_DELAY);
 diff --git a/services/core/java/com/android/server/appop/LujarchAsk.java b/services/core/java/com/android/server/appop/LujarchAsk.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..5e09b70ed46bd1b57bf21379ab9e26c07fff111f
+index 0000000000000000000000000000000000000000..4cbd3fdd573b0ed2aa8c12028c28f5f1d8dbda8f
 --- /dev/null
 +++ b/services/core/java/com/android/server/appop/LujarchAsk.java
-@@ -0,0 +1,440 @@
+@@ -0,0 +1,109 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -502,418 +289,87 @@ index 0000000000000000000000000000000000000000..5e09b70ed46bd1b57bf21379ab9e26c0
 +import android.app.AppOpsManager;
 +import android.content.Context;
 +import android.content.Intent;
-+import android.content.pm.PackageManager;
-+import android.content.pm.PackageManagerInternal;
 +import android.os.Handler;
 +import android.os.SystemClock;
 +import android.os.UserHandle;
-+import android.util.ArrayMap;
-+import android.util.ArraySet;
-+import android.util.AtomicFile;
 +import android.util.LongSparseLongArray;
 +import android.util.Slog;
-+import android.util.SparseArray;
-+import android.util.Xml;
 +
-+import com.android.internal.annotations.GuardedBy;
 +import com.android.internal.os.BackgroundThread;
-+import com.android.modules.utils.TypedXmlPullParser;
-+import com.android.modules.utils.TypedXmlSerializer;
 +import com.android.server.LocalServices;
 +
-+import org.xmlpull.v1.XmlPullParser;
-+import org.xmlpull.v1.XmlPullParserException;
-+
-+import java.io.File;
-+import java.io.FileInputStream;
-+import java.io.FileNotFoundException;
-+import java.io.FileOutputStream;
-+import java.io.IOException;
-+import java.io.PrintWriter;
-+import java.nio.charset.StandardCharsets;
-+import java.util.ArrayList;
-+import java.util.List;
-+
 +/**
-+ * The "ask every time" set: (uid, package, op) entries the user is asked about when the app
-+ * accesses the op.
-+ *
-+ * <p>An entry stands next to a package mode of MODE_IGNORED, which every enforcement point
-+ * (Java and native) treats as Return empty data; that is the answer until the user answers. An
-+ * access the entry holds (AppOpsService decides that under its lock) calls
-+ * {@link #requestLocked}, which sends the question to the permission controller as the explicit
-+ * broadcast {@link #ACTION_ASK}; no caller waits for an answer. Questions are limited per uid and
-+ * op ({@link #MIN_INTERVAL_MS}), and the broadcast is sent from {@link BackgroundThread}, never
-+ * under AppOpsService's lock.
-+ *
-+ * <p>Every method ending in {@code Locked} runs under AppOpsService's lock ({@link #mLock}),
-+ * which also guards this object's state. The set is persisted in
-+ * {@code /data/system/lujarch_ask.xml} (ops by public name), written on {@link BackgroundThread}
-+ * after each change.
++ * The questions of "ask every time": a package mode of MODE_DEFAULT on an op
++ * {@link AppOpsManager#isLujarchAskable} names. AppOpsService answers such an access with
++ * MODE_IGNORED and calls {@link #requestLocked}, which sends the question to the permission
++ * controller as the explicit broadcast {@link #ACTION_ASK}; no caller waits for an answer. The
++ * answer the user gives is written as the package's mode. Questions are limited per uid and op
++ * ({@link #MIN_INTERVAL_MS}) and sent from {@link BackgroundThread}, never under AppOpsService's
++ * lock, which guards this object's state.
 + */
 +final class LujarchAsk {
-+    private static final String TAG = "LujarchAsk";
++    private static final String TAG = "lujarch_permissions";
 +
 +    /** The question: an access to the op was answered with empty data and the user is asked. */
 +    static final String ACTION_ASK = "org.lujarch.permissions.action.ASK";
 +    /** The op's public name; the switch op of the access. */
 +    static final String EXTRA_OP = "org.lujarch.permissions.extra.OP";
-+    /** The attribution tag of the access, or absent. */
-+    static final String EXTRA_ATTRIBUTION_TAG = "org.lujarch.permissions.extra.ATTRIBUTION_TAG";
 +    /** Whether the app was on screen when the question left. */
 +    static final String EXTRA_FOREGROUND = "org.lujarch.permissions.extra.FOREGROUND";
-+    /** Wall-clock time of the access, in milliseconds. */
-+    static final String EXTRA_TIME = "org.lujarch.permissions.extra.TIME";
 +
 +    /** At most one question per uid and op in this interval. */
 +    static final long MIN_INTERVAL_MS = 30_000;
 +
-+    private static final String TAG_ROOT = "lujarch-ask";
-+    private static final String TAG_ENTRY = "entry";
-+    private static final String ATTR_VERSION = "v";
-+    private static final String ATTR_UID = "uid";
-+    private static final String ATTR_PACKAGE = "pkg";
-+    private static final String ATTR_OP = "op";
-+    private static final int VERSION = 1;
-+
 +    private final Context mContext;
-+    /** AppOpsService itself: its lock guards the set, as it guards every mode. */
-+    private final Object mLock;
-+    private final AtomicFile mFile;
 +    private final Handler mHandler = BackgroundThread.getHandler();
 +
-+    /** uid to package to the switch op codes of its entries. */
-+    @GuardedBy("mLock")
-+    private final SparseArray<ArrayMap<String, ArraySet<Integer>>> mEntries = new SparseArray<>();
-+
-+    /** Elapsed realtime of the last question per uid and op ({@link #key}). */
-+    @GuardedBy("mLock")
++    /** Elapsed realtime of the last question per uid and op. */
 +    private final LongSparseLongArray mLastRequest = new LongSparseLongArray();
 +
-+    LujarchAsk(@NonNull Context context, @NonNull Object lock, @NonNull File file) {
++    LujarchAsk(@NonNull Context context) {
 +        mContext = context;
-+        mLock = lock;
-+        mFile = new AtomicFile(file, "lujarch_ask");
-+        read();
-+    }
-+
-+    private static long key(int uid, int op) {
-+        return ((long) uid << 32) | (op & 0xffffffffL);
-+    }
-+
-+    // ---- the set ----
-+
-+    @GuardedBy("mLock")
-+    boolean containsLocked(int uid, @NonNull String packageName, int switchCode) {
-+        final ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        if (packages == null) {
-+            return false;
-+        }
-+        final ArraySet<Integer> ops = packages.get(packageName);
-+        return ops != null && ops.contains(switchCode);
-+    }
-+
-+    @GuardedBy("mLock")
-+    void addLocked(int uid, @NonNull String packageName, int switchCode) {
-+        ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        if (packages == null) {
-+            packages = new ArrayMap<>();
-+            mEntries.put(uid, packages);
-+        }
-+        ArraySet<Integer> ops = packages.get(packageName);
-+        if (ops == null) {
-+            ops = new ArraySet<>();
-+            packages.put(packageName, ops);
-+        }
-+        if (ops.add(switchCode)) {
-+            Slog.i(TAG, "ask: " + packageName + " (" + uid + ") "
-+                    + AppOpsManager.opToPublicName(switchCode));
-+            scheduleWriteLocked();
-+        }
-+    }
-+
-+    /** Removes one entry; true when there was one. */
-+    @GuardedBy("mLock")
-+    boolean removeLocked(int uid, @NonNull String packageName, int switchCode, String reason) {
-+        final ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        if (packages == null) {
-+            return false;
-+        }
-+        final ArraySet<Integer> ops = packages.get(packageName);
-+        if (ops == null || !ops.remove(switchCode)) {
-+            return false;
-+        }
-+        if (ops.isEmpty()) {
-+            packages.remove(packageName);
-+        }
-+        if (packages.isEmpty()) {
-+            mEntries.remove(uid);
-+        }
-+        mLastRequest.delete(key(uid, switchCode));
-+        Slog.i(TAG, "ask ended: " + packageName + " (" + uid + ") "
-+                + AppOpsManager.opToPublicName(switchCode) + " (" + reason + ")");
-+        scheduleWriteLocked();
-+        return true;
-+    }
-+
-+    /** A uid mode of the op changed: every package of the uid leaves "ask" for it. */
-+    @GuardedBy("mLock")
-+    void removeUidOpLocked(int uid, int switchCode, String reason) {
-+        final ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        if (packages == null) {
-+            return;
-+        }
-+        for (int i = packages.size() - 1; i >= 0; i--) {
-+            removeLocked(uid, packages.keyAt(i), switchCode, reason);
-+        }
-+    }
-+
-+    @GuardedBy("mLock")
-+    void removePackageLocked(int uid, @NonNull String packageName, String reason) {
-+        final ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        final ArraySet<Integer> ops = packages != null ? packages.get(packageName) : null;
-+        if (ops == null) {
-+            return;
-+        }
-+        for (int i = ops.size() - 1; i >= 0; i--) {
-+            removeLocked(uid, packageName, ops.valueAt(i), reason);
-+        }
-+    }
-+
-+    @GuardedBy("mLock")
-+    void removeUidLocked(int uid, String reason) {
-+        final ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+        if (packages == null) {
-+            return;
-+        }
-+        for (int i = packages.size() - 1; i >= 0; i--) {
-+            removePackageLocked(uid, packages.keyAt(i), reason);
-+        }
-+    }
-+
-+    @GuardedBy("mLock")
-+    void removeUserLocked(int userId, String reason) {
-+        for (int i = mEntries.size() - 1; i >= 0; i--) {
-+            final int uid = mEntries.keyAt(i);
-+            if (UserHandle.getUserId(uid) == userId) {
-+                removeUidLocked(uid, reason);
-+            }
-+        }
-+    }
-+
-+    /** One entry of {@link #snapshotLocked}. */
-+    record Entry(int uid, @NonNull String packageName, int op) {
-+    }
-+
-+    /** The entries of [uid] (every uid when -1), of [packageName] when not null. */
-+    @GuardedBy("mLock")
-+    @NonNull
-+    List<Entry> snapshotLocked(int uid, @Nullable String packageName) {
-+        final ArrayList<Entry> out = new ArrayList<>();
-+        for (int i = 0; i < mEntries.size(); i++) {
-+            final int entryUid = mEntries.keyAt(i);
-+            if (uid != -1 && entryUid != uid) {
-+                continue;
-+            }
-+            final ArrayMap<String, ArraySet<Integer>> packages = mEntries.valueAt(i);
-+            for (int j = 0; j < packages.size(); j++) {
-+                final String pkg = packages.keyAt(j);
-+                if (packageName != null && !packageName.equals(pkg)) {
-+                    continue;
-+                }
-+                final ArraySet<Integer> ops = packages.valueAt(j);
-+                for (int k = 0; k < ops.size(); k++) {
-+                    out.add(new Entry(entryUid, pkg, ops.valueAt(k)));
-+                }
-+            }
-+        }
-+        return out;
 +    }
 +
 +    /**
-+     * Drops entries whose package is no longer installed under their uid (removed while the
-+     * package broadcasts were not yet watched). PackageManager is asked outside the lock.
++     * An access to [switchCode] by [packageName] was answered with empty data because its package
++     * mode asks: asks the user, at most once per {@link #MIN_INTERVAL_MS} per uid and op. Only
++     * bookkeeping happens here; the broadcast goes out on {@link BackgroundThread}.
 +     */
-+    void prune() {
-+        final List<Entry> entries;
-+        synchronized (mLock) {
-+            entries = snapshotLocked(-1, null);
-+        }
-+        if (entries.isEmpty()) {
-+            return;
-+        }
-+        final PackageManagerInternal pmi = LocalServices.getService(PackageManagerInternal.class);
-+        if (pmi == null) {
-+            return;
-+        }
-+        final ArrayList<Entry> stale = new ArrayList<>();
-+        for (Entry e : entries) {
-+            try {
-+                final int uid = pmi.getPackageUid(e.packageName(),
-+                        PackageManager.MATCH_UNINSTALLED_PACKAGES,
-+                        UserHandle.getUserId(e.uid()));
-+                if (uid != e.uid()) {
-+                    stale.add(e);
-+                }
-+            } catch (RuntimeException ex) {
-+                Slog.w(TAG, "ask: " + e.packageName() + " not checked", ex);
-+            }
-+        }
-+        synchronized (mLock) {
-+            for (Entry e : stale) {
-+                removeLocked(e.uid(), e.packageName(), e.op(), "package gone");
-+            }
-+        }
-+    }
-+
-+    // ---- questions ----
-+
-+    /**
-+     * An access to [switchCode] by [packageName] was answered with empty data because of its
-+     * entry: asks the user, at most once per {@link #MIN_INTERVAL_MS} per uid and op.
-+     * Only bookkeeping happens here; the broadcast goes out on {@link BackgroundThread}.
-+     */
-+    @GuardedBy("mLock")
 +    void requestLocked(int switchCode, int uid, @NonNull String packageName,
 +            @Nullable String attributionTag) {
 +        final long now = SystemClock.elapsedRealtime();
-+        final long k = key(uid, switchCode);
-+        final long last = mLastRequest.get(k, -1);
++        final long key = ((long) uid << 32) | (switchCode & 0xffffffffL);
++        final long last = mLastRequest.get(key, -1);
 +        if (last >= 0 && now - last < MIN_INTERVAL_MS) {
 +            return;
 +        }
-+        mLastRequest.put(k, now);
-+        final long time = System.currentTimeMillis();
-+        mHandler.post(() -> send(switchCode, uid, packageName, attributionTag, time));
++        mLastRequest.put(key, now);
++        mHandler.post(() -> send(switchCode, uid, packageName));
 +    }
 +
-+    private void send(int switchCode, int uid, @NonNull String packageName,
-+            @Nullable String attributionTag, long time) {
++    private void send(int switchCode, int uid, @NonNull String packageName) {
 +        final String opName = AppOpsManager.opToPublicName(switchCode);
 +        try {
-+            // The process state now, a few milliseconds after the access. AppOps' own uid state
-+            // keeps "top" for a settle time after the app left the screen, which would put a
-+            // dialog over whatever came to the front.
++            // The process state now: AppOps' own uid state keeps "top" for a settle time after
++            // the app left the screen, which would put a dialog over whatever came to the front.
 +            final ActivityManagerInternal ami =
 +                    LocalServices.getService(ActivityManagerInternal.class);
 +            final boolean foreground = ami != null
 +                    && ami.getUidProcessState(uid) <= ActivityManager.PROCESS_STATE_TOP;
-+            final String controller =
-+                    mContext.getPackageManager().getPermissionControllerPackageName();
 +            final Intent intent = new Intent(ACTION_ASK)
-+                    .setPackage(controller)
++                    .setPackage(mContext.getPackageManager().getPermissionControllerPackageName())
 +                    .addFlags(Intent.FLAG_RECEIVER_FOREGROUND
 +                            | Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
 +                    .putExtra(EXTRA_OP, opName)
 +                    .putExtra(Intent.EXTRA_UID, uid)
 +                    .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
-+                    .putExtra(EXTRA_FOREGROUND, foreground)
-+                    .putExtra(EXTRA_TIME, time);
-+            if (attributionTag != null) {
-+                intent.putExtra(EXTRA_ATTRIBUTION_TAG, attributionTag);
-+            }
++                    .putExtra(EXTRA_FOREGROUND, foreground);
 +            Slog.i(TAG, "asking about " + packageName + " (" + uid + ") " + opName
-+                    + (foreground ? " in the foreground" : " in the background"));
++                    + (foreground ? " on screen" : " in the background"));
 +            mContext.sendBroadcastAsUser(intent, UserHandle.getUserHandleForUid(uid));
 +        } catch (RuntimeException e) {
 +            Slog.e(TAG, "question about " + packageName + " (" + uid + ") " + opName
 +                    + " not sent", e);
-+        }
-+    }
-+
-+    // ---- persistence ----
-+
-+    private void read() {
-+        final FileInputStream stream;
-+        try {
-+            stream = mFile.openRead();
-+        } catch (FileNotFoundException e) {
-+            return;
-+        }
-+        try (stream) {
-+            final TypedXmlPullParser parser = Xml.resolvePullParser(stream);
-+            int type;
-+            while ((type = parser.next()) != XmlPullParser.END_DOCUMENT) {
-+                if (type != XmlPullParser.START_TAG || !TAG_ENTRY.equals(parser.getName())) {
-+                    continue;
-+                }
-+                final int uid = parser.getAttributeInt(null, ATTR_UID, -1);
-+                final String pkg = parser.getAttributeValue(null, ATTR_PACKAGE);
-+                final String opName = parser.getAttributeValue(null, ATTR_OP);
-+                final int op;
-+                try {
-+                    op = AppOpsManager.strOpToOp(opName);
-+                } catch (IllegalArgumentException | NullPointerException e) {
-+                    Slog.w(TAG, "ask: unknown op " + opName + " of " + pkg + " dropped");
-+                    continue;
-+                }
-+                if (uid < 0 || pkg == null) {
-+                    Slog.w(TAG, "ask: damaged entry dropped");
-+                    continue;
-+                }
-+                ArrayMap<String, ArraySet<Integer>> packages = mEntries.get(uid);
-+                if (packages == null) {
-+                    packages = new ArrayMap<>();
-+                    mEntries.put(uid, packages);
-+                }
-+                ArraySet<Integer> ops = packages.get(pkg);
-+                if (ops == null) {
-+                    ops = new ArraySet<>();
-+                    packages.put(pkg, ops);
-+                }
-+                ops.add(AppOpsManager.opToSwitch(op));
-+            }
-+        } catch (IOException | XmlPullParserException | RuntimeException e) {
-+            // A damaged file loses the questions, not the answers: the package modes stay
-+            // MODE_IGNORED.
-+
-+            Slog.e(TAG, "ask: " + mFile.getBaseFile() + " unreadable; no entries", e);
-+            mEntries.clear();
-+        }
-+    }
-+
-+    @GuardedBy("mLock")
-+    private void scheduleWriteLocked() {
-+        final List<Entry> entries = snapshotLocked(-1, null);
-+        mHandler.post(() -> write(entries));
-+    }
-+
-+    private void write(@NonNull List<Entry> entries) {
-+        synchronized (mFile) {
-+            FileOutputStream stream = null;
-+            try {
-+                stream = mFile.startWrite();
-+                final TypedXmlSerializer out = Xml.newFastSerializer();
-+                out.setOutput(stream, StandardCharsets.UTF_8.name());
-+                out.startDocument(null, true);
-+                out.startTag(null, TAG_ROOT);
-+                out.attributeInt(null, ATTR_VERSION, VERSION);
-+                for (Entry e : entries) {
-+                    out.startTag(null, TAG_ENTRY);
-+                    out.attributeInt(null, ATTR_UID, e.uid());
-+                    out.attribute(null, ATTR_PACKAGE, e.packageName());
-+                    out.attribute(null, ATTR_OP, AppOpsManager.opToPublicName(e.op()));
-+                    out.endTag(null, TAG_ENTRY);
-+                }
-+                out.endTag(null, TAG_ROOT);
-+                out.endDocument();
-+                mFile.finishWrite(stream);
-+            } catch (IOException | RuntimeException e) {
-+                Slog.e(TAG, "ask: " + mFile.getBaseFile() + " not written", e);
-+                if (stream != null) {
-+                    mFile.failWrite(stream);
-+                }
-+            }
-+        }
-+    }
-+
-+    @GuardedBy("mLock")
-+    void dumpLocked(@NonNull PrintWriter pw) {
-+        final List<Entry> entries = snapshotLocked(-1, null);
-+        pw.println("Lujarch ask (" + entries.size() + "):");
-+        for (Entry e : entries) {
-+            pw.println("  " + e.uid() + " " + e.packageName() + " "
-+                    + AppOpsManager.opToName(e.op()));
 +        }
 +    }
 +}

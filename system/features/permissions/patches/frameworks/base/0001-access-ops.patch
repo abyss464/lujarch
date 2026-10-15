@@ -1,5 +1,5 @@
 diff --git a/core/java/android/app/AppOpsManager.java b/core/java/android/app/AppOpsManager.java
-index dfdd8b063604e2d31e1bcafc7c2d561aa080a25c..13502ded26c14512a53756be975f2ee9f071f080 100644
+index dfdd8b063604e2d31e1bcafc7c2d561aa080a25c..b3c39ff167b2348316c3ada985924bc3ea08bb36 100644
 --- a/core/java/android/app/AppOpsManager.java
 +++ b/core/java/android/app/AppOpsManager.java
 @@ -1828,9 +1828,65 @@ public class AppOpsManager {
@@ -148,63 +148,39 @@ index dfdd8b063604e2d31e1bcafc7c2d561aa080a25c..13502ded26c14512a53756be975f2ee9
      };
  
      // The number of longs needed to form a full bitmask of app ops
-@@ -9056,6 +9168,42 @@ public class AppOpsManager {
+@@ -9056,8 +9168,32 @@ public class AppOpsManager {
          }
      }
  
 +    /**
-+     * Puts the op of one package into the "ask every time" set, or takes it out. With
-+     * {@code ask}, the package mode becomes {@link #MODE_IGNORED}, the answer until the user
-+     * answers, and an access the entry holds makes AppOpsService ask the permission controller
-+     * to ask the user. Without {@code ask}, only the entry goes; the mode stays. Any other write
-+     * of the package's mode of the op, and a change of the uid's mode of it, ends the entry.
++     * Whether a package mode of {@link #MODE_DEFAULT} on the op means "ask every time": the
++     * access is answered as {@link #MODE_IGNORED} and the user is asked.
 +     *
 +     * @hide
 +     */
-+    @RequiresPermission(android.Manifest.permission.MANAGE_APP_OPS_MODES)
-+    public void setLujarchAsk(int code, int uid, @NonNull String packageName, boolean ask) {
-+        try {
-+            mService.setLujarchAsk(code, uid, packageName, ask);
-+        } catch (RemoteException e) {
-+            throw e.rethrowFromSystemServer();
-+        }
-+    }
-+
-+    /**
-+     * The "ask every time" set, as package ops whose entries carry the op and
-+
-+     * the package's stored mode; every uid when {@code uid} is -1, one package when
-+     * {@code packageName} is not null.
-+     *
-+     * @hide
-+     */
-+    @RequiresPermission(android.Manifest.permission.GET_APP_OPS_STATS)
-+    public @NonNull List<PackageOps> getLujarchAsks(int uid, @Nullable String packageName) {
-+        try {
-+            final List<PackageOps> asks = mService.getLujarchAsks(uid, packageName);
-+            return asks != null ? asks : Collections.emptyList();
-+        } catch (RemoteException e) {
-+            throw e.rethrowFromSystemServer();
++    public static boolean isLujarchAskable(int op) {
++        switch (op) {
++            case OP_LUJARCH_SENSORS:
++            case OP_LUJARCH_INSTALLED_APPS:
++            case OP_LUJARCH_DEVICE_IDS:
++            case OP_LUJARCH_AUTOSTART:
++            case OP_LUJARCH_INSTALL:
++            case OP_LUJARCH_PHONE_INFO:
++            case OP_LUJARCH_NETWORK_INFO:
++            case OP_LUJARCH_DEVICE_INFO:
++            case OP_READ_CLIPBOARD:
++                return true;
++            default:
++                return false;
 +        }
 +    }
 +
      /** @hide */
      public void setUserRestriction(int code, boolean restricted, IBinder token) {
++
          setUserRestriction(code, restricted, token, null);
-diff --git a/core/java/com/android/internal/app/IAppOpsService.aidl b/core/java/com/android/internal/app/IAppOpsService.aidl
-index 6858905e2713fbd03d7ffa4216b689b48c4056fc..c06ebd9ecc32d7869b22809a3289d9a814808bed 100644
---- a/core/java/com/android/internal/app/IAppOpsService.aidl
-+++ b/core/java/com/android/internal/app/IAppOpsService.aidl
-@@ -165,4 +165,9 @@ interface IAppOpsService {
-     ParceledListSlice<AppOpsManager.PackageOps> getPackagesForOpsForDevice(in int[] ops, String persistentDeviceId);
-     oneway void noteOperationsInBatch(in Map batchedNoteOps);
-     List<String> getPackagesWithNonDefaultUidMode(int op, int mode, int userId);
-+
-+    // Appended, so no existing transaction code moves.
-+
-+    void setLujarchAsk(int code, int uid, String packageName, boolean ask);
-+    List<AppOpsManager.PackageOps> getLujarchAsks(int uid, @nullable String packageName);
- }
+     }
+ 
 diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
 index 721e530887225553f7f5465c02eef8a511df5103..7658dabb2bb7a89bf843fe135fa5db6267d0c2e2 100644
 --- a/core/res/AndroidManifest.xml

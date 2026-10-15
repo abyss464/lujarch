@@ -1,9 +1,9 @@
 diff --git a/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..c8152b1f428178790ac16c5c79d290ab29e9d998
+index 0000000000000000000000000000000000000000..ea8cc8a182a783868109a5a3343deaaa235ea578
 --- /dev/null
 +++ b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,153 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -96,15 +96,14 @@ index 0000000000000000000000000000000000000000..c8152b1f428178790ac16c5c79d290ab
 +            final long[] last = sLastNote.get(uid);
 +            // Foreground-only needs a note to be resolved against the uid's state.
 +            final long interval = raw == AppOpsManager.MODE_ALLOWED
-+                    || raw == AppOpsManager.MODE_DEFAULT
 +                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
 +            if (last != null && last[1] == raw && now - last[0] < interval
 +                    && raw != AppOpsManager.MODE_FOREGROUND) {
-+                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
 +            }
 +            sLastNote.put(uid, new long[] {now, raw});
 +            final int mode = appOps.noteOpNoThrow(OP, uid, pkg, attributionTag, null);
-+            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
 +        } catch (RuntimeException e) {
 +            if (isUnknownOp(e)) {
 +                if (!sUnknownOpLogged) {
@@ -636,10 +635,10 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..7c66c7ba9e0cee27830f0e195c97d320
              case CALLBACK_BLK_CHANGED: {
 diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..0c0e67435ffb777f7f30e309dae82276afd4fac7
+index 0000000000000000000000000000000000000000..31563ff6d382bda4692971f742187d8520d0bf30
 --- /dev/null
 +++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,173 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -746,15 +745,14 @@ index 0000000000000000000000000000000000000000..0c0e67435ffb777f7f30e309dae82276
 +            final long[] last = sLastNote.get(key);
 +            // Foreground-only needs a note to be resolved against the uid's state.
 +            final long interval = raw == AppOpsManager.MODE_ALLOWED
-+                    || raw == AppOpsManager.MODE_DEFAULT
 +                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
 +            if (last != null && last[1] == raw && now - last[0] < interval
 +                    && raw != AppOpsManager.MODE_FOREGROUND) {
-+                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
 +            }
 +            sLastNote.put(key, new long[] {now, raw});
 +            final int mode = appOps.noteOpNoThrow(op, uid, pkg, attributionTag, null);
-+            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
 +        } catch (RuntimeException e) {
 +            if (isUnknownOp(e)) {
 +                if (sUnknownOpsLogged.add(op)) {

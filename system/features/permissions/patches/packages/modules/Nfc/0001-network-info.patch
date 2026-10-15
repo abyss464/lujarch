@@ -1,9 +1,9 @@
 diff --git a/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..bc6f82094f331a269122623e761b8c348128fdc1
+index 0000000000000000000000000000000000000000..093807674acfafb63cfce2e8ebd645e2ee98c7dd
 --- /dev/null
 +++ b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,155 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -96,17 +96,16 @@ index 0000000000000000000000000000000000000000..bc6f82094f331a269122623e761b8c34
 +            final long[] last = sLastNote.get(uid);
 +            // Foreground-only needs a note to be resolved against the uid's state.
 +            final long interval = raw == AppOpsManager.MODE_ALLOWED
-+                    || raw == AppOpsManager.MODE_DEFAULT
 +                    ? NOTE_INTERVAL_MS : REFUSED_NOTE_INTERVAL_MS;
 +            if (last != null && last[1] == raw && now - last[0] < interval
 +                    && raw != AppOpsManager.MODE_FOREGROUND) {
-+                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : raw;
++                return raw == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : raw;
 +            }
 +            sLastNote.put(uid, new long[] {now, raw});
 +            // The NFC process lacks UPDATE_APP_OPS_STATS, so it cannot note another uid's op;
 +            // a proxy note records the app's read (untrusted proxy) and asks as a note does.
 +            final int mode = appOps.noteProxyOpNoThrow(OP, pkg, uid, attributionTag, null);
-+            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_ALLOWED : mode;
++            return mode == AppOpsManager.MODE_DEFAULT ? AppOpsManager.MODE_IGNORED : mode;
 +        } catch (RuntimeException e) {
 +            if (isUnknownOp(e)) {
 +                if (!sUnknownOpLogged) {

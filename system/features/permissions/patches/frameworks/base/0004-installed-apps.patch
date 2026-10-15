@@ -332,7 +332,7 @@ index 0000000000000000000000000000000000000000..69ec1ce90c21c2d058ecc3dcf10c1e12
 +    }
 +}
 diff --git a/services/core/java/com/android/server/pm/AppsFilterBase.java b/services/core/java/com/android/server/pm/AppsFilterBase.java
-index 32795d030d8703f0253fdef1a8912d3a9677732e..1b287338b233970ee61557b9f5ab4fdc277842fe 100644
+index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0cee437f54b 100644
 --- a/services/core/java/com/android/server/pm/AppsFilterBase.java
 +++ b/services/core/java/com/android/server/pm/AppsFilterBase.java
 @@ -24,10 +24,21 @@ import static com.android.server.pm.AppsFilterUtils.requestsQueryAllPackages;
@@ -385,7 +385,7 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..1b287338b233970ee61557b9f5ab4fdc
  
  /**
   * AppsFilter is the entity responsible for filtering visibility between apps based on declarations
-@@ -73,6 +93,433 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+@@ -73,6 +93,435 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
      // With each new rebuild the delay doubles until it reaches max delay.
      protected static final int CACHE_REBUILD_DELAY_MAX_MS = 10000;
  
@@ -629,10 +629,12 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..1b287338b233970ee61557b9f5ab4fdc
 +                    final List<AppOpsManager.OpEntry> ops = po.getOps();
 +                    for (int j = 0; j < ops.size(); j++) {
 +                        final AppOpsManager.OpEntry e = ops.get(j);
++                        // The stored mode: "ask every time" hides as Return empty data does.
++                        final int mode = e.getMode() == AppOpsManager.MODE_DEFAULT
++                                ? AppOpsManager.MODE_IGNORED : e.getMode();
 +                        if (e.getOp() == AppOpsManager.OP_LUJARCH_INSTALLED_APPS
-+                                && e.getMode() != AppOpsManager.MODE_ALLOWED
-+                                && e.getMode() != AppOpsManager.MODE_DEFAULT) {
-+                            next.put(po.getUid(), e.getMode());
++                                && mode != AppOpsManager.MODE_ALLOWED) {
++                            next.put(po.getUid(), mode);
 +                        }
 +                    }
 +                }
@@ -819,7 +821,7 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..1b287338b233970ee61557b9f5ab4fdc
      /**
       * This contains a list of app UIDs that are implicitly queryable because another app explicitly
       * interacted with it. For example, if application A starts a service in application B,
-@@ -364,6 +811,35 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
+@@ -364,6 +813,35 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                  // if the caller is pcc uid, use the visibility of its app uid
                  callingUid = UserHandle.getUid(userId, packageSetting.getAppId());
              }
