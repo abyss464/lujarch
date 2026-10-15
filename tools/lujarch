@@ -8,6 +8,7 @@
   lujarch patch | unpatch           apply or revert the patches and vendor/extra in the tree
   lujarch save ENTRY [PROJECT...]   save the tree's changes into ENTRY's patches (features/x, device/y)
   lujarch build DEVICE [MODULE...]  build a device (fuxi, vm), or some of its modules
+  lujarch stock DEVICE [--add GLOB] download and unpack a device's stock release; pin its files
   lujarch vm start|stop|status      the virtual device
 """
 
@@ -350,6 +351,15 @@ def check_lock(findings):
                          ("upstream", "aosp"), ("build", "variant")):
         if key not in lock.get(section, {}):
             findings.add(path, 0, f"missing {section}.{key}")
+    for device, pin in lock.get("stock", {}).items():
+        if not (SYSTEM / "device" / device / "device.toml").is_file():
+            findings.add(path, 0, f"stock.{device}: no such device")
+        for key in ("release", "urls", "sha256"):
+            if key not in pin:
+                findings.add(path, 0, f"missing stock.{device}.{key}")
+        for name, digest in pin.get("files", {}).items():
+            if not re.fullmatch(r"[0-9a-f]{64}", str(digest)):
+                findings.add(path, 0, f"stock.{device}.files: {name} has no sha256")
     manifest = ROOT / "upstream.xml"
     if not manifest.exists():
         findings.add("upstream.xml", 0, "missing")
@@ -788,10 +798,24 @@ def revert_patches(tree):
 EXTRA_MANIFEST = ".lujarch-files"
 
 
-def extra_files():
+def extra_files(host):
     """vendor/extra as the tools stage it: every feature and device directory without its
-    patches and tests, and the two makefiles LineageOS includes from vendor/extra."""
+    patches and tests, each device's files from its stock release, and the two makefiles
+    LineageOS includes from vendor/extra."""
     files = {}
+    for device, pin in lock_file().get("stock", {}).items():
+        dump = stock_dump_dir(host, pin)
+        if not (dump / STOCK_UNPACKED).is_file():
+            if pin.get("files"):
+                log(f"{device}: stock release {pin['release']} is not unpacked "
+                    f"(lujarch stock {device}); its files are left out")
+            continue
+        for name, digest in sorted(pin.get("files", {}).items()):
+            src = dump / name
+            data = src.read_bytes() if src.is_file() else None
+            if data is None or hashlib.sha256(data).hexdigest() != digest:
+                die(f"{device}: {name} of {pin['release']} is missing or differs from lock.toml")
+            files[f"device/{device}/stock/{name}"] = data
     features, devices = [], []
     for kind, found in (("features", features), ("device", devices)):
         base = SYSTEM / kind
@@ -852,14 +876,14 @@ def staged_edits(dest):
     return edits + sorted(known)
 
 
-def stage_extra(tree):
+def stage_extra(host, tree):
     """Stage vendor/extra from system/; a file edited there in the tree stops it."""
     dest = tree / "vendor" / "extra"
     edits = staged_edits(dest)
     if edits:
         die("vendor/extra was edited in the tree; make the change in system/ instead:\n  "
             + "\n  ".join(edits[:40]))
-    files = extra_files()
+    files = extra_files(host)
     for path in sorted(p for p in dest.rglob("*") if p.is_file()) if dest.exists() else []:
         name = path.relative_to(dest).as_posix()
         if name != EXTRA_MANIFEST and name not in files:
@@ -892,9 +916,102 @@ def unstage_extra(tree):
         log("removed vendor/extra")
 
 
-def prepare_tree(tree):
-    apply_patches(tree)
-    stage_extra(tree)
+def prepare_tree(host):
+    apply_patches(host.tree)
+    stage_extra(host, host.tree)
+
+
+# ---------------------------------------------------------------------------
+# Stock releases
+
+STOCK_UNPACKED = ".lujarch-unpacked"
+
+
+def stock_dump_dir(host, pin):
+    """<stock>/<release>/<package name>/: the package's partitions, unpacked next to it."""
+    name = Path(pin["urls"][0].split("?", 1)[0]).name
+    return host.path_of("paths", "stock") / pin["release"] / Path(name).stem
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 22):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def stock_dump(host, device):
+    """Download, check and unpack a device's stock release; return its unpacked partitions."""
+    pin = lock_file().get("stock", {}).get(device)
+    if not pin:
+        die(f"lock.toml pins no stock release for {device}")
+    dump = stock_dump_dir(host, pin)
+    if (dump / STOCK_UNPACKED).is_file():
+        return pin, dump
+    package = dump.with_suffix(".zip")
+    package.parent.mkdir(parents=True, exist_ok=True)
+    if not package.is_file() or package.with_name(package.name + ".aria2").exists():
+        log(f"downloading {pin['release']} into {package.parent}")
+        if shutil.which("aria2c"):
+            run = subprocess.run(["aria2c", "-q", "--continue=true", "-x16", "-s16", "-k4M",
+                                  "--max-tries=10", "--retry-wait=10", "--file-allocation=none",
+                                  "-d", str(package.parent), "-o", package.name, *pin["urls"]])
+        else:
+            run = subprocess.run(["curl", "-fL", "--retry", "5", "-C", "-", "-o", str(package),
+                                  pin["urls"][0]])
+        if run.returncode:
+            die(f"download of {pin['release']} failed")
+    if sha256_file(package) != pin["sha256"]:
+        die(f"{package} does not match lock.toml's sha256")
+    log(f"unpacking {pin['release']} into {dump}")
+    run = subprocess.run([sys.executable, str(host.tree / "tools" / "extract-utils" / "extract.py"),
+                          str(package)], cwd=host.tree)
+    if run.returncode:
+        die(f"unpacking {package} failed")
+    (dump / STOCK_UNPACKED).write_text(pin["sha256"] + "\n")
+    return pin, dump
+
+
+def pin_stock_files(device, names):
+    """Write the sha256 of each named stock file into lock.toml's stock.<device>.files."""
+    path = ROOT / "lock.toml"
+    text = path.read_text(encoding="utf-8")
+    header = f"[stock.{device}.files]"
+    lines = text.rstrip("\n").split("\n")
+    if header in lines:
+        start = lines.index(header) + 1
+        end = next((i for i in range(start, len(lines)) if lines[i].startswith("[")), len(lines))
+    else:
+        lines += ["", header]
+        start = end = len(lines)
+    entries = {}
+    for line in lines[start:end]:
+        if line.strip():
+            key, _, value = line.partition("=")
+            entries[key.strip().strip('"')] = value.strip().strip('"')
+    entries.update(names)
+    body = [f'"{k}" = "{v}"' for k, v in sorted(entries.items())]
+    lines[start:end] = body + ([""] if end < len(lines) else [])
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def cmd_stock(args):
+    host = Host()
+    pin, dump = stock_dump(host, args.device)
+    if args.add:
+        found = {}
+        for pattern in args.add:
+            matches = sorted(p for p in dump.glob(pattern) if p.is_file())
+            if not matches:
+                die(f"nothing in {pin['release']} matches {pattern}")
+            for p in matches:
+                found[p.relative_to(dump).as_posix()] = sha256_file(p)
+        pin_stock_files(args.device, found)
+        log(f"pinned {len(found)} file{'s' if len(found) != 1 else ''} of {pin['release']}")
+    print(f"{args.device}: {pin['release']} unpacked in {dump}; "
+          f"{len(lock_file()['stock'][args.device].get('files', {}))} files pinned")
+    return 0
 
 
 def verify_tree(tree):
@@ -920,7 +1037,7 @@ def verify_tree(tree):
 
 
 def cmd_patch(_args):
-    prepare_tree(Host().tree)
+    prepare_tree(Host())
     return 0
 
 
@@ -1070,7 +1187,7 @@ def cmd_sync(_args):
     if run.returncode:
         die("repo sync failed")
     pull_lfs(tree, env)
-    prepare_tree(tree)
+    prepare_tree(host)
     return 0
 
 
@@ -1149,8 +1266,11 @@ def cmd_build(args):
         log(f"another build holds {lock_path}; waiting")
         fcntl.flock(lock, fcntl.LOCK_EX)
 
-    prepare_tree(tree)
+    prepare_tree(host)
     verify_tree(tree)
+    pin = lock_file().get("stock", {}).get(args.device)
+    if pin and pin.get("files") and not (stock_dump_dir(host, pin) / STOCK_UNPACKED).is_file():
+        die(f"{args.device} needs files of its stock release: lujarch stock {args.device}")
     mem_max, mem_high, jobs = build_budget(host)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
@@ -1396,6 +1516,10 @@ def main():
     which = save.add_mutually_exclusive_group()
     which.add_argument("--name", help="start a new patch NNNN-<name>.patch")
     which.add_argument("--patch", help="the entry's patch file to fold the changes into")
+    stock = sub.add_parser("stock", help="download and unpack a device's stock release")
+    stock.add_argument("device")
+    stock.add_argument("--add", nargs="+", metavar="GLOB",
+                       help="pin the stock files matching these paths into lock.toml")
     build = sub.add_parser("build", help="build a device or some of its modules")
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
@@ -1405,7 +1529,8 @@ def main():
     args = parser.parse_args()
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
-        "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "build": cmd_build,
+        "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "stock": cmd_stock,
+        "build": cmd_build,
         "vm": cmd_vm,
     }[args.command](args)
 

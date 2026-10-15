@@ -72,7 +72,8 @@ system/device/<device>/
 ## In the tree
 
 `tools/lujarch patch`, and every build, stages each feature's and device's directory without its
-`patches/` and `tests/` at `vendor/extra/<kind>/<name>/` in the tree, and generates
+`patches/` and `tests/` at `vendor/extra/<kind>/<name>/` in the tree, each file a device takes
+from its stock release at `vendor/extra/device/<device>/stock/<path in the release>`, and generates
 `vendor/extra/product.mk` and `vendor/extra/BoardConfigExtra.mk`, the two files LineageOS
 includes from there. They include every feature's `product.mk` and `board.mk`, `core` first, a
 feature limited to some devices only for their products, and each device's own for its product.
@@ -101,6 +102,10 @@ blob ids.
 
 - `lock.toml`: the upstream branch and AOSP tag, the build variant, each device's stock
   release, and every source or prebuilt a feature fetches (version, commit or URL, and hash).
+  A stock release is `[stock.<device>]` with `release`, `urls` (mirrors of one package) and
+  `sha256`; `[stock.<device>.files]` holds the sha256 of every file the device takes from it.
+  `tools/lujarch stock <device>` downloads, checks and unpacks the package under the host's
+  `stock` path; `--add` pins files from it.
 - `upstream.xml`: the repo manifest with every upstream project at its commit. The same commit
   of this repository always builds the same system.
 - Changing a pin is a commit that goes through the test flow like any other change.
