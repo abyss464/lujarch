@@ -31,7 +31,7 @@
 
 #include <android-base/unique_fd.h>
 
-#include "text.h"
+#include <lujarch/text.h>
 
 namespace lujarch::proxy::manager {
 
@@ -479,10 +479,10 @@ std::string CheckArgs(const std::vector<std::string>& args) {
         // routing page parses (the text forms are for people).
         ok = (n == 2 && OneOf(args[1], {"list", "targets"})) ||
              (n == 3 && OneOf(args[1], {"list", "targets"}) && args[2] == "--json") ||
-             (n == 4 && args[1] == "add" && IsPackageName(args[2]) && IsTarget(args[3])) ||
-             (n == 3 && args[1] == "remove" && IsPackageName(args[2])) ||
+             (n == 4 && args[1] == "add" && text::IsPackageName(args[2]) && IsTarget(args[3])) ||
+             (n == 3 && args[1] == "remove" && text::IsPackageName(args[2])) ||
              (n == 4 && args[1] == "tun" && OneOf(args[2], {"include", "exclude", "clear"}) &&
-              IsPackageName(args[3]));
+              text::IsPackageName(args[3]));
     } else if (sub == "rule") {
         ok = (n == 2 && OneOf(args[1], {"list", "sets", "default"})) ||
              (n == 3 && OneOf(args[1], {"list", "sets", "default"}) && args[2] == "--json") ||

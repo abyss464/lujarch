@@ -19,7 +19,7 @@
 #include <string>
 #include <string_view>
 
-namespace lujarch::proxy {
+namespace lujarch::text {
 
 // Every scheme://... in text replaced by <url>: subscription and node addresses carry access
 // keys, and the text goes to an app.
@@ -42,4 +42,4 @@ bool SendAll(int fd, std::string_view data);
 // dot.
 bool IsPackageName(std::string_view name);
 
-}  // namespace lujarch::proxy
+}  // namespace lujarch::text

@@ -17,15 +17,17 @@ prebuilt_etc {
     system_ext_specific: true,
 }
 
-// The base every Lujarch daemon is built on (lujarch/daemon.h) and Lujarch's user ids
-// (lujarch/aid.h).
+// The base every Lujarch daemon is built on (lujarch/daemon.h), its HTTP client for the local
+// APIs of the programs it runs (lujarch/http.h) and text helpers (lujarch/text.h), and Lujarch's
+// user ids (lujarch/aid.h).
 cc_library_static {
     name: "liblujarch_daemon",
-    srcs: ["src/daemon/daemon.cpp"],
+    srcs: ["src/daemon/*.cpp"],
     export_include_dirs: ["src/daemon/include"],
     shared_libs: [
         "libbase",
         "libbinder_ndk",
+        "libjsoncpp",
         "liblog",
     ],
     cflags: ["-Wall", "-Werror"],

@@ -1,0 +1,6 @@
+/system_ext/bin/lujarch_sync             u:object_r:lujarch_sync_exec:s0
+/system_ext/bin/lujarch_sync_engine      u:object_r:lujarch_sync_engine_exec:s0
+# The engine's home: configuration, keys, database, log, REST socket.
+/data/lujarch/sync(/.*)?                 u:object_r:lujarch_sync_data_file:s0
+# The sync storage.
+/data/lujarch/sync/folders(/.*)?         u:object_r:lujarch_sync_folder_file:s0

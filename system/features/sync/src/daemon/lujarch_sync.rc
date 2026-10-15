@@ -1,0 +1,13 @@
+on post-fs-data
+    mkdir /data/lujarch 0711 root root
+    # The engine's home and the sync storage, 0750 at every start: the daemon reaches the
+    # configuration, the socket and the folders through the group.
+    mkdir /data/lujarch/sync 0750 5100 5100
+    mkdir /data/lujarch/sync/folders 0750 5100 5100
+
+service lujarch_sync /system_ext/bin/lujarch_sync
+    class main
+    user root
+    # 5100: the engine's group; the daemon starts the engine and installs identities as its user.
+    group root 5100 inet
+    capabilities SETUID SETGID KILL

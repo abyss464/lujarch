@@ -26,7 +26,7 @@
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
 
-#include "text.h"
+#include <lujarch/text.h>
 
 namespace lujarch::proxy::controller {
 
@@ -138,7 +138,7 @@ Result<unique_fd> Send(std::string_view method, std::string_view target, std::st
     auto fd = Connect();
     if (!fd.ok()) return fd.error();
     http::SetTimeouts(fd->get(), timeout, timeout);
-    if (!SendAll(fd->get(), *request)) return ErrnoError() << "sending to the controller";
+    if (!text::SendAll(fd->get(), *request)) return ErrnoError() << "sending to the controller";
     return std::move(*fd);
 }
 

@@ -1,0 +1,17 @@
+[enabled]
+table = "global"
+type = "bool"
+default = false
+item = "SYN-1"
+
+[wifi_only]
+table = "global"
+type = "bool"
+default = false
+item = "SYN-2"
+
+[charging_only]
+table = "global"
+type = "bool"
+default = false
+item = "SYN-2"

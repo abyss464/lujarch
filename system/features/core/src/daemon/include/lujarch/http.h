@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The HTTP client of the controller and the probes. One HTTP/1.0 request per connection: the
-// server replies without chunked encoding and closes the connection after the reply.
+// The HTTP client of Lujarch's daemons, for the local APIs of the programs they run and their
+// probes. One HTTP/1.0 request per connection: the server replies without chunked encoding and
+// closes the connection after the reply.
 #pragma once
 
 #include <chrono>
@@ -25,7 +26,7 @@
 #include <android-base/unique_fd.h>
 #include <sys/socket.h>
 
-namespace lujarch::proxy::http {
+namespace lujarch::http {
 
 // RFC 3986 unreserved, sub-delims, ":", "@", "/", "?" and "%": no spaces,
 // controls, quotes or non-ASCII bytes, which keeps the request line intact.
@@ -75,6 +76,11 @@ struct Reply {
 android::base::Result<android::base::unique_fd> ConnectLoopback(uint16_t port,
                                                                 std::chrono::milliseconds timeout,
                                                                 std::string_view what);
+// A connection to a unix socket at path.
+android::base::Result<android::base::unique_fd> ConnectUnix(const std::string& path,
+                                                            std::chrono::milliseconds timeout,
+                                                            std::string_view what);
+
 // A connection to addr (IPv4 or IPv6).
 android::base::Result<android::base::unique_fd> Connect(const sockaddr* addr, socklen_t len,
                                                         std::chrono::milliseconds timeout,
@@ -95,4 +101,4 @@ android::base::Result<Reply> Exchange(int fd, std::string_view request,
                                       std::chrono::milliseconds timeout, size_t max_reply,
                                       std::string_view what);
 
-}  // namespace lujarch::proxy::http
+}  // namespace lujarch::http

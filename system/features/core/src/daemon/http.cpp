@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "http.h"
+#include "lujarch/http.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -21,15 +21,16 @@
 #include <poll.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include <algorithm>
 
 #include <android-base/strings.h>
 
-#include "text.h"
+#include "lujarch/text.h"
 
-namespace lujarch::proxy::http {
+namespace lujarch::http {
 
 using android::base::ErrnoError;
 using android::base::Error;
@@ -230,6 +231,16 @@ Result<unique_fd> Connect(const sockaddr* addr, socklen_t len, std::chrono::mill
     return fd;
 }
 
+Result<unique_fd> ConnectUnix(const std::string& path, std::chrono::milliseconds timeout,
+                              std::string_view what) {
+    sockaddr_un addr{};
+    addr.sun_family = AF_UNIX;
+    if (path.empty() || path.size() >= sizeof(addr.sun_path))
+        return Error() << "socket path too long";
+    memcpy(addr.sun_path, path.c_str(), path.size() + 1);
+    return Connect(reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), timeout, what);
+}
+
 void SetTimeouts(int fd, std::chrono::milliseconds recv_timeout,
                  std::chrono::milliseconds send_timeout) {
     auto to_timeval = [](std::chrono::milliseconds ms) {
@@ -263,7 +274,7 @@ std::string BuildRequest(std::string_view method, std::string_view target, std::
 Result<Reply> Exchange(int fd, std::string_view request, std::chrono::milliseconds timeout,
                        size_t max_reply, std::string_view what) {
     SetTimeouts(fd, timeout, timeout);
-    if (!SendAll(fd, request)) return ErrnoError() << "sending to " << what;
+    if (!text::SendAll(fd, request)) return ErrnoError() << "sending to " << what;
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     std::string data;
     char buf[16384];
@@ -300,4 +311,4 @@ Result<Reply> Exchange(int fd, std::string_view request, std::chrono::millisecon
     return reply;
 }
 
-}  // namespace lujarch::proxy::http
+}  // namespace lujarch::http
