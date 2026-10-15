@@ -60,3 +60,8 @@ commit = "ab405bad5beeeac8b003bb01f60f134f6df54471"
 
 [components.mihomo-manager]
 commit = "70b21adac5b60e323ae7003020e304b9756524df"
+
+[components.syncthing]
+url = "https://github.com/syncthing/syncthing.git"
+version = "v2.1.5"
+commit = "2ca95cf1498104113fdfde46df4107f2450a0f71"

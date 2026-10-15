@@ -24,7 +24,7 @@
 #include <android-base/result.h>
 #include <json/value.h>
 
-#include "http.h"
+#include <lujarch/http.h>
 
 namespace lujarch::proxy::controller {
 

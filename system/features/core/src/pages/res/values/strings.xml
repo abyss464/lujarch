@@ -23,4 +23,12 @@
     <string name="quoted_name">%1$s</string>
     <string name="time_just_now">just now</string>
     <string name="error_service_title">Lujarch system service not available</string>
+    <string name="error_closed">The Lujarch system service closed the connection.</string>
+    <string name="error_failed">The Lujarch system service could not complete this request.</string>
+    <string name="error_io_sentence">The connection to the Lujarch system service was interrupted.</string>
+    <string name="error_protocol_sentence">The Lujarch system service sent an answer this app cannot read.</string>
+    <string name="error_refused">The Lujarch system service refused this request.</string>
+    <string name="error_timeout">The Lujarch system service did not answer in time.</string>
+    <string name="error_unavailable_sentence">Cannot connect to the Lujarch system service. It may be stopped.</string>
+    <string name="error_busy_service">The Lujarch system service is busy. Try again in a moment.</string>
 </resources>

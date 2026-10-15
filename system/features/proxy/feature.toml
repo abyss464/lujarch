@@ -6,6 +6,7 @@ build = "go"
 module = "lujarch_proxy_core"
 tags = ["with_gvisor"]
 version_vars = ["github.com/metacubex/mihomo/constant.Version"]
+version_suffix = "-lujarch"
 
 [components.mihomo-manager]
 build = "cargo"

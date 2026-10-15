@@ -1,0 +1,34 @@
+# lujarch_sync_engine: the sync engine, run by lujarch_sync as its own user with group inet.
+type lujarch_sync_engine, domain, coredomain;
+type lujarch_sync_engine_exec, system_file_type, exec_type, file_type;
+# Peers (TCP, QUIC), local discovery (UDP broadcast and multicast), DNS through netd, interface
+# listing over rtnetlink.
+net_domain(lujarch_sync_engine)
+
+# stdout and stderr are the daemon's pipe; its monitor runs the binary again as its child.
+allow lujarch_sync_engine lujarch_sync:fd use;
+allow lujarch_sync_engine lujarch_sync:fifo_file { getattr ioctl write };
+allow lujarch_sync_engine lujarch_sync_engine_exec:file { rx_file_perms execute_no_trans };
+
+# Its CPU figures and Go's listeners; the Go runtime sizes its threads by the CPU quota of its
+# cgroup.
+allow lujarch_sync_engine proc_stat:file r_file_perms;
+allow lujarch_sync_engine proc_net:file r_file_perms;
+allow lujarch_sync_engine cgroup:dir search;
+allow lujarch_sync_engine cgroup:file r_file_perms;
+
+# SQLite stats the directories above its database.
+allow lujarch_sync_engine system_data_file:dir { search getattr };
+
+# Home. No setattr on its directories: the engine makes its home 0700 at every start, which would
+# lock the daemon out of the configuration, the socket and the folders; init creates it 0750.
+allow lujarch_sync_engine lujarch_sync_data_file:dir { rw_dir_perms create rmdir rename reparent };
+dontaudit lujarch_sync_engine lujarch_sync_data_file:dir setattr;
+allow lujarch_sync_engine lujarch_sync_data_file:file create_file_perms;
+allow lujarch_sync_engine lujarch_sync_data_file:sock_file { create unlink getattr setattr };
+
+# The sync storage: everything the engine does to files (temp files renamed into place,
+# modification times, deletions, conflicts, versions); links are indexed, never created.
+allow lujarch_sync_engine lujarch_sync_folder_file:dir create_dir_perms;
+allow lujarch_sync_engine lujarch_sync_folder_file:file create_file_perms;
+allow lujarch_sync_engine lujarch_sync_folder_file:lnk_file { getattr read };

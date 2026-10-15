@@ -1008,14 +1008,18 @@ def build_component(host, feature, name, spec, arch):
         die(f"no {clang}")
     patches = component_patches(feature, name)
     if spec["build"] == "go":
-        toolchain = tree / "prebuilts" / "go" / "linux-x86" / "bin"
+        toolchain = host.path_of("paths", "go") / "bin"
     elif spec["build"] == "cargo":
         toolchain = tree_rust(tree)
     else:
         die(f"component {name}: build is go or cargo")
     digest = hashlib.sha256()
+    toolchain_version = subprocess.run(
+        [str(toolchain / "go"), "version"] if spec["build"] == "go"
+        else [str(toolchain / "rustc"), "--version"],
+        capture_output=True, text=True).stdout.strip()
     for part in (json.dumps(spec, sort_keys=True), json.dumps(pin, sort_keys=True), arch,
-                 str(clang), str(toolchain.resolve())):
+                 str(clang), str(toolchain.resolve()), toolchain_version):
         digest.update(part.encode() + b"\0")
     for patch in patches:
         digest.update(patch.read_bytes())
@@ -1026,7 +1030,8 @@ def build_component(host, feature, name, spec, arch):
     env = dict(os.environ, LC_ALL="C", TZ="UTC")
     log(f"building component {name} ({pin.get('version', pin['commit'][:12])}, {arch})")
     if spec["build"] == "go":
-        env.update({"GOTOOLCHAIN": "local", "GOPROXY": "off", "GOFLAGS": "-mod=mod",
+        env.update({"GOROOT": str(toolchain.parent), "GOTOOLCHAIN": "local", "GOPROXY": "off",
+                    "GOFLAGS": "-mod=mod",
                     "GOCACHE": str(host.out / "components" / "go-cache")})
         # The modules come from the computer's module cache, checked against go.sum.
         if subprocess.run([str(toolchain / "go"), "mod", "vendor"], cwd=src, env=env).returncode:
@@ -1036,9 +1041,11 @@ def build_component(host, feature, name, spec, arch):
             die(f"{name}: {rel(patch)} does not apply")
     out.parent.mkdir(parents=True, exist_ok=True)
     if spec["build"] == "go":
-        version = f"{pin['version']}-lujarch"
+        version = pin["version"] + spec.get("version_suffix", "")
+        stamp = pgit(src, "show", "-s", "--format=%ct", pin["commit"], check=True).stdout.strip()
         ldflags = " ".join([*(f"-X '{v}={version}'" for v in spec.get("version_vars", [])),
-                            "-w", "-s", "-buildid="])
+                            *(f"-X '{v}={stamp}'" for v in spec.get("stamp_vars", [])),
+                            *spec.get("ldflags", []), "-w", "-s", "-buildid="])
         env.update({"GOFLAGS": "-mod=vendor", "CGO_ENABLED": "1", "GOOS": "android",
                     "GOARCH": GO_ARCH[arch], "CC": str(clang)})
         cmd = [str(toolchain / "go"), "build", "-trimpath", "-ldflags", ldflags, "-o", str(out)]

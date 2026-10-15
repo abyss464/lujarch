@@ -1,0 +1,77 @@
+// The interface of lujarch_sync, for Lujarch Settings and Lujarch Vault.
+aidl_interface {
+    name: "lujarch_sync_aidl",
+    srcs: ["src/daemon/aidl/org/lujarch/sync/*.aidl"],
+    local_include_dir: "src/daemon/aidl",
+    unstable: true,
+    system_ext_specific: true,
+    backend: {
+        java: {
+            platform_apis: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+    },
+}
+
+// The sync daemon: it runs the engine and serves its API, its identity and the vault's databases.
+cc_binary {
+    name: "lujarch_sync",
+    srcs: ["src/daemon/*.cpp"],
+    static_libs: [
+        "android.hardware.health-V4-ndk",
+        "liblujarch_daemon",
+        "lujarch_sync_aidl-ndk",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "libcrypto",
+        "libcutils",
+        "libjsoncpp",
+        "liblog",
+        "libtinyxml2",
+    ],
+    init_rc: ["src/daemon/lujarch_sync.rc"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+}
+
+// The sync engine, built outside the tree (feature.toml, components).
+cc_prebuilt_binary {
+    name: "lujarch_sync_engine",
+    compile_multilib: "64",
+    arch: {
+        arm64: {
+            srcs: ["prebuilt/arm64/lujarch_sync_engine"],
+        },
+        x86_64: {
+            srcs: ["prebuilt/x86_64/lujarch_sync_engine"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+    system_ext_specific: true,
+}
+
+// Sync's pages in Lujarch Settings, its search entries and the Sync row in Connected devices.
+android_library {
+    name: "LujarchSyncSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "lujarch_sync_aidl-java",
+        "zxing-core",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}

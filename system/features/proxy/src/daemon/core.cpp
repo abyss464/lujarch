@@ -30,8 +30,8 @@
 #include <regex>
 #include <thread>
 
-#include "http.h"
-#include "text.h"
+#include <lujarch/http.h>
+#include <lujarch/text.h>
 
 namespace lujarch::proxy::core {
 
@@ -120,7 +120,7 @@ std::string Ask(const Address& address, const std::string& request,
     auto fd = http::Connect(address.get(), address.length, 6s, "the probe's server");
     if (!fd.ok()) return "";
     http::SetTimeouts(fd->get(), timeout, timeout);
-    if (!SendAll(fd->get(), request)) return "";
+    if (!text::SendAll(fd->get(), request)) return "";
     std::string data;
     char buf[512];
     while (data.find('\n') == std::string::npos && data.size() < 4096) {

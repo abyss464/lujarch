@@ -22,10 +22,10 @@
 
 #include <thread>
 
+#include <lujarch/text.h>
 #include "controller.h"
 #include "manager.h"
 #include "supervisor.h"
-#include "text.h"
 
 namespace lujarch::proxy {
 
@@ -87,12 +87,13 @@ ndk::ScopedAStatus Service::controller(const std::string& method, const std::str
     Json::Value json;
     if (body && !android::base::Trim(*body).empty()) {
         std::string error;
-        if (!ParseJson(*body, &json, &error)) return Refused("the body is not JSON: " + error);
+        if (!text::ParseJson(*body, &json, &error))
+            return Refused("the body is not JSON: " + error);
     }
     if (std::string why = controller::CheckApi(method, path, json); !why.empty()) {
-        return Refused(why + ": " + method + " " + SanitizeUtf8(path.substr(0, 256)));
+        return Refused(why + ": " + method + " " + text::SanitizeUtf8(path.substr(0, 256)));
     }
-    auto answer = controller::Call(method, path, json.isNull() ? "" : ToJson(json),
+    auto answer = controller::Call(method, path, json.isNull() ? "" : text::ToJson(json),
                                    controller::TimeoutFor(method, path, kControllerTimeout));
     if (!answer.ok()) {
         LOG(WARNING) << method << " " << path << ": " << answer.error().message();
@@ -107,7 +108,7 @@ ndk::ScopedAStatus Service::controller(const std::string& method, const std::str
                       std::to_string(kMaxReply >> 10) + " KiB");
     }
     reply->status = answer->status;
-    reply->body = SanitizeUtf8(answer->body);
+    reply->body = text::SanitizeUtf8(answer->body);
     return ndk::ScopedAStatus::ok();
 }
 
@@ -125,16 +126,16 @@ ndk::ScopedAStatus Service::stream(const std::string& path, ndk::ScopedFileDescr
             Json::Value data;
             std::string error;
             std::string out;
-            if (!ParseJson(line, &data, &error)) {
-                out = ToJson(Json::Value(SanitizeUtf8(line)));
+            if (!text::ParseJson(line, &data, &error)) {
+                out = text::ToJson(Json::Value(text::SanitizeUtf8(line)));
             } else {
                 // Log lines of failed subscription updates name the address.
                 if (data.isObject() && std::as_const(data)["payload"].isString()) {
-                    data["payload"] = RedactUrls(std::as_const(data)["payload"].asString());
+                    data["payload"] = text::RedactUrls(std::as_const(data)["payload"].asString());
                 }
-                out = ToJson(data);
+                out = text::ToJson(data);
             }
-            return SendAll(fd.get(), out + "\n");
+            return text::SendAll(fd.get(), out + "\n");
         });
         if (!end.ok()) LOG(WARNING) << "stream " << path << ": " << end.error().message();
     }).detach();
@@ -159,7 +160,7 @@ ndk::ScopedAStatus Service::manager(const std::vector<std::string>& args,
               << android::base::Join(args, ' ');
     auto output = manager::Run(args, kManagerTimeout, input.get());
     if (!output.ok()) return Failed(output.error().message());
-    std::string text = RedactUrls(SanitizeUtf8(output->text));
+    std::string text = text::RedactUrls(text::SanitizeUtf8(output->text));
     if (output->code != 0) {
         LOG(WARNING) << "manager " << args[0] << " exited with " << output->code << ": "
                      << LastLine(text);
@@ -183,7 +184,7 @@ ndk::ScopedAStatus Service::exportTo(bool secrets, const ndk::ScopedFileDescript
     auto output = manager::Run(args, kManagerTimeout, -1, out.get());
     if (!output.ok()) return Failed(output.error().message());
     // Only its messages are here; the export itself went to out.
-    std::string messages = RedactUrls(SanitizeUtf8(output->text));
+    std::string messages = text::RedactUrls(text::SanitizeUtf8(output->text));
     if (output->code == 0) {
         LOG(INFO) << "uid " << AIBinder_getCallingUid() << ": proxy data exported ("
                   << (secrets ? "with" : "without")

@@ -58,8 +58,8 @@ system/features/<feature>/
   registry and its mirror, the page framework of Lujarch's pages in Settings with the App info
   rows and search entries features contribute, the daemon base, the AID table, shared SELinux
   macros.
-- A component is a program a feature builds outside the tree with the tree's own Go or Rust
-  toolchain and the host's NDK: `feature.toml` names it under `[components.<name>]` with its
+- A component is a program a feature builds outside the tree with the host's Go or the tree's own
+  Rust toolchain, and the host's NDK: `feature.toml` names it under `[components.<name>]` with its
   `build` (`go` or `cargo`), the `module` it becomes and how it is built; `lock.toml` pins its
   commit; the host configuration's `[sources]` says where its repository is on the computer.
   The tools build it once for each pin, patch series and toolchain, for every device
@@ -148,6 +148,7 @@ keys = "..."          # signing keys; only their location, never their content
 ccache = "..."
 stock = "..."         # unpacked stock releases
 ndk = "..."           # Android NDK for components built outside the tree
+go = "..."            # Go installation (GOROOT) for components built outside the tree
 
 [sources]
 mihomo = "..."          # where each component's repository is; its commit is in lock.toml

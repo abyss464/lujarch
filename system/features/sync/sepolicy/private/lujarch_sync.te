@@ -1,0 +1,47 @@
+# lujarch_sync: the sync daemon. It runs the engine and installs identities as the engine's user,
+# follows the network and the charger for the run conditions, and serves Lujarch Settings and
+# Lujarch Vault.
+type lujarch_sync, domain, coredomain;
+type lujarch_sync_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_sync)
+
+type lujarch_sync_data_file, file_type, data_file_type, core_data_file_type;
+type lujarch_sync_folder_file, file_type, data_file_type, core_data_file_type;
+type lujarch_sync_service, service_manager_type;
+system_internal_prop(lujarch_sync_prop)
+
+# Its interface.
+binder_use(lujarch_sync)
+add_service(lujarch_sync, lujarch_sync_service)
+allow platform_app_all lujarch_sync_service:service_manager find;
+binder_call(platform_app_all, lujarch_sync)
+allow lujarch_sync packages_list_file:file r_file_perms;
+get_prop(lujarch_sync, lujarch_setting_prop)
+set_prop(lujarch_sync, lujarch_sync_prop)
+get_prop(platform_app_all, lujarch_sync_prop)
+
+# The engine, as its own user (lujarch_sync.rc's capabilities) and in its own domain.
+allow lujarch_sync self:global_capability_class_set { setuid setgid kill };
+domain_auto_trans(lujarch_sync, lujarch_sync_engine_exec, lujarch_sync_engine)
+allow lujarch_sync lujarch_sync_engine:process { sigkill signal };
+allow lujarch_sync lujarch_sync_engine:fd use;
+
+# The engine's home and the sync storage: its API key and socket, the databases the vault opens,
+# and identities installed as the engine's user (a child of the daemon).
+allow lujarch_sync system_data_file:dir search;
+allow lujarch_sync lujarch_sync_data_file:dir { create_dir_perms rename reparent };
+allow lujarch_sync lujarch_sync_data_file:file { create_file_perms rename };
+allow lujarch_sync lujarch_sync_data_file:sock_file write;
+allow lujarch_sync lujarch_sync_engine:unix_stream_socket connectto;
+allow lujarch_sync lujarch_sync_folder_file:dir r_dir_perms;
+allow lujarch_sync lujarch_sync_folder_file:file r_file_perms;
+allow lujarch_sync lujarch_sync_folder_file:lnk_file getattr;
+# A database the vault opens goes to it as an open file.
+allow platform_app_all lujarch_sync:fd use;
+allow platform_app_all lujarch_sync_folder_file:file { read getattr };
+
+# The run conditions: links (a privileged dump) and rules over rtnetlink, power supply uevents,
+# the charger from the Health HAL.
+allow lujarch_sync self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read nlmsg_readpriv };
+allow lujarch_sync self:netlink_kobject_uevent_socket create_socket_perms_no_ioctl;
+hal_client_domain(lujarch_sync, hal_health)

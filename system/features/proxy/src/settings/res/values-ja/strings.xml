@@ -99,11 +99,8 @@
     <string name="detail_row">%1$s: %2$s</string>
     <string name="error_busy">プロキシ マネージャーで別のタスクが実行中です。完了してからもう一度お試しください。</string>
     <string name="error_close_connection">接続を閉じられませんでした</string>
-    <string name="error_closed">Lujarch システム サービスが接続を閉じました。</string>
     <string name="error_delay">遅延テストに失敗しました</string>
-    <string name="error_failed">Lujarch システム サービスはこのリクエストを完了できませんでした。</string>
     <string name="error_http">プロキシ コアが HTTP %1$d を返しました。</string>
-    <string name="error_io_sentence">Lujarch システム サービスとの接続が中断されました。</string>
     <string name="error_load_configs">プロキシの設定を読み込めませんでした</string>
     <string name="error_load_connections">接続を読み込めませんでした</string>
     <string name="error_load_groups">プロキシ グループを読み込めませんでした</string>
@@ -111,14 +108,10 @@
     <string name="error_load_status">ステータスを読み込めませんでした</string>
     <string name="error_load_targets">プロキシ グループを読み込めませんでした</string>
     <string name="error_logs">ログを読み取れませんでした</string>
-    <string name="error_protocol_sentence">Lujarch システム サービスから、このアプリで読み取れない応答が返されました。</string>
     <string name="error_proxy_off">プロキシをオフにできませんでした</string>
     <string name="error_proxy_on">プロキシをオンにできませんでした</string>
-    <string name="error_refused">Lujarch システム サービスがこのリクエストを拒否しました。</string>
     <string name="error_select">ノードを選択できませんでした</string>
-    <string name="error_timeout">Lujarch システム サービスが時間内に応答しませんでした。</string>
     <string name="error_traffic">リアルタイムの通信量を読み取れませんでした</string>
-    <string name="error_unavailable_sentence">Lujarch システム サービスに接続できません。停止している可能性があります。</string>
     <string name="error_unfix">自動選択に戻せませんでした</string>
     <string name="group_type_fallback">フォールバック</string>
     <string name="group_type_loadbalance">負荷分散</string>

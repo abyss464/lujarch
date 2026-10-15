@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "text.h"
+#include "lujarch/text.h"
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -24,7 +24,7 @@
 #include <json/reader.h>
 #include <json/writer.h>
 
-namespace lujarch::proxy {
+namespace lujarch::text {
 namespace {
 
 bool IsAlpha(char c) {
@@ -180,4 +180,4 @@ bool IsPackageName(std::string_view name) {
     return true;
 }
 
-}  // namespace lujarch::proxy
+}  // namespace lujarch::text
