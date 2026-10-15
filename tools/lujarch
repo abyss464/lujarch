@@ -352,6 +352,9 @@ def check_lock(findings):
         if key not in lock.get(section, {}):
             findings.add(path, 0, f"missing {section}.{key}")
     for device, pin in lock.get("stock", {}).items():
+        if not isinstance(pin, dict):
+            findings.add(path, 0, f"stock.{device} is not a table with release, urls and sha256")
+            continue
         if not (SYSTEM / "device" / device / "device.toml").is_file():
             findings.add(path, 0, f"stock.{device}: no such device")
         for key in ("release", "urls", "sha256"):
