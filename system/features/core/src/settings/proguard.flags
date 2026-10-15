@@ -2,3 +2,13 @@
 -keep class * implements org.lujarch.settings.Contribution {
     public <init>();
 }
+
+# Pages are created by class name (SubSettingsActivity), and page dialogs restored by it.
+-keep public class org.lujarch.** extends androidx.fragment.app.Fragment {
+    public <init>();
+}
+
+# Dispatchers.Main is looked up through ServiceLoader.
+-keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

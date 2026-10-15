@@ -142,11 +142,10 @@ ndk::ScopedAStatus Service::stream(const std::string& path, ndk::ScopedFileDescr
 }
 
 ndk::ScopedAStatus Service::manager(const std::vector<std::string>& args,
-                                    const std::optional<ndk::ScopedFileDescriptor>& input,
-                                    Reply* reply) {
+                                    const ndk::ScopedFileDescriptor& input, Reply* reply) {
     if (!FromSettings()) return Refused("not an allowed caller");
     if (std::string why = manager::CheckArgs(args); !why.empty()) return Refused(why);
-    bool has_input = input.has_value() && input->get() >= 0;
+    bool has_input = input.get() >= 0;
     if (manager::TakesInput(args) != has_input) {
         return Refused(has_input ? "this command of the manager takes no input"
                                  : "this command of the manager needs input");
@@ -158,7 +157,7 @@ ndk::ScopedAStatus Service::manager(const std::vector<std::string>& args,
     // Arguments carry no secret: addresses and node links come on stdin.
     LOG(INFO) << "uid " << AIBinder_getCallingUid() << ": manager "
               << android::base::Join(args, ' ');
-    auto output = manager::Run(args, kManagerTimeout, has_input ? input->get() : -1);
+    auto output = manager::Run(args, kManagerTimeout, input.get());
     if (!output.ok()) return Failed(output.error().message());
     std::string text = RedactUrls(SanitizeUtf8(output->text));
     if (output->code != 0) {

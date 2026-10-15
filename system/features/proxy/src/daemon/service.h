@@ -31,7 +31,7 @@ class Service : public aidl::org::lujarch::proxy::BnProxy {
                                   aidl::org::lujarch::proxy::Reply* reply) override;
     ndk::ScopedAStatus stream(const std::string& path, ndk::ScopedFileDescriptor* socket) override;
     ndk::ScopedAStatus manager(const std::vector<std::string>& args,
-                               const std::optional<ndk::ScopedFileDescriptor>& input,
+                               const ndk::ScopedFileDescriptor& input,
                                aidl::org::lujarch::proxy::Reply* reply) override;
     ndk::ScopedAStatus exportTo(bool secrets, const ndk::ScopedFileDescriptor& out,
                                 int32_t* code) override;

@@ -9,7 +9,7 @@ the proxy does on its own shows on that page.
 
 ### PRX-1 The proxy carries the phone's traffic
 
-- Home: Settings > Network & internet > Proxy
+- Home: Settings > Network & internet > Proxy; Quick Settings > Proxy
 - Switch: Settings > Network & internet > Proxy > Use proxy
 - Default: off
 - Verify: vm
@@ -17,8 +17,10 @@ the proxy does on its own shows on that page.
 While Use proxy is on, the proxy runs from every start of the phone with a virtual network
 interface, and every app's traffic, DNS included, passes through it, except apps kept out of it
 (PRX-7, PRX-8). While it is off, nothing passes through it and the phone connects directly. A
-change of the switch takes effect at once. Network & internet has a Proxy row whose summary is the
-proxy's state.
+change of the switch takes effect at once. Network & internet has a Proxy row with the proxy's
+state as its summary and the same switch beside it. The Quick Settings tile Proxy shows the state
+and the mode, turns the proxy on or off with a tap (after unlocking on a locked phone) and opens
+the Proxy page with a long press.
 
 ### PRX-2 The proxy shows its state
 
@@ -28,9 +30,9 @@ proxy's state.
 - Verify: vm
 
 The status row shows the state, the mode and the live upload and download speed. The states are
-Off, Starting, Running, Running the last working configuration (the current one did not pass the
-core's check), No working configuration, and Stopped after repeated failures; in the last two the
-phone connects directly. The row opens the details: the core's version, the virtual network
+Off, Starting, Running, Running on the last working configuration (the current one did not pass
+the core's check, and the details say why), No usable configuration, and Stopped after repeated
+failures; in the last two the phone connects directly. The row opens the details: the core's version, the virtual network
 interface and its stack, whether IPv6 is blocked, the traffic since the start, when the running
 and the last working configuration were built, and the last restart the proxy made on its own
 with its reason. Each detail fills in when its source answers; one whose source fails says so.

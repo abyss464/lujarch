@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="action_close">Close</string>
+    <string name="action_retry">Retry</string>
+    <string name="apps_hide_system">Hide system apps</string>
+    <string name="apps_none">No matching apps</string>
+    <string name="apps_search_hint">Search apps</string>
+    <string name="apps_show_system">Show system apps</string>
+    <string name="delay_ms">%1$d ms</string>
+    <string name="delay_timeout">Timeout</string>
+    <string name="error_details">Details</string>
+    <string name="error_load_apps">Couldn\'t load the app list</string>
+    <string name="error_page">This page cannot be opened.</string>
+    <string name="error_unexpected_sentence">An unexpected error occurred.</string>
+    <string name="format_speed">%1$s/s</string>
+    <string name="format_up_down">"↑ %1$s   ↓ %2$s"</string>
+    <string name="list_separator">", "</string>
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="menu_refresh">Refresh</string>
+    <string name="menu_search">Search</string>
+    <!-- A name inside a sentence, as zh quotes it (docs/design.md "Chinese typography"). -->
+    <string name="quoted_name">%1$s</string>
+    <string name="time_just_now">just now</string>
+    <string name="error_service_title">Lujarch system service not available</string>
+</resources>

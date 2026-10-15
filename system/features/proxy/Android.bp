@@ -74,3 +74,18 @@ cc_prebuilt_binary {
     check_elf_files: false,
     system_ext_specific: true,
 }
+
+// The proxy's pages in Lujarch Settings, its App info row, search entries, the Proxy row in
+// Network & internet and the Quick Settings tile.
+android_library {
+    name: "LujarchProxySettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "lujarch_proxy_aidl-java",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}

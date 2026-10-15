@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.proxy.settings">
+
+    <application>
+        <meta-data
+            android:name="org.lujarch.settings.contribution.proxy"
+            android:value="org.lujarch.proxy.settings.ProxyContribution" />
+
+        <!-- The proxy's pages (ProxyPages), App info's Proxy row, the Proxy row in Network &
+             internet with its state and switch (ProxySummaryProvider), and the Quick Settings
+             tile's long press. -->
+        <activity
+            android:name="org.lujarch.proxy.settings.ProxyActivity"
+            android:exported="true"
+            android:label="@string/px_title"
+            android:theme="@style/Theme.LujarchSettings">
+            <intent-filter>
+                <action android:name="org.lujarch.proxy.action.PROXY" />
+                <action android:name="org.lujarch.proxy.action.APP_ROUTE" />
+                <action android:name="org.lujarch.proxy.action.STATUS" />
+                <action android:name="org.lujarch.proxy.action.APPS" />
+                <action android:name="org.lujarch.proxy.action.INCLUDE" />
+                <action android:name="org.lujarch.proxy.action.GROUPS" />
+                <action android:name="org.lujarch.proxy.action.SUBSCRIPTIONS" />
+                <action android:name="org.lujarch.proxy.action.LOCATIONS" />
+                <action android:name="org.lujarch.proxy.action.CONNECTIONS" />
+                <action android:name="org.lujarch.proxy.action.LOGS" />
+                <action android:name="org.lujarch.proxy.action.RULES" />
+                <action android:name="org.lujarch.proxy.action.CORE" />
+                <action android:name="org.lujarch.proxy.action.ADAPTIVE" />
+                <action android:name="org.lujarch.proxy.action.FILES" />
+                <action android:name="org.lujarch.proxy.action.DNS" />
+                <action android:name="org.lujarch.proxy.action.SNIFFER" />
+                <action android:name="org.lujarch.proxy.action.GEODATA" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.android.settings.action.EXTRA_SETTINGS" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+            <meta-data
+                android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.wireless" />
+            <!-- After VPN (15), before Private DNS (20). -->
+            <meta-data
+                android:name="com.android.settings.order"
+                android:value="17" />
+            <meta-data
+                android:name="com.android.settings.keyhint"
+                android:value="lujarch_proxy" />
+            <meta-data
+                android:name="com.android.settings.title"
+                android:resource="@string/px_title" />
+            <meta-data
+                android:name="com.android.settings.summary_uri"
+                android:value="content://org.lujarch.proxy.tile" />
+            <meta-data
+                android:name="com.android.settings.switch_uri"
+                android:value="content://org.lujarch.proxy.tile" />
+            <meta-data
+                android:name="com.android.settings.icon"
+                android:resource="@drawable/ic_proxy" />
+            <meta-data
+                android:name="com.android.settings.profile"
+                android:value="primary_profile_only" />
+        </activity>
+
+        <provider
+            android:name="org.lujarch.proxy.settings.ProxySummaryProvider"
+            android:authorities="org.lujarch.proxy.tile"
+            android:exported="true" />
+
+        <service
+            android:name="org.lujarch.proxy.settings.ProxyTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_proxy"
+            android:label="@string/px_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+    </application>
+</manifest>

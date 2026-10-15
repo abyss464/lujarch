@@ -74,11 +74,11 @@ interface IProxy {
     Reply manager(in String[] args, in @nullable ParcelFileDescriptor input);
 
     /**
-     * The manager's export written to out: every file of the proxy, with the subscription
+     * The manager's export written to file: every file of the proxy, with the subscription
      * addresses and node passwords when secrets is set. Returns the manager's exit code; its
      * messages go to the log.
      */
-    int exportTo(boolean secrets, in ParcelFileDescriptor out);
+    int exportTo(boolean secrets, in ParcelFileDescriptor file);
 
     /** Stops and starts the core; also ends a stop after repeated failures. */
     void restart();

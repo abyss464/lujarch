@@ -582,7 +582,7 @@ namespace {
 // since its interface follows the default network itself; it is stopped only when it is
 // unhealthy (CheckHealth), or when its path stays broken after a network change while the proxy
 // itself works. The path is judged only while the liveness checks pass.
-struct Watch {
+struct WatchdogState {
     // Liveness.
     std::string ctl_host;
     int ctl_port = 0;
@@ -606,7 +606,7 @@ struct Watch {
 }  // namespace
 
 void Supervisor::Watchdog(Run* run) {
-    Watch w;
+    WatchdogState w;
     const std::string& use = run->config;
     std::string ctl = core::Top(use, "external-controller");
     size_t colon = ctl.rfind(':');

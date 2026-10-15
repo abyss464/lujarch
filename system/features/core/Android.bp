@@ -40,6 +40,35 @@ java_library {
     platform_apis: true,
 }
 
+// The page framework of Lujarch's pages in Settings, for the features' page libraries: the page
+// activity, the base page with its error banner, page dialogs, app lists.
+android_library {
+    name: "LujarchSettingsPages",
+    srcs: ["src/pages/**/*.kt"],
+    manifest: "src/pages/AndroidManifest.xml",
+    resource_dirs: ["src/pages/res"],
+    platform_apis: true,
+    static_libs: [
+        "androidx.appcompat_appcompat",
+        "androidx.core_core",
+        "androidx.fragment_fragment",
+        "androidx.lifecycle_lifecycle-runtime-ktx",
+        "androidx.preference_preference",
+        "kotlinx_coroutines_android",
+        "SettingsLibActionButtonsPreference",
+        "SettingsLibAppPreference",
+        "SettingsLibBannerMessagePreference",
+        "SettingsLibCollapsingToolbarBaseActivity",
+        "SettingsLibFooterPreference",
+        "SettingsLibMainSwitchPreference",
+        "SettingsLibSelectorWithWidgetPreference",
+        "SettingsLibSettingsTheme",
+        "SettingsLibTopIntroPreference",
+        "SettingsLibUsageProgressBarPreference",
+        "SettingsLibZeroStatePreference",
+    ],
+}
+
 // Lujarch's pages in Settings: this framework and every feature's page library.
 android_app {
     name: "LujarchSettings",
