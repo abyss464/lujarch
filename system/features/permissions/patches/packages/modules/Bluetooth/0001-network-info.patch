@@ -79,7 +79,7 @@ index abb12e17de40e0e1c77df051c4fa2070949623aa..acc5c18cf9b9df8ca48d540f5bf8b07b
          return try {
 diff --git a/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..7d4185e544bab43f33bd1e6aea8d801aaa5d832f
+index 0000000000000000000000000000000000000000..ee37764cc9f611df6e62130731b1061b9d5b70ea
 --- /dev/null
 +++ b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -115,8 +115,8 @@ index 0000000000000000000000000000000000000000..7d4185e544bab43f33bd1e6aea8d801a
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP} 
-+ * "Information permissions") for the reads the Bluetooth manager service answers.
++ * The network info permission ({@link #OP})
++ * for the reads the Bluetooth manager service answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every

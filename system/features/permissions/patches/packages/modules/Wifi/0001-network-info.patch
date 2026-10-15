@@ -1,6 +1,6 @@
 diff --git a/service/java/com/android/server/wifi/LujarchNetworkInfo.java b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..01712fede2989cee0eaaa3cf0939bc4f61a956d8
+index 0000000000000000000000000000000000000000..0ac371a09f102d5b793836b5f996c17aae30b634
 --- /dev/null
 +++ b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -36,8 +36,8 @@ index 0000000000000000000000000000000000000000..01712fede2989cee0eaaa3cf0939bc4f
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP} 
-+ * "Information permissions") for the reads the Wi-Fi service answers.
++ * The network info permission ({@link #OP})
++ * for the reads the Wi-Fi service answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
@@ -158,7 +158,7 @@ index 0000000000000000000000000000000000000000..01712fede2989cee0eaaa3cf0939bc4f
 +    }
 +}
 diff --git a/service/java/com/android/server/wifi/WifiServiceImpl.java b/service/java/com/android/server/wifi/WifiServiceImpl.java
-index 72f8aa719012fe92d522fdc39bf71be17d9d1bc9..396750ad63812b377b6c8f9d3306e7e35e181c18 100644
+index 72f8aa719012fe92d522fdc39bf71be17d9d1bc9..454a354494c2d2a10243f320cc967920d0e710ab 100644
 --- a/service/java/com/android/server/wifi/WifiServiceImpl.java
 +++ b/service/java/com/android/server/wifi/WifiServiceImpl.java
 @@ -154,6 +154,7 @@ import android.net.wifi.SoftApCapability;
@@ -208,8 +208,8 @@ index 72f8aa719012fe92d522fdc39bf71be17d9d1bc9..396750ad63812b377b6c8f9d3306e7e3
      }
  
 +    /**
-+     * The network info permission ( 
-+     * Permissions"). A refused app gets the WifiInfo an app without location, local MAC and
++     * The network info permission.
++     * A refused app gets the WifiInfo an app without location, local MAC and
 +     * settings permissions gets, without the link: RSSI invalid, link speeds, frequency and
 +     * Wi-Fi standard unknown, no IP address, security type and MLO links. The supplicant
 +     * state stays: whether Wi-Fi is connected is connectivity, which stays readable.

@@ -1,5 +1,5 @@
 diff --git a/src/java/com/android/internal/telephony/SmsController.java b/src/java/com/android/internal/telephony/SmsController.java
-index db70ce534115d43f0bdbeb1b21425580e32f6015..e5d29cf0de1eec7b52fd0464cc48807e2bd02b6b 100644
+index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822d46f66f3 100644
 --- a/src/java/com/android/internal/telephony/SmsController.java
 +++ b/src/java/com/android/internal/telephony/SmsController.java
 @@ -37,6 +37,8 @@ import android.os.BaseBundle;
@@ -35,8 +35,8 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e5d29cf0de1eec7b52fd0464cc48807e
 +    }
 +
 +    /**
-+     * Whether the phone info permission ( 
-+     * Permissions") refuses what the binder caller reads through {@code method}; refused in any
++     * Whether the basic phone info
++     * refuses what the binder caller reads through {@code method}; refused in any
 +     * mode, the getter answers its "not known" value, as these getters never throw. An app
 +     * holding the Phone permission and uids below 10000 are never refused (LujarchPhoneInfo).
 +     */
@@ -124,7 +124,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e5d29cf0de1eec7b52fd0464cc48807e
          try {
              final CarrierConfigManager configManager =
 diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
-index 9eb5daf837630362fb05718e832c05da0a7c2c9b..6c37821832947bf8cdd30ea2d4b3680c26f9ca27 100644
+index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6294383cb 100644
 --- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 +++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 @@ -47,6 +47,7 @@ import android.os.CountDownTimer;
@@ -179,8 +179,8 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..6c37821832947bf8cdd30ea2d4b3680c
 +    }
 +
 +    /**
-+     * Whether the phone info permission ( 
-+     * Permissions") refuses the subscription id or slot the binder caller reads through
++     * Whether the basic phone info
++     * refuses the subscription id or slot the binder caller reads through
 +     * {@code method} or {@code alias}; refused in any mode, the getter answers its "invalid"
 +     * value, as these getters never throw. Only an app's own ISub call is decided: the phone
 +     * process asks these for itself all the time, at times with an app's identity still on the

@@ -1,6 +1,6 @@
 diff --git a/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..ea8cc8a182a783868109a5a3343deaaa235ea578
+index 0000000000000000000000000000000000000000..908c3676b14f33de42bde177fde29c6445030a23
 --- /dev/null
 +++ b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -36,8 +36,8 @@ index 0000000000000000000000000000000000000000..ea8cc8a182a783868109a5a3343deaaa
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP} 
-+ * "Information permissions") for the reads Tethering answers.
++ * The network info permission ({@link #OP})
++ * for the reads Tethering answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
@@ -158,7 +158,7 @@ index 0000000000000000000000000000000000000000..ea8cc8a182a783868109a5a3343deaaa
 +    }
 +}
 diff --git a/Tethering/src/com/android/networkstack/tethering/Tethering.java b/Tethering/src/com/android/networkstack/tethering/Tethering.java
-index 71142438bca92ca52b0b6247aaaa0df57b9be1bb..3c47908b05bd8b74b77a7455a6c5f89aea1bed99 100644
+index 71142438bca92ca52b0b6247aaaa0df57b9be1bb..c0b82ad91121ff98a0daad6045319e102f6e7d57 100644
 --- a/Tethering/src/com/android/networkstack/tethering/Tethering.java
 +++ b/Tethering/src/com/android/networkstack/tethering/Tethering.java
 @@ -2679,15 +2679,17 @@ public class Tethering {
@@ -186,8 +186,8 @@ index 71142438bca92ca52b0b6247aaaa0df57b9be1bb..3c47908b05bd8b74b77a7455a6c5f89a
          return mContext.checkCallingOrSelfPermission(permission) == PERMISSION_GRANTED;
      }
  
-+    // The network info permission ( 
-+    // Permissions"). An app it refuses sees no tethering: no available, local-only, tethered or
++    // The network info permission.
++    // An app it refuses sees no tethering: no available, local-only, tethered or
 +    // errored interfaces, no upstream network and offload stopped. TetheringManager's own
 +    // getters (getTetheredIfaces and the rest) read these callbacks in the app's process.
 +    // Decided at each delivery, on the handler thread; system callers are not checked.
@@ -295,7 +295,7 @@ index 14809fb611743a5badf900f6159b060168dc1a0f..ec5a2848fc4007a4ed01c2f99493f2c6
      }
  
 diff --git a/service/src/com/android/server/ConnectivityService.java b/service/src/com/android/server/ConnectivityService.java
-index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..7c66c7ba9e0cee27830f0e195c97d32004f415f5 100644
+index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a82ea64cb1 100644
 --- a/service/src/com/android/server/ConnectivityService.java
 +++ b/service/src/com/android/server/ConnectivityService.java
 @@ -283,6 +283,7 @@ import android.net.QosSocketInfo;
@@ -487,8 +487,8 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..7c66c7ba9e0cee27830f0e195c97d320
 +                callingUid, callingPkgName, callingAttributionTag);
 +    }
 +
-+    // The network info permission ( 
-+    // Permissions"). Every getter and callback that hands an app a network's capabilities or
++    // The network info permission.
++    // Every getter and callback that hands an app a network's capabilities or
 +    // link properties passes here. A refused app keeps what tells it whether it is online
 +    // (available, validated, metered, the transport) and loses what describes the network or
 +    // its surroundings. The network's owner (a VPN app's own VPN) is never redacted.
@@ -635,7 +635,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..7c66c7ba9e0cee27830f0e195c97d320
              case CALLBACK_BLK_CHANGED: {
 diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..31563ff6d382bda4692971f742187d8520d0bf30
+index 0000000000000000000000000000000000000000..4a597f0bfa69ce0fdddf800a45b9e792bdd4f8f5
 --- /dev/null
 +++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 @@ -0,0 +1,173 @@
@@ -672,8 +672,8 @@ index 0000000000000000000000000000000000000000..31563ff6d382bda4692971f742187d85
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP} 
-+ * "Information permissions") for the reads ConnectivityService and NetworkStatsService answer,
++ * The network info permission ({@link #OP})
++ * for the reads ConnectivityService and NetworkStatsService answer,
 + * And the phone info permission ({@link #PHONE}) for the mobile network type and subscription
 + * id ConnectivityService hands out.
 + *

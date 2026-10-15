@@ -1,6 +1,6 @@
 diff --git a/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..093807674acfafb63cfce2e8ebd645e2ee98c7dd
+index 0000000000000000000000000000000000000000..55d25b17f4c4601b995ce2ac3192b0b89e409d9c
 --- /dev/null
 +++ b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
 @@ -0,0 +1,155 @@
@@ -36,8 +36,8 @@ index 0000000000000000000000000000000000000000..093807674acfafb63cfce2e8ebd645e2
 +import java.util.concurrent.ConcurrentHashMap;
 +
 +/**
-+ * The network info permission ({@link #OP} 
-+ * "Information permissions") for the reads the NFC service answers.
++ * The network info permission ({@link #OP})
++ * for the reads the NFC service answers.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every

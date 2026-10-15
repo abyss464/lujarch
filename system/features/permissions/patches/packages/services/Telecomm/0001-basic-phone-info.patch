@@ -1,5 +1,5 @@
 diff --git a/src/com/android/server/telecom/TelecomServiceImpl.java b/src/com/android/server/telecom/TelecomServiceImpl.java
-index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c202df5ab 100644
+index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..dea93165150c037fb00bb5922a1f1a3a53f4bcf2 100644
 --- a/src/com/android/server/telecom/TelecomServiceImpl.java
 +++ b/src/com/android/server/telecom/TelecomServiceImpl.java
 @@ -53,6 +53,7 @@ import android.os.Binder;
@@ -18,7 +18,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c
  import com.android.modules.utils.ParceledListSlice;
  import com.android.server.telecom.callsequencing.voip.VoipCallMonitor;
  import com.android.server.telecom.components.UserCallIntentProcessorFactory;
-@@ -225,8 +227,45 @@ public class TelecomServiceImpl {
+@@ -225,8 +227,64 @@ public class TelecomServiceImpl {
          return uid;
      }
  
@@ -29,9 +29,26 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c
 +     */
 +    private static final ThreadLocal<String> sLujarchIncoming = new ThreadLocal<>();
 +
++    // The stub keeps its transaction codes package-private.
++    private static final int LUJARCH_GET_CALL_STATE = lujarchTransaction("getCallState");
++    private static final int LUJARCH_GET_CALL_STATE_USING_PACKAGE =
++            lujarchTransaction("getCallStateUsingPackage");
++
++    private static int lujarchTransaction(String method) {
++        try {
++            final java.lang.reflect.Field f =
++                    ITelecomService.Stub.class.getDeclaredField("TRANSACTION_" + method);
++            f.setAccessible(true);
++            return f.getInt(null);
++        } catch (ReflectiveOperationException e) {
++            Log.w(TAG, "transaction code of " + method + " not found", e);
++            return -1;
++        }
++    }
++
 +    /**
-+     * Whether the phone info permission ( 
-+     * Permissions") refuses the call state an app reads through {@code method} without
++     * Whether the basic phone info
++     * refuses the call state an app reads through {@code method} without
 +     * READ_PHONE_STATE (target SDK 30 or lower); refused in any mode, idle, as these getters
 +     * never throw there. An app holding the Phone permission and uids below 10000 are never
 +     * refused (LujarchPhoneInfo).
@@ -53,7 +70,9 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c
 +        public boolean onTransact(int code, @NonNull Parcel data, Parcel reply, int flags)
 +                throws RemoteException {
 +            final String outer = sLujarchIncoming.get();
-+            sLujarchIncoming.set(ITelecomService.Stub.getDefaultTransactionName(code));
++            sLujarchIncoming.set(code == LUJARCH_GET_CALL_STATE ? "getCallState"
++                    : code == LUJARCH_GET_CALL_STATE_USING_PACKAGE ? "getCallStateUsingPackage"
++                    : null);
 +            try {
 +                return super.onTransact(code, data, reply, flags);
 +            } finally {
@@ -64,7 +83,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c
          @Override
          public boolean hasForegroundServiceDelegation(
                  PhoneAccountHandle handle,
-@@ -1584,6 +1623,11 @@ public class TelecomServiceImpl {
+@@ -1584,6 +1642,11 @@ public class TelecomServiceImpl {
                      throw new SecurityException("This method can only be used for applications "
                              + "targeting API version 30 or less.");
                  }
@@ -76,7 +95,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..06232d165459a46b1348ba8f2b7bb15c
                  event.setResult(ApiStats.RESULT_NORMAL);
                  synchronized (mLock) {
                      return mCallsManager.getCallState();
-@@ -1627,6 +1671,11 @@ public class TelecomServiceImpl {
+@@ -1627,6 +1690,11 @@ public class TelecomServiceImpl {
                          throw new SecurityException("getCallState API requires READ_PHONE_STATE"
                                  + " for API version 31+");
                      }

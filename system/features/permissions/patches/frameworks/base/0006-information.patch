@@ -571,7 +571,7 @@ index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792
              return mHealthServiceWrapper.getProperty(id, prop);
          }
 diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
-index ee20dde909221ec2968b308d829e46bc296400af..fb7098a26b30fd624b32845faa6e620c2a5852e1 100644
+index ee20dde909221ec2968b308d829e46bc296400af..35fc14723b75358fead7516365895bf8e6c70e4d 100644
 --- a/services/core/java/com/android/server/TelephonyRegistry.java
 +++ b/services/core/java/com/android/server/TelephonyRegistry.java
 @@ -108,6 +108,7 @@ import com.android.internal.telephony.IOnSubscriptionsChangedListener;
@@ -587,8 +587,8 @@ index ee20dde909221ec2968b308d829e46bc296400af..fb7098a26b30fd624b32845faa6e620c
      }
  
 +    /**
-+     * The events of the phone info permission ( 
-+     * "Information permissions") an app can listen to without READ_PHONE_STATE: service state,
++     * The events of the basic phone info
++     * an app can listen to without READ_PHONE_STATE: service state,
 +     * signal strength(s), call state and the active data subscription (both without a permission
 +     * up to target SDK 30), data connection state and activity, carrier network change, data
 +     * activation state, the user's mobile data switch and display info.
@@ -1509,7 +1509,7 @@ index 0000000000000000000000000000000000000000..6b04fcbd36de29563107a137cb405746
 +    }
 +}
 diff --git a/telephony/java/android/telephony/TelephonyManager.java b/telephony/java/android/telephony/TelephonyManager.java
-index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..7501ef5021e1977ec21ee1fe22c950a63bb21154 100644
+index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..53752e3c654a64c5183207f1b24808d4c651b233 100644
 --- a/telephony/java/android/telephony/TelephonyManager.java
 +++ b/telephony/java/android/telephony/TelephonyManager.java
 @@ -45,6 +45,7 @@ import android.annotation.SystemApi;
@@ -1550,8 +1550,8 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..7501ef5021e1977ec21ee1fe22c950a6
  
  
 +    /**
-+     * Whether the phone info permission ( 
-+     * Permissions") refuses the app a getter over the telephony system properties (network and SIM
++     * Whether the basic phone info
++     * refuses the app a getter over the telephony system properties (network and SIM
 +     * operator, SIM country, roaming). Decided in the app's own process for its own uid
 +     * ({@link LujarchPhoneInfo#decideSelf}); the getters answer "" (false for roaming) in every
 +     * refused mode, as they never throw. The properties themselves stay readable to the app's

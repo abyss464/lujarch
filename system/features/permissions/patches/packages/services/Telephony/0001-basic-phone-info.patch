@@ -1,5 +1,5 @@
 diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
-index 242cf4107a634a706db67aff03371f17167f4900..d62bc87618479ede720b6412d70e8c009b336225 100644
+index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989d0e1e9d9 100644
 --- a/src/com/android/phone/PhoneInterfaceManager.java
 +++ b/src/com/android/phone/PhoneInterfaceManager.java
 @@ -73,6 +73,7 @@ import android.os.LocaleList;
@@ -203,8 +203,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..d62bc87618479ede720b6412d70e8c00
 +    }
 +
 +    /**
-+     * The phone info permission's mode ( 
-+     * Permissions") for a read the binder caller makes through one of {@code methods}, the
++     * The basic phone info mode
++     * for a read the binder caller makes through one of {@code methods}, the
 +     * ITelephony methods that reach the getter; MODE_ALLOWED on any other call. An app holding
 +     * the Phone permission and uids below 10000 are allowed (LujarchPhoneInfo). Call before
 +     * clearCallingIdentity.

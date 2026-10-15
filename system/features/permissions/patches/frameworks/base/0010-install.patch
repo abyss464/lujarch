@@ -1,3 +1,405 @@
+diff --git a/data/etc/privapp-permissions-platform.xml b/data/etc/privapp-permissions-platform.xml
+index 593c84d2dc00f7d8f54be28c643526a30e524ec6..04b5aa49cbfd881d101d9f96e69d3731c96a9739 100644
+--- a/data/etc/privapp-permissions-platform.xml
++++ b/data/etc/privapp-permissions-platform.xml
+@@ -129,6 +129,7 @@ applications that come with the platform
+         <permission name="android.permission.PACKAGE_USAGE_STATS"/>
+         <permission name="android.permission.READ_SYSTEM_GRAMMATICAL_GENDER"/>
+         <permission name="android.permission.RESOLVE_COMPONENT_FOR_UID"/>
++        <permission name="android.permission.PACKAGE_VERIFICATION_AGENT"/>
+     </privapp-permissions>
+ 
+     <privapp-permissions package="com.android.phone">
+diff --git a/packages/PackageInstaller/AndroidManifest.xml b/packages/PackageInstaller/AndroidManifest.xml
+index 16dc409f600aad6c85a1a2273fe9283c98084e3c..9da37095d6026838e6321007b34acc3ec6d16e6f 100644
+--- a/packages/PackageInstaller/AndroidManifest.xml
++++ b/packages/PackageInstaller/AndroidManifest.xml
+@@ -27,6 +27,7 @@
+     <uses-permission android:name="android.permission.RESOLVE_COMPONENT_FOR_UID" />
+     <uses-permission android:name="com.google.android.permission.INSTALL_WEARABLE_PACKAGES" />
+     <uses-permission android:name="android.permission.SET_DEVELOPER_VERIFICATION_USER_RESPONSE" />
++    <uses-permission android:name="android.permission.PACKAGE_VERIFICATION_AGENT" />
+ 
+     <application android:name=".PackageInstallerApplication"
+             android:label="@string/app_name"
+@@ -38,6 +39,20 @@
+             android:forceQueryable="true"
+             android:directBootAware="true">
+ 
++        <receiver android:name=".lujarch.LujarchInstallVerifier"
++            android:exported="true"
++            android:permission="android.permission.BIND_PACKAGE_VERIFIER">
++            <intent-filter>
++                <action android:name="android.intent.action.PACKAGE_NEEDS_VERIFICATION" />
++                <data android:mimeType="application/vnd.android.package-archive" />
++            </intent-filter>
++        </receiver>
++
++        <activity android:name=".lujarch.LujarchInstallQuestionActivity"
++            android:exported="false"
++            android:excludeFromRecents="true"
++            android:theme="@style/Theme.AlertDialogActivity" />
++
+         <receiver android:name=".common.TemporaryFileManager"
+             android:exported="false">
+             <intent-filter>
+diff --git a/packages/PackageInstaller/res/values-ja/lujarch_strings.xml b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f2ed2e146d852853a1fdc3945df0ff083b4dbc3
+--- /dev/null
++++ b/packages/PackageInstaller/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">"インストールの確認"</string>
++    <string name="lujarch_install_question">"「%1$s」に「%2$s」のインストールを許可しますか？"</string>
++    <string name="lujarch_install_until_answered">"インストールは回答を待ち、回答がなければ拒否されます。"</string>
++    <string name="lujarch_install_version">"バージョン %1$s"</string>
++    <string name="lujarch_install_signature_same">"インストール済みのアプリと同じ署名、または新しいアプリです"</string>
++    <string name="lujarch_install_signature_changed">"インストール済みのアプリと署名が異なります"</string>
++    <string name="lujarch_install_allow">"インストール"</string>
++    <string name="lujarch_install_deny">"インストールしない"</string>
++    <string name="lujarch_install_refused">"「%1$s」はインストールされませんでした"</string>
++    <string name="lujarch_install_refused_text">"[不明なアプリのインストール] で「%1$s」によるインストールが許可されていません"</string>
++</resources>
+diff --git a/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbc7fdcc46984e075190b65a2db0bc6b1c272340
+--- /dev/null
++++ b/packages/PackageInstaller/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">"安装询问"</string>
++    <string name="lujarch_install_question">"要让“%1$s”安装“%2$s”吗？"</string>
++    <string name="lujarch_install_until_answered">"安装会等待您的回答，未回答则会被拒绝。"</string>
++    <string name="lujarch_install_version">"版本 %1$s"</string>
++    <string name="lujarch_install_signature_same">"签名与已安装的应用相同，或是新应用"</string>
++    <string name="lujarch_install_signature_changed">"签名与已安装的应用不同"</string>
++    <string name="lujarch_install_allow">"安装"</string>
++    <string name="lujarch_install_deny">"不安装"</string>
++    <string name="lujarch_install_refused">"“%1$s”未安装"</string>
++    <string name="lujarch_install_refused_text">"“安装未知应用”不允许“%1$s”安装应用"</string>
++</resources>
+diff --git a/packages/PackageInstaller/res/values/lujarch_strings.xml b/packages/PackageInstaller/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8ed8a913c30d8169e189e547118718cee36579b4
+--- /dev/null
++++ b/packages/PackageInstaller/res/values/lujarch_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_install_channel">Install questions</string>
++    <string name="lujarch_install_question">Let %1$s install %2$s?</string>
++    <string name="lujarch_install_until_answered">The install waits for your answer, and is refused without one.</string>
++    <string name="lujarch_install_version">Version %1$s</string>
++    <string name="lujarch_install_signature_same">Signed like the installed app, or a new app</string>
++    <string name="lujarch_install_signature_changed">Signed differently from the installed app</string>
++    <string name="lujarch_install_allow">Install</string>
++    <string name="lujarch_install_deny">Don\u2019t install</string>
++    <string name="lujarch_install_refused">%1$s was not installed</string>
++    <string name="lujarch_install_refused_text">Install unknown apps does not allow %1$s to install apps</string>
++</resources>
+diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..bb0eb3351aab4092199f6cffbe1dd59066f899b4
+--- /dev/null
++++ b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
+@@ -0,0 +1,249 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.packageinstaller.lujarch
++
++import android.app.Activity
++import android.app.AlertDialog
++import android.app.AppOpsManager
++import android.app.KeyguardManager
++import android.app.Notification
++import android.app.NotificationChannel
++import android.app.NotificationManager
++import android.app.PendingIntent
++import android.content.BroadcastReceiver
++import android.content.Context
++import android.content.Intent
++import android.content.pm.PackageInfo
++import android.content.pm.PackageManager
++import android.net.Uri
++import android.os.Bundle
++import android.os.PowerManager
++import android.os.Process
++import android.os.UserHandle
++import android.provider.Settings
++import android.util.Log
++import com.android.packageinstaller.R
++import java.io.File
++import java.util.concurrent.Executors
++
++/**
++ * Install unknown apps set to "Ask every time": every install and update by that app waits for
++ * the user. The system's install verifier reads the installer's choice: Allow lets the install
++ * go on, Don't allow refuses it with a notification, and Ask every time holds it for the wait
++ * the user chose and asks; without an answer in time the install is refused.
++ */
++object LujarchInstalls {
++    const val TAG = "lujarch_permissions"
++    const val OP = "android:lujarch_install"
++    const val SETTING_WAIT = "lujarch_permissions_install_wait_minutes"
++    private const val DEFAULT_WAIT_MINUTES = 10
++    private const val CHANNEL = "lujarch_install"
++
++    const val EXTRA_ID = "org.lujarch.permissions.extra.VERIFICATION_ID"
++    const val EXTRA_INSTALLER = "org.lujarch.permissions.extra.INSTALLER"
++    const val EXTRA_LABEL = "org.lujarch.permissions.extra.LABEL"
++    const val EXTRA_VERSION = "org.lujarch.permissions.extra.VERSION"
++    const val EXTRA_SIGNATURE_CHANGED = "org.lujarch.permissions.extra.SIGNATURE_CHANGED"
++    const val EXTRA_ALLOW = "org.lujarch.permissions.extra.ALLOW"
++    const val ACTION_ANSWER = "org.lujarch.permissions.action.INSTALL_ANSWER"
++
++    val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "lujarch-install") }
++
++    fun waitMillis(context: Context): Long {
++        val minutes = Settings.Global.getInt(context.contentResolver, SETTING_WAIT, DEFAULT_WAIT_MINUTES)
++        return minutes.coerceIn(1, 60) * 60_000L
++    }
++
++    fun channel(context: Context): NotificationManager {
++        val nm = context.getSystemService(NotificationManager::class.java)!!
++        nm.createNotificationChannel(
++            NotificationChannel(CHANNEL, context.getString(R.string.lujarch_install_channel), NotificationManager.IMPORTANCE_HIGH)
++        )
++        return nm
++    }
++
++    fun answer(context: Context, id: Int, allow: Boolean) {
++        context.getSystemService(NotificationManager::class.java)!!.cancel(TAG, id)
++        try {
++            context.packageManager.verifyPendingInstall(
++                id,
++                if (allow) PackageManager.VERIFICATION_ALLOW else PackageManager.VERIFICATION_REJECT,
++            )
++            Log.i(TAG, "install $id ${if (allow) "allowed" else "refused"} by the user")
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "install $id: the answer was not taken", e)
++        }
++    }
++
++    fun notifyRefused(context: Context, installer: CharSequence, app: CharSequence, id: Int) {
++        val n =
++            Notification.Builder(context, CHANNEL)
++                .setSmallIcon(R.drawable.ic_file_download)
++                .setContentTitle(context.getString(R.string.lujarch_install_refused, app))
++                .setContentText(context.getString(R.string.lujarch_install_refused_text, installer))
++                .setAutoCancel(true)
++                .build()
++        channel(context).notify(TAG, id, n)
++    }
++}
++
++/** The system's install verifier. */
++class LujarchInstallVerifier : BroadcastReceiver() {
++    override fun onReceive(context: Context, intent: Intent) {
++        if (intent.action != Intent.ACTION_PACKAGE_NEEDS_VERIFICATION) return
++        val pending = goAsync()
++        LujarchInstalls.executor.execute {
++            try {
++                verify(context.applicationContext, intent)
++            } finally {
++                pending.finish()
++            }
++        }
++    }
++
++    private fun verify(context: Context, intent: Intent) {
++        val id = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_ID, -1)
++        if (id < 0) return
++        val pm = context.packageManager
++        val installerUid = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_INSTALLER_UID, -1)
++        val installer = intent.getStringExtra(PackageManager.EXTRA_VERIFICATION_INSTALLER_PACKAGE)
++        val packageName = intent.getStringExtra(PackageManager.EXTRA_VERIFICATION_PACKAGE_NAME)
++        val mode =
++            if (installer == null || UserHandle.getAppId(installerUid) < Process.FIRST_APPLICATION_UID) {
++                AppOpsManager.MODE_ALLOWED
++            } else {
++                try {
++                    context
++                        .getSystemService(AppOpsManager::class.java)!!
++                        .unsafeCheckOpRawNoThrow(LujarchInstalls.OP, installerUid, installer)
++                } catch (e: RuntimeException) {
++                    Log.e(LujarchInstalls.TAG, "install $id: choice of $installer not read; allowed", e)
++                    AppOpsManager.MODE_ALLOWED
++                }
++            }
++        if (mode == AppOpsManager.MODE_ALLOWED || mode == AppOpsManager.MODE_FOREGROUND) {
++            pm.verifyPendingInstall(id, PackageManager.VERIFICATION_ALLOW)
++            return
++        }
++        val archive = archive(pm, intent)
++        val app = archive?.applicationInfo?.loadLabel(pm) ?: packageName ?: "?"
++        val installerLabel =
++            try {
++                pm.getApplicationInfo(installer!!, 0).loadLabel(pm)
++            } catch (e: Exception) {
++                installer ?: "?"
++            }
++        if (mode != AppOpsManager.MODE_DEFAULT) {
++            pm.verifyPendingInstall(id, PackageManager.VERIFICATION_REJECT)
++            Log.i(LujarchInstalls.TAG, "install $id of $packageName by $installer refused")
++            LujarchInstalls.channel(context)
++            LujarchInstalls.notifyRefused(context, installerLabel, app, id)
++            return
++        }
++        // Ask every time: held for the user's wait, refused without an answer.
++        pm.extendVerificationTimeout(id, PackageManager.VERIFICATION_REJECT, LujarchInstalls.waitMillis(context))
++        val installed = packageName?.let { installedInfo(pm, it) }
++        val changed = installed != null && archive != null && signatureChanged(installed, archive)
++        val question =
++            Intent(context, LujarchInstallQuestionActivity::class.java)
++                .putExtra(LujarchInstalls.EXTRA_ID, id)
++                .putExtra(LujarchInstalls.EXTRA_INSTALLER, installerLabel)
++                .putExtra(LujarchInstalls.EXTRA_LABEL, app)
++                .putExtra(LujarchInstalls.EXTRA_VERSION, archive?.versionName)
++                .putExtra(LujarchInstalls.EXTRA_SIGNATURE_CHANGED, changed)
++                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
++        Log.i(LujarchInstalls.TAG, "install $id of $packageName by $installer: asking")
++        val keyguard = context.getSystemService(KeyguardManager::class.java)!!
++        val power = context.getSystemService(PowerManager::class.java)!!
++        if (power.isInteractive && !keyguard.isKeyguardLocked) {
++            try {
++                context.startActivity(question)
++                return
++            } catch (e: RuntimeException) {
++                Log.w(LujarchInstalls.TAG, "install $id: question not shown as a dialog", e)
++            }
++        }
++        val open = PendingIntent.getActivity(context, id, question, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
++        val n =
++            Notification.Builder(context, "lujarch_install")
++                .setSmallIcon(R.drawable.ic_file_download)
++                .setContentTitle(context.getString(R.string.lujarch_install_question, installerLabel, app))
++                .setContentText(context.getString(R.string.lujarch_install_until_answered))
++                .setContentIntent(open)
++                .setVisibility(Notification.VISIBILITY_SECRET)
++                .build()
++        LujarchInstalls.channel(context).notify(LujarchInstalls.TAG, id, n)
++    }
++
++    private fun archive(pm: PackageManager, intent: Intent): PackageInfo? {
++        val path = intent.data?.path ?: return null
++        val file = File(path).let { f ->
++            if (f.isDirectory) f.listFiles()?.firstOrNull { it.name.endsWith(".apk") } else f
++        } ?: return null
++        return try {
++            pm.getPackageArchiveInfo(file.path, PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
++                ?.also {
++                    it.applicationInfo?.sourceDir = file.path
++                    it.applicationInfo?.publicSourceDir = file.path
++                }
++        } catch (e: RuntimeException) {
++            Log.w(LujarchInstalls.TAG, "staged APK not read", e)
++            null
++        }
++    }
++
++    private fun installedInfo(pm: PackageManager, packageName: String): PackageInfo? =
++        try {
++            pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
++        } catch (e: PackageManager.NameNotFoundException) {
++            null
++        }
++
++    private fun signatureChanged(installed: PackageInfo, archive: PackageInfo): Boolean {
++        val a = installed.signingInfo?.apkContentsSigners?.toSet() ?: return false
++        val b = archive.signingInfo?.apkContentsSigners?.toSet() ?: return false
++        return a != b
++    }
++}
++
++/** The question about one install, in the look of the installer's own dialog. */
++class LujarchInstallQuestionActivity : Activity() {
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        val id = intent.getIntExtra(LujarchInstalls.EXTRA_ID, -1)
++        if (id < 0) {
++            finish()
++            return
++        }
++        val installer = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_INSTALLER)
++        val app = intent.getCharSequenceExtra(LujarchInstalls.EXTRA_LABEL)
++        val version = intent.getStringExtra(LujarchInstalls.EXTRA_VERSION)
++        val changed = intent.getBooleanExtra(LujarchInstalls.EXTRA_SIGNATURE_CHANGED, false)
++        val lines =
++            listOfNotNull(
++                version?.let { getString(R.string.lujarch_install_version, it) },
++                getString(if (changed) R.string.lujarch_install_signature_changed else R.string.lujarch_install_signature_same),
++            )
++        AlertDialog.Builder(this)
++            .setTitle(getString(R.string.lujarch_install_question, installer, app))
++            .setMessage(lines.joinToString("\n"))
++            .setPositiveButton(R.string.lujarch_install_allow) { _, _ -> LujarchInstalls.answer(this, id, true) }
++            .setNegativeButton(R.string.lujarch_install_deny) { _, _ -> LujarchInstalls.answer(this, id, false) }
++            .setOnDismissListener { finish() }
++            .show()
++    }
++}
 diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
 index 4c63493439e274e7df270bd63fa3c1f2c31d7290..c2bd60abb16562beebb76e6c7a0b65cda2aadfaa 100644
 --- a/services/core/java/com/android/server/pm/VerifyingSession.java
