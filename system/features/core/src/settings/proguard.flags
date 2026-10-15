@@ -1,0 +1,4 @@
+# Lujarch Settings loads each feature's Contribution by the class name its manifest gives.
+-keep class * implements org.lujarch.settings.Contribution {
+    public <init>();
+}

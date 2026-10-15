@@ -1,0 +1,678 @@
+diff --git a/app/Android.bp b/app/Android.bp
+index 2cbfcf94776bb62a5bc3a5c75ba38a1d9016e488..c716c75da6861939cece883a2a68f29d6c59d51f 100644
+--- a/app/Android.bp
++++ b/app/Android.bp
+@@ -80,6 +80,7 @@ android_app {
+         "Updater_com.squareup.okhttp3_okhttp",
+         "kotlin-stdlib",
+         "kotlinx_serialization_json",
++        "lujarch_updates_aidl-java",
+     ],
+ 
+     optimize: {
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 1cfa4d1871f4b4bd968401773d9b6a900a634444..2ea874f259e50da12a17b7d3b6c3c2ccc9fab7c2 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -32,7 +32,13 @@
+ 
+         <activity
+             android:name=".preferences.PreferencesActivity"
+-            android:exported="false" />
++            android:exported="true">
++            <!-- Settings search opens Confirm automatically here. -->
++            <intent-filter>
++                <action android:name="org.lujarch.updates.action.UPDATE_PREFERENCES" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </activity>
+ 
+         <activity
+             android:name=".UpdatesActivity"
+diff --git a/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt b/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt
+index bb6bc873b05d718bb818a24d0e6a59325f6a35c0..f89e7adccfd5d5028be5c88f6bbf5856dbbb9409 100644
+--- a/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt
++++ b/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt
+@@ -55,6 +55,7 @@ import org.lineageos.updater.updates.state.UpdateItemStateMapper
+ import org.lineageos.updater.updatescheck.UpdatesCheck
+ import org.lineageos.updater.updatescheck.UpdatesCheckModel
+ import org.lineageos.updater.updatescheck.rememberUpdatesCheckUiState
++import org.lineageos.updater.lujarch.LujarchBuild
+ 
+ abstract class UpdatesScaffoldActivity : ComponentActivity() {
+     private val viewModel by viewModels<UpdatesViewModel>()
+@@ -310,6 +311,7 @@ private fun UpdatesActionPane(
+     val updatesCheckUiState = rememberUpdatesCheckUiState(model.state)
+ 
+     Column(modifier = modifier) {
++        LujarchBuild.Card(showDialog = showDialog)
+         UpdatesCheck(
+             model = model,
+             uiState = updatesCheckUiState,
+diff --git a/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt b/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
+index 0ef23216e7fcdeb2ff16245f60be46a1aa24d9ed..d3f2bcd299836873a9e3c1c03ccf6ccbd7060170 100644
+--- a/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
++++ b/app/src/main/java/org/lineageos/updater/UpdatesViewModel.kt
+@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.onEach
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
+ import org.lineageos.updater.data.Update
++import org.lineageos.updater.deviceinfo.DeviceInfoUtils
+ import org.lineageos.updater.updatescheck.UpdatesCheckModel
+ import org.lineageos.updater.updatescheck.UpdatesCheckState
+ 
+@@ -32,22 +33,26 @@ class UpdatesViewModel(
+         val updates: List<Update> = emptyList(),
+         val isCheckingForUpdates: Boolean = false,
+         val isOnline: Boolean = true,
++        // Without an update server the network does not matter: a check asks nothing.
++        val hasServer: Boolean = true,
+         val lastCheckedTimestamp: Long = 0L,
+         val hasUpdateCheckFailed: Boolean = false,
+     ) {
+         val updatesCheckModel = UpdatesCheckModel(
+             state = when {
+                 isCheckingForUpdates -> UpdatesCheckState.Checking
+-                !isOnline -> UpdatesCheckState.NoInternet
++                !isOnline && hasServer -> UpdatesCheckState.NoInternet
+                 hasUpdateCheckFailed -> UpdatesCheckState.Error
+                 else -> UpdatesCheckState.Idle
+             },
+             lastCheckedTimestamp = lastCheckedTimestamp,
+-            canCheckForUpdates = isOnline && !isCheckingForUpdates,
++            canCheckForUpdates = (isOnline || !hasServer) && !isCheckingForUpdates,
+         )
+     }
+ 
+-    private val _uiState = MutableStateFlow(UiState())
++    private val _uiState = MutableStateFlow(
++        UiState(hasServer = DeviceInfoUtils.hasUpdateServer(application))
++    )
+     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+     val uiStateLive: LiveData<UiState> = _uiState.asLiveData()
+ 
+diff --git a/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt b/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt
+index c9e2350df8dfed5c65778c2dd00d1cbb3103bd10..7949b505a224c9dc822b0aeacf34da8e1916ce4f 100644
+--- a/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt
++++ b/app/src/main/java/org/lineageos/updater/data/UpdatesRepository.kt
+@@ -38,6 +38,8 @@ class UpdatesRepository(
+      * @throws SerializationException if the response cannot be parsed.
+      */
+     suspend fun fetchUpdates(): Long? {
++        // Without an update server there is nothing to ask: no request, no update.
++        if (!networkDataSource.hasServer) return System.currentTimeMillis()
+         if (!networkMonitor.currentNetworkState.isOnline) return null
+ 
+         val localUpdates = withContext(Dispatchers.IO) {
+diff --git a/app/src/main/java/org/lineageos/updater/data/source/network/UpdatesNetworkDataSource.kt b/app/src/main/java/org/lineageos/updater/data/source/network/UpdatesNetworkDataSource.kt
+index 2f1407f73d8fbc8c894aa34130fa2620a5cfdc39..ed6687197b67cdfd46ca11f5fe451b144c7b7263 100644
+--- a/app/src/main/java/org/lineageos/updater/data/source/network/UpdatesNetworkDataSource.kt
++++ b/app/src/main/java/org/lineageos/updater/data/source/network/UpdatesNetworkDataSource.kt
+@@ -14,6 +14,9 @@ import java.io.IOException
+ import java.util.concurrent.TimeUnit
+ 
+ class UpdatesNetworkDataSource(private val context: Context) {
++    val hasServer: Boolean
++        get() = DeviceInfoUtils.hasUpdateServer(context)
++
+     private val serverUrl: String
+         get() {
+             val base = DeviceInfoUtils.updaterUri.trim().ifEmpty {
+diff --git a/app/src/main/java/org/lineageos/updater/deviceinfo/DeviceInfoUtils.kt b/app/src/main/java/org/lineageos/updater/deviceinfo/DeviceInfoUtils.kt
+index 126a7a4c7aebb20dad33a1bec26063ff0eee36d0..8d8f05f819324b2e4efa1a50f0e745786c9709b9 100644
+--- a/app/src/main/java/org/lineageos/updater/deviceinfo/DeviceInfoUtils.kt
++++ b/app/src/main/java/org/lineageos/updater/deviceinfo/DeviceInfoUtils.kt
+@@ -5,9 +5,11 @@
+ 
+ package org.lineageos.updater.deviceinfo
+ 
++import android.content.Context
+ import android.os.Build
+ import android.os.SystemProperties
+ import com.android.settingslib.DeviceInfoUtils as SettingsLibDeviceInfoUtils
++import org.lineageos.updater.R
+ 
+ object DeviceInfoUtils : SettingsLibDeviceInfoUtils() {
+ 
+@@ -65,4 +67,8 @@ object DeviceInfoUtils : SettingsLibDeviceInfoUtils() {
+     @JvmStatic
+     val updaterUri: String
+         get() = SystemProperties.get(PROP_UPDATER_URI, "")
++
++    /** Whether updates come from a server; without one only local updates are installed. */
++    fun hasUpdateServer(context: Context): Boolean =
++        updaterUri.isNotBlank() || context.getString(R.string.updater_server_url).isNotBlank()
+ }
+diff --git a/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt b/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
+index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..bf6d1700a39bf03c4c51bad62818617428a4e310 100644
+--- a/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
++++ b/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
+@@ -50,7 +50,7 @@ fun DeviceInfoActionButtons(modifier: Modifier = Modifier) {
+         val buttonColors = ButtonDefaults.textButtonColors(
+             contentColor = MaterialTheme.colorScheme.onSurface,
+         )
+-        TextButton(
++        if (context.getString(R.string.menu_changelog_url).isNotBlank()) TextButton(
+             onClick = {
+                 val url = context.getString(R.string.menu_changelog_url, DeviceInfoUtils.device)
+                 val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+diff --git a/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb0baa309c
+--- /dev/null
++++ b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
+@@ -0,0 +1,230 @@
++/*
++ * SPDX-FileCopyrightText: The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.updater.lujarch
++
++import android.content.Context
++import android.icu.text.DateFormat
++import android.icu.text.MessageFormat
++import android.os.PowerManager
++import android.os.ServiceManager
++import android.os.ServiceSpecificException
++import android.provider.Settings
++import android.util.Log
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.DisposableEffect
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberCoroutineScope
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.AnnotatedString
++import androidx.lifecycle.Lifecycle
++import androidx.lifecycle.LifecycleEventObserver
++import androidx.lifecycle.compose.LocalLifecycleOwner
++import com.android.settingslib.spa.widget.card.CardButton
++import com.android.settingslib.spa.widget.card.CardModel
++import com.android.settingslib.spa.widget.card.SettingsCard
++import java.util.Date
++import java.util.Locale
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.delay
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
++import org.lineageos.updater.R
++import org.lineageos.updater.updates.action.AlertDialogState
++import org.lujarch.updates.IUpdates
++import org.lujarch.updates.Status
++
++/** The running build's confirmation and the previous build, through lujarch_updates. */
++object LujarchBuild {
++    private const val TAG = "lujarch_updates"
++    private const val SERVICE = "lujarch_updates"
++
++    /** The auto-confirm choice, in minutes (settings.toml of updates). */
++    private const val SETTING_AUTO_CONFIRM = "lujarch_updates_auto_confirm"
++    val AUTO_CONFIRM_MINUTES = intArrayOf(0, 30, 1440, 4320, 10080, 20160, 43200)
++
++    private fun service(): IUpdates? =
++        IUpdates.Stub.asInterface(ServiceManager.checkService(SERVICE)).also {
++            if (it == null) Log.e(TAG, "lujarch_updates is not running")
++        }
++
++    /** The status, or null when lujarch_updates cannot be asked (logged). */
++    fun status(): Status? =
++        try {
++            service()?.status
++        } catch (e: Exception) {
++            Log.e(TAG, "status not read", e)
++            null
++        }
++
++    /** Null when done, else what failed (logged). */
++    private fun call(what: String, action: (IUpdates) -> Unit): String? {
++        val service = service() ?: return "lujarch_updates is not running"
++        return try {
++            action(service)
++            null
++        } catch (e: ServiceSpecificException) {
++            Log.e(TAG, "$what: ${e.message}")
++            e.message ?: what
++        } catch (e: Exception) {
++            Log.e(TAG, what, e)
++            e.toString()
++        }
++    }
++
++    fun confirm(): String? = call("confirm") { it.confirm() }
++
++    fun restorePrevious(): String? = call("restore the previous build") { it.restorePrevious() }
++
++    fun setAutoConfirm(context: Context, minutes: Int) {
++        if (!Settings.Global.putInt(context.contentResolver, SETTING_AUTO_CONFIRM, minutes)) {
++            Log.e(TAG, "$SETTING_AUTO_CONFIRM not written")
++        }
++    }
++
++    /** Why no other update can be installed now, or null. */
++    fun installBlocker(context: Context): String? =
++        when (status()?.state) {
++            IUpdates.STATE_WAITING -> context.getString(R.string.lujarch_install_waits)
++            IUpdates.STATE_MERGING -> context.getString(R.string.lujarch_install_merging)
++            IUpdates.STATE_RESTORING -> context.getString(R.string.lujarch_install_restoring)
++            else -> null
++        }
++
++    /** "Never", "After 30 minutes", "After 1 day" and so on. */
++    fun autoConfirmLabel(context: Context, minutes: Int): String =
++        when {
++            minutes <= 0 -> context.getString(R.string.lujarch_auto_confirm_never)
++            minutes % 1440 == 0 -> plural(context, R.string.lujarch_auto_confirm_days, minutes / 1440)
++            else -> plural(context, R.string.lujarch_auto_confirm_minutes, minutes)
++        }
++
++    private fun plural(context: Context, id: Int, count: Int): String =
++        MessageFormat(context.getString(id), Locale.getDefault()).format(mapOf("count" to count))
++
++    private fun restoreBlockerText(context: Context, blocker: String): String =
++        context.getString(
++            when (blocker) {
++                IUpdates.RESTORE_ANDROID_VERSION -> R.string.lujarch_restore_android_version
++                IUpdates.RESTORE_PATCH_LEVEL -> R.string.lujarch_restore_patch_level
++                IUpdates.RESTORE_NOT_BOOTABLE -> R.string.lujarch_restore_not_bootable
++                IUpdates.RESTORE_UNKNOWN_BUILD -> R.string.lujarch_restore_unknown_build
++                else -> R.string.lujarch_restore_unknown
++            }
++        )
++
++    /** The card of a build that waits for confirmation, is merged or gives way to the previous one. */
++    @Composable
++    fun Card(showDialog: (AlertDialogState) -> Unit) {
++        val context = LocalContext.current
++        val scope = rememberCoroutineScope()
++        var status by remember { mutableStateOf<Status?>(null) }
++        var refresh by remember { mutableIntStateOf(0) }
++        val lifecycleOwner = LocalLifecycleOwner.current
++        DisposableEffect(lifecycleOwner) {
++            val observer = LifecycleEventObserver { _, event ->
++                if (event == Lifecycle.Event.ON_RESUME) refresh++
++            }
++            lifecycleOwner.lifecycle.addObserver(observer)
++            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
++        }
++        LaunchedEffect(refresh) {
++            while (true) {
++                status = withContext(Dispatchers.IO) { status() }
++                if (status?.state != IUpdates.STATE_MERGING) break
++                delay(5_000)
++            }
++        }
++        val s = status ?: return
++        fun act(failure: Int, action: () -> String?, then: () -> Unit = {}) {
++            scope.launch {
++                val error = withContext(Dispatchers.IO) { action() }
++                if (error != null) {
++                    showDialog(
++                        AlertDialogState(
++                            title = context.getString(failure),
++                            text = AnnotatedString(context.getString(R.string.lujarch_action_failed, error)),
++                        )
++                    )
++                } else {
++                    then()
++                }
++                refresh++
++            }
++        }
++        val restart = {
++            context.getSystemService(PowerManager::class.java)!!.reboot(null)
++        }
++        val model =
++            when (s.state) {
++                IUpdates.STATE_WAITING -> {
++                    val lines = mutableListOf(context.getString(R.string.lujarch_waits_text))
++                    if (s.autoConfirmAt > 0) {
++                        val at =
++                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
++                                .format(Date(s.autoConfirmAt * 1000))
++                        lines += context.getString(R.string.lujarch_waits_auto, at)
++                    }
++                    if (s.restoreBlocker.isNotEmpty()) lines += restoreBlockerText(context, s.restoreBlocker)
++                    val buttons =
++                        mutableListOf(
++                            CardButton(context.getString(R.string.lujarch_confirm)) {
++                                showDialog(
++                                    AlertDialogState(
++                                        title = context.getString(R.string.lujarch_confirm_title),
++                                        text = AnnotatedString(context.getString(R.string.lujarch_confirm_message)),
++                                        showDismiss = true,
++                                        onConfirm = { act(R.string.lujarch_confirm_failed, ::confirm) },
++                                    )
++                                )
++                            }
++                        )
++                    if (s.restoreBlocker.isEmpty()) {
++                        buttons +=
++                            CardButton(context.getString(R.string.lujarch_restore)) {
++                                showDialog(
++                                    AlertDialogState(
++                                        title = context.getString(R.string.lujarch_restore_title),
++                                        text = AnnotatedString(context.getString(R.string.lujarch_restore_message)),
++                                        showDismiss = true,
++                                        onConfirm = {
++                                            act(R.string.lujarch_restore_failed, ::restorePrevious, restart)
++                                        },
++                                    )
++                                )
++                            }
++                    }
++                    CardModel(
++                        title = context.getString(R.string.lujarch_waits_title),
++                        text = lines.joinToString("\n"),
++                        buttons = buttons,
++                    )
++                }
++                IUpdates.STATE_MERGING ->
++                    CardModel(
++                        title = context.getString(R.string.lujarch_merging_title),
++                        text =
++                            if (s.mergeProgress >= 0) {
++                                context.getString(R.string.lujarch_merging_progress, s.mergeProgress)
++                            } else {
++                                context.getString(R.string.lujarch_merging_text)
++                            },
++                    )
++                IUpdates.STATE_RESTORING ->
++                    CardModel(
++                        title = context.getString(R.string.lujarch_restoring_title),
++                        text = context.getString(R.string.lujarch_restoring_text),
++                        buttons = listOf(CardButton(context.getString(R.string.lujarch_restart), onClick = restart)),
++                    )
++                else -> return
++            }
++        SettingsCard(model)
++    }
++}
+diff --git a/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt b/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt
+index 4f3a2a4fab62288d93019f66287ffd5ef3380adc..bc7b826758a951c73dc3b4a4ff079913f8c8f95e 100644
+--- a/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt
++++ b/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt
+@@ -7,6 +7,8 @@ package org.lineageos.updater.preferences
+ 
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.IntState
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.mutableIntStateOf
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+@@ -22,12 +24,15 @@ import com.android.settingslib.spa.widget.preference.SwitchPreference
+ import com.android.settingslib.spa.widget.preference.SwitchPreferenceModel
+ import com.android.settingslib.spa.widget.scaffold.RegularScaffold
+ import com.android.settingslib.spa.widget.ui.Category
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ import org.lineageos.updater.R
+ import org.lineageos.updater.UpdaterApplication
+ import org.lineageos.updater.data.CheckInterval
+ import org.lineageos.updater.data.UserPreferencesRepository
+ import org.lineageos.updater.deviceinfo.DeviceInfoUtils
++import org.lineageos.updater.lujarch.LujarchBuild
+ import org.lineageos.updater.util.BatteryMonitor
+ import java.io.File
+ 
+@@ -64,6 +69,13 @@ private fun PreferencesContent(
+     )
+     val periodicCheckEnabled by repository.periodicCheckEnabledFlow.collectAsStateWithLifecycle(true)
+     var recoveryUpdateEnabled by remember { mutableStateOf(repository.getRecoveryUpdateEnabled()) }
++    val context = LocalContext.current
++    val hasServer = remember { DeviceInfoUtils.hasUpdateServer(context) }
++    // The running build's auto-confirm choice, from lujarch_updates; -1 until it has answered.
++    var autoConfirm by remember { mutableIntStateOf(-1) }
++    LaunchedEffect(Unit) {
++        autoConfirm = withContext(Dispatchers.IO) { LujarchBuild.status()?.autoConfirmMinutes ?: -1 }
++    }
+ 
+     val autoUpdatesCheckSummary = stringResource(R.string.menu_auto_updates_check_summary)
+     val autoDeleteUpdatesSummary = stringResource(R.string.menu_auto_delete_updates_summary)
+@@ -78,7 +90,7 @@ private fun PreferencesContent(
+         }
+     }
+ 
+-    Category(title = stringResource(R.string.pref_category_background_sync)) {
++    if (hasServer) Category(title = stringResource(R.string.pref_category_background_sync)) {
+         SwitchPreference(object : SwitchPreferenceModel {
+             override val title = stringResource(R.string.menu_auto_updates_check)
+             override val summary = { autoUpdatesCheckSummary }
+@@ -114,7 +126,22 @@ private fun PreferencesContent(
+     }
+ 
+     Category(title = stringResource(R.string.pref_category_download_install)) {
+-        if (isABDevice) {
++        ListPreference(object : ListPreferenceModel {
++            override val title = stringResource(R.string.lujarch_auto_confirm)
++            override val enabled = { autoConfirm >= 0 }
++            override val options = LujarchBuild.AUTO_CONFIRM_MINUTES.map { minutes ->
++                ListPreferenceOption(id = minutes, text = LujarchBuild.autoConfirmLabel(context, minutes))
++            }
++            override val selectedId = object : IntState {
++                override val intValue get() = autoConfirm
++            }
++            override val onIdSelected: (Int) -> Unit = { minutes ->
++                autoConfirm = minutes
++                LujarchBuild.setAutoConfirm(context, minutes)
++            }
++        })
++
++        if (isABDevice && hasServer) {
+             SwitchPreference(object : SwitchPreferenceModel {
+                 override val title = stringResource(R.string.menu_stream_updates)
+                 override val summary = { streamUpdatesSummary }
+@@ -123,7 +150,7 @@ private fun PreferencesContent(
+                     coroutineScope.launch { repository.setStreamUpdates(value) }
+                 }
+             })
+-        } else {
++        } else if (!isABDevice) {
+             SwitchPreference(object : SwitchPreferenceModel {
+                 override val title = stringResource(R.string.menu_auto_delete_updates)
+                 override val summary = { autoDeleteUpdatesSummary }
+@@ -134,7 +161,7 @@ private fun PreferencesContent(
+             })
+         }
+ 
+-        SwitchPreference(object : SwitchPreferenceModel {
++        if (hasServer) SwitchPreference(object : SwitchPreferenceModel {
+             override val title = stringResource(R.string.menu_metered_network_warning)
+             override val summary = { meteredNetworkWarningSummary }
+             override val checked = { meteredNetworkWarning }
+diff --git a/app/src/main/java/org/lineageos/updater/updates/action/UpdateActionHandler.kt b/app/src/main/java/org/lineageos/updater/updates/action/UpdateActionHandler.kt
+index 8c0ab12dc77a3a51db9ca3bf1a4b4cd2c696a6ac..9c9edb85c9ca5ba52b28527dd862a0a65b315dbb 100644
+--- a/app/src/main/java/org/lineageos/updater/updates/action/UpdateActionHandler.kt
++++ b/app/src/main/java/org/lineageos/updater/updates/action/UpdateActionHandler.kt
+@@ -20,6 +20,7 @@ import org.lineageos.updater.controller.UpdaterController
+ import org.lineageos.updater.controller.UpdaterService
+ import org.lineageos.updater.data.Update
+ import org.lineageos.updater.deviceinfo.DeviceInfoUtils
++import org.lineageos.updater.lujarch.LujarchBuild
+ import org.lineageos.updater.misc.Utils
+ import org.lineageos.updater.util.BatteryMonitor.BatteryState
+ import org.lineageos.updater.util.InstallUtils
+@@ -85,6 +86,16 @@ class UpdateActionHandler(
+                     return
+                 }
+ 
++                LujarchBuild.installBlocker(activity)?.let { reason ->
++                    showDialog(
++                        AlertDialogState(
++                            title = activity.getString(R.string.lujarch_install_blocked_title),
++                            text = AnnotatedString(reason),
++                        )
++                    )
++                    return
++                }
++
+                 if (InstallUtils.isScratchMounted()) {
+                     showDialog(
+                         AlertDialogState(
+diff --git a/app/src/main/java/org/lineageos/updater/updatescheck/UpdatesCheckWorker.kt b/app/src/main/java/org/lineageos/updater/updatescheck/UpdatesCheckWorker.kt
+index 49dce2a5d016c2847782bc0af753f9d97e279328..a0cc38470d6f9f8c2b60fd2a7b03c7938dfa5bd4 100644
+--- a/app/src/main/java/org/lineageos/updater/updatescheck/UpdatesCheckWorker.kt
++++ b/app/src/main/java/org/lineageos/updater/updatescheck/UpdatesCheckWorker.kt
+@@ -25,6 +25,7 @@ import org.lineageos.updater.UpdaterApplication
+ import org.lineageos.updater.data.CheckInterval
+ import kotlin.time.Duration.Companion.hours
+ import kotlin.time.toJavaDuration
++import org.lineageos.updater.deviceinfo.DeviceInfoUtils
+ 
+ class UpdatesCheckWorker(
+     context: Context,
+@@ -72,6 +73,10 @@ class UpdatesCheckWorker(
+ 
+         @JvmStatic
+         fun schedulePeriodicCheck(context: Context) {
++            if (!DeviceInfoUtils.hasUpdateServer(context)) {
++                cancelPeriodicCheck(context)
++                return
++            }
+             CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+                 val prefs =
+                     (context.applicationContext as UpdaterApplication).userPreferencesRepository
+diff --git a/app/src/main/res/values-ja/lujarch_strings.xml b/app/src/main/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..cc995a5273cefe1e5dddf9c398b12877b873b668
+--- /dev/null
++++ b/app/src/main/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,38 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    SPDX-FileCopyrightText: The Lujarch Project
++    SPDX-License-Identifier: Apache-2.0
++-->
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <string name="lujarch_auto_confirm">"自動的に確認"</string>
++    <string name="lujarch_auto_confirm_never">"しない"</string>
++    <string name="lujarch_auto_confirm_minutes">"{count,plural, other{# 分後}}"</string>
++    <string name="lujarch_auto_confirm_days">"{count,plural, other{# 日後}}"</string>
++    <string name="lujarch_install_blocked_title">"他のアップデートはまだインストールできません"</string>
++    <string name="lujarch_install_waits">"実行中のビルドは確認を待っています。他のアップデートをインストールする前に、このビルドを確認するか、以前のビルドに戻してください。"</string>
++    <string name="lujarch_install_merging">"実行中のビルドのアップデートを統合しています。完了してから他のアップデートをインストールしてください。"</string>
++    <string name="lujarch_install_restoring">"次回の再起動で以前のビルドが起動します。他のアップデートをインストールする前に再起動してください。"</string>
++    <string name="lujarch_waits_title">"このビルドは確認を待っています"</string>
++    <string name="lujarch_waits_text">"確認されるまで、以前のビルドはもう一方のスロットに残ります。"</string>
++    <string name="lujarch_waits_auto">"<xliff:g id="TIME">%1$s</xliff:g> に自動的に確認されます。"</string>
++    <string name="lujarch_confirm">"このビルドを確認"</string>
++    <string name="lujarch_confirm_title">"このビルドを確認しますか？"</string>
++    <string name="lujarch_confirm_message">"確認すると Android がアップデートを統合し、以前のビルドには戻せなくなります。"</string>
++    <string name="lujarch_confirm_failed">"このビルドを確認できませんでした"</string>
++    <string name="lujarch_restore">"以前のビルドに戻す"</string>
++    <string name="lujarch_restore_title">"以前のビルドに戻しますか？"</string>
++    <string name="lujarch_restore_message">"スマートフォンは以前のビルドで再起動します。データはすべて現在の状態のままです。このビルドで変更された内容はそのまま残り、このビルドがデータを変換したアプリはそのデータを開けない場合があります。"</string>
++    <string name="lujarch_restore_failed">"以前のビルドに戻せませんでした"</string>
++    <string name="lujarch_action_failed">"<xliff:g id="ERROR">%1$s</xliff:g>\n\n詳しくはシステムログをご覧ください。もう一度お試しいただくか、先にスマートフォンを再起動してください。"</string>
++    <string name="lujarch_restore_android_version">"以前のビルドには戻せません。Android のバージョンが異なります。"</string>
++    <string name="lujarch_restore_patch_level">"以前のビルドには戻せません。セキュリティ パッチが古いためです。"</string>
++    <string name="lujarch_restore_not_bootable">"以前のビルドには戻せません。そのスロットは起動できません。"</string>
++    <string name="lujarch_restore_unknown_build">"以前のビルドには戻せません。そのスロットにどのビルドがあるか不明です。"</string>
++    <string name="lujarch_restore_unknown">"以前のビルドには戻せません。スロットの状態を読み取れません。"</string>
++    <string name="lujarch_merging_title">"アップデートを統合しています"</string>
++    <string name="lujarch_merging_text">"このビルドは確認済みです。Android がアップデートを統合しています。完了すると以前のビルドはなくなります。"</string>
++    <string name="lujarch_merging_progress">"このビルドは確認済みです。<xliff:g id="PERCENT">%1$d</xliff:g>%% 統合済みです。完了すると以前のビルドはなくなります。"</string>
++    <string name="lujarch_restoring_title">"次回の再起動で以前のビルドが起動します"</string>
++    <string name="lujarch_restoring_text">"以前のビルドが起動すると、このビルドへのアップデートは取り消されます。"</string>
++    <string name="lujarch_restart">"今すぐ再起動"</string>
++</resources>
+diff --git a/app/src/main/res/values-zh-rCN/lujarch_strings.xml b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..cf0852433afc232e513264afcdb52e6e37d5a685
+--- /dev/null
++++ b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,38 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    SPDX-FileCopyrightText: The Lujarch Project
++    SPDX-License-Identifier: Apache-2.0
++-->
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <string name="lujarch_auto_confirm">"自动确认"</string>
++    <string name="lujarch_auto_confirm_never">"从不"</string>
++    <string name="lujarch_auto_confirm_minutes">"{count,plural, other{# 分钟后}}"</string>
++    <string name="lujarch_auto_confirm_days">"{count,plural, other{# 天后}}"</string>
++    <string name="lujarch_install_blocked_title">"暂时无法安装其他更新"</string>
++    <string name="lujarch_install_waits">"当前版本正在等待确认。请先确认它，或回到上一版本，再安装其他更新。"</string>
++    <string name="lujarch_install_merging">"当前版本的更新正在合并。请在合并完成后再安装其他更新。"</string>
++    <string name="lujarch_install_restoring">"上一版本将在下次重启时启动。请先重启，再安装其他更新。"</string>
++    <string name="lujarch_waits_title">"此版本正在等待确认"</string>
++    <string name="lujarch_waits_text">"确认之前，上一版本会保留在另一个槽位上。"</string>
++    <string name="lujarch_waits_auto">"此版本将于 <xliff:g id="TIME">%1$s</xliff:g> 自动确认。"</string>
++    <string name="lujarch_confirm">"确认此版本"</string>
++    <string name="lujarch_confirm_title">"要确认此版本吗？"</string>
++    <string name="lujarch_confirm_message">"确认后 Android 会合并此次更新，之后无法再回到上一版本。"</string>
++    <string name="lujarch_confirm_failed">"未能确认此版本"</string>
++    <string name="lujarch_restore">"回到上一版本"</string>
++    <string name="lujarch_restore_title">"要回到上一版本吗？"</string>
++    <string name="lujarch_restore_message">"手机将重启进入上一版本。所有数据保持现在的状态：此版本做出的改动会保留，此版本转换过数据的应用可能无法打开这些数据。"</string>
++    <string name="lujarch_restore_failed">"未能回到上一版本"</string>
++    <string name="lujarch_action_failed">"<xliff:g id="ERROR">%1$s</xliff:g>\n\n详细信息见系统日志。请重试，或先重启手机。"</string>
++    <string name="lujarch_restore_android_version">"无法回到上一版本：它的 Android 版本不同。"</string>
++    <string name="lujarch_restore_patch_level">"无法回到上一版本：它的安全补丁较旧。"</string>
++    <string name="lujarch_restore_not_bootable">"无法回到上一版本：它所在的槽位无法启动。"</string>
++    <string name="lujarch_restore_unknown_build">"无法回到上一版本：不清楚它所在的槽位中是哪个版本。"</string>
++    <string name="lujarch_restore_unknown">"无法回到上一版本：无法读取槽位的状态。"</string>
++    <string name="lujarch_merging_title">"正在合并更新"</string>
++    <string name="lujarch_merging_text">"此版本已确认。Android 正在合并更新，合并完成后上一版本将不复存在。"</string>
++    <string name="lujarch_merging_progress">"此版本已确认。已合并 <xliff:g id="PERCENT">%1$d</xliff:g>%%，合并完成后上一版本将不复存在。"</string>
++    <string name="lujarch_restoring_title">"上一版本将在下次重启时启动"</string>
++    <string name="lujarch_restoring_text">"上一版本启动后，到此版本的更新将被取消。"</string>
++    <string name="lujarch_restart">"立即重启"</string>
++</resources>
+diff --git a/app/src/main/res/values/lujarch_strings.xml b/app/src/main/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..75809719be7389fa68a71562114bd111e278629a
+--- /dev/null
++++ b/app/src/main/res/values/lujarch_strings.xml
+@@ -0,0 +1,44 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    SPDX-FileCopyrightText: The Lujarch Project
++    SPDX-License-Identifier: Apache-2.0
++-->
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <string name="lujarch_auto_confirm">Confirm automatically</string>
++    <string name="lujarch_auto_confirm_never">Never</string>
++    <string name="lujarch_auto_confirm_minutes">{count, plural,
++        =1      {After 1 minute}
++        other   {After # minutes}
++    }</string>
++    <string name="lujarch_auto_confirm_days">{count, plural,
++        =1      {After 1 day}
++        other   {After # days}
++    }</string>
++    <string name="lujarch_install_blocked_title">Another update cannot be installed yet</string>
++    <string name="lujarch_install_waits">The running build waits for confirmation. Confirm it, or return to the previous build, before installing another update.</string>
++    <string name="lujarch_install_merging">The update of the running build is being merged. Install another update once it has finished.</string>
++    <string name="lujarch_install_restoring">The previous build starts at the next restart. Restart before installing another update.</string>
++    <string name="lujarch_waits_title">This build waits for confirmation</string>
++    <string name="lujarch_waits_text">Until it is confirmed, the previous build stays on the other slot.</string>
++    <string name="lujarch_waits_auto">It is confirmed automatically on <xliff:g id="time" example="Oct 16, 2026, 9:30 AM">%1$s</xliff:g>.</string>
++    <string name="lujarch_confirm">Confirm this build</string>
++    <string name="lujarch_confirm_title">Confirm this build?</string>
++    <string name="lujarch_confirm_message">Android then merges the update, and the previous build can no longer be restored.</string>
++    <string name="lujarch_confirm_failed">This build was not confirmed</string>
++    <string name="lujarch_restore">Return to the previous build</string>
++    <string name="lujarch_restore_title">Return to the previous build?</string>
++    <string name="lujarch_restore_message">The phone restarts into the previous build. All data stays as it is now: what this build changed stays changed, and an app whose data this build converted may not open it.</string>
++    <string name="lujarch_restore_failed">The previous build was not restored</string>
++    <string name="lujarch_action_failed"><xliff:g id="error" example="no boot control HAL">%1$s</xliff:g>\n\nThe system log has the details. Try again, or restart the phone first.</string>
++    <string name="lujarch_restore_android_version">The previous build cannot be restored: it has another Android version.</string>
++    <string name="lujarch_restore_patch_level">The previous build cannot be restored: it has an older security patch.</string>
++    <string name="lujarch_restore_not_bootable">The previous build cannot be restored: its slot cannot start.</string>
++    <string name="lujarch_restore_unknown_build">The previous build cannot be restored: which build its slot holds is not known.</string>
++    <string name="lujarch_restore_unknown">The previous build cannot be restored: the state of the slots cannot be read.</string>
++    <string name="lujarch_merging_title">Merging the update</string>
++    <string name="lujarch_merging_text">This build is confirmed. Android is merging its update; the previous build is gone once it finishes.</string>
++    <string name="lujarch_merging_progress">This build is confirmed. <xliff:g id="percent" example="40">%1$d</xliff:g>%% merged; the previous build is gone once it finishes.</string>
++    <string name="lujarch_restoring_title">The previous build starts at the next restart</string>
++    <string name="lujarch_restoring_text">The update to this build is cancelled once the previous build has started.</string>
++    <string name="lujarch_restart">Restart now</string>
++</resources>

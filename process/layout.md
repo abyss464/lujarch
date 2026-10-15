@@ -50,7 +50,8 @@ system/features/<feature>/
 - A feature's pages in Settings are the Kotlin library `Lujarch<Feature>Settings` in its
   `src/settings/`, with its own manifest and resources; the tools build every such library into
   Lujarch Settings. Its manifest registers what it adds to App info and search as application
-  meta-data `org.lujarch.settings.contribution.<feature>` naming its `Contribution` class.
+  meta-data `org.lujarch.settings.contribution.<feature>` naming its `Contribution` class, built
+  against `core`'s `LujarchSettingsContribution`.
 - `core` is the feature of the rules that hold everywhere (target/core.md): the settings
   registry and its mirror, the page framework of Lujarch's pages in Settings with the App info
   rows and search entries features contribute, the daemon base, the AID table, shared SELinux

@@ -46,6 +46,11 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Permissions | 权限 | 権限 |
 | Notifications | 通知 | 通知 |
 | System updates | 系统更新 | システムアップデート |
+| Install local update | 安装本地更新 | ローカル アップデートをインストール |
+| Build | 版本 | ビルド |
+| Confirm this build | 确认此版本 | このビルドを確認 |
+| Confirm automatically | 自动确认 | 自動的に確認 |
+| Return to the previous build | 回到上一版本 | 以前のビルドに戻す |
 | Settings | 设置 | 設定 |
 | Allow | 允许 | 許可する |
 | Allow all the time | 始终允许 | 常に許可 |

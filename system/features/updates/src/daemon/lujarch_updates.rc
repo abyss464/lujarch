@@ -1,0 +1,8 @@
+on post-fs
+    mkdir /metadata/lujarch 0755 root root
+    mkdir /metadata/lujarch/updates 0770 system system
+
+service lujarch_updates /system_ext/bin/lujarch_updates
+    class main
+    user system
+    group system

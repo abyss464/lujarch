@@ -1,0 +1,33 @@
+# lujarch_updates: the confirmation of the running build and the return to the previous one.
+type lujarch_updates, domain, coredomain;
+type lujarch_updates_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_updates)
+
+type lujarch_updates_metadata_file, file_type;
+type lujarch_updates_service, service_manager_type;
+system_internal_prop(lujarch_updates_prop)
+
+# Its interface, for System updates.
+binder_use(lujarch_updates)
+add_service(lujarch_updates, lujarch_updates_service)
+allow updater_app lujarch_updates_service:service_manager find;
+binder_call(updater_app, lujarch_updates)
+
+# The confirmation and the slots' builds; callers by packages.list.
+allow lujarch_updates metadata_file:dir search;
+allow lujarch_updates lujarch_updates_metadata_file:dir rw_dir_perms;
+allow lujarch_updates lujarch_updates_metadata_file:file create_file_perms;
+allow lujarch_updates packages_list_file:file r_file_perms;
+
+# The slots, their merge status and the active slot.
+hal_client_domain(lujarch_updates, hal_bootctl)
+
+# The auto-confirm choice, update_engine's merge state and the vendor's patch level.
+get_prop(lujarch_updates, lujarch_setting_prop)
+get_prop(lujarch_updates, lujarch_updates_prop)
+get_prop(lujarch_updates, vendor_security_patch_level_prop)
+
+# update_engine: the merge waits for the confirmation, and it reports the merge's state.
+allow update_engine lujarch_updates_metadata_file:dir r_dir_perms;
+allow update_engine lujarch_updates_metadata_file:file r_file_perms;
+set_prop(update_engine, lujarch_updates_prop)

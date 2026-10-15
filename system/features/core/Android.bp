@@ -33,10 +33,21 @@ cc_library_static {
     system_ext_specific: true,
 }
 
+// What a feature adds to App info and search, for the features' page libraries.
+java_library {
+    name: "LujarchSettingsContribution",
+    srcs: ["src/contribution/**/*.kt"],
+    platform_apis: true,
+}
+
 // Lujarch's pages in Settings: this framework and every feature's page library.
 android_app {
     name: "LujarchSettings",
     defaults: ["lujarch_settings_features"],
+    static_libs: ["LujarchSettingsContribution"],
+    optimize: {
+        proguard_flags_files: ["src/settings/proguard.flags"],
+    },
     srcs: ["src/settings/**/*.kt"],
     manifest: "src/settings/AndroidManifest.xml",
     resource_dirs: ["src/settings/res"],

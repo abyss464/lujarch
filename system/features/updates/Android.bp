@@ -1,0 +1,60 @@
+// The interface of lujarch_updates, for System updates.
+aidl_interface {
+    name: "lujarch_updates_aidl",
+    srcs: ["src/daemon/aidl/org/lujarch/updates/*.aidl"],
+    local_include_dir: "src/daemon/aidl",
+    unstable: true,
+    system_ext_specific: true,
+    backend: {
+        java: {
+            platform_apis: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+    },
+}
+
+// The confirmation of the running build and the return to the previous one.
+cc_binary {
+    name: "lujarch_updates",
+    srcs: [
+        "src/daemon/main.cpp",
+        "src/daemon/updates.cpp",
+    ],
+    static_libs: [
+        "liblujarch_daemon",
+        "lujarch_updates_aidl-ndk",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "libboot_control_client",
+        "liblog",
+    ],
+    init_rc: ["src/daemon/lujarch_updates.rc"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+}
+
+// System updates without an update server.
+runtime_resource_overlay {
+    name: "LujarchUpdatesUpdaterOverlay",
+    manifest: "src/overlay/updater/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/updater/res"],
+    system_ext_specific: true,
+}
+
+// What updates adds to Lujarch Settings: Confirm automatically in Settings search.
+android_library {
+    name: "LujarchUpdatesSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+}

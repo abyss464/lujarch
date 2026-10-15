@@ -1,0 +1,170 @@
+diff --git a/libsnapshot/include/libsnapshot/lujarch_merge_gate.h b/libsnapshot/include/libsnapshot/lujarch_merge_gate.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..e78612edac01744237522c2abcf9098ecbfb365d
+--- /dev/null
++++ b/libsnapshot/include/libsnapshot/lujarch_merge_gate.h
+@@ -0,0 +1,130 @@
++// Copyright (C) 2026 The Lujarch Project
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//      http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++// Lujarch's merge gate: outside recovery, an update booted from its target slot is merged only once
++// the running build is confirmed, so until then the previous build stays whole in the source slot.
++//
++// The confirmation is /metadata/lujarch/updates/confirmed, which lujarch_updates writes as
++// "version: <ro.build.version.incremental>" and "slot: <a|b>" lines. One decision,
++// MergeAwaitsConfirmation, serves SnapshotManager::InitiateMerge, which refuses the merge, and
++// update_engine, which waits for the confirmation instead of asking for it. When the confirmation
++// cannot be read the merge waits.
++#pragma once
++
++#include <errno.h>
++#include <sys/stat.h>
++
++#include <optional>
++#include <string>
++#include <string_view>
++
++#include <android-base/file.h>
++#include <android-base/properties.h>
++#include <android-base/strings.h>
++
++namespace android::snapshot::lujarch {
++
++inline constexpr char kDir[] = "/metadata/lujarch/updates";
++inline constexpr char kConfirmedFile[] = "/metadata/lujarch/updates/confirmed";
++// libsnapshot's boot indicator (GetSnapshotBootIndicatorPath): the suffix of the update's source
++// slot, written when the update's writes finished and removed with the update's state.
++inline constexpr char kBootIndicatorFile[] = "/metadata/ota/snapshot-boot";
++
++struct GateInput {
++    bool unverified = false;          // libsnapshot's UpdateState is Unverified
++    std::string source_suffix;        // the boot indicator's content, "" when absent
++    bool source_unreadable = false;   // the boot indicator exists but cannot be read
++    std::string current_suffix;       // the booted slot, "_a" or "_b"
++    std::string version;              // ro.build.version.incremental of the running build
++    bool dir_missing = false;         // kDir does not exist
++    std::optional<std::string> confirmed;  // kConfirmedFile, nullopt when absent or unreadable
++};
++
++// "b" for "_b".
++inline std::string SlotName(std::string_view suffix) {
++    if (!suffix.empty() && suffix.front() == '_') suffix.remove_prefix(1);
++    return std::string(suffix);
++}
++
++// The value of a "key: value" line, or "".
++inline std::string Value(const std::string& text, std::string_view key) {
++    for (const std::string& line : android::base::Split(text, "\n")) {
++        if (line.size() > key.size() && android::base::StartsWith(line, key) &&
++            line[key.size()] == ':') {
++            return android::base::Trim(line.substr(key.size() + 1));
++        }
++    }
++    return "";
++}
++
++// The running build is an update booted from its target slot: its snapshots are live and the
++// source slot still holds the previous build.
++inline bool BootedIntoTarget(const GateInput& in) {
++    return in.unverified && !in.source_suffix.empty() && !in.current_suffix.empty() &&
++           in.source_suffix != in.current_suffix;
++}
++
++// An update is Unverified while its source slot runs: it waits for its restart, or the previous
++// build was restored (ProcessUpdateState then cancels the update).
++inline bool BootedFromSource(const GateInput& in) {
++    return in.unverified && !in.source_suffix.empty() && in.source_suffix == in.current_suffix;
++}
++
++// Whether the merge waits for the running build's confirmation.
++inline bool MergeAwaitsConfirmation(const GateInput& in) {
++    // Which slot the update came from cannot be told: wait rather than merge.
++    if (in.unverified && in.source_unreadable) return true;
++    if (!BootedIntoTarget(in)) return false;
++    if (in.version.empty() || in.dir_missing || !in.confirmed) return true;
++    return Value(*in.confirmed, "version") != in.version ||
++           Value(*in.confirmed, "slot") != SlotName(in.current_suffix);
++}
++
++// Why MergeAwaitsConfirmation waits, for the log.
++inline std::string WaitReason(const GateInput& in) {
++    if (in.unverified && in.source_unreadable) return "the update's source slot cannot be read";
++    if (in.version.empty()) return "the running build has no version";
++    if (in.dir_missing) return std::string(kDir) + " is missing";
++    if (!in.confirmed) return "the running build is not confirmed";
++    return "the confirmation names another build";
++}
++
++struct GatePaths {
++    std::string dir = kDir;
++    std::string confirmed = kConfirmedFile;
++    std::string boot_indicator = kBootIndicatorFile;
++};
++
++// The inputs as the running system has them. A file that exists but cannot be read counts as
++// unconfirmed, so a caller without access never starts a merge.
++inline GateInput ReadGateInput(bool unverified, const std::string& current_suffix,
++                               const GatePaths& paths = {}) {
++    GateInput in;
++    in.unverified = unverified;
++    in.current_suffix = current_suffix;
++    in.version = android::base::GetProperty("ro.build.version.incremental", "");
++    std::string text;
++    if (android::base::ReadFileToString(paths.boot_indicator, &text)) {
++        in.source_suffix = android::base::Trim(text);
++    } else {
++        in.source_unreadable = errno != ENOENT;
++    }
++    struct stat st;
++    in.dir_missing = stat(paths.dir.c_str(), &st) != 0 && errno == ENOENT;
++    text.clear();
++    if (android::base::ReadFileToString(paths.confirmed, &text)) in.confirmed = text;
++    return in;
++}
++
++}  // namespace android::snapshot::lujarch
+diff --git a/libsnapshot/snapshot.cpp b/libsnapshot/snapshot.cpp
+index 4609724d90222f874d672c091f9760f0262f105c..e833181f9adf2a77072d20614df920b9c216509e 100644
+--- a/libsnapshot/snapshot.cpp
++++ b/libsnapshot/snapshot.cpp
+@@ -48,6 +48,7 @@
+ 
+ #include <android/snapshot/snapshot.pb.h>
+ #include <libsnapshot/capabilities.h>
++#include <libsnapshot/lujarch_merge_gate.h>
+ #include "device_info.h"
+ #include "partition_cow_creator.h"
+ #include "scratch_super.h"
+@@ -1286,6 +1287,21 @@ bool SnapshotManager::InitiateMerge() {
+         return false;
+     }
+ 
++    // Outside recovery the merge of an update waits for the running build's confirmation
++    // (lujarch_merge_gate.h), whoever asks for it.
++    if (!device_->IsRecovery()) {
++        auto gate = lujarch::ReadGateInput(true, device_->GetSlotSuffix());
++        gate.source_suffix = ReadUpdateSourceSlotSuffix();
++        gate.source_unreadable = false;
++        if (lujarch::MergeAwaitsConfirmation(gate)) {
++            LOG(ERROR) << "lujarch_updates: not merging " << gate.version << " in slot "
++                       << gate.current_suffix << ": " << lujarch::WaitReason(gate);
++            return false;
++        }
++        LOG(INFO) << "lujarch_updates: merge of " << gate.version << " in slot "
++                  << gate.current_suffix << " allowed";
++    }
++
+     std::vector<std::string> snapshots;
+     if (!ListSnapshots(lock.get(), &snapshots)) {
+         LOG(ERROR) << "Could not list snapshots";

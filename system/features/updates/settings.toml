@@ -1,0 +1,7 @@
+# Minutes a new build runs from its first start before it is confirmed by itself; 0 is Never.
+
+[auto_confirm]
+table = "global"
+type = "int"
+default = 30
+item = "UPD-3"
