@@ -107,3 +107,16 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Block IPv6 while the proxy runs | 代理运行时阻止 IPv6 | プロキシの実行中は IPv6 をブロック |
 | Change the control key | 更换控制密钥 | 制御キーを変更 |
 | System icons | 系统图标 | システムアイコン |
+| Connected devices | 已连接的设备 | 接続設定 |
+| Sync | 同步 | 同期 |
+| Use sync | 使用同步 | 同期を使用 |
+| Only on Wi-Fi | 仅在连接 WLAN 时运行 | Wi-Fi のみ |
+| Only while charging | 仅在充电时运行 | 充電中のみ |
+| Device identity | 设备身份 | デバイスの識別情報 |
+| Sync storage | 同步存储 | 同期ストレージ |
+| Passwords & accounts | 密码和账号 | パスワードとアカウント |
+| Preferred service | 首选服务 | 優先するサービス |
+| Lujarch Vault | Lujarch 保险库 | Lujarch 保管庫 |
+| 2FA codes | 两步验证码 | 2FA コード |
+| Passwords | 密码 | パスワード |
+| Sources | 数据源 | ソース |
