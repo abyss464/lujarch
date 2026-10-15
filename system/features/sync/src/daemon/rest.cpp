@@ -416,7 +416,7 @@ std::string CheckVersioning(const Json::Value& v) {
             if (!value.isObject() || value.size() > 4) return "versioning params must be an object";
             for (const std::string& p : value.getMemberNames()) {
                 if (p != "cleanoutDays" && p != "keep" && p != "maxAge" && p != "cleanInterval") {
-                    return "versioning param not allowed: " + SanitizeUtf8(p.substr(0, 64));
+                    return "versioning param not allowed: " + text::SanitizeUtf8(p.substr(0, 64));
                 }
                 const Json::Value& pv = value[p];
                 if (!pv.isString() || pv.asString().empty() || pv.asString().size() > 12 ||
@@ -434,7 +434,7 @@ std::string CheckVersioning(const Json::Value& v) {
         } else if (key == "fsType") {
             if (!IsOneOf(value, {"basic"})) return "the versions path's file system must be basic";
         } else {
-            return "versioning member not allowed: " + SanitizeUtf8(key.substr(0, 64));
+            return "versioning member not allowed: " + text::SanitizeUtf8(key.substr(0, 64));
         }
     }
     return "";
@@ -470,7 +470,7 @@ std::string CheckDeviceMember(const std::string& key, const Json::Value& value) 
                        : "\"compression\" must be metadata, always or never";
     }
     if (key == "ignoredFolders") return CheckIgnoredFolders(value);
-    return "device member not allowed: " + SanitizeUtf8(key.substr(0, 64));
+    return "device member not allowed: " + text::SanitizeUtf8(key.substr(0, 64));
 }
 
 // Members of a folder the pages set; not its ID or path. add: a new folder.
@@ -492,7 +492,7 @@ std::string CheckFolderMember(const std::string& key, const Json::Value& value, 
         return IsNumberIn(value, 1, 3600) ? "" : "\"fsWatcherDelayS\" out of range (1 to 3600)";
     }
     if (key == "versioning") return CheckVersioning(value);
-    return "folder member not allowed: " + SanitizeUtf8(key.substr(0, 64));
+    return "folder member not allowed: " + text::SanitizeUtf8(key.substr(0, 64));
 }
 
 std::string CheckBody(BodyRule rule, const Json::Value& body) {
@@ -588,7 +588,7 @@ std::string CheckBody(BodyRule rule, const Json::Value& body) {
                     if (!IsIntIn(value, 5, 86400))
                         return "\"reconnectionIntervalS\" out of range (5 to 86400)";
                 } else {
-                    return "option not allowed: " + SanitizeUtf8(key.substr(0, 64));
+                    return "option not allowed: " + text::SanitizeUtf8(key.substr(0, 64));
                 }
             }
             return "";
@@ -796,7 +796,7 @@ std::string KeepPasswords(const Json::Value& current, Json::Value* devices) {
             const std::string from = std::as_const(d)["encryptionPasswordFrom"].asString();
             d.removeMember("encryptionPasswordFrom");
             if (std::find(sharing.begin(), sharing.end(), from) == sharing.end()) {
-                return "device " + SanitizeUtf8(from.substr(0, 7)) +
+                return "device " + text::SanitizeUtf8(from.substr(0, 7)) +
                        " does not share this folder, so there is no encryption to copy from it";
             }
             // As the source device has it: encrypted with its password, or not.
@@ -1023,7 +1023,7 @@ std::string VersionsConflict(const Json::Value& folders, const std::string& id) 
         places.push_back(std::move(p));
     }
     auto name = [](const std::string& text) {
-        return "\"" + SanitizeUtf8(text.substr(0, 64)) + "\"";
+        return "\"" + text::SanitizeUtf8(text.substr(0, 64)) + "\"";
     };
     for (const Place& p : places) {
         if (p.versions.empty()) continue;
@@ -1061,7 +1061,7 @@ std::string CheckMove(const Json::Value& folders, const std::string& id, const s
     }
     if (original == nullptr) {
         *code = kCodeNoFolder;
-        return "no folder " + SanitizeUtf8(id);
+        return "no folder " + text::SanitizeUtf8(id);
     }
     const Json::Value& type = (*original)["type"];
     if (type.isString() && !IsMovableType(type.asString())) {
@@ -1132,7 +1132,7 @@ Result<Json::Value> GetJson(const std::string& target) {
     }
     Json::Value value;
     std::string error;
-    if (!ParseJson(reply->body, &value, &error))
+    if (!text::ParseJson(reply->body, &value, &error))
         return Error() << "Syncthing sent a reply that does not parse";
     return value;
 }
@@ -1310,7 +1310,7 @@ Outcome CmdIgnored(const Json::Value& request, uid_t uid) {
     }
     Json::Value config;
     std::string error;
-    if (!ParseJson(reply->body, &config, &error) || !config.isObject()) {
+    if (!text::ParseJson(reply->body, &config, &error) || !config.isObject()) {
         return Outcome::Failed("Syncthing sent a configuration that does not parse");
     }
     Json::Value& ignored = config["remoteIgnoredDevices"];
@@ -1339,7 +1339,7 @@ Outcome CmdIgnored(const Json::Value& request, uid_t uid) {
         const bool changed = (op == "add") != present;
         if (changed) {
             ignored = kept;
-            auto put = Call("PUT", "/rest/config", ToJson(config), kConfigTimeout);
+            auto put = Call("PUT", "/rest/config", text::ToJson(config), kConfigTimeout);
             if (!put.ok()) return Outcome::Failed(put.error().message(), android::base::WARNING);
             if (put->status < 200 || put->status > 299) {
                 return Outcome::Failed("Syncthing answered PUT /rest/config with HTTP " +
@@ -1361,7 +1361,7 @@ Outcome CmdIgnored(const Json::Value& request, uid_t uid) {
         if (!entry.isObject()) continue;
         Json::Value out(Json::objectValue);
         for (const char* key : {"deviceID", "name", "address", "time"}) {
-            if (entry[key].isString()) out[key] = SanitizeUtf8(entry[key].asString());
+            if (entry[key].isString()) out[key] = text::SanitizeUtf8(entry[key].asString());
         }
         devices.append(out);
     }
@@ -1424,12 +1424,12 @@ Outcome CmdFolderMove(const Json::Value& request, uid_t uid) {
                                        std::to_string(removed->status),
                                android::base::WARNING);
     }
-    auto added = Call("POST", "/rest/config/folders", ToJson(moved), kConfigTimeout);
+    auto added = Call("POST", "/rest/config/folders", text::ToJson(moved), kConfigTimeout);
     if (!added.ok() || added->status < 200 || added->status > 299) {
         const std::string why =
                 added.ok() ? "HTTP " + std::to_string(added->status) : added.error().message();
         // Put the folder back as it was.
-        auto back = Call("POST", "/rest/config/folders", ToJson(original), kConfigTimeout);
+        auto back = Call("POST", "/rest/config/folders", text::ToJson(original), kConfigTimeout);
         const bool restored = back.ok() && back->status >= 200 && back->status <= 299;
         LOG(ERROR) << "sync.folder.move: adding " << id << " at " << target << " failed (" << why
                    << "); " << (restored ? "restored at its old path" : "could not restore it");
@@ -1440,7 +1440,7 @@ Outcome CmdFolderMove(const Json::Value& request, uid_t uid) {
     if (!ignore.empty()) {
         Json::Value lines(Json::objectValue);
         lines["ignore"] = ignore;
-        auto set = Call("POST", "/rest/db/ignores?folder=" + EncodeSegment(id), ToJson(lines),
+        auto set = Call("POST", "/rest/db/ignores?folder=" + EncodeSegment(id), text::ToJson(lines),
                         kConfigTimeout);
         if (!set.ok() || set->status != 200) {
             LOG(WARNING) << "sync.folder.move: ignore patterns of " << id << " not copied: "
@@ -1452,7 +1452,7 @@ Outcome CmdFolderMove(const Json::Value& request, uid_t uid) {
     if (!was_paused) {
         Json::Value resume(Json::objectValue);
         resume["paused"] = false;
-        auto patched = Call("PATCH", folder_path, ToJson(resume), kConfigTimeout);
+        auto patched = Call("PATCH", folder_path, text::ToJson(resume), kConfigTimeout);
         resumed = patched.ok() && patched->status >= 200 && patched->status <= 299;
         if (!resumed) LOG(WARNING) << "sync.folder.move: " << id << " stays paused (resume failed)";
     }
