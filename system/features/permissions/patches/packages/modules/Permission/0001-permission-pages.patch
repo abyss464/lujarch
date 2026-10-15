@@ -323,6 +323,62 @@ index 0000000000000000000000000000000000000000..e877b0062687aaba5d57b1355d8b215f
 +        other   {Past\n# days}
 +    }</string>
 +</resources>
+diff --git a/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java b/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java
+index 50da28149fe55439f3e79f39f606a583bc3ef9da..ffdd126fd33cdf1ae3b452924f55cb9dd7847865 100644
+--- a/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java
++++ b/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java
+@@ -21,8 +21,6 @@ import android.content.ComponentName;
+ import android.content.pm.PackageItemInfo;
+ import android.content.pm.PackageManager;
+ import android.os.Build;
+-import android.os.Process;
+-import android.util.ArrayMap;
+ import android.view.accessibility.AccessibilityManager;
+ 
+ import androidx.annotation.RequiresApi;
+@@ -33,8 +31,6 @@ import com.android.permissioncontroller.permission.utils.Utils;
+ import com.android.permissioncontroller.privacysources.SafetyCenterAccessibilityListener;
+ import com.android.permissioncontroller.role.model.RoleParserInitializer;
+ import com.android.permissioncontroller.role.ui.SpecialAppAccessListActivity;
+-import com.android.role.controller.model.Role;
+-import com.android.role.controller.model.Roles;
+ 
+ public final class PermissionControllerApplication extends Application {
+ 
+@@ -65,29 +61,10 @@ public final class PermissionControllerApplication extends Application {
+     }
+ 
+     private void updateSpecialAppAccessListActivityEnabledState() {
+-        ArrayMap<String, Role> roles = Roles.get(this);
+-        boolean hasVisibleSpecialAppAccess = false;
+-        int rolesSize = roles.size();
+-        for (int i = 0; i < rolesSize; i++) {
+-            Role role = roles.valueAt(i);
+-
+-            if (!role.isAvailableAsUser(Process.myUserHandle(), this)
+-                    || !role.isVisibleAsUser(Process.myUserHandle(), this)) {
+-                continue;
+-            }
+-            if (!role.isExclusive()) {
+-                hasVisibleSpecialAppAccess = true;
+-                break;
+-            }
+-        }
+-
+-        PackageManager packageManager = getPackageManager();
+-        ComponentName componentName = new ComponentName(this, SpecialAppAccessListActivity.class);
+-        int enabledState = hasVisibleSpecialAppAccess
+-                ? PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+-                : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+-        packageManager.setComponentEnabledSetting(componentName, enabledState,
+-                PackageManager.DONT_KILL_APP);
++        // The list always holds Lujarch's other accesses, so it is enabled whatever the roles.
++        getPackageManager().setComponentEnabledSetting(
++                new ComponentName(this, SpecialAppAccessListActivity.class),
++                PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP);
+     }
+ 
+     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 diff --git a/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt b/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt
 index a24aff1f9125ecba6c66b859e89c45cc38661509..d691cd7b87ebce668e13885366eabcb224db86fc 100644
 --- a/PermissionController/src/com/android/permissioncontroller/appops/data/model/v31/DiscretePackageOpsModel.kt
@@ -411,10 +467,10 @@ index c990f9d876fcdcd7d2f60dba21a9029d9513560d..663de569b03f9ea2677b272eca0e3b03
          if (SdkLevel.isAtLeastT()) {
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..2025b0a3e787b38c62317f8e3a854cf94615f9fa
+index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b053723146fd43ab
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,204 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -483,7 +539,7 @@ index 0000000000000000000000000000000000000000..2025b0a3e787b38c62317f8e3a854cf9
 +        AppOpsManager.OnOpChangedListener { _, pkg -> if (pkg == packageName) main.post { reload() } }
 +
 +    override fun onCreate(savedInstanceState: Bundle?) {
-+        super.onCreate(savedInstanceState)
++        // PreferenceFragmentCompat builds the page (onCreatePreferences) in its own onCreate.
 +        val args = requireArguments()
 +        packageName = args.getString(Intent.EXTRA_PACKAGE_NAME)!!
 +        val group =
@@ -491,6 +547,7 @@ index 0000000000000000000000000000000000000000..2025b0a3e787b38c62317f8e3a854cf9
 +                ?: args.getString(Intent.EXTRA_PERMISSION_NAME)
 +        user = args.getParcelable(Intent.EXTRA_USER) ?: Process.myUserHandle()
 +        permission = LujarchPermissions.pageOf(requireContext(), group, packageName, user)!!
++        super.onCreate(savedInstanceState)
 +        setHasOptionsMenu(true)
 +        activity?.actionBar?.setDisplayHomeAsUpEnabled(true)
 +    }
