@@ -812,11 +812,11 @@ def extra_files(host):
     files = {}
     for device, pin in lock_file().get("stock", {}).items():
         dump = stock_dump_dir(host, pin)
-        if not (dump / STOCK_UNPACKED).is_file():
-            if pin.get("files"):
-                log(f"{device}: stock release {pin['release']} is not unpacked "
-                    f"(lujarch stock {device}); its files are left out")
+        if not pin.get("files"):
             continue
+        if not (dump / STOCK_UNPACKED).is_file():
+            die(f"{device} takes files from {pin['release']}, which is not unpacked: "
+                f"lujarch stock {device}")
         for name, digest in sorted(pin.get("files", {}).items()):
             src = dump / name
             data = src.read_bytes() if src.is_file() else None
@@ -824,11 +824,12 @@ def extra_files(host):
                 die(f"{device}: {name} of {pin['release']} is missing or differs from lock.toml")
             files[f"device/{device}/stock/{name}"] = data
     features, devices = [], []
+    tracked = set(repo_files())
     for kind, found in (("features", features), ("device", devices)):
         base = SYSTEM / kind
         for d in sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []:
             staged = False
-            for src in sorted(p for p in d.rglob("*") if p.is_file()):
+            for src in sorted(p for p in tracked if d in p.parents):
                 inner = src.relative_to(d)
                 if inner.parts[0] in ("patches", "tests") or src.name == ".gitkeep":
                     continue
