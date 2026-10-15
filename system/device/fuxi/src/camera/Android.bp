@@ -1,0 +1,188 @@
+// Xiaomi's camera from the stock release, with its first-party tuning in the camera HAL, which
+// serves it by its package name.
+
+python_binary_host {
+    name: "lujarch_fuxi_camera_derive",
+    main: "derive.py",
+    srcs: ["derive.py"],
+}
+
+genrule {
+    name: "lujarch_fuxi_camera_apk",
+    srcs: [
+        ":lujarch_fuxi_stock_camera_apk",
+        "smali/*/*.patch",
+    ],
+    tools: [
+        "lujarch_fuxi_camera_derive",
+        "smali-baksmali",
+        "android-smali",
+        "zip2zip",
+        "soong_zip",
+        "merge_zips",
+    ],
+    cmd: "$(location lujarch_fuxi_camera_derive) apk " +
+        "--baksmali $(location smali-baksmali) --smali $(location android-smali) " +
+        "--soong-zip $(location soong_zip) --zip2zip $(location zip2zip) " +
+        "--merge-zips $(location merge_zips) --work $(genDir)/work --out $(out) " +
+        "$(location :lujarch_fuxi_stock_camera_apk) $(locations smali/*/*.patch)",
+    out: ["MiuiCamera.apk"],
+}
+
+android_app_import {
+    name: "MiuiCamera",
+    apk: ":lujarch_fuxi_camera_apk",
+    certificate: "platform",
+    privileged: true,
+    system_ext_specific: true,
+    overrides: ["Aperture"],
+    optional_uses_libs: [
+        "miui-cameraopt",
+        "androidx.window.extensions",
+        "androidx.window.sidecar",
+    ],
+}
+
+runtime_resource_overlay {
+    name: "LujarchFuxiCameraOverlay",
+    certificate: "platform",
+    system_ext_specific: true,
+    sdk_version: "current",
+    manifest: "overlay/AndroidManifest.xml",
+    resource_dirs: ["overlay/res"],
+}
+
+// Both libraries call Surface::connect(int, sp<SurfaceListener> const&, bool), which this
+// libgui no longer has; Surface::connect(int) registers a listener that does nothing, as theirs.
+cc_genrule {
+    name: "lujarch_fuxi_camera_algoup_jni_patched",
+    compile_multilib: "64",
+    srcs: [
+        ":lujarch_fuxi_stock_camera_algoup_jni",
+        ":lujarch_fuxi_stock_libgui",
+        ":libgui",
+    ],
+    tools: ["lujarch_fuxi_camera_derive"],
+    cmd: "$(location lujarch_fuxi_camera_derive) vtable --site 0x7200 " +
+        "--expect _ZN7android7Surface7connectEiRKNS_2spINS_15SurfaceListenerEEEb " +
+        "--call _ZN7android7Surface7connectEi " +
+        "--stock-libgui $(location :lujarch_fuxi_stock_libgui) --libgui $(location :libgui) " +
+        "--in $(location :lujarch_fuxi_stock_camera_algoup_jni) --out $(out)",
+    out: ["libcamera_algoup_jni.xiaomi.so"],
+}
+
+cc_genrule {
+    name: "lujarch_fuxi_camera_mianode_jni_patched",
+    compile_multilib: "64",
+    srcs: [
+        ":lujarch_fuxi_stock_camera_mianode_jni",
+        ":lujarch_fuxi_stock_libgui",
+        ":libgui",
+    ],
+    tools: ["lujarch_fuxi_camera_derive"],
+    cmd: "$(location lujarch_fuxi_camera_derive) vtable --site 0xe7a0 " +
+        "--expect _ZN7android7Surface7connectEiRKNS_2spINS_15SurfaceListenerEEEb " +
+        "--call _ZN7android7Surface7connectEi " +
+        "--stock-libgui $(location :lujarch_fuxi_stock_libgui) --libgui $(location :libgui) " +
+        "--in $(location :lujarch_fuxi_stock_camera_mianode_jni) --out $(out)",
+    out: ["libcamera_mianode_jni.xiaomi.so"],
+}
+
+// libhidltransport.so is part of libhidlbase.so.
+genrule {
+    name: "lujarch_fuxi_camera_postproc_client_patched",
+    srcs: [":lujarch_fuxi_stock_camera_postproc_client"],
+    tools: ["lujarch_fuxi_camera_derive"],
+    cmd: "$(location lujarch_fuxi_camera_derive) unneed --needed libhidltransport.so " +
+        "--in $(in) --out $(out)",
+    out: ["libmicampostproc_client.so"],
+}
+
+cc_prebuilt_library_shared {
+    name: "lujarch_fuxi_camera_algoup_jni",
+    stem: "libcamera_algoup_jni.xiaomi",
+    system_ext_specific: true,
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: [":lujarch_fuxi_camera_algoup_jni_patched"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "lujarch_fuxi_camera_mianode_jni",
+    stem: "libcamera_mianode_jni.xiaomi",
+    system_ext_specific: true,
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: [":lujarch_fuxi_camera_mianode_jni_patched"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "lujarch_fuxi_camera_postproc_client",
+    stem: "libmicampostproc_client",
+    system_ext_specific: true,
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: [":lujarch_fuxi_camera_postproc_client_patched"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "lujarch_fuxi_camera_campostproc",
+    stem: "vendor.xiaomi.hardware.campostproc@1.0",
+    system_ext_specific: true,
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: [":lujarch_fuxi_stock_camera_campostproc"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+prebuilt_etc {
+    name: "lujarch_fuxi_camera_privapp_permissions",
+    filename_from_src: true,
+    src: "configs/privapp-permissions-camera.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_fuxi_camera_hiddenapi_allowlist",
+    filename_from_src: true,
+    src: "configs/hiddenapi-allowlist-camera.xml",
+    sub_dir: "sysconfig",
+    system_ext_specific: true,
+}
+
+// The native loader makes these libraries loadable by name from apps' namespaces: sonames
+// ending in .xiaomi.so, listed in /system_ext/etc/public.libraries-xiaomi.txt.
+prebuilt_etc {
+    name: "lujarch_fuxi_camera_public_libraries",
+    filename_from_src: true,
+    src: "configs/public.libraries-xiaomi.txt",
+    system_ext_specific: true,
+}

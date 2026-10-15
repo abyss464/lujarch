@@ -1,0 +1,18 @@
+Drop the "permission restricted" toast
+
+The activity's handler shows a toast asking to contact Xiaomi's developers (string
+0x7f140af4) when a HyperOS-only permission is missing. Nothing else depends on the message.
+
+--- a/com/android/camera/ActivityBase$c.smali
++++ b/com/android/camera/ActivityBase$c.smali
+@@ -79,10 +79,6 @@
+     goto/16 :goto_1c9
+ 
+     :pswitch_1c
+-    const p1, 0x7f140af4
+-
+-    invoke-static {p0, p1, v0}, LA/g4;->c(Landroid/content/Context;IZ)V
+-
+     goto/16 :goto_1c9
+ 
+     :pswitch_24

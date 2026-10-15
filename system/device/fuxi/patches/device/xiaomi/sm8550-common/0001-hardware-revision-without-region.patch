@@ -1,0 +1,15 @@
+diff --git a/init/init.sm8550.rc b/init/init.sm8550.rc
+index 8c70968f5461bd86072cdf746341a7393d0bb7b1..372502d0b8a117660ec579a9e67245dbbe7d8fbd 100644
+--- a/init/init.sm8550.rc
++++ b/init/init.sm8550.rc
+@@ -264,8 +264,9 @@ service vendor.nv_mac /vendor/bin/nv_mac
+     group system inet net_admin wifi net_raw
+     oneshot
+ 
++# Every app can read this property; it carries no region code.
+ on property:ro.boot.hwversion=*
+-    setprop ro.boot.hardware.revision ${ro.boot.hwc}_${ro.boot.hwlevel}_${ro.boot.hwversion}
++    setprop ro.boot.hardware.revision ${ro.boot.hwlevel}_${ro.boot.hwversion}
+ 
+ service vendor.audio-hal /vendor/bin/hw/android.hardware.audio.service
+     override

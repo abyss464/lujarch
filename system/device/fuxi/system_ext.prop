@@ -1,0 +1,5 @@
+# Xiaomi's camera lays its viewfinder into the display cutout only when this is 1, the stock value.
+ro.miui.notch=1
+
+# The device name in the camera's EXIF Model and Leica watermark, the stock value.
+ro.product.marketname=Xiaomi 13

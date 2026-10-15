@@ -1,0 +1,16 @@
+Keep Annex-B encoder output
+
+With this flag the camera asks the encoder for NAL length prefixes instead of start codes, which
+AOSP's MPEG4Writer does not expect: the recorded file is broken. The flag is read as false.
+
+--- a/xb/f.smali
++++ b/xb/f.smali
+@@ -711,7 +711,7 @@
+ 
+     iget-object v4, v2, Lxb/b;->e:Lxb/q;
+ 
+-    iget-boolean v7, v4, Lxb/q;->y:Z
++    const/4 v7, 0x0
+ 
+     if-eqz v7, :cond_2a4
+ 

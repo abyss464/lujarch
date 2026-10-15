@@ -1,0 +1,31 @@
+diff --git a/drivers/base/class.c b/drivers/base/class.c
+index 0e44a68e90a024a0182d1fd215ec996de7980261..a4193eccab3fbfa59e7c3b74433319811239276e 100644
+--- a/drivers/base/class.c
++++ b/drivers/base/class.c
+@@ -185,6 +185,13 @@ int __class_register(struct class *cls, struct lock_class_key *key)
+ 	cp->class = cls;
+ 	cls->p = cp;
+ 
++	/*
++	 * Announce the class only once its attributes exist: ueventd applies the
++	 * permissions of a class's attributes on its add uevent and skips those
++	 * not created yet. A suppressed add leaves no remove uevent to send on the
++	 * error path.
++	 */
++	cp->subsys.kobj.uevent_suppress = 1;
+ 	error = kset_register(&cp->subsys);
+ 	if (error) {
+ 		kfree(cp);
+@@ -196,8 +203,11 @@ int __class_register(struct class *cls, struct lock_class_key *key)
+ 		kobject_del(&cp->subsys.kobj);
+ 		kfree_const(cp->subsys.kobj.name);
+ 		kfree(cp);
++		return error;
+ 	}
+-	return error;
++	cp->subsys.kobj.uevent_suppress = 0;
++	kobject_uevent(&cp->subsys.kobj, KOBJ_ADD);
++	return 0;
+ }
+ EXPORT_SYMBOL_GPL(__class_register);
+ 

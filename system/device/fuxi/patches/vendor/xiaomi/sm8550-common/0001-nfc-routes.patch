@@ -1,0 +1,51 @@
+diff --git a/proprietary/odm/etc/libnfc-nxp.conf b/proprietary/odm/etc/libnfc-nxp.conf
+index 795dba7b056022334546dff7e5e796b02fdb8ef9..b9cc1fe9a69db677a23927affba415bd9465847a 100644
+--- a/proprietary/odm/etc/libnfc-nxp.conf
++++ b/proprietary/odm/etc/libnfc-nxp.conf
+@@ -120,7 +120,11 @@ DEFAULT_AID_ROUTE=0x01
+ # eSE   0x01
+ # UICC  0x02
+ # UICC2 0x03
+-DEFAULT_ISODEP_ROUTE=0x01
++# The AOSP NFC stack reads route values as NFCEE ids, which on this phone are
++# 0x00 host, 0x80 SIM1, 0x81 SIM2 and 0xC0 the embedded secure element.
++DEFAULT_ROUTE=0xC0
++DEFAULT_ISODEP_ROUTE=0xC0
++DEFAULT_NFCF_ROUTE=0x00
+ 
+ ###############################################################################
+ #Set the Mifare CLT route Location :
+@@ -201,7 +205,7 @@ DEFAULT_T4TNFCEE_AID_POWER_STATE=0x3B
+ # eSE   0x01
+ # UICC  0x02
+ # UICC2 0x03
+-DEFAULT_SYS_CODE_ROUTE=0x01
++DEFAULT_SYS_CODE_ROUTE=0xC0
+ ###############################################################################
+ # AID Matching platform options
+ # AID_MATCHING_L 0x01
+@@ -360,7 +364,7 @@ OFF_HOST_SIM2_PIPE_ID=0x23
+ DEFAULT_SYS_CODE_PWR_STATE=0x00
+ ###############################################################################
+ #Default Secure Element route id
+-DEFAULT_OFFHOST_ROUTE=0x02
++DEFAULT_OFFHOST_ROUTE=0xC0
+ 
+ ###############################################################################
+ #Maximum SMB transceive wait for response
+@@ -410,13 +414,13 @@ NXP_SET_CONFIG_ALWAYS=0x01
+ ###############################################################################
+ #OffHost ESE route location for MultiSE
+ #ESE = 01
+-OFFHOST_ROUTE_ESE={01}
++OFFHOST_ROUTE_ESE={C0}
+ 
+ ###############################################################################
+ #OffHost UICC route location for MultiSE
+ #UICC1 = 02
+ #UICC2 = 03
+-OFFHOST_ROUTE_UICC={02:03}
++OFFHOST_ROUTE_UICC={80:81}
+ 
+ ###############################################################################
+ #T4T NFCEE ENABLE

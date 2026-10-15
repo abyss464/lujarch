@@ -1,0 +1,4 @@
+# The region the bootloader reports. Vendor code, the system and init read it; no domain that
+# runs an app's own code does.
+product_restricted_prop(lujarch_fuxi_region_prop)
+get_prop({ domain -untrusted_app_all -isolated_app_all -ephemeral_app -app_zygote -sdk_sandbox_all }, lujarch_fuxi_region_prop)

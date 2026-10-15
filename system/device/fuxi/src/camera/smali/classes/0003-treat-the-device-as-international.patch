@@ -1,0 +1,18 @@
+Treat the device as an international build
+
+The camera takes "international build" from ro.product.mod_device ending in _global. A Chinese
+build routes the first-start privacy and permission consent through HyperOS' Security Center,
+which this system does not have, and never gets past it; an international build uses Android's
+own permission requests. The flag is set here because other apps read ro.product.mod_device.
+
+--- a/u7/c.smali
++++ b/u7/c.smali
+@@ -233,7 +233,7 @@
+ 
+     invoke-virtual {v0, v3}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+ 
+-    move-result v0
++    const/4 v0, 0x1
+ 
+     sput-boolean v0, Lu7/c;->m:Z
+ 

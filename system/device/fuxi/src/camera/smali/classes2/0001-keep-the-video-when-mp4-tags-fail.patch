@@ -1,0 +1,17 @@
+Keep the video when writing its MP4 tags fails
+
+After recording, the camera edits the MP4 in place to add its cover and HDR boxes. Only an
+IOException was caught there; any other exception ended the save and the video never reached
+MediaStore. The handler, which logs and goes on without the tags, now catches every exception.
+
+--- a/l4/D.smali
++++ b/l4/D.smali
+@@ -691,7 +691,7 @@
+ 
+     invoke-static {v9, v10}, Ltj/d;->a(Ljava/io/File;Ltj/b;)V
+     :try_end_23a
+-    .catch Ljava/io/IOException; {:try_start_232 .. :try_end_23a} :catch_23b
++    .catchall {:try_start_232 .. :try_end_23a} :catch_23b
+ 
+     goto :goto_23f
+ 

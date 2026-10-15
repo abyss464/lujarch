@@ -1,0 +1,121 @@
+diff --git a/configs/properties/product.prop b/configs/properties/product.prop
+index 1dd49808252dc70da052ea237f1f42c3b8ddc9b8..b5caa7bdc7a5683fff8227eb6b967952af7b3eaa 100644
+--- a/configs/properties/product.prop
++++ b/configs/properties/product.prop
+@@ -4,3 +4,13 @@ media.stagefright.audio.deep=true
+ 
+ # Bluetooth
+ bluetooth.device_id.vendor_id=0x001D
++
++# System-owned properties: property_service rejects them from the vendor partition.
++audio.sys.noisy.broadcast.delay=600
++audio.sys.offload.pstimeout.secs=3
++bluetooth.auto_connect_profiles.enabled=true
++bluetooth.profile.bap.unicast.server.enabled=true
++bluetooth.profile.tbs.server.enabled=true
++bluetooth.profile.vc.server.enabled=true
++persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac-lhdc
++ro.mediaserver.64b.enable=true
+diff --git a/configs/properties/vendor.prop b/configs/properties/vendor.prop
+index 696626d04a06d2b1acdd9314e9f6b28fcbedf72b..85f8bc9f11e04ab84b722fcd63144ed0c03e6fe8 100644
+--- a/configs/properties/vendor.prop
++++ b/configs/properties/vendor.prop
+@@ -5,8 +5,6 @@ aaudio.mmap_policy=2
+ af.fast_track_multiplier=1
+ audio.deep_buffer.media=true
+ audio.offload.video=true
+-audio.sys.noisy.broadcast.delay=600
+-audio.sys.offload.pstimeout.secs=3
+ persist.vendor.audio.auto.scenario=true
+ persist.vendor.audio.ha_proxy.enabled=true
+ ro.af.client_heap_size_kbyte=7168
+@@ -53,12 +51,10 @@ vendor.qc2audio.per_frame.flac.dec.enabled=true
+ vendor.qc2audio.suspend.enabled=true
+ 
+ # Bluetooth
+-bluetooth.auto_connect_profiles.enabled=true
+ bluetooth.profile.a2dp.source.enabled=true
+ bluetooth.profile.avrcp.target.enabled=true
+ bluetooth.profile.bap.broadcast.assist.enabled=true
+ bluetooth.profile.bap.broadcast.source.enabled=false
+-bluetooth.profile.bap.unicast.server.enabled=true
+ bluetooth.profile.bas.client.enabled=true
+ bluetooth.profile.ccp.server.enabled=true
+ bluetooth.profile.csip.set_coordinator.enabled=true
+@@ -71,12 +67,9 @@ bluetooth.profile.map.server.enabled=true
+ bluetooth.profile.mcp.server.enabled=true
+ bluetooth.profile.opp.enabled=true
+ bluetooth.profile.pbap.server.enabled=true
+-bluetooth.profile.tbs.server.enabled=true
+-bluetooth.profile.vc.server.enabled=true
+ bluetooth.profile.vcp.controller.enabled=false
+ persist.bluetooth.a2dp_offload.disabled=false
+ persist.sys.fflag.override.settings_bluetooth_hearing_aid=true
+-persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac-lhdc
+ persist.vendor.bt.aac_frm_ctl.enabled=true
+ persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
+ persist.vendor.qcom.bluetooth.a2dp_mcast_test.enabled=false
+@@ -183,7 +176,6 @@ vendor.gralloc.enable_logs=0
+ # Media
+ debug.c2.use_dmabufheaps=1
+ debug.stagefright.c2inputsurface=-1
+-ro.mediaserver.64b.enable=true
+ vendor.mm.enable.qcom_parser=16777215
+ 
+ # OEM unlock
+diff --git a/init/init.target.rc b/init/init.target.rc
+index ee257dc55496c46f15374a541dfa4e5222d95235..d4fd84edcb234711f01e07968585d3ddd1226e09 100644
+--- a/init/init.target.rc
++++ b/init/init.target.rc
+@@ -182,3 +182,11 @@ service fan_control_turn_off /vendor/bin/fan_service 0
+     user root
+     disabled
+     oneshot
++
++# WLAN firmware and PCSS recovery follow the subsystem restart level, as in
++# the stock init.target.rc.
++on property:persist.vendor.ssr.restart_level=ALL_ENABLE
++    write /sys/kernel/cnss/recovery 3
++
++on property:persist.vendor.ssr.restart_level=ALL_DISABLE
++    write /sys/kernel/cnss/recovery 0
+diff --git a/overlay/WifiOverlayCommon/res/values/config.xml b/overlay/WifiOverlayCommon/res/values/config.xml
+index 0964a567015ffb3bac0010c29c8c9c49323ea68f..b2d8005a055705d661cd629f4e568fa59f9c3505 100644
+--- a/overlay/WifiOverlayCommon/res/values/config.xml
++++ b/overlay/WifiOverlayCommon/res/values/config.xml
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
++    <!-- Hardware PNO scans (as stock). Without it PNO is unavailable, so a
++         disconnected Wi-Fi does not reconnect while the screen is off. -->
++    <bool translatable="false" name="config_wifi_background_scan_support">true</bool>
++
+     <!-- boolean indicating whether the WiFi chipset has 5GHz band support.
+          Note: This config is replacing the config_wifi_dual_band_support
+          since more bands may now be supported (such as 6GHz), the naming dual_band
+diff --git a/sepolicy/vendor/file_contexts b/sepolicy/vendor/file_contexts
+index b6adce50b9baaf4436ccc4f60725eac7cf1db4ff..385d8c585c5af519e61660ee2542c05f4689ef0f 100644
+--- a/sepolicy/vendor/file_contexts
++++ b/sepolicy/vendor/file_contexts
+@@ -51,3 +51,10 @@
+ /sys/{class,devices/virtual}/thermal/thermal_message/flash_state u:object_r:sys_thermal_flash_state:s0
+ /sys/{class,devices/virtual}/thermal/thermal_message/torch_real_level u:object_r:sys_thermal_torch_real_level:s0
+ /sys/{class,devices/virtual}/thermal/thermal_message/wifi_limit u:object_r:sys_thermal_wifi_limit:s0
++
++# Subsystem restart nodes ssr_setup writes (qcom sepolicy_vndr labels only
++# the recovery files; ssr_setup also writes coredump for each subsystem
++# and stops at the first denied write).
++/sys/devices/platform/soc/4080000\.remoteproc-mss/remoteproc/remoteproc[0-9]+/coredump      u:object_r:vendor_sysfs_ssr_toggle:s0
++/sys/devices/platform/soc/3000000\.remoteproc-adsp/remoteproc/remoteproc[0-9]+/coredump     u:object_r:vendor_sysfs_ssr_toggle:s0
++/sys/devices/platform/soc/32300000\.remoteproc-cdsp/remoteproc/remoteproc[0-9]+/coredump    u:object_r:vendor_sysfs_ssr_toggle:s0
+diff --git a/sepolicy/vendor/vendor_init.te b/sepolicy/vendor/vendor_init.te
+index 37c109356e2a3b65762652c3ec0159e4d5d304b1..1d4323f501e79052189c9eb7c3b52d50ffe69408 100644
+--- a/sepolicy/vendor/vendor_init.te
++++ b/sepolicy/vendor/vendor_init.te
+@@ -1,2 +1,6 @@
+ set_prop(vendor_init, vendor_nfc_mi_prop)
+ set_prop(vendor_init, vendor_fp_prop)
++set_prop(vendor_init, vendor_qcc_prop)
++# persist.vendor.ssr.restart_level (odm build.prop, ALL_ENABLE): without it
++# subsystem restart stays off and a modem or DSP crash reboots the phone.
++set_prop(vendor_init, vendor_ssr_prop)

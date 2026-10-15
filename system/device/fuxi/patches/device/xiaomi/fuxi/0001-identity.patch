@@ -1,0 +1,17 @@
+diff --git a/lineage_fuxi.mk b/lineage_fuxi.mk
+index 44665606a640910a7669508e44c640709a5832be..48d62f1d18997ece3b7f68ab5da152dc10e135c1 100644
+--- a/lineage_fuxi.mk
++++ b/lineage_fuxi.mk
+@@ -17,7 +17,10 @@ $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
+ PRODUCT_DEVICE := fuxi
+ PRODUCT_NAME := lineage_fuxi
+ PRODUCT_BRAND := Xiaomi
+-PRODUCT_MODEL := 2211133C
++PRODUCT_MODEL := Xiaomi 13
+ PRODUCT_MANUFACTURER := Xiaomi
+ 
+-BUILD_FINGERPRINT := Xiaomi/fuxi/fuxi:16/BP2A.250605.031.A3/OS3.0.307.0.WMCCNXM:user/release-keys
++# ID attestation compares these with the identifiers provisioned at the factory.
++PRODUCT_MODEL_FOR_ATTESTATION := 2211133C
++PRODUCT_NAME_FOR_ATTESTATION := fuxi
++PRODUCT_BRAND_FOR_ATTESTATION := Xiaomi

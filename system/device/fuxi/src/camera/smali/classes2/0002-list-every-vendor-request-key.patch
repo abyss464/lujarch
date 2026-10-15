@@ -1,0 +1,19 @@
+List every vendor request key, as on HyperOS
+
+The camera's capabilities take every vendor tag of the camera on HyperOS, and elsewhere only the
+request keys the HAL advertises, which leave out xiaomi.snapshot.imageName. Without it the
+capture request carries no picture name, the final image cannot be matched to its capture and
+only the quick view is saved. The HyperOS branch is taken here instead of setting the HyperOS
+version properties, which other apps read to detect HyperOS.
+
+--- a/Z5/c.smali
++++ b/Z5/c.smali
+@@ -1952,7 +1952,7 @@
+ 
+     invoke-static {}, LA/Q2;->j()Z
+ 
+-    move-result p2
++    const/4 p2, 0x1
+ 
+     if-eqz p2, :cond_34f
+ 

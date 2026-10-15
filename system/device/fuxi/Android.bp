@@ -1,0 +1,84 @@
+// Vendor files LineageOS' vendor projects lack, from the stock release of the firmware.
+
+cc_prebuilt_binary {
+    name: "lujarch_fuxi_ssr_setup",
+    stem: "ssr_setup",
+    vendor: true,
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: ["stock/vendor/bin/ssr_setup"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "lujarch_fuxi_esepowermanager",
+    stem: "vendor.qti.esepowermanager@1.1-service",
+    vendor: true,
+    relative_install_path: "hw",
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: ["stock/vendor/bin/hw/vendor.qti.esepowermanager@1.1-service"],
+        },
+    },
+    required: ["lujarch_fuxi_esepowermanager_impl"],
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+// The service loads it by name from the vendor linker namespace's hw directory.
+cc_prebuilt_library_shared {
+    name: "lujarch_fuxi_esepowermanager_impl",
+    stem: "vendor.qti.esepowermanager@1.1-impl",
+    vendor: true,
+    relative_install_path: "hw",
+    compile_multilib: "64",
+    target: {
+        android_arm64: {
+            srcs: ["stock/vendor/lib64/hw/vendor.qti.esepowermanager@1.1-impl.so"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+}
+
+// Inputs of Xiaomi's camera (src/camera), named for the modules there.
+filegroup {
+    name: "lujarch_fuxi_stock_camera_apk",
+    srcs: ["stock/product/priv-app/MiuiCamera/MiuiCamera.apk"],
+}
+
+filegroup {
+    name: "lujarch_fuxi_stock_camera_algoup_jni",
+    srcs: ["stock/system_ext/lib64/libcamera_algoup_jni.xiaomi.so"],
+}
+
+filegroup {
+    name: "lujarch_fuxi_stock_camera_mianode_jni",
+    srcs: ["stock/system_ext/lib64/libcamera_mianode_jni.xiaomi.so"],
+}
+
+filegroup {
+    name: "lujarch_fuxi_stock_camera_postproc_client",
+    srcs: ["stock/system_ext/lib64/libmicampostproc_client.so"],
+}
+
+filegroup {
+    name: "lujarch_fuxi_stock_camera_campostproc",
+    srcs: ["stock/system_ext/lib64/vendor.xiaomi.hardware.campostproc@1.0.so"],
+}
+
+filegroup {
+    name: "lujarch_fuxi_stock_libgui",
+    srcs: ["stock/system/lib64/libgui.so"],
+}

@@ -1,0 +1,3 @@
+# The camera provider serves IBGService, which the device's binder rules cover only for a
+# server of vendor_hal_camerapostproc_xiaomi.
+hal_server_domain(hal_camera_default, vendor_hal_camerapostproc_xiaomi)

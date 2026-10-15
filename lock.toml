@@ -5,3 +5,50 @@ aosp = "android-17.0.0_r1"
 
 [build]
 variant = "userdebug"
+
+
+[stock.fuxi]
+release = "OS3.0.307.0.WMCCNXM"
+urls = [
+    "https://cdnorg.d.miui.com/OS3.0.307.0.WMCCNXM/fuxi-ota_full-OS3.0.307.0.WMCCNXM-user-16.0-dfdca9894e.zip",
+    "https://bn.d.miui.com/OS3.0.307.0.WMCCNXM/fuxi-ota_full-OS3.0.307.0.WMCCNXM-user-16.0-dfdca9894e.zip",
+    "https://bkt-sgp-miui-ota-update-alisgp.oss-ap-southeast-1.aliyuncs.com/OS3.0.307.0.WMCCNXM/fuxi-ota_full-OS3.0.307.0.WMCCNXM-user-16.0-dfdca9894e.zip",
+]
+sha256 = "728015a71fd5a4affd54a00eb2b164256f6fcafa96805194de3b2ad3ac642e00"
+
+[stock.fuxi.files]
+"odm/etc/thermal-4k-newcharger.conf" = "b93216b9ebbb02613511b76b42caebb09ae8c0abad63f97b71480eff86b53bf9"
+"odm/etc/thermal-abnormal-newcharger.conf" = "c3f4f2dda60da0390cda353e58012cb7a90284f2d9c49b3ef77c1d8cb6970004"
+"odm/etc/thermal-arvr-newcharger.conf" = "81718b8d2d64201046787f519e3915b8f697d62f464c66b47c5ca79175a4587f"
+"odm/etc/thermal-camera-newcharger.conf" = "33e707d359fdc6647ce3b649b799c1cb3de47a9bef4bc019b6a268e223ada287"
+"odm/etc/thermal-cclassvideo-newcharger.conf" = "2f3c5368673ffeabc9b8b99e7567d12026dfcbd15e35bfe53cfb9b9e85ddeb7c"
+"odm/etc/thermal-cgame-newcharger.conf" = "b2c5a584352e55c11b047925236ed350852a9a54d6919ea557ae1f4036a57e6a"
+"odm/etc/thermal-class0-newcharger.conf" = "4ab4a54e02c61d52768be7aba96213a52d2f901aaf9322fe8bd068f3c19e1acd"
+"odm/etc/thermal-dolbyvision-newcharger.conf" = "ea7bd39b8e5d2aff5e1ca7262b2eeede1eaa2d98dc57e0addcd1629140e07ec7"
+"odm/etc/thermal-hp-mgame-newcharger.conf" = "4b7c54c04d0ab02f38797f581c3897424b52556d65e0c3f5dbf77cdcf5639826"
+"odm/etc/thermal-hp-normal-newcharger.conf" = "e71d196099e92816144c61c16b2373461b78de44eda58b104c4188dfc34709a3"
+"odm/etc/thermal-huanji-newcharger.conf" = "0536d5497f962a0f2df372e0f403e16e04fd9e22a471f41849b9b47805b2e460"
+"odm/etc/thermal-mgame-newcharger.conf" = "1d12e7b4359a8580edad2ed99201c8f80cf25e207b8bb012cb564d6852c50abc"
+"odm/etc/thermal-navigation-newcharger.conf" = "61917e3357900eef2bd1c4fd0d53bc91f92025eb4265f967ab54974dbbe2d93d"
+"odm/etc/thermal-nolimits-newcharger.conf" = "4c2be031c546ea2e978a0f2f6b73ed1c6c49f83ed9e6eec7f9246704573b1f33"
+"odm/etc/thermal-normal-newcharger.conf" = "3c087859fe93a99b67fd4c81e1cdffe77f237d745e351c5a1b9dbfc2985fd2f5"
+"odm/etc/thermal-odm-map.conf" = "03077c05dc048652de57909cd3e0b9b8f226e0ae456b6f5417afbbea5fc81c54"
+"odm/etc/thermal-per-cclassvideo-newcharger.conf" = "dd81dd9977a4aafdf32c1347d70174522804b8ab1576cf82904c82a4dcda5865"
+"odm/etc/thermal-per-cgame-newcharger.conf" = "c17f7a09cd1362af3347215cc55fcfe0b8a8d5b5a1831a63e2dd155cbc5296a6"
+"odm/etc/thermal-per-class0-newcharger.conf" = "4e05a25724cf1388c3d3beccafe09f22ea28418f487c32c83a9b7ca1fdfa7e82"
+"odm/etc/thermal-per-normal-newcharger.conf" = "4a9706d7cb3a182b12d7e4d42cd7f82d83e379ed657c4da2f24a6b8100b05b6b"
+"odm/etc/thermal-per-video-newcharger.conf" = "0e412c4247dd8d324d0d7857b28d036a30083b6baebd848ce087a5a06c26d08f"
+"odm/etc/thermal-phone-newcharger.conf" = "ba0e49a17df3875d2f47fe32ec3f28246a841c16f34d3809dba323533b0b3a0d"
+"odm/etc/thermal-tgame-newcharger.conf" = "2febe3d89bdc75d2357fa6feec7c574c6730a970e445094a9ec2e35631b8bc2f"
+"odm/etc/thermal-video-newcharger.conf" = "bbd3fbd404188667ae11ac11ba234245a805af3cd9313cf97a9b8737b9fd5d56"
+"odm/etc/thermal-videochat-newcharger.conf" = "021ce90bf4d9be40e87227d5bd0cd8b3fa56d2d26ccac76f426ef48c23d326ea"
+"product/priv-app/MiuiCamera/MiuiCamera.apk" = "2424f8ff9147d058d3de6370b78262facaa7b03b249fc1702e6440ab1bdc1f10"
+"system/lib64/libgui.so" = "fce4f4a6ae29cff9ab11594909034b7b963117bcd3eeeaf80d305fa3993ef1a2"
+"system_ext/lib64/libcamera_algoup_jni.xiaomi.so" = "ae329487ccd16b947a06c5e4ab74d55ffc528e460c32a03da7660b370334ffcc"
+"system_ext/lib64/libcamera_mianode_jni.xiaomi.so" = "3159485a9c6ca7ae8d33a98534e9e7461c7c3979c2eb8a6e3f1a776a532bec30"
+"system_ext/lib64/libmicampostproc_client.so" = "deeb8d47c3f4b135ccb6fb8c2fb479edb3672ddd6901b4d1417eb726c3073174"
+"system_ext/lib64/vendor.xiaomi.hardware.campostproc@1.0.so" = "1caf3d76f1cb446844423081ea8f73430e2d6ba2b41297a0fbc683184f8c08b6"
+"vendor/bin/hw/vendor.qti.esepowermanager@1.1-service" = "00d84075ea5d1dd5727b7b23fb4e9a933105c6a07833fccd262ccc4413a6356a"
+"vendor/bin/ssr_setup" = "537b6c3cd7b0b36befbba735a1c0ab21a1efbde59a8ee2344862e4f7701a50c9"
+"vendor/etc/init/vendor.qti.esepowermanager@1.1-service.rc" = "cc0c23bf86c480eff39563e7c4733fe1e0848d68f284e6975947823be873bb74"
+"vendor/lib64/hw/vendor.qti.esepowermanager@1.1-impl.so" = "1ae97baa2a0e21b9285c8a68805a2d7a92c3bc0a1b9d4aa96a529b4d20330066"

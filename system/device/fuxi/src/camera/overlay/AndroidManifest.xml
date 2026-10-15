@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Xiaomi's camera with Aperture's adaptive icon. The camera declares no <overlayable>, so the
+     overlay must stay static, preinstalled and platform-signed like the camera.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.fuxi.overlay.camera">
+    <application android:hasCode="false" />
+    <overlay
+        android:targetPackage="com.android.camera"
+        android:isStatic="true"
+        android:priority="1" />
+</manifest>
