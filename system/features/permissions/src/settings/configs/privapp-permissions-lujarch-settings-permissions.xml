@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The privileged permissions the pages of this feature add to Lujarch Settings. A missing entry
+    stops system_server at boot.
+-->
+<permissions>
+    <privapp-permissions package="org.lujarch.settings">
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+</permissions>

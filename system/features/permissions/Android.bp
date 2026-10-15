@@ -12,3 +12,11 @@ android_library {
         "SettingsLibSettingsTheme",
     ],
 }
+
+prebuilt_etc {
+    name: "lujarch_permissions_settings_privapp_permissions",
+    filename_from_src: true,
+    src: "src/settings/configs/privapp-permissions-lujarch-settings-permissions.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
