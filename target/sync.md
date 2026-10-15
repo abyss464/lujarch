@@ -97,8 +97,8 @@ download limits. Each list is edited one entry per line and can be restored to i
 The identity is imported from files chosen in the document picker (certificate, key, and
 optionally a configuration), or created anew, keeping this device's devices and folders or not.
 The files are never shown, logged or kept by the page. The identity it replaces is kept as a
-backup and can be restored. A new identity takes effect at the next start of the service, and the
-page says whether sync restarted with it.
+backup and can be restored. A new identity is in place at once: running sync restarts with it, and
+the page says so, or says that sync uses it once it may run or is turned on.
 
 ### SYN-8 The sync storage is reached only by sync and Lujarch
 

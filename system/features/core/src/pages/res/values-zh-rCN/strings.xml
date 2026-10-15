@@ -22,4 +22,12 @@
     <string name="quoted_name">“%1$s”</string>
     <string name="time_just_now">刚刚</string>
     <string name="error_service_title">Lujarch 系统服务不可用</string>
+    <string name="error_closed">Lujarch 系统服务关闭了连接。</string>
+    <string name="error_failed">Lujarch 系统服务未能完成此请求。</string>
+    <string name="error_io_sentence">与 Lujarch 系统服务的连接已中断。</string>
+    <string name="error_protocol_sentence">Lujarch 系统服务返回了此应用无法读取的应答。</string>
+    <string name="error_refused">Lujarch 系统服务拒绝了此请求。</string>
+    <string name="error_timeout">Lujarch 系统服务未在规定时间内响应。</string>
+    <string name="error_unavailable_sentence">无法连接到 Lujarch 系统服务，该服务可能已停止。</string>
+    <string name="error_busy_service">Lujarch 系统服务正忙，请稍后重试。</string>
 </resources>

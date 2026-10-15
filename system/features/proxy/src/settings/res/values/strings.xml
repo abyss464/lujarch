@@ -158,11 +158,8 @@
     <string name="detail_row">%1$s: %2$s</string>
     <string name="error_busy">Another proxy manager task is running. Try again when it has finished.</string>
     <string name="error_close_connection">Couldn\'t close the connection</string>
-    <string name="error_closed">The Lujarch system service closed the connection.</string>
     <string name="error_delay">Delay test failed</string>
-    <string name="error_failed">The Lujarch system service could not complete this request.</string>
     <string name="error_http">The proxy core answered with HTTP %1$d.</string>
-    <string name="error_io_sentence">The connection to the Lujarch system service was interrupted.</string>
     <string name="error_load_configs">Couldn\'t load the proxy settings</string>
     <string name="error_load_connections">Couldn\'t load connections</string>
     <string name="error_load_groups">Couldn\'t load proxy groups</string>
@@ -170,14 +167,10 @@
     <string name="error_load_status">Couldn\'t load the status</string>
     <string name="error_load_targets">Couldn\'t load the proxy groups</string>
     <string name="error_logs">Couldn\'t read the log</string>
-    <string name="error_protocol_sentence">The Lujarch system service sent an answer this app cannot read.</string>
     <string name="error_proxy_off">Couldn\'t turn off the proxy</string>
     <string name="error_proxy_on">Couldn\'t turn on the proxy</string>
-    <string name="error_refused">The Lujarch system service refused this request.</string>
     <string name="error_select">Couldn\'t select the node</string>
-    <string name="error_timeout">The Lujarch system service did not answer in time.</string>
     <string name="error_traffic">Couldn\'t read live traffic</string>
-    <string name="error_unavailable_sentence">Cannot connect to the Lujarch system service. It may be stopped.</string>
     <string name="error_unfix">Couldn\'t restore automatic selection</string>
     <string name="group_type_adaptive">Adaptive</string>
     <string name="group_type_fallback">Fallback</string>

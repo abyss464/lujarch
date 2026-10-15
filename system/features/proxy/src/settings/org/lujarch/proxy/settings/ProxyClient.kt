@@ -43,6 +43,7 @@ import org.json.JSONTokener
 import org.lujarch.proxy.IProxy
 import org.lujarch.proxy.Status
 import org.lujarch.settings.pages.Failure
+import org.lujarch.settings.pages.R as PagesR
 
 /** Log tag of the proxy's pages. */
 const val TAG = "lujarch_proxy"
@@ -85,15 +86,15 @@ class ProxyException(
 
     override fun describe(context: Context): String =
         when (kind) {
-            Kind.UNAVAILABLE -> context.getString(R.string.error_unavailable_sentence)
-            Kind.TIMEOUT -> context.getString(R.string.error_timeout)
-            Kind.IO -> context.getString(R.string.error_io_sentence)
-            Kind.PROTOCOL -> context.getString(R.string.error_protocol_sentence)
+            Kind.UNAVAILABLE -> context.getString(PagesR.string.error_unavailable_sentence)
+            Kind.TIMEOUT -> context.getString(PagesR.string.error_timeout)
+            Kind.IO -> context.getString(PagesR.string.error_io_sentence)
+            Kind.PROTOCOL -> context.getString(PagesR.string.error_protocol_sentence)
             Kind.REMOTE ->
-                context.getString(if (refused) R.string.error_refused else R.string.error_failed)
+                context.getString(if (refused) PagesR.string.error_refused else PagesR.string.error_failed)
             Kind.BUSY -> context.getString(R.string.error_busy)
             Kind.HTTP -> context.getString(R.string.error_http, httpStatus)
-            Kind.CLOSED -> context.getString(R.string.error_closed)
+            Kind.CLOSED -> context.getString(PagesR.string.error_closed)
         }
 
     override val details: String

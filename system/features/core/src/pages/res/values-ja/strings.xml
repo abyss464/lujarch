@@ -23,4 +23,12 @@
     <string name="quoted_name">%1$s</string>
     <string name="time_just_now">たった今</string>
     <string name="error_service_title">Lujarch システム サービスを利用できません</string>
+    <string name="error_closed">Lujarch システム サービスが接続を閉じました。</string>
+    <string name="error_failed">Lujarch システム サービスはこのリクエストを完了できませんでした。</string>
+    <string name="error_io_sentence">Lujarch システム サービスとの接続が中断されました。</string>
+    <string name="error_protocol_sentence">Lujarch システム サービスから、このアプリで読み取れない応答が返されました。</string>
+    <string name="error_refused">Lujarch システム サービスがこのリクエストを拒否しました。</string>
+    <string name="error_timeout">Lujarch システム サービスが時間内に応答しませんでした。</string>
+    <string name="error_unavailable_sentence">Lujarch システム サービスに接続できません。停止している可能性があります。</string>
+    <string name="error_busy_service">Lujarch システム サービスはビジー状態です。しばらくしてからもう一度お試しください。</string>
 </resources>
