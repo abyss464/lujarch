@@ -29,6 +29,7 @@ system's own UI, and is never a default in this repository.
 | `test/` | The test flow: host checks, virtual-device tests, phone tests (process/test-flow.md) |
 | `release/` | The release flow (process/release-flow.md) |
 | `tools/lujarch` | The command line for everything above |
+| `tools/patches/<project>/` | Patches to the build system itself, which reach no image; applied before all others |
 
 ## Features
 
@@ -81,7 +82,8 @@ Makefiles and `Android.bp` files name the staged paths. `vendor/extra` is never 
 
 ## Patches
 
-`system/order` lists every directory that has patches, one per line, relative to `system/`
+`tools/patches/` applies first. `system/order` lists every other directory that has patches, one
+per line, relative to `system/`
 (`device/fuxi`, `features/core`, `features/channels`, ...), in application order. Patches of
 one directory apply in path order. A patch is a `git diff` of one upstream project with full
 blob ids.
@@ -90,8 +92,8 @@ blob ids.
   `tools/lujarch patch` in that order. The patch files are the source; the tool rebuilds the
   commits whenever they differ from the files, and counts no commit it did not make.
 - An upstream file is changed in the tree, then `tools/lujarch save <entry>` folds the change
-  into the entry's patch for that project (`--name` starts a new one, `--patch` picks one of
-  several) and rewrites the patch file. Later patches of the project are rebased onto it; a later
+  into the entry's patch for that project (`tools` for `tools/patches/`; `--name` starts a new
+  one, `--patch` picks one of several) and rewrites the patch file. Later patches of the project are rebased onto it; a later
   patch's file is rewritten only when it no longer reproduces its commit.
 - A patch that no longer applies is merged three ways where the project's history holds the
   blobs it was made from, otherwise applied with rejected hunks. Its conflicts are resolved in
