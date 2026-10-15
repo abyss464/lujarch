@@ -928,6 +928,7 @@ def prepare_tree(host):
 # Stock releases
 
 STOCK_UNPACKED = ".lujarch-unpacked"
+STOCK_PARTITIONS = ("odm", "product", "system", "system_ext", "vendor")
 
 
 def stock_package(host, pin):
@@ -973,10 +974,16 @@ def stock_dump(host, device):
     if sha256_file(package) != pin["sha256"]:
         die(f"{package} does not match lock.toml's sha256")
     log(f"unpacking {pin['release']} into {dump}")
+    env = dict(os.environ)
+    env["PATH"] = f"{env.get('PATH', '')}:{host.tree / 'out' / 'host' / 'linux-x86' / 'bin'}"
     run = subprocess.run([sys.executable, str(host.tree / "tools" / "extract-utils" / "extract.py"),
-                          str(package)], cwd=host.tree)
-    if run.returncode:
-        die(f"unpacking {package} failed")
+                          str(package)], cwd=host.tree, env=env)
+    empty = [p for p in STOCK_PARTITIONS if not (dump / p).is_dir() or not any((dump / p).iterdir())]
+    if run.returncode or empty:
+        for p in empty:
+            if (dump / p).is_dir():
+                (dump / p).rmdir()
+        die(f"unpacking {package} failed" + (f": no {', '.join(empty)}" if empty else ""))
     (dump / STOCK_UNPACKED).write_text(pin["sha256"] + "\n")
     return pin, dump
 
