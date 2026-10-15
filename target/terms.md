@@ -158,3 +158,8 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | By name | 按名称 | 名前順 |
 | By icon color | 按图标颜色 | アイコンの色順 |
 | Unnamed section | 未命名分区 | 名前のないセクション |
+| Lujarch motion | Lujarch 动效 | Lujarch モーション |
+| Lock screen and fingerprint | 锁屏和指纹 | ロック画面と指紋 |
+| Charging | 充电 | 充電 |
+| Back gesture | 返回手势 | 「戻る」ジェスチャー |
+| Volume | 音量 | 音量 |
