@@ -1,9 +1,120 @@
+diff --git a/PermissionController/AndroidManifest.xml b/PermissionController/AndroidManifest.xml
+index 7bd569967cd4947ca9f3bd68ef303615726816a7..c3cf284719842d129e2ec761cd0d40a90a1bbafc 100644
+--- a/PermissionController/AndroidManifest.xml
++++ b/PermissionController/AndroidManifest.xml
+@@ -103,6 +103,20 @@
+             </intent-filter>
+         </receiver>
+ 
++        <receiver android:name="com.android.permissioncontroller.lujarch.LujarchAskReceiver"
++            android:exported="true"
++            android:permission="android.permission.MANAGE_APP_OPS_MODES">
++            <intent-filter>
++                <action android:name="org.lujarch.permissions.action.ASK" />
++            </intent-filter>
++        </receiver>
++
++        <activity android:name="com.android.permissioncontroller.lujarch.LujarchAskActivity"
++            android:excludeFromRecents="true"
++            android:exported="false"
++            android:launchMode="singleTop"
++            android:theme="@style/GrantPermissions.FilterTouches" />
++
+         <receiver android:name="com.android.permissioncontroller.hibernation.HibernationBroadcastReceiver"
+                   android:exported="true">
+             <intent-filter>
+diff --git a/PermissionController/res/layout/lujarch_ask.xml b/PermissionController/res/layout/lujarch_ask.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175a96f07a8
+--- /dev/null
++++ b/PermissionController/res/layout/lujarch_ask.xml
+@@ -0,0 +1,80 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- The look of grant_permissions.xml, with the choices of Lujarch's permissions. -->
++<ScrollView
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    style="@style/PermissionGrantScrollView">
++
++    <LinearLayout
++        android:importantForAccessibility="no"
++        android:focusable="false"
++        style="@style/PermissionGrantSingleton">
++
++        <LinearLayout
++            android:theme="@style/Theme.PermissionGrantDialog"
++            android:importantForAccessibility="no"
++            android:focusable="false"
++            style="@style/PermissionGrantDialog">
++
++            <LinearLayout
++                style="@style/PermissionGrantContent">
++
++                <LinearLayout
++                    style="@style/PermissionGrantDescription">
++
++                    <ImageView
++                        android:id="@+id/permission_icon"
++                        style="@style/PermissionGrantTitleIcon" />
++
++                    <TextView
++                        android:id="@+id/permission_message"
++                        android:accessibilityHeading="true"
++                        style="@style/PermissionGrantTitleMessage" />
++                </LinearLayout>
++
++                <TextView
++                    android:id="@+id/current_page_text"
++                    style="@style/PermissionGrantDetailMessage" />
++            </LinearLayout>
++
++            <LinearLayout
++                style="@style/PermissionGrantButtonList">
++
++                <Space
++                    style="@style/PermissionGrantButtonBarSpace" />
++
++                <com.android.permissioncontroller.permission.ui.widget.SecureButton
++                    android:id="@+id/permission_allow_button"
++                    style="@style/PermissionGrantButtonAllow" />
++
++                <com.android.permissioncontroller.permission.ui.widget.SecureButton
++                    android:id="@+id/permission_allow_foreground_only_button"
++                    style="@style/PermissionGrantButtonAllowForeground" />
++
++                <com.android.permissioncontroller.permission.ui.widget.SecureButton
++                    android:id="@+id/lujarch_empty_button"
++                    style="@style/PermissionGrantButtonDeny" />
++
++                <com.android.permissioncontroller.permission.ui.widget.SecureButton
++                    android:id="@+id/permission_deny_button"
++                    style="@style/PermissionGrantButtonDeny" />
++            </LinearLayout>
++        </LinearLayout>
++    </LinearLayout>
++</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..36d92008e3ae030e8b31f398bde3bd1edf8e7b8e
+index 0000000000000000000000000000000000000000..6fbc6857d891a48070887cf8a43e23565631f7a6
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -32,13 +143,16 @@ index 0000000000000000000000000000000000000000..36d92008e3ae030e8b31f398bde3bd1e
 +    <string name="lujarch_footer_device_info">"システムのインターフェースを通じてこのスマートフォンを説明する情報（モデルとメーカー、システム ビルド、タイムゾーン、バッテリー、接続されている USB デバイス、デバイス名、起動回数、開発者向けオプションが有効かどうか、スマートフォンを説明する設定）が対象です。[空のデータを返す] では、モデルとビルドは「unknown」、タイムゾーンは UTC、バッテリーと USB は空として読み取られます。変更はアプリの次回起動時に適用されます。アプリ自身のネイティブ コードは、システム プロパティからモデルとビルドを、カーネルからプロセッサとグラフィックスの名前を引き続き読み取れます。"</string>
 +    <string name="lujarch_footer_network_info">"システムのインターフェースが伝えるネットワークの情報（IP アドレス、DNS サーバー、プロキシ、VPN が有効かどうか、Wi-Fi の信号と接続の詳細、データ使用量の合計、Bluetooth と NFC が有効かどうか）が対象です。[空のデータを返す] では、これらは空、VPN はなし、Bluetooth と NFC はオフとして読み取られます。アプリ自身の接続はそのまま使え、付近のデバイスを許可されたアプリには Bluetooth が見えます。[許可しない] では、拒否できるインターフェースは読み取りを拒否します。アプリ自身のネイティブ コードはカーネルからネットワーク インターフェースのアドレスを引き続き読み取れ、アプリが通信するサーバーにはスマートフォンのパブリック アドレスが見えます。"</string>
 +    <string name="lujarch_footer_phone">"電話の基本情報とは、通信事業者とその国とコード、SIM の状態、信号強度、ネットワークの種類、データと通話の状態、サブスクリプション番号のことで、Android が電話の権限のないすべてのアプリに提供する情報です。通信事業者のコードはシステムがシステム プロパティとして公開しているため、アプリ自身のネイティブ コードは引き続き読み取れます。"</string>
++    <string name="lujarch_ask_channel">"アクセスの確認"</string>
++    <string name="lujarch_ask_until_answered">"回答するまで、アプリには空のデータが返されます。"</string>
++    <string name="lujarch_ask_phone_info">"通信事業者、信号、ネットワークの種類の読み取り"</string>
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..d3be3bbe38fb33476ae8bf1f4ab8cb3dbe20a577
+index 0000000000000000000000000000000000000000..1e402e336afc822a3099fc5deaf4fc45e802daf8
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -67,13 +181,16 @@ index 0000000000000000000000000000000000000000..d3be3bbe38fb33476ae8bf1f4ab8cb3d
 +    <string name="lujarch_footer_device_info">"涵盖通过系统接口描述这部手机的信息：型号和制造商、系统版本、时区、电池、连接的 USB 设备、设备名称、开机次数、开发者选项是否开启，以及描述手机的设置。选择“返回空数据”时，型号和版本读出为“unknown”，时区为 UTC，电池和 USB 为空。更改从应用下次启动时生效。应用自己的原生代码仍可从系统属性读到型号和版本，并从内核读到处理器和图形芯片的名称。"</string>
 +    <string name="lujarch_footer_network_info">"涵盖系统接口提供的网络信息：IP 地址、DNS 服务器、代理、VPN 是否开启、WLAN 信号和连接详情、数据流量总量，以及蓝牙和 NFC 是否开启。选择“返回空数据”时，这些信息读出为空，VPN 视为不存在，蓝牙和 NFC 视为关闭；应用自己的网络连接照常工作，已获准使用“附近的设备”的应用仍能看到蓝牙。选择“不允许”时，可以拒绝读取的接口会拒绝。应用自己的原生代码仍可从内核读到手机网络接口的地址，应用连接的任何服务器都能看到手机的公网地址。"</string>
 +    <string name="lujarch_footer_phone">"基本电话信息包括运营商及其国家和代码、SIM 卡状态、信号强度、网络类型、数据和通话状态，以及订阅编号，即 Android 向每个没有“电话”权限的应用提供的信息。运营商代码由系统作为系统属性公开，应用自己的原生代码仍可读到。"</string>
++    <string name="lujarch_ask_channel">"访问询问"</string>
++    <string name="lujarch_ask_until_answered">"在您回答之前，该应用得到的是空数据。"</string>
++    <string name="lujarch_ask_phone_info">"读取运营商、信号和网络类型"</string>
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..dff000ca09d05c2fd3096c0f217a573e00807e92
+index 0000000000000000000000000000000000000000..8a90310a75b294717ada72d3056f1a8cf662c426
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -102,13 +219,16 @@ index 0000000000000000000000000000000000000000..dff000ca09d05c2fd3096c0f217a573e
 +    <string name="lujarch_footer_device_info">Covers what describes this phone through the system\'s interfaces: the model and maker, the system build, the time zone, the battery, connected USB devices, the device name, the number of boots, whether developer options are on, and the settings that describe the phone. With Return empty data, the model and build read \"unknown\", the time zone UTC, and the battery and USB nothing. A change applies from the app\'s next start. The app\'s own native code still reads the model and build from system properties, and the processor and graphics names from the kernel.</string>
 +    <string name="lujarch_footer_network_info">Covers what the system\'s interfaces tell about the networks: IP addresses, DNS servers, the proxy, whether a VPN is on, Wi‑Fi signal and link details, data totals, and whether Bluetooth and NFC are on. With Return empty data, these read as empty, a VPN as absent, and Bluetooth and NFC as off; the app\'s own connections keep working, and an app allowed Nearby devices still sees Bluetooth. With Don\'t allow, a read whose interface can refuse is refused. The app\'s own native code still reads the addresses of the phone\'s network interfaces from the kernel, and any server the app talks to sees the phone\'s public address.</string>
 +    <string name="lujarch_footer_phone">Basic phone info is the carrier and its country and code, the SIM\'s state, signal strength, the network type, the data and call state, and the subscription numbers: what Android gives every app without the Phone permission. The carrier\'s code, which the system publishes as a system property, stays readable to the app\'s own native code.</string>
++    <string name="lujarch_ask_channel">Questions about access</string>
++    <string name="lujarch_ask_until_answered">Until you answer, the app gets empty data.</string>
++    <string name="lujarch_ask_phone_info">read the carrier, signal and network type</string>
 +</resources>
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..734a7040e46d3e403d4ae613dbc46b36504fd372
+index 0000000000000000000000000000000000000000..90a0401509f18bc82930cd9a559d097cada046c9
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
-@@ -0,0 +1,193 @@
+@@ -0,0 +1,202 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -283,9 +403,18 @@ index 0000000000000000000000000000000000000000..734a7040e46d3e403d4ae613dbc46b36
 +        lifecycleScope.launch {
 +            val current =
 +                withContext(Dispatchers.IO) {
-+                    uid = app.packageManager.getPackageUidAsUser(packageName, 0, user.identifier)
-+                    LujarchPermissions.choice(app, permission.op, uid, packageName)
++                    try {
++                        uid = app.createContextAsUser(user, 0).packageManager.getPackageUid(packageName, 0)
++                        LujarchPermissions.choice(app, permission.op, uid, packageName)
++                    } catch (e: Exception) {
++                        Log.e(LujarchPermissions.TAG, "$packageName not found", e)
++                        null
++                    }
 +                }
++            if (current == null) {
++                pressBack()
++                return@launch
++            }
 +            radios.forEach { (choice, r) -> r.isChecked = choice == current }
 +        }
 +    }
@@ -304,7 +433,7 @@ index 0000000000000000000000000000000000000000..734a7040e46d3e403d4ae613dbc46b36
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..bddc80fcdb0d3aeedd24cbe1833f6027351f6cf6
+index 0000000000000000000000000000000000000000..682f5704d291e3be6d20e0987bcb0ce1c9c0b404
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
 @@ -0,0 +1,265 @@
@@ -391,7 +520,7 @@ index 0000000000000000000000000000000000000000..bddc80fcdb0d3aeedd24cbe1833f6027
 +                withContext(Dispatchers.IO) {
 +                    val uid =
 +                        try {
-+                            app.packageManager.getPackageUidAsUser(packageName, 0, u.identifier)
++                            app.createContextAsUser(u, 0).packageManager.getPackageUid(packageName, 0)
 +                        } catch (e: Exception) {
 +                            return@withContext null
 +                        }
@@ -790,6 +919,260 @@ index 0000000000000000000000000000000000000000..2baf9a0896122b4e8bc54a45fe052237
 +
 +    companion object {
 +        private const val KEY_SHOW_SYSTEM = "lujarch_show_system"
++    }
++}
+diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..b2fc439b6ca39bb66d215e78f221990d4f821ccf
+--- /dev/null
++++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
+@@ -0,0 +1,248 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.permissioncontroller.lujarch
++
++import android.app.Activity
++import android.app.KeyguardManager
++import android.app.Notification
++import android.app.NotificationChannel
++import android.app.NotificationManager
++import android.app.PendingIntent
++import android.content.BroadcastReceiver
++import android.content.Context
++import android.content.Intent
++import android.os.Bundle
++import android.os.PowerManager
++import android.os.Process
++import android.os.UserHandle
++import android.text.Html
++import android.util.Log
++import android.view.View
++import android.widget.Button
++import android.widget.ImageView
++import android.widget.TextView
++import com.android.permissioncontroller.R
++import com.android.permissioncontroller.permission.utils.KotlinUtils
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.GlobalScope
++import kotlinx.coroutines.launch
++
++/**
++ * "Ask every time": the system answered an access with empty data and asks the user. The
++ * question is a dialog in the look of Android's permission dialog when the app is on screen and
++ * the phone is unlocked, otherwise a notification that is never shown on the lock screen and opens
++ * the dialog. Several permissions of one app asked about together are one question, one page per
++ * permission. The answer becomes the app's choice.
++ */
++object LujarchAsks {
++    const val ACTION_ASK = "org.lujarch.permissions.action.ASK"
++    const val EXTRA_OP = "org.lujarch.permissions.extra.OP"
++    const val EXTRA_FOREGROUND = "org.lujarch.permissions.extra.FOREGROUND"
++    const val EXTRA_OPS = "org.lujarch.permissions.extra.OPS"
++
++    private const val CHANNEL = "lujarch_ask"
++
++    /** The ops each app is being asked about, until answered. */
++    private val pending = HashMap<String, LinkedHashSet<String>>()
++
++    /** The permission whose page answers a question about [op]. */
++    fun permissionOf(op: String): LujarchPermission? =
++        LujarchPermissions.ALL.firstOrNull { it.op == op }
++            ?: LujarchPermissions.PHONE_BASIC.takeIf { it.op == op }
++
++    @Synchronized
++    fun add(packageName: String, op: String): List<String> {
++        val ops = pending.getOrPut(packageName) { LinkedHashSet() }
++        ops.add(op)
++        return ops.toList()
++    }
++
++    @Synchronized
++    fun answered(context: Context, packageName: String, op: String) {
++        val ops = pending[packageName] ?: return
++        ops.remove(op)
++        if (ops.isEmpty()) {
++            pending.remove(packageName)
++            context.getSystemService(NotificationManager::class.java)!!.cancel(packageName, 0)
++        }
++    }
++
++    fun ask(context: Context, packageName: String, uid: Int, op: String, foreground: Boolean) {
++        val ops = add(packageName, op)
++        val dialog =
++            Intent(context, LujarchAskActivity::class.java)
++                .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
++                .putExtra(Intent.EXTRA_UID, uid)
++                .putExtra(EXTRA_OPS, ops.toTypedArray())
++                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
++        val keyguard = context.getSystemService(KeyguardManager::class.java)!!
++        val power = context.getSystemService(PowerManager::class.java)!!
++        if (foreground && power.isInteractive && !keyguard.isKeyguardLocked) {
++            try {
++                context.startActivity(dialog)
++                return
++            } catch (e: RuntimeException) {
++                Log.w(LujarchPermissions.TAG, "question about $packageName not shown as a dialog", e)
++            }
++        }
++        notify(context, packageName, uid, ops, dialog)
++    }
++
++    private fun notify(context: Context, packageName: String, uid: Int, ops: List<String>, dialog: Intent) {
++        val nm = context.getSystemService(NotificationManager::class.java)!!
++        nm.createNotificationChannel(
++            NotificationChannel(
++                CHANNEL,
++                context.getString(R.string.lujarch_ask_channel),
++                NotificationManager.IMPORTANCE_HIGH,
++            )
++        )
++        val app = KotlinUtils.getPackageLabel(context.applicationContext as android.app.Application, packageName, UserHandle.getUserHandleForUid(uid))
++        val first = permissionOf(ops.first()) ?: return
++        val title =
++            Html.fromHtml(
++                context.getString(R.string.permission_warning_template, app, request(context, first)),
++                0,
++            )
++        val open =
++            PendingIntent.getActivity(
++                context,
++                packageName.hashCode(),
++                dialog,
++                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
++            )
++        val n =
++            Notification.Builder(context, CHANNEL)
++                .setSmallIcon(R.drawable.ic_info_outline)
++                .setContentTitle(title)
++                .setContentText(context.getString(R.string.lujarch_ask_until_answered))
++                .setContentIntent(open)
++                .setVisibility(Notification.VISIBILITY_SECRET)
++                .setAutoCancel(true)
++                .build()
++        nm.notify(packageName, 0, n)
++    }
++
++    /** What the app asks to do with [p], for "Allow <app> to <request>?". */
++    fun request(context: Context, p: LujarchPermission): CharSequence =
++        if (p === LujarchPermissions.PHONE_BASIC) context.getString(R.string.lujarch_ask_phone_info)
++        else LujarchPermissions.description(context, p.group) ?: LujarchPermissions.label(context, p.group)
++}
++
++/** The question from the system. */
++class LujarchAskReceiver : BroadcastReceiver() {
++    override fun onReceive(context: Context, intent: Intent) {
++        if (intent.action != LujarchAsks.ACTION_ASK) return
++        val op = intent.getStringExtra(LujarchAsks.EXTRA_OP) ?: return
++        val packageName = intent.getStringExtra(Intent.EXTRA_PACKAGE_NAME) ?: return
++        val uid = intent.getIntExtra(Intent.EXTRA_UID, Process.INVALID_UID)
++        if (LujarchAsks.permissionOf(op) == null || uid == Process.INVALID_UID) {
++            Log.w(LujarchPermissions.TAG, "question about $op of $packageName has no page")
++            return
++        }
++        LujarchAsks.ask(context, packageName, uid, op, intent.getBooleanExtra(LujarchAsks.EXTRA_FOREGROUND, false))
++    }
++}
++
++/** The question as a dialog in the look of Android's permission dialog, one page per permission. */
++class LujarchAskActivity : Activity() {
++    private lateinit var packageName: String
++    private var uid = Process.INVALID_UID
++    private var ops: List<String> = emptyList()
++    private var index = 0
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        setFinishOnTouchOutside(false)
++        if (!read(intent)) {
++            finish()
++            return
++        }
++        index = savedInstanceState?.getInt(KEY_INDEX) ?: 0
++        setContentView(R.layout.lujarch_ask)
++        show()
++    }
++
++    override fun onNewIntent(intent: Intent) {
++        super.onNewIntent(intent)
++        if (read(intent)) {
++            index = 0
++            show()
++        }
++    }
++
++    override fun onSaveInstanceState(outState: Bundle) {
++        super.onSaveInstanceState(outState)
++        outState.putInt(KEY_INDEX, index)
++    }
++
++    private fun read(intent: Intent): Boolean {
++        packageName = intent.getStringExtra(Intent.EXTRA_PACKAGE_NAME) ?: return false
++        uid = intent.getIntExtra(Intent.EXTRA_UID, Process.INVALID_UID)
++        ops = intent.getStringArrayExtra(LujarchAsks.EXTRA_OPS)?.toList().orEmpty()
++        return uid != Process.INVALID_UID && ops.isNotEmpty()
++    }
++
++    private fun show() {
++        if (index >= ops.size) {
++            finish()
++            return
++        }
++        val op = ops[index]
++        val p = LujarchAsks.permissionOf(op) ?: run {
++            index++
++            show()
++            return
++        }
++        val app = KotlinUtils.getPackageLabel(application, packageName, UserHandle.getUserHandleForUid(uid))
++        findViewById<ImageView>(R.id.permission_icon).setImageDrawable(LujarchPermissions.icon(this, p.group))
++        findViewById<TextView>(R.id.permission_message).text =
++            Html.fromHtml(getString(R.string.permission_warning_template, app, LujarchAsks.request(this, p)), 0)
++        val count = findViewById<TextView>(R.id.current_page_text)
++        count.visibility = if (ops.size > 1) View.VISIBLE else View.GONE
++        count.text = getString(R.string.current_permission_template, index + 1, ops.size)
++        val buttons =
++            mapOf(
++                LujarchChoice.ALLOW to R.id.permission_allow_button,
++                LujarchChoice.ALLOW_FOREGROUND to R.id.permission_allow_foreground_only_button,
++                LujarchChoice.EMPTY to R.id.lujarch_empty_button,
++                LujarchChoice.DENY to R.id.permission_deny_button,
++            )
++        for ((choice, id) in buttons) {
++            val b = findViewById<Button>(id)
++            b.visibility = if (choice in p.choices) View.VISIBLE else View.GONE
++            b.text = getString(p.label(choice))
++            b.setOnClickListener { answer(p, op, choice) }
++        }
++    }
++
++    private fun answer(p: LujarchPermission, op: String, choice: LujarchChoice) {
++        val app = applicationContext
++        val pkg = packageName
++        val u = uid
++        GlobalScope.launch(Dispatchers.IO) {
++            LujarchPermissions.set(app, p.op, u, pkg, choice)
++            LujarchAsks.answered(app, pkg, op)
++        }
++        index++
++        show()
++    }
++
++    companion object {
++        private const val KEY_INDEX = "lujarch_index"
 +    }
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
@@ -1278,7 +1661,7 @@ index 0000000000000000000000000000000000000000..171ab33c170432c9e66c097e8fd27fa3
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..07d5e4f7ce0efd35c249fcb3e5fa54faba43fc54
+index 0000000000000000000000000000000000000000..a916c5191f3a49aefff1e11a6b31864e77081a68
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchRadios.kt
 @@ -0,0 +1,299 @@
@@ -1438,7 +1821,7 @@ index 0000000000000000000000000000000000000000..07d5e4f7ce0efd35c249fcb3e5fa54fa
 +        fragment.lifecycleScope.launch {
 +            withContext(Dispatchers.IO) {
 +                try {
-+                    uid = app.packageManager.getPackageUidAsUser(packageName, 0, user.identifier)
++                    uid = app.createContextAsUser(user, 0).packageManager.getPackageUid(packageName, 0)
 +                } catch (e: Exception) {
 +                    Log.e(LujarchPermissions.TAG, "$packageName not found", e)
 +                    return@withContext

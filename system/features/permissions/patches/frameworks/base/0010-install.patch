@@ -1,5 +1,5 @@
 diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
-index 4c63493439e274e7df270bd63fa3c1f2c31d7290..3079cdefcf7bb73c422ccd37b6725e0a52c72189 100644
+index 4c63493439e274e7df270bd63fa3c1f2c31d7290..c2bd60abb16562beebb76e6c7a0b65cda2aadfaa 100644
 --- a/services/core/java/com/android/server/pm/VerifyingSession.java
 +++ b/services/core/java/com/android/server/pm/VerifyingSession.java
 @@ -330,6 +330,11 @@ final class VerifyingSession {
@@ -14,23 +14,18 @@ index 4c63493439e274e7df270bd63fa3c1f2c31d7290..3079cdefcf7bb73c422ccd37b6725e0a
          for (String requiredVerifierPackage : requiredVerifierPackages) {
              final int requiredUid = snapshot.getPackageUid(requiredVerifierPackage,
                      MATCH_DEBUG_TRIAGED_MISSING, verifierUserId);
-@@ -602,6 +607,42 @@ final class VerifyingSession {
-      *
-      * @return true if verification should be performed
-      */
+@@ -597,6 +602,37 @@ final class VerifyingSession {
+         return true;
+     }
+ 
 +    /**
-+     * Only required verifiers that hold
-+     * PACKAGE_VERIFICATION_AGENT count. The verification broadcast goes out
-+     * with that receiver permission, so a required verifier without it never
-+     * receives the request and its turn ends only at the verifier timeout
-+     * (verifier_timeout, then verifier_default_response). Play is such a
-+     * verifier here (patches/vendor/gapps/0002 denies it the permission), and
-+     * The permission controller answers instead. This runs per session, where grants are
-+     * final: PackageManagerService picks the required verifiers in its
-+     * constructor, before an OTA boot grants the permission to a new package,
-+     * so filtering there would leave no verifier on the first boot of an image.
-+     * The list is left as is when no verifier holds the permission (an empty
-+     * list leaves the session without a timeout), and on any failure.
++     * Only required verifiers that hold PACKAGE_VERIFICATION_AGENT count. The verification
++     * broadcast goes out with that receiver permission, so a required verifier without it never
++     * receives the request and its turn ends only at the verifier timeout. Filtered per session,
++     * where grants are final: PackageManagerService picks the required verifiers in its
++     * constructor, before an update's first boot grants the permission to a new package. The list
++     * is left as is when no verifier holds the permission (an empty list leaves the session
++     * without a timeout), and on any failure.
 +     */
 +    private static void lujarchKeepVerifiersHoldingAgentPermission(@NonNull Computer snapshot,
 +            @NonNull List<String> requiredVerifierPackages, int userId) {
@@ -54,6 +49,6 @@ index 4c63493439e274e7df270bd63fa3c1f2c31d7290..3079cdefcf7bb73c422ccd37b6725e0a
 +        }
 +    }
 +
-     private boolean isVerificationEnabled(PackageInfoLite pkgInfoLite, int userId,
-             List<String> requiredVerifierPackages) {
-         if (!DEFAULT_VERIFY_ENABLE) {
+     /**
+      * Check whether package verification has been enabled.
+      *
