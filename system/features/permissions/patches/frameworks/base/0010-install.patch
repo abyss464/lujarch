@@ -147,10 +147,10 @@ index 0000000000000000000000000000000000000000..8ed8a913c30d8169e189e547118718ce
 +</resources>
 diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..bb0eb3351aab4092199f6cffbe1dd59066f899b4
+index 0000000000000000000000000000000000000000..c9601868f07668200980b49e1dec1a37446c544c
 --- /dev/null
 +++ b/packages/PackageInstaller/src/com/android/packageinstaller/lujarch/LujarchInstallQuestions.kt
-@@ -0,0 +1,249 @@
+@@ -0,0 +1,256 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -256,6 +256,13 @@ index 0000000000000000000000000000000000000000..bb0eb3351aab4092199f6cffbe1dd590
 +
 +/** The system's install verifier. */
 +class LujarchInstallVerifier : BroadcastReceiver() {
++    private companion object {
++        // PackageManager's verification extras outside the system API.
++        const val EXTRA_INSTALLER_UID = "android.content.pm.extra.VERIFICATION_INSTALLER_UID"
++        const val EXTRA_INSTALLER_PACKAGE = "android.content.pm.extra.VERIFICATION_INSTALLER_PACKAGE"
++        const val EXTRA_PACKAGE_NAME = "android.content.pm.extra.VERIFICATION_PACKAGE_NAME"
++    }
++
 +    override fun onReceive(context: Context, intent: Intent) {
 +        if (intent.action != Intent.ACTION_PACKAGE_NEEDS_VERIFICATION) return
 +        val pending = goAsync()
@@ -272,9 +279,9 @@ index 0000000000000000000000000000000000000000..bb0eb3351aab4092199f6cffbe1dd590
 +        val id = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_ID, -1)
 +        if (id < 0) return
 +        val pm = context.packageManager
-+        val installerUid = intent.getIntExtra(PackageManager.EXTRA_VERIFICATION_INSTALLER_UID, -1)
-+        val installer = intent.getStringExtra(PackageManager.EXTRA_VERIFICATION_INSTALLER_PACKAGE)
-+        val packageName = intent.getStringExtra(PackageManager.EXTRA_VERIFICATION_PACKAGE_NAME)
++        val installerUid = intent.getIntExtra(EXTRA_INSTALLER_UID, -1)
++        val installer = intent.getStringExtra(EXTRA_INSTALLER_PACKAGE)
++        val packageName = intent.getStringExtra(EXTRA_PACKAGE_NAME)
 +        val mode =
 +            if (installer == null || UserHandle.getAppId(installerUid) < Process.FIRST_APPLICATION_UID) {
 +                AppOpsManager.MODE_ALLOWED
