@@ -1,5 +1,5 @@
 diff --git a/src/java/com/android/internal/telephony/SmsController.java b/src/java/com/android/internal/telephony/SmsController.java
-index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822d46f66f3 100644
+index db70ce534115d43f0bdbeb1b21425580e32f6015..1a48ccd7340296d601e0548787296a70d94de2ed 100644
 --- a/src/java/com/android/internal/telephony/SmsController.java
 +++ b/src/java/com/android/internal/telephony/SmsController.java
 @@ -37,6 +37,8 @@ import android.os.BaseBundle;
@@ -55,7 +55,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
      @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
      @Override
      public boolean isImsSmsSupportedForSubscriber(int subId) {
-+        // IMS SMS support follows the network, the phone info permission's.
++        // IMS SMS support follows the network, basic phone info.
 +        if (lujarchRefusesPhoneInfo("isImsSmsSupportedForSubscriber")) {
 +            return false;
 +        }
@@ -67,7 +67,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
          enforceTelephonyFeatureWithException(getCallingPackage(), "isSmsSimPickActivityNeeded");
  
 +        // The answer tells whether more than one SIM is active, the phone
-+        // Info permission's; refused, no SIM pick (SmsManager then sends on the default phone).
++        // info permission's; refused, no SIM pick (SmsManager then sends on the default phone).
 +        if (lujarchRefusesPhoneInfo("isSmsSimPickActivityNeeded")) {
 +            return false;
 +        }
@@ -91,7 +91,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
      @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
      @Override
      public int getPreferredSmsSubscription() {
-+        // The default SMS subscription is the phone info permission's; refused,
++        // The default SMS subscription is basic phone info; refused,
 +        // none (SmsManager then sends on the default phone).
 +        if (lujarchRefusesPhoneInfo("getPreferredSmsSubscription")) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
@@ -103,7 +103,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
       */
      @Override
      public boolean isSMSPromptEnabled() {
-+        // The multi-SIM SMS prompt switch is the phone info permission's.
++        // The multi-SIM SMS prompt switch is basic phone info.
 +        if (lujarchRefusesPhoneInfo("isSMSPromptEnabled")) {
 +            return false;
 +        }
@@ -115,7 +115,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
                  "getCarrierConfigValuesForSubscriber");
  
 +        // The carrier's MMS configuration (user agent, UA profile, limits)
-+        // Names the carrier, the phone info permission's; refused, the documented empty Bundle.
++        // Names the carrier, basic phone info; refused, the documented empty Bundle.
 +        if (lujarchRefusesPhoneInfo("getCarrierConfigValuesForSubscriber")) {
 +            return new Bundle();
 +        }
@@ -124,7 +124,7 @@ index db70ce534115d43f0bdbeb1b21425580e32f6015..e22b5e6a8da1d217d2d0aa4136ec1822
          try {
              final CarrierConfigManager configManager =
 diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
-index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6294383cb 100644
+index 9eb5daf837630362fb05718e832c05da0a7c2c9b..a0da63647c01e4524663fc15c36df9f03f158cdf 100644
 --- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 +++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 @@ -47,6 +47,7 @@ import android.os.CountDownTimer;
@@ -200,7 +200,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
 +     * Apps keep the subscription ids this service answers in
 +     * SubscriptionManager's IPC caches; a change of an app's phone info permission or Phone
 +     * permission drops every process's cache, so the app's next read takes the new answer
-+     * Instead of a refusal cached before the user's choice.
++     * instead of a refusal cached before the user's choice.
 +     */
 +    private void lujarchWatchPhoneInfo() {
 +        for (String op : new String[] {LujarchInfo.PHONE, AppOpsManager.OPSTR_READ_PHONE_STATE,
@@ -227,7 +227,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getSlotIndex(int subId) {
-+        // The subscription's slot is the phone info permission's.
++        // The subscription's slot is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getSlotIndex", null)) {
 +            return SubscriptionManager.INVALID_SIM_SLOT_INDEX;
 +        }
@@ -238,7 +238,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getSubId(int slotIndex) {
-+        // The slot's subscription id is the phone info permission's.
++        // The slot's subscription id is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getSubId", null)) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }
@@ -249,7 +249,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  "getDefaultSubIdAsUser");
  
-+        // The default subscription is the phone info permission's.
++        // The default subscription is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getDefaultSubId", "getDefaultSubIdAsUser")) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }
@@ -260,7 +260,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getPhoneId(int subId) {
-+        // The subscription's slot is the phone info permission's.
++        // The subscription's slot is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getPhoneId", null)) {
 +            return SubscriptionManager.INVALID_PHONE_INDEX;
 +        }
@@ -271,7 +271,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getDefaultDataSubId() {
-+        // The default data subscription is the phone info permission's.
++        // The default data subscription is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getDefaultDataSubId", null)) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }
@@ -282,7 +282,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getDefaultVoiceSubIdAsUser(@UserIdInt int userId) {
-+        // The default voice subscription is the phone info permission's.
++        // The default voice subscription is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getDefaultVoiceSubId", "getDefaultVoiceSubIdAsUser")) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }
@@ -293,7 +293,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getDefaultSmsSubIdAsUser(@UserIdInt int userId) {
-+        // The default SMS subscription is the phone info permission's.
++        // The default SMS subscription is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getDefaultSmsSubId", "getDefaultSmsSubIdAsUser")) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }
@@ -304,7 +304,7 @@ index 9eb5daf837630362fb05718e832c05da0a7c2c9b..2998f866c43d59b63fa116679db528a6
       */
      @Override
      public int getActiveDataSubscriptionId() {
-+        // The active data subscription is the phone info permission's.
++        // The active data subscription is basic phone info.
 +        if (lujarchRefusesPhoneInfo("getActiveDataSubscriptionId", null)) {
 +            return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 +        }

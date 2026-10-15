@@ -1,5 +1,5 @@
 diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
-index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a35b1b6f1 100644
+index b7d9f653023e91bc8c9145f0f6bf3014f921503c..793791c6a7bc9d7f3cfcdae5a0d91d37d7fca4aa 100644
 --- a/core/java/android/app/ActivityThread.java
 +++ b/core/java/android/app/ActivityThread.java
 @@ -247,6 +247,7 @@ import com.android.internal.R;
@@ -17,7 +17,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(newConfig,
 -                contextThemeWrapperOverrideConfig);
 +        // Without mcc and mnc when the process's phone
-+        // Info permission refuses (a copy; mCurrentConfig and the created configuration reported
++        // info permission refuses (a copy; mCurrentConfig and the created configuration reported
 +        // to the window manager keep the real values).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
@@ -29,7 +29,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a
      private void handleWindowingModeChangeIfNeeded(ActivityClientRecord r,
              Configuration newConfiguration) {
 +        // The activity's callbacks get no mcc and mnc
-+        // When the process's phone info permission refuses.
++        // when the process's phone info permission refuses.
 +        newConfiguration = Configuration.lujarchForApp(newConfiguration);
          final Activity activity = r.activity;
          final int newWindowingMode = newConfiguration.windowConfiguration.getWindowingMode();
@@ -40,7 +40,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a
  
 +    /**
 +     * What the system hands the app's process
-+     * Itself is decided once per process, at bind;
++     * itself is decided once per process, at bind;
 +     * A change of the user's choice applies from the app's next start. Uids below 10000 are
 +     * never touched (LujarchInfo). Isolated and SDK sandbox processes are not decided: their
 +     * uid is not the app's.
@@ -94,7 +94,7 @@ index b7d9f653023e91bc8c9145f0f6bf3014f921503c..431689ed99bc7abc9dd514d9faf6a30a
              /*
               * Update the system configuration since its preloaded and might not
 diff --git a/core/java/android/app/ConfigurationController.java b/core/java/android/app/ConfigurationController.java
-index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..0f2d4f1e34090c9032daed6121f5716b3bb9dcf5 100644
+index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..d5b1e5b9faaff5ac9e672d857b8c0eaad9d44da3 100644
 --- a/core/java/android/app/ConfigurationController.java
 +++ b/core/java/android/app/ConfigurationController.java
 @@ -256,8 +256,10 @@ class ConfigurationController {
@@ -104,7 +104,7 @@ index f491e3d274dba809dccb06be63ed3f64c3e8ed6a..0f2d4f1e34090c9032daed6121f5716b
 -        final Configuration configToReport = createNewConfigAndUpdateIfNotNull(
 -                newConfig, contextThemeWrapperOverrideConfig);
 +        // Without mcc and mnc when the process's phone
-+        // Info permission refuses (a copy; this controller keeps the real configuration).
++        // info permission refuses (a copy; this controller keeps the real configuration).
 +        final Configuration configToReport = Configuration.lujarchForApp(
 +                createNewConfigAndUpdateIfNotNull(newConfig, contextThemeWrapperOverrideConfig));
          cb.onConfigurationChanged(configToReport);
@@ -173,7 +173,7 @@ index 9aa1b18648f0be3b255790bfa0e100ab9d855a56..483473df89320dfa9d9d58c39941b962
       * <p>Construct an invalid Configuration. This state is only suitable for constructing a
       * Configuration delta that will be applied to some valid Configuration object. In order to
 diff --git a/core/java/android/content/res/ResourcesImpl.java b/core/java/android/content/res/ResourcesImpl.java
-index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..5b3e9eb1a8b733340488913d873e3002e7262288 100644
+index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..62447f47c78c02e9a535cc962049c3636d41366b 100644
 --- a/core/java/android/content/res/ResourcesImpl.java
 +++ b/core/java/android/content/res/ResourcesImpl.java
 @@ -681,6 +681,12 @@ public class ResourcesImpl {
@@ -181,7 +181,7 @@ index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..5b3e9eb1a8b733340488913d873e3002
  
          mTmpConfig.setTo(config);
 +        // No mcc and mnc for an app process whose phone
-+        // Info permission refuses, so no carrier-specific resources and none in the
++        // info permission refuses, so no carrier-specific resources and none in the
 +        // configuration the app reads; a stale value from before the decision is dropped.
 +        Configuration.lujarchClearOperator(mTmpConfig);
 +        final @Config int lujarchChanges = Configuration.lujarchClearOperator(mConfiguration)
@@ -278,7 +278,7 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..17490b097e5e7507e419dd1bfb047a34
      private static String getString(String property) {
          return SystemProperties.get(property, UNKNOWN);
 diff --git a/core/java/android/window/WindowTokenClient.java b/core/java/android/window/WindowTokenClient.java
-index e8c59a5d7286db6c4947d687169154771dfeb5d0..e45ee087a45078e3941b968f768c1ee2b2c9d714 100644
+index e8c59a5d7286db6c4947d687169154771dfeb5d0..55e64ef191f9f3482c1137e2445c6cd5226b833a 100644
 --- a/core/java/android/window/WindowTokenClient.java
 +++ b/core/java/android/window/WindowTokenClient.java
 @@ -209,7 +209,9 @@ public class WindowTokenClient extends Binder {
@@ -287,7 +287,7 @@ index e8c59a5d7286db6c4947d687169154771dfeb5d0..e45ee087a45078e3941b968f768c1ee2
                  if (dispatcher.shouldReportPrivateChanges() || publicDiff != 0) {
 -                    dispatcher.dispatchConfigurationChanged(newConfig);
 +                    // Without mcc and mnc when the
-+                    // Process's phone info permission refuses.
++                    // process's phone info permission refuses.
 +                    dispatcher.dispatchConfigurationChanged(Configuration.lujarchForApp(newConfig));
                  }
              }
@@ -571,7 +571,7 @@ index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792
              return mHealthServiceWrapper.getProperty(id, prop);
          }
 diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
-index ee20dde909221ec2968b308d829e46bc296400af..35fc14723b75358fead7516365895bf8e6c70e4d 100644
+index ee20dde909221ec2968b308d829e46bc296400af..f09fa2ecd7aa13a921fa776febceb3bd4967a785 100644
 --- a/services/core/java/com/android/server/TelephonyRegistry.java
 +++ b/services/core/java/com/android/server/TelephonyRegistry.java
 @@ -108,6 +108,7 @@ import com.android.internal.telephony.IOnSubscriptionsChangedListener;
@@ -645,7 +645,7 @@ index ee20dde909221ec2968b308d829e46bc296400af..35fc14723b75358fead7516365895bf8
              r.phoneId = phoneId;
              r.eventList = events;
 +            // Decided (and noted) at registration, so the user is asked at
-+            // The first listener; the initial values of the permission's events follow it.
++            // the first listener; the initial values of the permission's events follow it.
 +            final boolean lujarchPhoneInfo = lujarchPhoneInfo(r, events);
  
              if (DBG) {
@@ -1029,7 +1029,7 @@ index c81c8271da531b4722db5207a495880561341f53..4cde1fe1e23b362db53c98dd80787add
              long time = mStats.computeChargeTimeRemaining(mClock.elapsedRealtime());
              return time >= 0 ? (time/1000) : time;
 diff --git a/services/core/java/com/android/server/am/BroadcastController.java b/services/core/java/com/android/server/am/BroadcastController.java
-index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..93fd8aeee598b68a016161bb0ecec1388cc17b53 100644
+index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..d2c8f4b3ae609b2ebd58a4685b1c8616c8df1a9a 100644
 --- a/services/core/java/com/android/server/am/BroadcastController.java
 +++ b/services/core/java/com/android/server/am/BroadcastController.java
 @@ -285,8 +285,13 @@ class BroadcastController {
@@ -1039,7 +1039,7 @@ index ef95ad5e560f33d479ff58d2bd45f33f38f7c9ba..93fd8aeee598b68a016161bb0ecec138
 -            return registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
 -                    receiverId, receiver, filter, permission, userId, flags);
 +            // The sticky intent without extras when
-+            // The caller's permission for its action refuses (the caller's package was checked
++            // the caller's permission for its action refuses (the caller's package was checked
 +            // against its process).
 +            return LujarchInfoBroadcasts.forStickyCaller(mContext,
 +                    registerReceiverWithFeatureTraced(caller, callerPackage, callerFeatureId,
@@ -1064,7 +1064,7 @@ index 9a270af7373921d2b0fda1e0da5a4c2cf3f2b941..6ecf1d67c49b66f7ff77eb3803e1ef0c
                      return false;
 diff --git a/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7a7659af0
+index 0000000000000000000000000000000000000000..6c17f3f82cafb3d3f75c8214042a085450591402
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchInfoBroadcasts.java
 @@ -0,0 +1,214 @@
@@ -1105,7 +1105,7 @@ index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7
 +/**
 + * The system broadcasts that carry phone,
 + * network or device information to any app that registers for them, delivered without
-+ * Extras to an app whose permission refuses. The
++ * extras to an app whose permission refuses. The
 + * broadcast itself still arrives, so an app that waits for it keeps working; a sticky one
 + * is still returned by {@code registerReceiver(null, filter)}, and {@code getIntExtra}
 + * answers its default.
@@ -1166,7 +1166,7 @@ index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7
 +    /**
 +     * The intent the broadcast queue hands to {@code receiver} (a {@link BroadcastFilter} or
 +     * a manifest receiver's {@link ResolveInfo}): {@code intent} itself, or a copy without
-+     * Extras when the receiving app's permission for the action refuses.
++     * extras when the receiving app's permission for the action refuses.
 +     */
 +    @Nullable
 +    static Intent forReceiver(@NonNull Context context, @Nullable Intent intent,
@@ -1242,7 +1242,7 @@ index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7
 +
 +    /**
 +     * Apps keep sticky intents in a per-process cache ({@link BroadcastStickyCache}) that is
-+     * Refreshed only when the sticky broadcast is sent again; a change of a permission's mode
++     * refreshed only when the sticky broadcast is sent again; a change of a permission's mode
 +     * drops the cached intents of its actions, so the app's next registerReceiver asks again
 +     * and gets the intent its new mode allows.
 +     */
@@ -1283,7 +1283,7 @@ index 0000000000000000000000000000000000000000..532b75cbeb9177e241e19bb95b5a5be7
 +    }
 +}
 diff --git a/services/core/java/com/android/server/power/PowerManagerService.java b/services/core/java/com/android/server/power/PowerManagerService.java
-index cac2b761fb9ace853853f3aa21e460d09bc86900..6f439c25e5304b95aca49be36c289a5c70062ae2 100644
+index cac2b761fb9ace853853f3aa21e460d09bc86900..d081e42d1bbca3f60d92b010cb779c8d64582d08 100644
 --- a/services/core/java/com/android/server/power/PowerManagerService.java
 +++ b/services/core/java/com/android/server/power/PowerManagerService.java
 @@ -137,6 +137,7 @@ import com.android.internal.annotations.GuardedBy;
@@ -1299,7 +1299,7 @@ index cac2b761fb9ace853853f3aa21e460d09bc86900..6f439c25e5304b95aca49be36c289a5c
          @Override // Binder call
          public ParcelDuration getBatteryDischargePrediction() {
 +            // No prediction for an app whose device
-+            // Info permission refuses.
++            // info permission refuses.
 +            if (LujarchInfo.refuses(mContext, LujarchInfo.DEVICE, Binder.getCallingUid(),
 +                    null, null)) {
 +                return null;
@@ -1308,7 +1308,7 @@ index cac2b761fb9ace853853f3aa21e460d09bc86900..6f439c25e5304b95aca49be36c289a5c
              try {
                  synchronized (mLock) {
 diff --git a/services/usb/java/com/android/server/usb/UsbService.java b/services/usb/java/com/android/server/usb/UsbService.java
-index ba7b776420f450fd640c1b0236f583e5bd59a2c4..493aca4f03a0d7297d6170e9e1969964446b978e 100644
+index ba7b776420f450fd640c1b0236f583e5bd59a2c4..100deaa3b24872c35975a7d29b3592e7d98c94f9 100644
 --- a/services/usb/java/com/android/server/usb/UsbService.java
 +++ b/services/usb/java/com/android/server/usb/UsbService.java
 @@ -78,6 +78,7 @@ import android.util.proto.ProtoOutputStream;
@@ -1324,7 +1324,7 @@ index ba7b776420f450fd640c1b0236f583e5bd59a2c4..493aca4f03a0d7297d6170e9e1969964
      @Override
      public void getDeviceList(Bundle devices) {
 +        // No attached devices for an app whose device
-+        // Info permission refuses.
++        // info permission refuses.
 +        if (lujarchRefusesUsb()) {
 +            return;
 +        }
@@ -1346,7 +1346,7 @@ index ba7b776420f450fd640c1b0236f583e5bd59a2c4..493aca4f03a0d7297d6170e9e1969964
      @Override
      public UsbAccessory getCurrentAccessory() {
 +        // No attached accessory for an app whose device
-+        // Info permission refuses.
++        // info permission refuses.
 +        if (lujarchRefusesUsb()) {
 +            return null;
 +        }
@@ -1509,7 +1509,7 @@ index 0000000000000000000000000000000000000000..6b04fcbd36de29563107a137cb405746
 +    }
 +}
 diff --git a/telephony/java/android/telephony/TelephonyManager.java b/telephony/java/android/telephony/TelephonyManager.java
-index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..53752e3c654a64c5183207f1b24808d4c651b233 100644
+index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..92b8d76d6db8b2def738922e7f8991fb6fe40bd3 100644
 --- a/telephony/java/android/telephony/TelephonyManager.java
 +++ b/telephony/java/android/telephony/TelephonyManager.java
 @@ -45,6 +45,7 @@ import android.annotation.SystemApi;
@@ -1555,7 +1555,7 @@ index 5265eddc7aa869b1de8dc2d83124b9b863c836cd..53752e3c654a64c5183207f1b24808d4
 +     * operator, SIM country, roaming). Decided in the app's own process for its own uid
 +     * ({@link LujarchPhoneInfo#decideSelf}); the getters answer "" (false for roaming) in every
 +     * refused mode, as they never throw. The properties themselves stay readable to the app's
-+     * Native code.
++     * native code.
 +     */
 +    private static boolean lujarchRefusesPhoneInfo(@Nullable Context context) {
 +        return LujarchPhoneInfo.decideSelf(context) != AppOpsManager.MODE_ALLOWED;

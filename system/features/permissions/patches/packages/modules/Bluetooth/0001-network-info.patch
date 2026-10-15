@@ -79,7 +79,7 @@ index abb12e17de40e0e1c77df051c4fa2070949623aa..acc5c18cf9b9df8ca48d540f5bf8b07b
          return try {
 diff --git a/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..ee37764cc9f611df6e62130731b1061b9d5b70ea
+index 0000000000000000000000000000000000000000..0dc13066986e1883a1be94cf91a8ea59ddd95ddd
 --- /dev/null
 +++ b/service/src/com/android/server/bluetooth/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -120,11 +120,11 @@ index 0000000000000000000000000000000000000000..ee37764cc9f611df6e62130731b1061b
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
-+ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
-+ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid while the permission allows, every two seconds while it
 + * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
 + * window), and at once when the stored mode differs from the one last noted; in between only
-+ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
 + * lookup allows (logged). A framework that does not know the op (an image older than the op)
 + * throws for its name, which allows (logged once).
 + */

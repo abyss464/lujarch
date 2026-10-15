@@ -1,6 +1,6 @@
 diff --git a/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..908c3676b14f33de42bde177fde29c6445030a23
+index 0000000000000000000000000000000000000000..96913ea0d3ab32faf813ce5d492abbb3e48993d2
 --- /dev/null
 +++ b/Tethering/src/com/android/networkstack/tethering/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -41,11 +41,11 @@ index 0000000000000000000000000000000000000000..908c3676b14f33de42bde177fde29c64
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
-+ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
-+ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid while the permission allows, every two seconds while it
 + * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
 + * window), and at once when the stored mode differs from the one last noted; in between only
-+ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
 + * lookup allows (logged). A framework that does not know the op (an image older than the op)
 + * throws for its name, which allows (logged once).
 + */
@@ -295,7 +295,7 @@ index 14809fb611743a5badf900f6159b060168dc1a0f..ec5a2848fc4007a4ed01c2f99493f2c6
      }
  
 diff --git a/service/src/com/android/server/ConnectivityService.java b/service/src/com/android/server/ConnectivityService.java
-index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a82ea64cb1 100644
+index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..da5c52917ed7159d7799d25639ecaf348ba159f5 100644
 --- a/service/src/com/android/server/ConnectivityService.java
 +++ b/service/src/com/android/server/ConnectivityService.java
 @@ -283,6 +283,7 @@ import android.net.QosSocketInfo;
@@ -323,7 +323,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a8
 +        if (lujarchRefuses(mDeps.getCallingUid(), null, null)) {
 +            filtered.setExtraInfo(null);
 +        }
-+        // The subtype is the mobile network type, the phone info permission's (decided only
++        // The subtype is the mobile network type, basic phone info (decided only
 +        // when there is one, so a Wi-Fi NetworkInfo notes no phone info read).
 +        if ((filtered.getSubtype() != TelephonyManager.NETWORK_TYPE_UNKNOWN
 +                || !TextUtils.isEmpty(filtered.getSubtypeName()))
@@ -394,7 +394,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a8
                      && nc.hasCapability(NET_CAPABILITY_NOT_RESTRICTED)
                      && !result.containsKey(nai.network)) {
 +                // This API does not verify the package; the network info
-+                // Permission takes the uid's own.
++                // permission takes the uid's own.
                  result.put(
                          nai.network,
 -                        createWithSensitiveInfoSanitizedIfNecessaryWhenParceled(
@@ -533,7 +533,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a8
 +    }
 +
 +    /**
-+     * The phone info permission's part of the capabilities: a mobile network's subscription
++     * The basic phone info part of the capabilities: a mobile network's subscription
 +     * (TelephonyNetworkSpecifier, subscription ids) is left out for an app it refuses.
 +     * Decided only when there is one, so other networks note no phone info read.
 +     */
@@ -635,7 +635,7 @@ index 7682d5082635aeaa6f36c555c51f0ab2c17932c6..5f3f60ea1d8a95ed359362efd9de88a8
              case CALLBACK_BLK_CHANGED: {
 diff --git a/service/src/com/android/server/connectivity/LujarchNetworkInfo.java b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..4a597f0bfa69ce0fdddf800a45b9e792bdd4f8f5
+index 0000000000000000000000000000000000000000..49d9e01b4a21d4e03971e4b70f1d2ec344110c68
 --- /dev/null
 +++ b/service/src/com/android/server/connectivity/LujarchNetworkInfo.java
 @@ -0,0 +1,173 @@
@@ -674,16 +674,16 @@ index 0000000000000000000000000000000000000000..4a597f0bfa69ce0fdddf800a45b9e792
 +/**
 + * The network info permission ({@link #OP})
 + * for the reads ConnectivityService and NetworkStatsService answer,
-+ * And the phone info permission ({@link #PHONE}) for the mobile network type and subscription
++ * and the phone info permission ({@link #PHONE}) for the mobile network type and subscription
 + * id ConnectivityService hands out.
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
-+ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
-+ * Asked) at most once a minute per uid and op while the permission allows, every two seconds while it
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid and op while the permission allows, every two seconds while it
 + * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
 + * window), and at once when the stored mode differs from the one last noted; in between only
-+ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
 + * lookup allows (logged). A framework that does not know the op (an image older than the op)
 + * throws for its name, which allows (logged once).
 + */

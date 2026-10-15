@@ -1,6 +1,6 @@
 diff --git a/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..55d25b17f4c4601b995ce2ac3192b0b89e409d9c
+index 0000000000000000000000000000000000000000..995b3c27aa15757ba4e03b3e17168cbbc09253f8
 --- /dev/null
 +++ b/NfcNci/src/com/android/nfc/LujarchNetworkInfo.java
 @@ -0,0 +1,155 @@
@@ -41,11 +41,11 @@ index 0000000000000000000000000000000000000000..55d25b17f4c4601b995ce2ac3192b0b8
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
-+ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
-+ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid while the permission allows, every two seconds while it
 + * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
 + * window), and at once when the stored mode differs from the one last noted; in between only
-+ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
 + * lookup allows (logged). A framework that does not know the op (an image older than the op)
 + * throws for its name, which allows (logged once).
 + */

@@ -1,5 +1,5 @@
 diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
-index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989d0e1e9d9 100644
+index 242cf4107a634a706db67aff03371f17167f4900..259b775b8bb28f0367b7dd1134aaf8289745d4e4 100644
 --- a/src/com/android/phone/PhoneInterfaceManager.java
 +++ b/src/com/android/phone/PhoneInterfaceManager.java
 @@ -73,6 +73,7 @@ import android.os.LocaleList;
@@ -46,7 +46,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "isDataConnectivityPossible");
  
-+        // Data state is the phone info permission's; refused, false.
++        // Data state is basic phone info; refused, false.
 +        if (lujarchRefusesPhoneInfo("isDataConnectivityPossible")) {
 +            return false;
 +        }
@@ -57,8 +57,8 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
              throw new SecurityException("This method can only be used for applications "
                      + "targeting API version 30 or less.");
          }
-+        // Up to target SDK 30 the call state needs no permission; it is
-+        // The phone info permission's (refused: idle, as this getter never throws).
++        // Up to target SDK 30 the call state needs no permission: it is basic phone info
++        // (refused: idle, as this getter never throws).
 +        if (lujarchRefusesPhoneInfo("getCallState")) {
 +            return TelephonyManager.CALL_STATE_IDLE;
 +        }
@@ -69,10 +69,10 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(callingPackage,
                  PackageManager.FEATURE_TELEPHONY_CALLING, "getCallStateForSubscription");
  
-+        // Up to target SDK 30 (no READ_PHONE_STATE above) the call state is
-+        // The phone info permission's; refused, idle.
++        // Up to target SDK 30 (no READ_PHONE_STATE above) the call state is basic phone info;
++        // refused, idle.
 +        if (!CompatChanges.isChangeEnabled(
-+                TelecomManager.ENABLE_GET_CALL_STATE_PERMISSION_PROTECTION,
++                TelephonyManager.ENABLE_GET_CALL_STATE_PERMISSION_PROTECTION,
 +                Binder.getCallingUid())
 +                && lujarchRefusesPhoneInfo("getCallStateForSubscription")) {
 +            return TelephonyManager.CALL_STATE_IDLE;
@@ -85,7 +85,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "getDataStateForSubId");
  
-+        // Data state is the phone info permission's; refused, disconnected.
++        // Data state is basic phone info; refused, disconnected.
 +        if (lujarchRefusesPhoneInfo("getDataState", "getDataStateForSubId")) {
 +            return TelephonyManager.DATA_DISCONNECTED;
 +        }
@@ -96,7 +96,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "getDataActivityForSubId");
  
-+        // Data activity is the phone info permission's; refused, none.
++        // Data activity is basic phone info; refused, none.
 +        if (lujarchRefusesPhoneInfo("getDataActivity", "getDataActivityForSubId")) {
 +            return TelephonyManager.DATA_ACTIVITY_NONE;
 +        }
@@ -107,7 +107,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                      PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getNetworkCountryIsoForPhone");
          }
  
-+        // The network country is the phone info permission's; refused, "" (the
++        // The network country is basic phone info; refused, "" (the
 +        // API's "not available").
 +        if (lujarchRefusesPhoneInfo("getNetworkCountryIsoForPhone")) {
 +            return "";
@@ -121,7 +121,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
      @Override
      public String getTypeAllocationCodeForSlot(int slotIndex) {
 +        // The TAC (the IMEI's first eight digits) names the phone's model,
-+        // Which the device info permission guards; refused, null (not available), as the
++        // which the device info permission guards; refused, null (not available), as the
 +        // Build fields read "unknown". An app's own read only (sLujarchIncoming).
 +        if ("getTypeAllocationCodeForSlot".equals(sLujarchIncoming.get())
 +                && LujarchInfo.decide(mApp, LujarchInfo.DEVICE, Binder.getCallingUid(), null,
@@ -135,7 +135,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                      PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSubscriptionCarrierId");
          }
  
-+        // The carrier id is the phone info permission's; refused, unknown.
++        // The carrier id is basic phone info; refused, unknown.
 +        if (lujarchRefusesPhoneInfo("getSubscriptionCarrierId")) {
 +            return TelephonyManager.UNKNOWN_CARRIER_ID;
 +        }
@@ -146,7 +146,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSubscriptionCarrierName");
  
-+        // The carrier name is the phone info permission's; refused, null
++        // The carrier name is basic phone info; refused, null
 +        // (unknown).
 +        if (lujarchRefusesPhoneInfo("getSubscriptionCarrierName")) {
 +            return null;
@@ -158,7 +158,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSubscriptionSpecificCarrierId");
  
-+        // The carrier id is the phone info permission's; refused, unknown.
++        // The carrier id is basic phone info; refused, unknown.
 +        if (lujarchRefusesPhoneInfo("getSubscriptionSpecificCarrierId")) {
 +            return TelephonyManager.UNKNOWN_CARRIER_ID;
 +        }
@@ -169,7 +169,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                  PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION,
                  "getSubscriptionSpecificCarrierName");
  
-+        // The carrier name is the phone info permission's; refused, null
++        // The carrier name is basic phone info; refused, null
 +        // (unknown).
 +        if (lujarchRefusesPhoneInfo("getSubscriptionSpecificCarrierName")) {
 +            return null;
@@ -257,7 +257,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
 +    /**
 +     * The READ_PHONE_STATE check of a read READ_BASIC_PHONE_STATE did not
 +     * pass ({@code mode} MODE_ALLOWED: the stock path, the permission is missing) or the phone
-+     * Info permission refused ({@code mode} ignored or errored), as {@link #lujarchRefused}: its
++     * info permission refused ({@code mode} ignored or errored), as {@link #lujarchRefused}: its
 +     * SecurityException propagates on the stock path and when errored, and reads false when
 +     * ignored.
 +     */
@@ -279,7 +279,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_DATA, "isConcurrentVoiceAndDataAllowed");
  
-+        // Follows the current network type, the phone info permission's.
++        // Follows the current network type, basic phone info.
 +        if (lujarchRefusesPhoneInfo("isConcurrentVoiceAndDataAllowed")) {
 +            return false;
 +        }
@@ -291,7 +291,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                  PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getNetworkTypeForSubscriber");
  
 +        // Below target SDK 29 this read needs no permission; it is the phone
-+        // Info permission's (refused: unknown, as it never throws there).
++        // info permission's (refused: unknown, as it never throws there).
 +        if (targetSdk < android.os.Build.VERSION_CODES.Q
 +                && lujarchPhoneInfo(callingPackage, callingFeatureId,
 +                        "getNetworkTypeForSubscriber") != AppOpsManager.MODE_ALLOWED) {
@@ -309,7 +309,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
 -                mApp, functionName)) {
 -            if (!TelephonyPermissions.checkCallingOrSelfReadPhoneState(
 -                    mApp, subId, callingPackage, callingFeatureId, functionName)) {
-+        // What READ_BASIC_PHONE_STATE reaches is the phone info permission's; a
++        // What READ_BASIC_PHONE_STATE reaches is basic phone info; a
 +        // refused read is decided as if that permission were missing (lujarchReadBasic).
 +        final boolean readBasic =
 +                TelephonyPermissions.checkCallingOrSelfReadNonDangerousPhoneStateNoThrow(
@@ -350,7 +350,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                      PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "hasIccCardUsingSlotIndex");
          }
  
-+        // SIM presence is the phone info permission's; refused, false.
++        // SIM presence is basic phone info; refused, false.
 +        if (lujarchRefusesPhoneInfo("hasIccCard", "hasIccCardUsingSlotIndex")) {
 +            return false;
 +        }
@@ -470,7 +470,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
       * @param subId
       */
      public boolean isImsRegistered(int subId) {
-+        // IMS registration is service state, the phone info permission's;
++        // IMS registration is service state, basic phone info;
 +        // refused, false.
 +        if (lujarchRefusesPhoneInfo("isImsRegistered")) {
 +            return false;
@@ -483,7 +483,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
       */
      public boolean isWifiCallingAvailable(int subId) {
 +        // Wi-Fi calling availability is service state, the phone info
-+        // Permission's; refused, false.
++        // permission's; refused, false.
 +        if (lujarchRefusesPhoneInfo("isWifiCallingAvailable")) {
 +            return false;
 +        }
@@ -495,7 +495,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
       */
      public boolean isVideoTelephonyAvailable(int subId) {
 +        // Video calling availability is service state, the phone info
-+        // Permission's; refused, false.
++        // permission's; refused, false.
 +        if (lujarchRefusesPhoneInfo("isVideoTelephonyAvailable")) {
 +            return false;
 +        }
@@ -506,7 +506,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
          enforceTelephonyFeatureWithException(getCurrentPackageName(),
                  PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS, "getSignalStrength");
  
-+        // Signal strength is the phone info permission's; refused, null (the
++        // Signal strength is basic phone info; refused, null (the
 +        // API's "not available").
 +        if (lujarchRefusesPhoneInfo("getSignalStrength")) {
 +            return null;
@@ -569,7 +569,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                  PackageManager.FEATURE_TELEPHONY_MESSAGING, "getMmsUAProfUrl");
  
 +        // The carrier's MMS UA profile URL names the carrier, the phone info
-+        // Permission's; refused, "".
++        // permission's; refused, "".
 +        if (lujarchRefusesPhoneInfo("getMmsUAProfUrl")) {
 +            return "";
 +        }
@@ -582,7 +582,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                  PackageManager.FEATURE_TELEPHONY_MESSAGING, "getMmsUserAgent");
  
 +        // The carrier's MMS user agent names the carrier, the phone info
-+        // Permission's; refused, "".
++        // permission's; refused, "".
 +        if (lujarchRefusesPhoneInfo("getMmsUserAgent")) {
 +            return "";
 +        }
@@ -594,7 +594,7 @@ index 242cf4107a634a706db67aff03371f17167f4900..fb5e351179c2390125850b96e85b0989
                      PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION, "getSimStateForSlotIndex");
          }
  
-+        // SIM state is the phone info permission's; refused, unknown.
++        // SIM state is basic phone info; refused, unknown.
 +        if (lujarchRefusesPhoneInfo("getSimStateForSlotIndex")) {
 +            return TelephonyManager.SIM_STATE_UNKNOWN;
 +        }

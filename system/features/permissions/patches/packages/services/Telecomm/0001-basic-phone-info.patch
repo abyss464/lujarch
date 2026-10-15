@@ -89,7 +89,7 @@ index 0000000000000000000000000000000000000000..0889c747bb991ad6303b088e7fd6f5a5
 +    }
 +}
 diff --git a/src/com/android/server/telecom/TelecomServiceImpl.java b/src/com/android/server/telecom/TelecomServiceImpl.java
-index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..05568fbb1b2b4a32736603b00fc413ef8eeb3dcd 100644
+index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..39fe64b71a56a1cc3a9d085e9b9789af7e330b65 100644
 --- a/src/com/android/server/telecom/TelecomServiceImpl.java
 +++ b/src/com/android/server/telecom/TelecomServiceImpl.java
 @@ -53,6 +53,7 @@ import android.os.Binder;
@@ -170,7 +170,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..05568fbb1b2b4a32736603b00fc413ef
                              + "targeting API version 30 or less.");
                  }
 +                // Without READ_PHONE_STATE the call state is the phone info
-+                // Permission's; refused, idle.
++                // permission's; refused, idle.
 +                if (lujarchRefusesCallState("getCallState", null, null)) {
 +                    return TelephonyManager.CALL_STATE_IDLE;
 +                }
@@ -184,7 +184,7 @@ index 832f2ab65906f05a94724afb5d90d1b4c16e1d04..05568fbb1b2b4a32736603b00fc413ef
 +                } else if (lujarchRefusesCallState("getCallStateUsingPackage", callingPackage,
 +                        callingFeatureId)) {
 +                    // Up to target SDK 30 the call state needs no permission;
-+                    // It is the phone info permission's (refused: idle).
++                    // It is basic phone info (refused: idle).
 +                    return TelephonyManager.CALL_STATE_IDLE;
                  }
                  event.setResult(ApiStats.RESULT_NORMAL);

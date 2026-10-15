@@ -1,6 +1,6 @@
 diff --git a/service/java/com/android/server/wifi/LujarchNetworkInfo.java b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ac371a09f102d5b793836b5f996c17aae30b634
+index 0000000000000000000000000000000000000000..7a42629f296ec1b1af60a08b195df891c13d2cbc
 --- /dev/null
 +++ b/service/java/com/android/server/wifi/LujarchNetworkInfo.java
 @@ -0,0 +1,153 @@
@@ -41,11 +41,11 @@ index 0000000000000000000000000000000000000000..0ac371a09f102d5b793836b5f996c17a
 + *
 + * <p>The rules of the framework's com.android.internal.app.LujarchInfo, which code in a
 + * mainline module cannot call, through the public AppOpsManager API: uid 0, 1000 and every
-+ * Uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
-+ * Asked) at most once a minute per uid while the permission allows, every two seconds while it
++ * uid below 10000 pass untouched; the op is noted (recorded, and with ask set the user is
++ * asked) at most once a minute per uid while the permission allows, every two seconds while it
 + * refuses (so a crash right after a refused read finds the refusal, the crash notice's 3 s
 + * window), and at once when the stored mode differs from the one last noted; in between only
-+ * The mode is checked, so a change of the user's choice applies at the next read. A failed
++ * the mode is checked, so a change of the user's choice applies at the next read. A failed
 + * lookup allows (logged). A framework that does not know the op (an image older than the op)
 + * throws for its name, which allows (logged once).
 + */

@@ -1,5 +1,5 @@
 diff --git a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
-index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..bc31de04be82d4b669831016a77e002d7aa72465 100644
+index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..5998ae469ce5b77815ee4fe95c939286a965500c 100644
 --- a/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
 +++ b/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
 @@ -219,6 +219,7 @@ import com.android.server.accessibility.magnification.MagnificationController;
@@ -43,9 +43,9 @@ index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..bc31de04be82d4b669831016a77e002d
              }
 +        }
 +        // Stock hands every enabled service to any app, which
-+        // Names the apps the user enabled as accessibility services. For an app the
++        // names the apps the user enabled as accessibility services. For an app the
 +        // Installed apps permission restricts, a service stays only when its package
-+        // Stays in the permission's lists (LujarchAppList#hides: lenient keeps system
++        // stays in the permission's lists (LujarchAppList#hides: lenient keeps system
 +        // services, strict the allow-set; both keep the app's own). Decided outside mLock.
 +        final int callingUid = Binder.getCallingUid();
 +        if (result.isEmpty() || Binder.getCallingPid() == OWN_PROCESS_ID
@@ -64,7 +64,7 @@ index ca079f8b1d8c9a2ac212d02fad580e5cf120964d..bc31de04be82d4b669831016a77e002d
  
      @Override
 diff --git a/services/core/java/com/android/server/accounts/AccountManagerService.java b/services/core/java/com/android/server/accounts/AccountManagerService.java
-index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71abc2bdf85 100644
+index 308996d8c23505cd1b95c93ea2d2024a70bef538..93d90da95f92d8738232fb69c1d20a58f2cb6475 100644
 --- a/services/core/java/com/android/server/accounts/AccountManagerService.java
 +++ b/services/core/java/com/android/server/accounts/AccountManagerService.java
 @@ -100,6 +100,7 @@ import android.os.UserManager;
@@ -88,8 +88,8 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71a
          }
  
 +        // Account lists follow the installed apps
-+        // Permission (lujarchFilterAccounts); apps cache getAccounts() until the accounts
-+        // Data changes, so a change of the permission's mode drops those caches.
++        // permission (lujarchFilterAccounts); apps cache getAccounts() until the accounts
++        // data changes, so a change of the permission's mode drops those caches.
 +        try {
 +            mAppOpsManager.startWatchingMode(AppOpsManager.OPSTR_LUJARCH_INSTALLED_APPS, null,
 +                    (op, packageName) -> AccountManager.invalidateLocalAccountsDataCaches());
@@ -106,8 +106,8 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71a
          try {
              UserAccounts accounts = getUserAccounts(userId);
 +            // The packages that asked for or were given the
-+            // Authenticator's account name apps; an authenticator the installed apps
-+            // Permission restricts gets only the packages the permission's lists keep, judged
++            // authenticator's account name apps; an authenticator the installed apps
++            // permission restricts gets only the packages the permission's lists keep, judged
 +            // on a copy of the visibility cache outside the account locks.
 +            final int lujarchMode = LujarchAppList.mode(mContext, callingUid, null);
 +            final Map<String, Integer> kept;
@@ -134,7 +134,7 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71a
 +            // Below target SDK 34 stock answers whether the
 +            // package is installed (account types, visibility queries); an app the
 +            // Installed apps permission restricts learns only of packages the permission's
-+            // Lists keep. From 34 on, package visibility below carries the permission.
++            // lists keep. From 34 on, package visibility below carries the permission.
              return pmInternal.getPackageUid(
 -                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID;
 +                    targetPkgName, 0 /* flags */, userId) != Process.INVALID_UID
@@ -158,9 +158,9 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71a
 +     * An account's type names the app that authenticates it
 +     * (com.whatsapp, org.telegram.messenger, ...), and account visibility lets an app see
 +     * accounts no package visibility check covers (an app holding READ_CONTACTS sees every
-+     * Account whose type manages contacts). For an app the installed apps permission
++     * account whose type manages contacts). For an app the installed apps permission
 +     * restricts, an account stays only when its authenticator's package stays in the
-+     * Permission's lists ({@link LujarchAppList#hides}: lenient keeps system authenticators,
++     * permission's lists ({@link LujarchAppList#hides}: lenient keeps system authenticators,
 +     * strict keeps the allow-set; both keep the app's own).
 +     */
 +    private void lujarchFilterAccounts(UserAccounts accounts, Map<Account, Integer> visible,
@@ -200,10 +200,10 @@ index 308996d8c23505cd1b95c93ea2d2024a70bef538..af01a5a5beff9071f5aa99f9ea2fe71a
              @NonNull Map<Account, Integer> unfiltered, int callingUid,
 diff --git a/services/core/java/com/android/server/lujarch/LujarchAppList.java b/services/core/java/com/android/server/lujarch/LujarchAppList.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..69ec1ce90c21c2d058ecc3dcf10c1e1276030a33
+index 0000000000000000000000000000000000000000..eb98d080d51865ffe2cb03585ca0bf8b82dbde4d
 --- /dev/null
 +++ b/services/core/java/com/android/server/lujarch/LujarchAppList.java
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,125 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -236,12 +236,10 @@ index 0000000000000000000000000000000000000000..69ec1ce90c21c2d058ecc3dcf10c1e12
 +import com.android.server.pm.pkg.PackageStateInternal;
 +
 +/**
-+ * The installed apps permission
-+ * ({@link AppOpsManager#OPSTR_LUJARCH_INSTALLED_APPS}) over lists system services build
-+ * from other apps' components and hand to any app: accounts and account types
-+ * (AccountManagerService), the enabled accessibility services
-+ * (AccessibilityManagerService). , "Into
-+ * Existing permissions".
++ * The installed apps permission ({@link AppOpsManager#OPSTR_LUJARCH_INSTALLED_APPS}) over
++ * lists system services build from other apps' components and hand to any app: accounts and
++ * account types (AccountManagerService) and the enabled accessibility services
++ * (AccessibilityManagerService).
 + *
 + * <p>Package visibility (AppsFilter) carries the permission's two levels, so an entry is
 + * judged as package visibility judges its owner, with what stock lists show regardless
@@ -250,7 +248,7 @@ index 0000000000000000000000000000000000000000..69ec1ce90c21c2d058ecc3dcf10c1e12
 + * <li>allowed: stock;</li>
 + * <li>ignored (lenient): the entries of system packages stay; an entry of an app the
 + * owner installed stays only when package visibility shows that app to the caller (the
-+ * Permission's allow-set, an interaction);</li>
++ * permission's allow-set, an interaction);</li>
 + * <li>errored (strict): an entry stays only when package visibility shows its owner to
 + * the caller, which at this level is the allow-set alone.</li>
 + * </ul>
@@ -858,7 +856,7 @@ index 32795d030d8703f0253fdef1a8912d3a9677732e..f06f603fabad545391dc05e59dceb0ce
              if (mCacheReady && mCacheEnabled) {
                  if (!shouldFilterApplicationUsingCache(callingUid,
 diff --git a/services/core/java/com/android/server/pm/AppsFilterImpl.java b/services/core/java/com/android/server/pm/AppsFilterImpl.java
-index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..1835ae69748fcc41be45cae1843054a4a0eb6551 100644
+index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..73e4ec59b32c761befd1bb0505bdc46af3c3ca2e 100644
 --- a/services/core/java/com/android/server/pm/AppsFilterImpl.java
 +++ b/services/core/java/com/android/server/pm/AppsFilterImpl.java
 @@ -450,6 +450,9 @@ public final class AppsFilterImpl extends AppsFilterLocked implements Watchable,
@@ -866,7 +864,7 @@ index 135fb7b8b22eee2659712c6b1ca55b4a94e86337..1835ae69748fcc41be45cae1843054a4
                  forcedQueryablePackageNames, forceSystemAppsQueryable, null,
                  injector.getHandler());
 +        // Keep the system context and handler to
-+        // Reach AppOpsManager for the installed apps permission (see onSystemReady).
++        // reach AppOpsManager for the installed apps permission (see onSystemReady).
 +        lujarchSetContext(injector.getContext(), injector.getHandler());
          featureConfig.setAppsFilter(appsFilter);
          return appsFilter;

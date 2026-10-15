@@ -1,5 +1,5 @@
 diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-index 212fae2c5a9b358e92a16888a0487d41a309ce24..2c00c46b7fbb512db5415b0bae21ae2a4db568d9 100644
+index 212fae2c5a9b358e92a16888a0487d41a309ce24..0be0ca58bc9f4f60d5c09a1c5b31dd38932ceaf2 100644
 --- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
 +++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
 @@ -351,6 +351,72 @@ public final class TelephonyPermissions {
@@ -29,7 +29,7 @@ index 212fae2c5a9b358e92a16888a0487d41a309ce24..2c00c46b7fbb512db5415b0bae21ae2a
 +                // The no-argument IDeviceIdentifiersPolicyService.getSerial()
 +                // passes no package, and any app can call it directly; attribute
 +                // the access to the uid's most restricted package so that path
-+                // Cannot bypass the permission.
++                // cannot bypass the permission.
 +                pkg = lujarchMostRestrictedPackage(context, appOps, uid);
 +                if (pkg == null) {
 +                    return AppOpsManager.MODE_ALLOWED;
