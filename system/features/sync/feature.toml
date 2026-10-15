@@ -1,0 +1,17 @@
+prefix = "SYN"
+
+# The sync engine, built outside the tree (process/layout.md, Components); pinned in lock.toml.
+[components.syncthing]
+build = "go"
+module = "lujarch_sync_engine"
+package = "./cmd/syncthing"
+tags = ["noassets", "noupgrade", "sqlite_omit_load_extension", "sqlite_dbstat"]
+version_vars = ["github.com/syncthing/syncthing/lib/build.Version"]
+stamp_vars = ["github.com/syncthing/syncthing/lib/build.Stamp"]
+# -checklinkname=0: the engine's interface listing for Android links to internals of net.
+ldflags = [
+    "-checklinkname=0",
+    "-X github.com/syncthing/syncthing/lib/build.User=lujarch",
+    "-X github.com/syncthing/syncthing/lib/build.Host=lujarch",
+    "-X github.com/syncthing/syncthing/lib/build.Tags=noassets,noupgrade,sqlite_omit_load_extension,sqlite_dbstat",
+]
