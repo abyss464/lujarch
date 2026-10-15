@@ -1,0 +1,392 @@
+diff --git a/aosp/cleanup_previous_update_action.cc b/aosp/cleanup_previous_update_action.cc
+index 3b060aa7d92788b6cbe2c0090f6b3b9303ebb198..cee005c5bf529d9e18cc7c8335a043648ea292cf 100644
+--- a/aosp/cleanup_previous_update_action.cc
++++ b/aosp/cleanup_previous_update_action.cc
+@@ -15,6 +15,9 @@
+ //
+ #include "update_engine/aosp/cleanup_previous_update_action.h"
+ 
++#include <sys/inotify.h>
++#include <unistd.h>
++
+ #include <algorithm>
+ #include <chrono>
+ #include <functional>
+@@ -24,6 +27,7 @@
+ #include <android-base/chrono_utils.h>
+ #include <android-base/properties.h>
+ #include <base/bind.h>
++#include <libsnapshot/lujarch_merge_gate.h>
+ #include <libsnapshot/snapshot.h>
+ 
+ #if !defined(__ANDROID_RECOVERY__) && !defined(UE_DISABLE_STATS)
+@@ -50,6 +54,16 @@ constexpr auto kCheckSlotMarkedSuccessfulInterval =
+ // Interval to call SnapshotManager::ProcessUpdateState
+ constexpr auto kWaitForMergeInterval = base::TimeDelta::FromSeconds(2);
+ 
++// The merge of an update waits for the running build's confirmation, which lujarch_updates writes
++// into this directory (libsnapshot/lujarch_merge_gate.h).
++constexpr const char* kLujarchDir = android::snapshot::lujarch::kDir;
++// The merge state lujarch_updates reports: waiting, merging, merged, none, cancelled, installed,
++// failed, needs_reboot.
++constexpr char kLujarchMergeProp[] = "lujarch.updates.merge";
++constexpr char kLujarchProgressProp[] = "lujarch.updates.merge_progress";
++// Re-check of the confirmation when the directory cannot be watched.
++constexpr auto kLujarchRecheckInterval = base::TimeDelta::FromSeconds(60);
++
+ #ifdef __ANDROID_RECOVERY__
+ static constexpr bool kIsRecovery = true;
+ #else
+@@ -58,6 +72,25 @@ static constexpr bool kIsRecovery = false;
+ 
+ namespace chromeos_update_engine {
+ 
++namespace {
++
++void LujarchPublish(const char* state) {
++  if (kIsRecovery)
++    return;
++  if (!android::base::SetProperty(kLujarchMergeProp, state)) {
++    LOG(WARNING) << "lujarch_updates: cannot set " << kLujarchMergeProp << " to "
++                 << state;
++  }
++}
++
++void LujarchPublishProgress(unsigned int percent) {
++  if (kIsRecovery)
++    return;
++  android::base::SetProperty(kLujarchProgressProp, std::to_string(percent));
++}
++
++}  // namespace
++
+ CleanupPreviousUpdateAction::CleanupPreviousUpdateAction(
+     PrefsInterface* prefs,
+     BootControlInterface* boot_control,
+@@ -131,6 +164,8 @@ void CleanupPreviousUpdateAction::CheckTaskScheduled(std::string_view name) {
+ void CleanupPreviousUpdateAction::StopActionInternal() {
+   LOG(INFO) << "Stopping/suspending/completing CleanupPreviousUpdateAction";
+   running_ = false;
++  LujarchStopWatching();
++  lujarch_waiting_ = false;
+ 
+   if (scheduled_task_.IsScheduled()) {
+     if (scheduled_task_.Cancel()) {
+@@ -207,6 +242,10 @@ void CleanupPreviousUpdateAction::CheckForMergeDelay() {
+     StartMerge();
+     return;
+   }
++  if (LujarchMergeWaits()) {
++    LujarchWaitForConfirmation();
++    return;
++  }
+   const auto merge_delay_seconds =
+       std::clamp<int>(android::base::GetIntProperty(kMergeDelaySecondsProp, 0),
+                       0,
+@@ -236,6 +275,88 @@ void CleanupPreviousUpdateAction::CheckSlotMarkedSuccessfulOrSchedule() {
+   CheckForMergeDelay();
+ }
+ 
++// Whether the merge of the running build waits for its confirmation: an update that runs on
++// snapshots, booted into its target slot, while the source slot still holds the previous build.
++// The boot is marked successful as before, so the bootloader never falls back on its own; the
++// previous build is restored only on request (lujarch_updates switches the active slot, and
++// libsnapshot cancels the snapshots at the next boot). Recovery merges as before.
++bool CleanupPreviousUpdateAction::LujarchMergeWaits() {
++  if (kIsRecovery)
++    return false;
++  // The decision SnapshotManager::InitiateMerge makes; which slot the update came from is
++  // libsnapshot's boot indicator, compared with the booted slot.
++  const auto gate = android::snapshot::lujarch::ReadGateInput(
++      snapshot_->GetUpdateState() == UpdateState::Unverified,
++      android::base::GetProperty("ro.boot.slot_suffix", ""));
++  lujarch_on_source_ = android::snapshot::lujarch::BootedFromSource(gate);
++  const bool waits = android::snapshot::lujarch::MergeAwaitsConfirmation(gate);
++  if (waits) {
++    LOG(INFO) << "lujarch_updates: the merge of " << gate.version << " in slot "
++              << gate.current_suffix << " waits: "
++              << android::snapshot::lujarch::WaitReason(gate);
++  }
++  return waits;
++}
++
++void CleanupPreviousUpdateAction::LujarchWaitForConfirmation() {
++  TEST_AND_RETURN(running_);
++  if (!lujarch_waiting_) {
++    lujarch_waiting_ = true;
++    LujarchPublish("waiting");
++  }
++  if (lujarch_watch_ != nullptr)
++    return;
++  lujarch_inotify_fd_.reset(inotify_init1(IN_NONBLOCK | IN_CLOEXEC));
++  // lujarch_updates renames a complete file into place (IN_MOVED_TO).
++  if (lujarch_inotify_fd_ < 0 ||
++      inotify_add_watch(lujarch_inotify_fd_.get(),
++                        kLujarchDir,
++                        IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE |
++                            IN_DELETE_SELF | IN_MOVE_SELF) < 0) {
++    PLOG(ERROR) << "lujarch_updates: cannot watch " << kLujarchDir
++                << ", checking the confirmation every "
++                << kLujarchRecheckInterval.InSeconds() << " s";
++    lujarch_inotify_fd_.reset();
++    if (!scheduled_task_.PostTask(
++            FROM_HERE,
++            [this]() { LujarchRecheck(); },
++            kLujarchRecheckInterval)) {
++      CheckTaskScheduled("LujarchRecheck");
++    }
++    return;
++  }
++  lujarch_watch_ = base::FileDescriptorWatcher::WatchReadable(
++      lujarch_inotify_fd_.get(),
++      base::BindRepeating(&CleanupPreviousUpdateAction::LujarchOnGateEvent,
++                          base::Unretained(this)));
++}
++
++void CleanupPreviousUpdateAction::LujarchOnGateEvent() {
++  // The events only say that something changed; the file is read again.
++  char buf[4096];
++  while (read(lujarch_inotify_fd_.get(), buf, sizeof(buf)) > 0) {
++  }
++  LujarchRecheck();
++}
++
++void CleanupPreviousUpdateAction::LujarchRecheck() {
++  AcknowledgeTaskExecuted();
++  TEST_AND_RETURN(running_);
++  if (LujarchMergeWaits()) {
++    LujarchWaitForConfirmation();
++    return;
++  }
++  LOG(INFO) << "lujarch_updates: the running build is confirmed, merging";
++  LujarchStopWatching();
++  lujarch_waiting_ = false;
++  CheckForMergeDelay();
++}
++
++void CleanupPreviousUpdateAction::LujarchStopWatching() {
++  lujarch_watch_.reset();
++  lujarch_inotify_fd_.reset();
++}
++
+ void CleanupPreviousUpdateAction::StartMerge() {
+   if (metadata_device_ == nullptr) {
+     metadata_device_ = snapshot_->EnsureMetadataMounted();
+@@ -307,6 +428,7 @@ void CleanupPreviousUpdateAction::WaitForMergeOrSchedule() {
+   switch (state) {
+     case UpdateState::None: {
+       LOG(INFO) << "Can't find any snapshot to merge.";
++      LujarchPublish("none");
+       ErrorCode error_code = ErrorCode::kSuccess;
+       if (!snapshot_->CancelUpdate()) {
+         error_code = ErrorCode::kError;
+@@ -328,18 +450,21 @@ void CleanupPreviousUpdateAction::WaitForMergeOrSchedule() {
+     }
+ 
+     case UpdateState::Merging: {
++      LujarchPublish("merging");
+       ScheduleWaitForMerge();
+       return;
+     }
+ 
+     case UpdateState::MergeNeedsReboot: {
+       LOG(ERROR) << "Need reboot to finish merging.";
++      LujarchPublish("needs_reboot");
+       processor_->ActionComplete(this, ErrorCode::kError);
+       return;
+     }
+ 
+     case UpdateState::MergeCompleted: {
+       LOG(INFO) << "Merge finished with state MergeCompleted.";
++      LujarchPublish("merged");
+       boot_control_->MarkSlotUnbootable(1 - boot_control_->GetCurrentSlot());
+       processor_->ActionComplete(this, ErrorCode::kSuccess);
+       return;
+@@ -347,6 +472,7 @@ void CleanupPreviousUpdateAction::WaitForMergeOrSchedule() {
+ 
+     case UpdateState::MergeFailed: {
+       LOG(ERROR) << "Merge failed. Device may be corrupted.";
++      LujarchPublish("failed");
+       processor_->ActionComplete(this, ErrorCode::kDeviceCorrupted);
+       return;
+     }
+@@ -355,6 +481,14 @@ void CleanupPreviousUpdateAction::WaitForMergeOrSchedule() {
+       // DeltaPerformer::ResetUpdateProgress failed, hence snapshots are
+       // not deleted to avoid inconsistency.
+       // Nothing can be done here; just try next time.
++      // Restoring the previous build ends here. The update's slot was marked successful when it
++      // ran, and after the cancel its dynamic partitions no longer hold that build: it must not
++      // be booted again.
++      LujarchPublish(cancel_failed_ ? "failed" : "cancelled");
++      if (lujarch_on_source_ && !cancel_failed_) {
++        LOG(INFO) << "lujarch_updates: the restored update's slot is marked unbootable";
++        boot_control_->MarkSlotUnbootable(1 - boot_control_->GetCurrentSlot());
++      }
+       ErrorCode error_code =
+           cancel_failed_ ? ErrorCode::kError : ErrorCode::kSuccess;
+       processor_->ActionComplete(this, error_code);
+@@ -381,6 +515,7 @@ bool CleanupPreviousUpdateAction::OnMergePercentageUpdate() {
+   if (last_percentage_ < static_cast<unsigned int>(percentage)) {
+     last_percentage_ = percentage;
+     LOG(INFO) << "Waiting for merge to complete: " << last_percentage_ << "%.";
++    LujarchPublishProgress(last_percentage_);
+   }
+ 
+   // Do not continue to wait for merge. Instead, let ProcessUpdateState
+@@ -436,11 +571,18 @@ void CleanupPreviousUpdateAction::InitiateMergeAndWait() {
+   }
+ 
+   if (snapshot_->InitiateMerge()) {
++    LujarchPublishProgress(0);
+     WaitForMergeOrSchedule();
+     return;
+   }
+ 
+   LOG(WARNING) << "InitiateMerge failed.";
++  // libsnapshot refuses a merge the running build's confirmation does not allow; wait for it as
++  // CheckForMergeDelay does.
++  if (LujarchMergeWaits()) {
++    LujarchWaitForConfirmation();
++    return;
++  }
+   auto state = snapshot_->GetUpdateState();
+   if (state == UpdateState::Unverified) {
+     // We are stuck at unverified state. This can happen if the update has
+@@ -451,6 +593,8 @@ void CleanupPreviousUpdateAction::InitiateMergeAndWait() {
+     LOG(WARNING) << "InitiateMerge leaves the device at "
+                  << "UpdateState::Unverified. (Did update_engine "
+                  << "restarted?)";
++    // An update written to the other slot, not booted yet.
++    LujarchPublish("installed");
+     processor_->ActionComplete(this, ErrorCode::kSuccess);
+     return;
+   }
+diff --git a/aosp/cleanup_previous_update_action.h b/aosp/cleanup_previous_update_action.h
+index 5cbff34c6efcc4199ee0979afe0c82dddda27909..4d181c724ba51d903879adae9b2d3a60f03ee4e1 100644
+--- a/aosp/cleanup_previous_update_action.h
++++ b/aosp/cleanup_previous_update_action.h
+@@ -21,6 +21,8 @@
+ #include <string>
+ #include <string_view>
+ 
++#include <android-base/unique_fd.h>
++#include <base/files/file_descriptor_watcher_posix.h>
+ #include <brillo/message_loops/message_loop.h>
+ #include <libsnapshot/snapshot.h>
+ 
+@@ -65,6 +67,10 @@ class CleanupPreviousUpdateAction : public Action<CleanupPreviousUpdateAction> {
+   typedef ActionTraits<CleanupPreviousUpdateAction>::OutputObjectType
+       OutputObjectType;
+ 
++  // Whether the merge of the running build waits for its confirmation; the previous build can
++  // still be restored then.
++  bool LujarchWaitingForConfirmation() const { return lujarch_waiting_; }
++
+  private:
+   PrefsInterface* prefs_;
+   BootControlInterface* boot_control_;
+@@ -73,6 +79,13 @@ class CleanupPreviousUpdateAction : public Action<CleanupPreviousUpdateAction> {
+   std::unique_ptr<android::snapshot::AutoDevice> metadata_device_;
+   bool running_{false};
+   bool cancel_failed_{false};
++  // The confirmation is watched with inotify on /metadata/lujarch/updates while the merge waits.
++  bool lujarch_waiting_{false};
++  // The source slot runs while an update is Unverified: the update waits for its restart, or the
++  // previous build was restored (ProcessUpdateState then cancels the update).
++  bool lujarch_on_source_{false};
++  android::base::unique_fd lujarch_inotify_fd_;
++  std::unique_ptr<base::FileDescriptorWatcher::Controller> lujarch_watch_;
+   unsigned int last_percentage_{0};
+   ScopedTaskId scheduled_task_;
+ 
+@@ -93,6 +106,13 @@ class CleanupPreviousUpdateAction : public Action<CleanupPreviousUpdateAction> {
+   void InitiateMergeAndWait();
+   void ReportMergeStats();
+ 
++  // The merge of an update waits for the running build's confirmation (lujarch_merge_gate.h).
++  bool LujarchMergeWaits();
++  void LujarchWaitForConfirmation();
++  void LujarchOnGateEvent();
++  void LujarchRecheck();
++  void LujarchStopWatching();
++
+   // Callbacks to ProcessUpdateState.
+   bool OnMergePercentageUpdate();
+   bool BeforeCancel();
+diff --git a/aosp/update_attempter_android.cc b/aosp/update_attempter_android.cc
+index 9e4a99608b602498e1d3f01d1986f99f5a0fb886..896431b6e71cd60c362ad697f5242da38d235532 100644
+--- a/aosp/update_attempter_android.cc
++++ b/aosp/update_attempter_android.cc
+@@ -88,6 +88,27 @@ namespace {
+ const double kBroadcastThresholdProgress = 0.01;  // 1%
+ const int kBroadcastThresholdSeconds = 10;
+ 
++// While the merge of the running build waits for its confirmation, the previous build is still in
++// the other slot and no update can be written there (libsnapshot keeps the live snapshots).
++const char kLujarchWaitsForConfirmation[] =
++    "lujarch_updates: the running build waits for confirmation; no other update is installed";
++
++bool LujarchMergeWaitsForConfirmation(ActionProcessor* processor) {
++  if (!processor->IsRunning())
++    return false;
++  AbstractAction* action = processor->current_action();
++  return action != nullptr &&
++         action->Type() == CleanupPreviousUpdateAction::StaticType() &&
++         static_cast<CleanupPreviousUpdateAction*>(action)->LujarchWaitingForConfirmation();
++}
++
++// The merge state lujarch_updates reports; the cleanup action sets the others.
++void LujarchPublishInstalled() {
++#ifndef _UE_SIDELOAD
++  android::base::SetProperty("lujarch.updates.merge", "installed");
++#endif
++}
++
+ // Log and set the error on the passed ErrorPtr.
+ bool LogAndSetGenericError(Error* error,
+                            int line_number,
+@@ -225,6 +246,7 @@ void UpdateAttempterAndroid::Init() {
+   if (UpdateCompletedOnThisBoot()) {
+     LOG(INFO) << "Updated installed but update_engine is restarted without "
+                  "device reboot. Resuming old state.";
++    LujarchPublishInstalled();
+     SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+   } else {
+     const auto result = GetOTAUpdateResult();
+@@ -259,6 +281,13 @@ bool UpdateAttempterAndroid::ApplyPayload(
+                           "An update already applied, waiting for reboot",
+                           ErrorCode::kUpdateAlreadyInstalled);
+   }
++  if (LujarchMergeWaitsForConfirmation(processor_.get())) {
++    return LogAndSetError(error,
++                          __LINE__,
++                          __FILE__,
++                          kLujarchWaitsForConfirmation,
++                          ErrorCode::kUpdateProcessing);
++  }
+   if (processor_->IsRunning() && !CancelOptionalPostinstall()) {
+     return LogAndSetError(error,
+                           __LINE__,
+@@ -453,6 +482,13 @@ bool UpdateAttempterAndroid::ApplyPayload(
+         __FILE__,
+         "An update already applied, waiting for reboot");
+   }
++  if (LujarchMergeWaitsForConfirmation(processor_.get())) {
++    return LogAndSetError(error,
++                          __LINE__,
++                          __FILE__,
++                          kLujarchWaitsForConfirmation,
++                          ErrorCode::kUpdateProcessing);
++  }
+   if (processor_->IsRunning()) {
+     return LogAndSetGenericError(
+         error,
+@@ -929,6 +965,8 @@ void UpdateAttempterAndroid::TerminateUpdateAndNotify(ErrorCode error_code) {
+   UpdateStatus new_status =
+       (error_code == ErrorCode::kSuccess ? UpdateStatus::UPDATED_NEED_REBOOT
+                                          : UpdateStatus::IDLE);
++  if (new_status == UpdateStatus::UPDATED_NEED_REBOOT)
++    LujarchPublishInstalled();
+   SetStatusAndNotify(new_status);
+   payload_fd_.reset();
+ 

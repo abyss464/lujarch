@@ -1,3 +1,4 @@
 device/fuxi
 features/core
 features/permissions
+features/updates
