@@ -683,9 +683,10 @@ def commit_index(where, message):
     return commit
 
 
-def conflict_files(where):
-    """Files a patch still conflicts in: unmerged paths, leftover markers, rejected hunks."""
-    found = set(unmerged(where))
+def conflict_files(where, resolving=False):
+    """Files a patch still conflicts in: leftover markers, rejected hunks, and, until the
+    resolution starts, unmerged paths."""
+    found = set() if resolving else set(unmerged(where))
     rejects = pgit(where, "ls-files", "--others", "--", "*.rej").stdout.split("\n")
     found |= {r for r in rejects if r}
     listed = pgit(where, "diff", "--name-only", "HEAD").stdout.split("\n")
@@ -717,7 +718,7 @@ def finish_applying(where, project, wanted):
     if patch not in wanted:
         die(f"{project}: {rel(patch)} is being resolved but is no longer a patch of it; "
             f"drop the resolution with git -C {where} reset --hard, delete {marker}")
-    left = conflict_files(where)
+    left = conflict_files(where, resolving=True)
     if left:
         die(f"{project}: {rel(patch)} still conflicts in " + ", ".join(left))
     pgit(where, "add", "-A", check=True)
