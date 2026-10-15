@@ -5,3 +5,11 @@ prebuilt_etc {
     sub_dir: "init",
     system_ext_specific: true,
 }
+
+// Settings' launcher icon (BRD-2).
+runtime_resource_overlay {
+    name: "LujarchBrandingSettingsIcon",
+    manifest: "src/overlay/settings/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/settings/res"],
+    system_ext_specific: true,
+}

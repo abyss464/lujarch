@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Lujarch (BRD-2): Settings' launcher icon, under Settings' own resource name so the manifest,
+     the task description and the shortcuts all show it. The layers have names of their own, so
+     Settings' ic_launcher_* layers stay as they are; the monochrome layer is the themed icon.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/lujarch_settings_icon_background" />
+    <foreground android:drawable="@drawable/lujarch_settings_icon_foreground" />
+    <monochrome android:drawable="@drawable/lujarch_settings_icon_monochrome" />
+</adaptive-icon>

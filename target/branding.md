@@ -1,7 +1,7 @@
 # Branding
 
-The system names itself Lujarch and shows one mark of its own; Android's and the apps' own names
-and icons stay theirs.
+The system names itself Lujarch and has two marks: the trigram Li on its icon, the ten-shard symbol
+in its motion. Apps keep their own names, and every app but Settings keeps its own icon.
 
 ## Name and mark
 
@@ -18,14 +18,24 @@ only where it is credited (Legal information, LineageOS contributors). Apps keep
 About phone > Android version shows the Lujarch version: the release number and the commit of a
 release, or the commit alone for any other build.
 
-### BRD-2 One mark
+### BRD-2 Settings' icon carries the trigram Li
+
+- Home: the launcher
+- Switch: none
+- Default: none
+- Verify: vm
+
+Settings' app icon is a white gear on a teal plate with the trigram Li (☲) at its hub, with a
+monochrome version of the gear and Li for Themed icons.
+
+### BRD-3 The ten-shard symbol is the mark in motion
 
 - Home: none
 - Switch: none
 - Default: none
 - Verify: vm
 
-The Lujarch mark, the ten-shard symbol, takes the place of LineageOS' mark wherever the system
-shows one: the animation while the phone starts, recovery and fastbootd, and the System updates
-card. Recovery and fastbootd show it with Lujarch's name and version in the mark's colors. Every
-image of the mark is made from one drawing.
+The ten-shard symbol takes the place of LineageOS' mark wherever the system shows one: the
+animation while the phone starts, recovery and fastbootd, and the System updates card. Recovery
+and fastbootd show it with Lujarch's name and version in the symbol's colors. Lujarch's moments
+(motion.md) are made of it. Every image of the symbol is made from one drawing.
