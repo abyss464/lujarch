@@ -20,3 +20,17 @@ index 913207039f8e3fdb8e90089c24e478a47d16ad40..e3384622eee686ccd6dd9200dc7c49a5
  
          const val PLATLOGO_PACKAGE_NAME: String = "org.lineageos.lineageparts"
          const val PLATLOGO_ACTIVITY_CLASS: String = PLATLOGO_PACKAGE_NAME + ".logo.PlatLogoActivity"
+diff --git a/src/com/android/settings/deviceinfo/firmwareversion/LineageVersionDetailPreferenceController.java b/src/com/android/settings/deviceinfo/firmwareversion/LineageVersionDetailPreferenceController.java
+index b98ab96bfaf1ed327be9b41be5079e64c5c2bc0f..97a84fd905e1cc4554e5dc920989e7fa77d438a4 100644
+--- a/src/com/android/settings/deviceinfo/firmwareversion/LineageVersionDetailPreferenceController.java
++++ b/src/com/android/settings/deviceinfo/firmwareversion/LineageVersionDetailPreferenceController.java
+@@ -42,7 +42,8 @@ public class LineageVersionDetailPreferenceController extends BasePreferenceCont
+     private static final int DELAY_TIMER_MILLIS = 500;
+     private static final int ACTIVITY_TRIGGER_COUNT = 3;
+ 
+-    private static final String KEY_LINEAGE_VERSION_PROP = "ro.lineage.version";
++    // Lujarch (BRD-1): the Lujarch version the tools write, not LineageOS'
++    private static final String KEY_LINEAGE_VERSION_PROP = "ro.lujarch.version";
+ 
+     private static final String PLATLOGO_PACKAGE_NAME = "org.lineageos.lineageparts";
+     private static final String PLATLOGO_ACTIVITY_CLASS =
