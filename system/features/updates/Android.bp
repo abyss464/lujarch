@@ -48,3 +48,13 @@ runtime_resource_overlay {
     resource_dirs: ["src/overlay/updater/res"],
     system_ext_specific: true,
 }
+
+// What updates adds to Lujarch Settings: Confirm automatically in Settings search.
+android_library {
+    name: "LujarchUpdatesSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+}

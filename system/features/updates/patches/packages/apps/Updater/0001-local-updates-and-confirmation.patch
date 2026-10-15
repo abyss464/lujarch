@@ -10,6 +10,25 @@ index 2cbfcf94776bb62a5bc3a5c75ba38a1d9016e488..c716c75da6861939cece883a2a68f29d
      ],
  
      optimize: {
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 1cfa4d1871f4b4bd968401773d9b6a900a634444..2ea874f259e50da12a17b7d3b6c3c2ccc9fab7c2 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -32,7 +32,13 @@
+ 
+         <activity
+             android:name=".preferences.PreferencesActivity"
+-            android:exported="false" />
++            android:exported="true">
++            <!-- Settings search opens Confirm automatically here. -->
++            <intent-filter>
++                <action android:name="org.lujarch.updates.action.UPDATE_PREFERENCES" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </activity>
+ 
+         <activity
+             android:name=".UpdatesActivity"
 diff --git a/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt b/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt
 index bb6bc873b05d718bb818a24d0e6a59325f6a35c0..f89e7adccfd5d5028be5c88f6bbf5856dbbb9409 100644
 --- a/app/src/main/java/org/lineageos/updater/UpdatesScaffoldActivity.kt
