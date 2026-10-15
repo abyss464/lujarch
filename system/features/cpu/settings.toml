@@ -1,0 +1,5 @@
+[idle_floor]
+table = "global"
+type = "bool"
+default = true
+item = "CPU-1"

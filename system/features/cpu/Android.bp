@@ -1,0 +1,7 @@
+// The CPU clusters' floor, written by init when the switch or the post-boot script changes it.
+prebuilt_etc {
+    name: "lujarch_cpu.rc",
+    src: "src/init/lujarch_cpu.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}

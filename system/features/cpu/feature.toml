@@ -1,0 +1,2 @@
+prefix = "CPU"
+devices = ["fuxi"]
