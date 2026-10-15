@@ -38,8 +38,9 @@ directory, the target file and every identifier (process/conventions.md).
 
 ```
 system/features/<feature>/
-├── feature.toml          prefix (the target CODE), devices it applies to
+├── feature.toml          prefix (the target CODE), devices it applies to, components it builds
 ├── patches/<project>/    NNNN-<what>.patch, changes to the upstream project at that tree path
+├── components/<name>/    NNNN-<what>.patch, changes to a component's source
 ├── src/                  what the feature adds: apps, daemons, libraries, configs, overlays
 ├── sepolicy/             the feature's SELinux policy
 ├── settings.toml         the feature's switches: key, type, default, the item each implements
@@ -56,6 +57,14 @@ system/features/<feature>/
   registry and its mirror, the page framework of Lujarch's pages in Settings with the App info
   rows and search entries features contribute, the daemon base, the AID table, shared SELinux
   macros.
+- A component is a program a feature builds outside the tree with the tree's own Go or Rust
+  toolchain and the host's NDK: `feature.toml` names it under `[components.<name>]` with its
+  `build` (`go` or `cargo`), the `module` it becomes and how it is built; `lock.toml` pins its
+  commit; the host configuration's `[sources]` says where its repository is on the computer.
+  The tools build it once for each pin, patch series and toolchain, for every device
+  architecture, offline (Go modules from the computer's module cache, crates from Cargo's), and
+  stage it at `vendor/extra/features/<feature>/prebuilt/<arch>/<module>` for the feature's
+  `Android.bp`.
 - A feature that applies to some devices only says so in `feature.toml`; the build of another
   device leaves it out.
 - A feature's patches cover every upstream project it changes, including device projects
@@ -113,7 +122,9 @@ blob ids.
 ## Pins
 
 - `lock.toml`: the upstream branch and AOSP tag, the build variant, each device's stock
-  release, and every source or prebuilt a feature fetches (version, commit or URL, and hash).
+  release, and every source or prebuilt a feature fetches (version, commit or URL, and hash):
+  a component is `[components.<name>]` with its `commit` (and `version` and `url` where it has
+  them).
   A stock release is `[stock.<device>]` with `release`, `urls` (mirrors of one package) and
   `sha256`; `[stock.<device>.files]` holds the sha256 of every file the device takes from it.
   `tools/lujarch stock <device>` downloads, checks and unpacks the package under the host's
@@ -138,7 +149,8 @@ stock = "..."         # unpacked stock releases
 ndk = "..."           # Android NDK for components built outside the tree
 
 [sources]
-mihomo-manager = "..."  # where a separate component's repository is; its commit is in lock.toml
+mihomo = "..."          # where each component's repository is; its commit is in lock.toml
+mihomo-manager = "..."
 
 [computer]
 cpus = "..."          # the CPUs builds and the virtual device run on; the others stay free

@@ -1,0 +1,20 @@
+diff --git a/vendor/github.com/metacubex/sing-tun/ping/destination.go b/vendor/github.com/metacubex/sing-tun/ping/destination.go
+index 7f629061f72b2af2c5c827e535e123dd378af271..db8af9fed87942a8c44a2667af13c67002807c91 100644
+--- a/vendor/github.com/metacubex/sing-tun/ping/destination.go
++++ b/vendor/github.com/metacubex/sing-tun/ping/destination.go
+@@ -88,7 +88,14 @@ func (d *Destination) loopRead() {
+ 		err = d.conn.ReadIP(buffer)
+ 		if err != nil {
+ 			buffer.Release()
+-			if !E.IsClosed(err) {
++			if errors.Is(err, os.ErrDeadlineExceeded) {
++				// the deadline is the ICMP session's idle timeout,
++				// renewed by every packet read. It passes after the last
++				// reply of every ping and when a ping gets no answer: the
++				// session ends as designed, and a silent destination is no
++				// error of the proxy.
++				d.logger.DebugContext(d.ctx, E.Cause(err, "receive ICMP echo reply"))
++			} else if !E.IsClosed(err) {
+ 				d.logger.ErrorContext(d.ctx, E.Cause(err, "receive ICMP echo reply"))
+ 			}
+ 			return

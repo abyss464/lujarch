@@ -1,0 +1,103 @@
+diff --git a/vendor/github.com/metacubex/sing-tun/monitor_linux.go b/vendor/github.com/metacubex/sing-tun/monitor_linux.go
+index e8d20ceb342645273a6fa9a56385ca3287d9b3e8..cc37a9b4692b801acaf072bee658c2f022801990 100644
+--- a/vendor/github.com/metacubex/sing-tun/monitor_linux.go
++++ b/vendor/github.com/metacubex/sing-tun/monitor_linux.go
+@@ -10,6 +10,7 @@ import (
+ 	"github.com/metacubex/sing/common/logger"
+ 	"github.com/metacubex/sing/common/x/list"
+ 	"github.com/sagernet/netlink"
++	"github.com/sagernet/netlink/nl"
+ 
+ 	"golang.org/x/sys/unix"
+ )
+@@ -17,6 +18,7 @@ import (
+ type networkUpdateMonitor struct {
+ 	routeUpdate chan netlink.RouteUpdate
+ 	linkUpdate  chan netlink.LinkUpdate
++	ruleUpdate  chan struct{}
+ 	close       chan struct{}
+ 
+ 	access    sync.Mutex
+@@ -34,6 +36,7 @@ func NewNetworkUpdateMonitor(logger logger.Logger) (NetworkUpdateMonitor, error)
+ 	monitor := &networkUpdateMonitor{
+ 		routeUpdate: make(chan netlink.RouteUpdate, 2),
+ 		linkUpdate:  make(chan netlink.LinkUpdate, 2),
++		ruleUpdate:  make(chan struct{}, 1),
+ 		close:       make(chan struct{}),
+ 		logger:      logger,
+ 	}
+@@ -63,6 +66,10 @@ func (m *networkUpdateMonitor) Start() error {
+ 	if err != nil {
+ 		return err
+ 	}
++	err = m.subscribeRules()
++	if err != nil {
++		m.logger.Warn("default interface monitor: ip rule changes are not watched: ", err)
++	}
+ 	go m.loopUpdate()
+ 	return nil
+ }
+@@ -77,6 +84,7 @@ func (m *networkUpdateMonitor) loopUpdate() {
+ 			return
+ 		case <-m.routeUpdate:
+ 		case <-m.linkUpdate:
++		case <-m.ruleUpdate:
+ 		}
+ 		m.emit()
+ 		select {
+@@ -88,6 +96,55 @@ func (m *networkUpdateMonitor) loopUpdate() {
+ 	}
+ }
+ 
++// subscribeRules makes ip rule changes trigger the default interface check.
++// Android switches its default network (Wi-Fi comes up while mobile data stays
++// connected, or the reverse) by rewriting the "fwmark 0x0/0xffff" rules that
++// the Android checkUpdate reads, while the routes and links of both networks
++// stay as they are; with route and link events alone the monitor keeps the
++// previous interface, and every outbound socket stays bound to it.
++func (m *networkUpdateMonitor) subscribeRules() error {
++	s, err := nl.Subscribe(unix.NETLINK_ROUTE, unix.RTNLGRP_IPV4_RULE, unix.RTNLGRP_IPV6_RULE)
++	if err != nil {
++		return err
++	}
++	go func() {
++		<-m.close
++		s.Close()
++	}()
++	go func() {
++		for {
++			msgs, _, err := s.Receive()
++			if err == unix.ENOBUFS {
++				// messages were lost (a network switch rewrites many rules at once): check anyway
++				m.signalRuleUpdate()
++				continue
++			}
++			if err != nil {
++				select {
++				case <-m.close:
++				default:
++					m.logger.Error("default interface monitor: receive ip rule changes: ", err)
++				}
++				return
++			}
++			for _, msg := range msgs {
++				if msg.Header.Type == unix.RTM_NEWRULE || msg.Header.Type == unix.RTM_DELRULE {
++					m.signalRuleUpdate()
++					break
++				}
++			}
++		}
++	}()
++	return nil
++}
++
++func (m *networkUpdateMonitor) signalRuleUpdate() {
++	select {
++	case m.ruleUpdate <- struct{}{}:
++	default:
++	}
++}
++
+ func (m *networkUpdateMonitor) Close() error {
+ 	select {
+ 	case <-m.close:

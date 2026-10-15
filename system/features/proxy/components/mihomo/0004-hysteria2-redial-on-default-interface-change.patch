@@ -1,0 +1,85 @@
+diff --git a/adapter/outbound/hysteria2_close_lujarch.go b/adapter/outbound/hysteria2_close_lujarch.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..09e0375ce7393d736f84cb00d092e29259210a7f
+--- /dev/null
++++ b/adapter/outbound/hysteria2_close_lujarch.go
+@@ -0,0 +1,21 @@
++package outbound
++
++import C "github.com/metacubex/mihomo/constant"
++
++// CloseHysteria2Connection closes the current QUIC connection of a Hysteria 2
++// proxy (Lujarch): the adapter stays usable, and its next request dials a new
++// connection on a new UDP socket. Every parsed proxy is wrapped in
++// autoCloseProxyAdapter (adapter/parser.go), whose own Close runs once and
++// only for an outdated proxy, so the Hysteria 2 adapter is taken from inside
++// it. False for any other adapter.
++func CloseHysteria2Connection(a C.ProxyAdapter) bool {
++	if w, ok := a.(*autoCloseProxyAdapter); ok {
++		a = w.ProxyAdapter
++	}
++	h, ok := a.(*Hysteria2)
++	if !ok {
++		return false
++	}
++	_ = h.Close()
++	return true
++}
+diff --git a/listener/sing_tun/hysteria2_redial_lujarch.go b/listener/sing_tun/hysteria2_redial_lujarch.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..798d475c4a68986cf383633f253fea0f888b5c6d
+--- /dev/null
++++ b/listener/sing_tun/hysteria2_redial_lujarch.go
+@@ -0,0 +1,38 @@
++package sing_tun
++
++import (
++	"github.com/metacubex/mihomo/adapter/outbound"
++	C "github.com/metacubex/mihomo/constant"
++	"github.com/metacubex/mihomo/log"
++	"github.com/metacubex/mihomo/tunnel"
++)
++
++// closeHysteria2Sessions closes the current QUIC connection of every Hysteria 2
++// node once the default interface has changed. A Hysteria 2 client carries all
++// its streams over one QUIC connection on the UDP socket it was dialed with
++// (port hopping only changes the server port), and that socket stays bound to
++// the interface that was the default at the time. On Android mobile data stays
++// connected next to Wi-Fi, so without this the node keeps running over mobile
++// data after Wi-Fi became the default, for as long as the connection lives.
++// Only the connection is closed: the next request dials a new one on the new
++// default interface.
++func closeHysteria2Sessions() {
++	closed := map[C.Proxy]bool{} // *adapter.Proxy: a pointer, hashable
++	closeOne := func(p C.Proxy) {
++		if closed[p] {
++			return
++		}
++		closed[p] = true
++		if outbound.CloseHysteria2Connection(p.Adapter()) {
++			log.Warnln("[TUN] %s: QUIC connection closed, the next one is dialed on the new default interface", p.Name())
++		}
++	}
++	for _, p := range tunnel.Proxies() {
++		closeOne(p)
++	}
++	for _, pd := range tunnel.Providers() {
++		for _, p := range pd.Proxies() {
++			closeOne(p)
++		}
++	}
++}
+diff --git a/listener/sing_tun/server.go b/listener/sing_tun/server.go
+index 1e9527ec5754c0477b90eafbca565841062e1871..8a639c7fb36ebe32f87a84d66bdb968ba4db9219 100644
+--- a/listener/sing_tun/server.go
++++ b/listener/sing_tun/server.go
+@@ -365,6 +365,9 @@ func New(options LC.Tun, tunnel C.Tunnel, additions ...inbound.Addition) (l *Lis
+ 			}
+ 			iface.FlushCache()
+ 			resolver.ResetConnection() // reset resolver's connection after default interface changed
++			if defaultInterface != nil {
++				closeHysteria2Sessions()
++			}
+ 		})
+ 		err = defaultInterfaceMonitor.Start()
+ 		if err != nil {

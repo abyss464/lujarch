@@ -52,3 +52,11 @@ sha256 = "728015a71fd5a4affd54a00eb2b164256f6fcafa96805194de3b2ad3ac642e00"
 "vendor/bin/ssr_setup" = "537b6c3cd7b0b36befbba735a1c0ab21a1efbde59a8ee2344862e4f7701a50c9"
 "vendor/etc/init/vendor.qti.esepowermanager@1.1-service.rc" = "cc0c23bf86c480eff39563e7c4733fe1e0848d68f284e6975947823be873bb74"
 "vendor/lib64/hw/vendor.qti.esepowermanager@1.1-impl.so" = "1ae97baa2a0e21b9285c8a68805a2d7a92c3bc0a1b9d4aa96a529b4d20330066"
+
+[components.mihomo]
+url = "https://github.com/MetaCubeX/mihomo.git"
+version = "v1.19.31"
+commit = "ab405bad5beeeac8b003bb01f60f134f6df54471"
+
+[components.mihomo-manager]
+commit = "70b21adac5b60e323ae7003020e304b9756524df"

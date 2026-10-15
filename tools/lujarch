@@ -307,7 +307,10 @@ def check_files(findings):
         for n, line in enumerate(text.split("\n"), 1):
             if path.suffix == ".patch" and line.startswith("diff --git "):
                 patched = line.rsplit(" b/", 1)[-1]
-            for pattern in LEGACY:
+            # A patch's removed and context lines are the upstream project's own text.
+            upstream = path.suffix == ".patch" and line[:1] in ("-", " ", "@") and not (
+                line.startswith("--- ") or line.startswith("@@@"))
+            for pattern in () if upstream else LEGACY:
                 if pattern.search(line):
                     findings.add(path, n, "legacy name; the system is Lujarch")
                     break
@@ -378,6 +381,16 @@ def check_lock(findings):
         for name, digest in pin.get("files", {}).items():
             if not re.fullmatch(r"[0-9a-f]{64}", str(digest)):
                 findings.add(path, 0, f"stock.{device}.files: {name} has no sha256")
+    pins = lock.get("components", {})
+    for name, pin in pins.items():
+        if not re.fullmatch(r"[0-9a-f]{40}", str(pin.get("commit", ""))):
+            findings.add(path, 0, f"components.{name}: commit is not a full commit id")
+    for feature, name, spec in feature_components():
+        if name not in pins:
+            findings.add(path, 0, f"component {name} of {feature} is not pinned")
+        if spec.get("build") not in ("go", "cargo") or "module" not in spec:
+            findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
+                         f"component {name}: build (go or cargo) and module are required")
     manifest = ROOT / "upstream.xml"
     if not manifest.exists():
         findings.add("upstream.xml", 0, "missing")
@@ -846,12 +859,13 @@ def extra_files(host):
             staged = False
             for src in sorted(p for p in tracked if d in p.parents):
                 inner = src.relative_to(d)
-                if inner.parts[0] in ("patches", "tests") or src.name == ".gitkeep":
+                if inner.parts[0] in ("patches", "tests", "components") or src.name == ".gitkeep":
                     continue
                 files[f"{kind}/{d.name}/{inner.as_posix()}"] = src.read_bytes()
                 staged = True
             if staged:
                 found.append(d.name)
+    files.update(component_files(host))
     if not files:
         return {}
 
@@ -923,6 +937,147 @@ def settings_libraries(features):
             '    name: "lujarch_settings_features",\n'
             f"    static_libs: [\n{names}    ],\n"
             "}\n")
+
+
+# ---------------------------------------------------------------------------
+# Components: programs a feature builds outside the tree
+
+
+# The API level the components are linked for.
+COMPONENT_API = 34
+GO_ARCH = {"arm64": "arm64", "x86_64": "amd64"}
+RUST_ARCH = {"arm64": "aarch64", "x86_64": "x86_64"}
+
+
+def device_arches():
+    return sorted({load_toml(p).get("arch", "arm64")
+                   for p in (SYSTEM / "device").glob("*/device.toml")})
+
+
+def feature_components():
+    """Every component of every feature.toml, as (feature, name, spec)."""
+    out = []
+    for path in sorted((SYSTEM / "features").glob("*/feature.toml")):
+        for name, spec in load_toml(path).get("components", {}).items():
+            out.append((path.parent.name, name, spec))
+    return out
+
+
+def component_patches(feature, name):
+    return sorted((SYSTEM / "features" / feature / "components" / name).glob("*.patch"))
+
+
+def tree_rust(tree):
+    text = (tree / "build" / "soong" / "rust" / "config" / "global.go").read_text()
+    m = re.search(r'RustDefaultVersion\s*=\s*"([^"]+)"', text)
+    if not m:
+        die("no RustDefaultVersion in build/soong/rust/config/global.go")
+    bin_dir = tree / "prebuilts" / "rust-toolchain" / "linux-x86" / m.group(1) / "bin"
+    if not (bin_dir / "cargo").is_file():
+        die(f"no cargo in {bin_dir}")
+    return bin_dir
+
+
+def component_source(host, name, pin):
+    """A checkout of the component's pinned commit, from its repository on this computer."""
+    repo = host.path_of("sources", name)
+    commit = pin["commit"]
+    if pgit(repo, "cat-file", "-e", f"{commit}^{{commit}}").returncode:
+        die(f"{repo} has no commit {commit} of {name} (lock.toml); fetch it there")
+    src = host.out / "components" / name / "src"
+    if not (src / ".git").is_dir():
+        src.parent.mkdir(parents=True, exist_ok=True)
+        if subprocess.run(["git", "clone", "-q", "--no-checkout", str(repo), str(src)]).returncode:
+            die(f"could not clone {repo}")
+    if pgit(src, "cat-file", "-e", f"{commit}^{{commit}}").returncode:
+        pgit(src, "fetch", "-q", str(repo), commit, check=True)
+    pgit(src, "checkout", "-q", "--force", "--detach", commit, check=True)
+    pgit(src, "clean", "-q", "-fdx", check=True)
+    return src
+
+
+def build_component(host, feature, name, spec, arch):
+    """The component's binary for arch, built once for each pin, patch series and toolchain."""
+    tree = host.tree
+    pin = lock_file().get("components", {}).get(name)
+    if not pin or "commit" not in pin:
+        die(f"component {name} of {feature} has no commit in lock.toml")
+    ndk = host.path_of("paths", "ndk") / "toolchains" / "llvm" / "prebuilt" / "linux-x86_64" / "bin"
+    clang = ndk / f"{RUST_ARCH[arch]}-linux-android{COMPONENT_API}-clang"
+    if not clang.is_file():
+        die(f"no {clang}")
+    patches = component_patches(feature, name)
+    if spec["build"] == "go":
+        toolchain = tree / "prebuilts" / "go" / "linux-x86" / "bin"
+    elif spec["build"] == "cargo":
+        toolchain = tree_rust(tree)
+    else:
+        die(f"component {name}: build is go or cargo")
+    digest = hashlib.sha256()
+    for part in (json.dumps(spec, sort_keys=True), json.dumps(pin, sort_keys=True), arch,
+                 str(clang), str(toolchain.resolve())):
+        digest.update(part.encode() + b"\0")
+    for patch in patches:
+        digest.update(patch.read_bytes())
+    out = host.out / "components" / name / arch / digest.hexdigest()[:16] / spec["module"]
+    if out.is_file():
+        return out
+    src = component_source(host, name, pin)
+    env = dict(os.environ, LC_ALL="C", TZ="UTC")
+    log(f"building component {name} ({pin.get('version', pin['commit'][:12])}, {arch})")
+    if spec["build"] == "go":
+        env.update({"GOTOOLCHAIN": "local", "GOPROXY": "off", "GOFLAGS": "-mod=mod",
+                    "GOCACHE": str(host.out / "components" / "go-cache")})
+        # The modules come from the computer's module cache, checked against go.sum.
+        if subprocess.run([str(toolchain / "go"), "mod", "vendor"], cwd=src, env=env).returncode:
+            die(f"{name}: go mod vendor failed (are its modules in the module cache?)")
+    for patch in patches:
+        if subprocess.run(["git", "apply", str(patch)], cwd=src).returncode:
+            die(f"{name}: {rel(patch)} does not apply")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if spec["build"] == "go":
+        version = f"{pin['version']}-lujarch"
+        ldflags = " ".join([*(f"-X '{v}={version}'" for v in spec.get("version_vars", [])),
+                            "-w", "-s", "-buildid="])
+        env.update({"GOFLAGS": "-mod=vendor", "CGO_ENABLED": "1", "GOOS": "android",
+                    "GOARCH": GO_ARCH[arch], "CC": str(clang)})
+        cmd = [str(toolchain / "go"), "build", "-trimpath", "-ldflags", ldflags, "-o", str(out)]
+        if spec.get("tags"):
+            cmd += ["-tags", ",".join(spec["tags"])]
+        built = subprocess.run([*cmd, spec.get("package", ".")], cwd=src, env=env).returncode == 0
+    else:
+        target = f"{RUST_ARCH[arch]}-linux-android"
+        triple = target.upper().replace("-", "_")
+        env.update({"RUSTC": str(toolchain / "rustc"), "RUSTC_WRAPPER": "",
+                    "CARGO_BUILD_RUSTC_WRAPPER": "",
+                    "CARGO_TARGET_DIR": str(host.out / "components" / name / "target"),
+                    # Android's standard library is built to abort on a panic.
+                    "CARGO_PROFILE_RELEASE_PANIC": "abort",
+                    f"CARGO_TARGET_{triple}_LINKER": str(clang),
+                    f"CC_{target.replace('-', '_')}": str(clang),
+                    f"AR_{target.replace('-', '_')}": str(ndk / "llvm-ar")})
+        built = subprocess.run([str(toolchain / "cargo"), "build", "--offline", "--locked",
+                                "--release", "--quiet", "--target", target], cwd=src,
+                               env=env).returncode == 0
+        if built:
+            shutil.copyfile(Path(env["CARGO_TARGET_DIR"]) / target / "release" / spec["binary"],
+                            out)
+    pgit(src, "checkout", "-q", "--force", pin["commit"], check=True)
+    pgit(src, "clean", "-q", "-fdx", check=True)
+    if not built:
+        out.unlink(missing_ok=True)
+        die(f"component {name} did not build for {arch}")
+    return out
+
+
+def component_files(host):
+    """vendor/extra/features/<feature>/prebuilt/<arch>/<module> of every component."""
+    files = {}
+    for feature, name, spec in feature_components():
+        for arch in device_arches():
+            path = build_component(host, feature, name, spec, arch)
+            files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
+    return files
 
 
 def staged_edits(dest):

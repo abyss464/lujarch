@@ -1,0 +1,265 @@
+diff --git a/component/process/process.go b/component/process/process.go
+index 464f5a79bc445a904ee5711fc159f76622607e53..4bbd902cc6f1e63f89aafe01221463fa5f3390a5 100644
+--- a/component/process/process.go
++++ b/component/process/process.go
+@@ -36,3 +36,16 @@ func FindPackageName(metadata *C.Metadata) (string, error) {
+ 	}
+ 	return "", ErrPlatformNotSupport
+ }
++
++// DefaultOwnerAliasResolver gives the second name of a connection's
++// owner that PROCESS-NAME rules match, "" for none. On Android: the shared user
++// of a uid that is named by its only package (listener/sing_tun), so a rule on
++// the shared user keeps matching that app.
++var DefaultOwnerAliasResolver func(metadata *C.Metadata) string
++
++func FindOwnerAlias(metadata *C.Metadata) string {
++	if resolver := DefaultOwnerAliasResolver; resolver != nil && metadata.Process != "" {
++		return resolver(metadata)
++	}
++	return ""
++}
+diff --git a/component/process/process_linux.go b/component/process/process_linux.go
+index 2e36f67416ed7ec777d9a8fac1200d11a27e1597..5799c4258df4f3f57ba9262fdfe899b16fc7bc4c 100644
+--- a/component/process/process_linux.go
++++ b/component/process/process_linux.go
+@@ -79,24 +79,38 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (uint32, string
+ 	if err != nil {
+ 		return 0, "", err
+ 	}
+-	pp, err := resolveProcessNameByProcSearch(inode, uid)
+ 	if runtime.GOOS == "android" {
+-		// if inode-based /proc/<pid>/fd resolution fails but UID is known,
+-		// fall back to resolving the process/package name by UID (typical on Android where all app processes share one UID).
+-		if err != nil && uid != 0 {
+-			pp, err = resolveProcessNameByUID(uid)
+-		}
++		// the owner is the uid, named by the package resolver
++		// (FindPackageName: sing-tun's map of packages.xml, reloaded when the
++		// file changes). No /proc walk: a core confined by SELinux cannot read
++		// other domains' /proc/<pid>/fd (ptrace read) or cmdline, so a walk
++		// fails for them, costs two passes over every pid per connection and
++		// leaves a denial for each process it tries. Root (uid 0) and uids
++		// outside packages.xml have no name.
++		return uid, "", nil
+ 	}
++	pp, err := resolveProcessNameByProcSearch(inode, uid)
+ 	return uid, pp, err
+ }
+ 
+ func resolveSocketByNetlink(network string, ip netip.Addr, srcPort int) (uid uint32, inode uint32, err error) {
++	uid, inode, err = resolveSocketByNetlinkFamily(network, ip, srcPort, ip.Is4())
++	if err == ErrNotFound && ip.Is4() {
++		// dual-stack sockets (Java's default on Android) hold an IPv4
++		// connection as an AF_INET6 socket with a v4-mapped address; the AF_INET
++		// dump does not list them. The comparison below unmaps the address.
++		uid, inode, err = resolveSocketByNetlinkFamily(network, ip, srcPort, false)
++	}
++	return
++}
++
++func resolveSocketByNetlinkFamily(network string, ip netip.Addr, srcPort int, inet4 bool) (uid uint32, inode uint32, err error) {
+ 	request := &inetDiagRequest{
+ 		States: 0xffffffff,
+ 		Cookie: [2]uint32{0xffffffff, 0xffffffff},
+ 	}
+ 
+-	if ip.Is4() {
++	if inet4 {
+ 		request.Family = unix.AF_INET
+ 	} else {
+ 		request.Family = unix.AF_INET6
+@@ -133,7 +147,6 @@ func resolveSocketByNetlink(network string, ip netip.Addr, srcPort int) (uid uin
+ 		return 0, 0, err
+ 	}
+ 
+-	err = ErrNotFound
+ 	for _, msg := range messages {
+ 		if len(msg.Data) < inetDiagResponseSize {
+ 			continue
+@@ -141,9 +154,6 @@ func resolveSocketByNetlink(network string, ip netip.Addr, srcPort int) (uid uin
+ 
+ 		response := (*inetDiagResponse)(unsafe.Pointer(&msg.Data[0]))
+ 
+-		// always set to allow fallback when check fails
+-		uid, inode, err = response.UID, response.INode, nil
+-
+ 		// check src port
+ 		if binary.BigEndian.Uint16(response.SrcPort[:]) != uint16(srcPort) {
+ 			continue
+@@ -167,11 +177,13 @@ func resolveSocketByNetlink(network string, ip netip.Addr, srcPort int) (uid uin
+ 			continue
+ 		}
+ 
+-		// this is the one we want
+-		break
++		// this is the one we want. only an exact source match counts;
++		// the owner of whichever socket the dump listed last is not the owner
++		// of this connection and would route it by another app's rule.
++		return response.UID, response.INode, nil
+ 	}
+ 
+-	return
++	return 0, 0, ErrNotFound
+ }
+ 
+ func resolveProcessNameByProcSearch(inode, uid uint32) (string, error) {
+diff --git a/listener/sing_tun/owner_lujarch.go b/listener/sing_tun/owner_lujarch.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..197410b7dc2e50f9a9c8b8cd63b045ac42c9b2c7
+--- /dev/null
++++ b/listener/sing_tun/owner_lujarch.go
+@@ -0,0 +1,50 @@
++package sing_tun
++
++// the name of a connection's owner on Android, for PROCESS-NAME rules.
++//
++// The owner is a uid (component/process). Android tells apart only uids, so the
++// name follows the uid: a uid that belongs to one package is named by that
++// package, also when the package declares a shared user (android:sharedUserId,
++// e.g. Firefox's org.mozilla.firefox.sharedID), so a route written for the app
++// by its package matches. A uid that several packages share (Google Play
++// services and its companions under com.google.uid.shared, android.uid.system)
++// is named by the shared user: its traffic is theirs together, and one route by
++// the shared user's name applies to all of them. The shared user's name stays a
++// second name of a uid named by its only package (ownerAlias), so a rule on the
++// shared user matches whichever name the uid has at the moment, however many of
++// its packages are installed.
++
++// packageLookup is the part of sing-tun's package manager (packages.xml) the
++// names come from.
++type packageLookup interface {
++	PackagesByID(id uint32) ([]string, bool)
++	SharedPackageByID(id uint32) (string, bool)
++}
++
++// ownerName is the name of uid's owner: its package when it has one, else its
++// shared user.
++func ownerName(pm packageLookup, uid uint32) (string, bool) {
++	id := uid % 100000
++	packages, _ := pm.PackagesByID(id)
++	if len(packages) == 1 {
++		return packages[0], true
++	}
++	if shared, loaded := pm.SharedPackageByID(id); loaded {
++		return shared, true
++	}
++	if len(packages) > 0 {
++		return packages[0], true
++	}
++	return "", false
++}
++
++// ownerAlias is the other name PROCESS-NAME rules match for uid: the shared user
++// of a uid that ownerName names by its only package; "" otherwise.
++func ownerAlias(pm packageLookup, uid uint32) string {
++	id := uid % 100000
++	if packages, _ := pm.PackagesByID(id); len(packages) != 1 {
++		return ""
++	}
++	shared, _ := pm.SharedPackageByID(id)
++	return shared
++}
+diff --git a/listener/sing_tun/server_android.go b/listener/sing_tun/server_android.go
+index f180bd3051b96bec9e241468fca3388b56aa6c20..4ca5d319c5277442a4dc2d7941c99db006286bd7 100644
+--- a/listener/sing_tun/server_android.go
++++ b/listener/sing_tun/server_android.go
+@@ -60,18 +60,25 @@ func findPackageName(metadata *constant.Metadata) (string, error) {
+ 	if err != nil {
+ 		return "", err
+ 	}
+-	uid := metadata.Uid
+-	if sharedPackage, loaded := packageManager.SharedPackageByID(uid % 100000); loaded {
+-		return sharedPackage, nil
+-	}
+-	if packageName, loaded := packageManager.PackageByID(uid % 100000); loaded {
+-		return packageName, nil
++	// a shared uid of one package is named by the package (owner_lujarch.go).
++	if name, loaded := ownerName(packageManager, metadata.Uid); loaded {
++		return name, nil
+ 	}
+ 	return "", errors.New("package not found")
+ }
+ 
++// the shared user of a uid named by its only package (owner_lujarch.go).
++func findOwnerAlias(metadata *constant.Metadata) string {
++	packageManager, err := getPackageManager()
++	if err != nil {
++		return ""
++	}
++	return ownerAlias(packageManager, metadata.Uid)
++}
++
+ func init() {
+ 	if !features.CMFA {
+ 		process.DefaultPackageNameResolver = findPackageName
++		process.DefaultOwnerAliasResolver = findOwnerAlias
+ 	}
+ }
+diff --git a/rules/common/process.go b/rules/common/process.go
+index 77c7b0e3ba91dd8e461b85d314ad556deea6a5ae..a8c007c65fcfab484ea3bc7a88300963845903b4 100644
+--- a/rules/common/process.go
++++ b/rules/common/process.go
+@@ -3,6 +3,7 @@ package common
+ import (
+ 	"strings"
+ 
++	"github.com/metacubex/mihomo/component/process"
+ 	"github.com/metacubex/mihomo/component/wildcard"
+ 	C "github.com/metacubex/mihomo/constant"
+ 
+@@ -33,22 +34,31 @@ func (ps *Process) Match(metadata *C.Metadata, helper C.RuleMatchHelper) (bool,
+ 	if helper.FindProcess != nil {
+ 		helper.FindProcess()
+ 	}
+-	var target string
+ 	switch ps.ruleType {
+ 	case C.ProcessName, C.ProcessNameRegex, C.ProcessNameWildcard:
+-		target = metadata.Process
++		if ps.matchTarget(metadata.Process) {
++			return true, ps.adapter
++		}
++		// the owner's second name (on Android the shared user of an
++		// app named by its package) matches as well.
++		if alias := process.FindOwnerAlias(metadata); alias != "" {
++			return ps.matchTarget(alias), ps.adapter
++		}
++		return false, ps.adapter
+ 	default:
+-		target = metadata.ProcessPath
++		return ps.matchTarget(metadata.ProcessPath), ps.adapter
+ 	}
++}
+ 
++func (ps *Process) matchTarget(target string) bool {
+ 	switch ps.ruleType {
+ 	case C.ProcessNameRegex, C.ProcessPathRegex:
+ 		match, _ := ps.regexp.MatchString(target)
+-		return match, ps.adapter
++		return match
+ 	case C.ProcessNameWildcard, C.ProcessPathWildcard:
+-		return wildcard.Match(strings.ToLower(ps.pattern), strings.ToLower(target)), ps.adapter
++		return wildcard.Match(strings.ToLower(ps.pattern), strings.ToLower(target))
+ 	default:
+-		return strings.EqualFold(target, ps.pattern), ps.adapter
++		return strings.EqualFold(target, ps.pattern)
+ 	}
+ }
+ 
+diff --git a/tunnel/tunnel.go b/tunnel/tunnel.go
+index 86dbc14ae428ba7927dd2dc3ab52d78f0ddb1e87..5c112a3bd272456baf4430b3fa038d7f57ea5701 100644
+--- a/tunnel/tunnel.go
++++ b/tunnel/tunnel.go
+@@ -357,7 +357,11 @@ func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err erro
+ 					if err != nil {
+ 						log.Debugln("[Process] find process error for %s: %v", metadata.String(), err)
+ 					} else {
+-						metadata.Process = filepath.Base(path)
++						// on Android the path is empty (the owner is the
++						// uid; the package resolver below names it).
++						if path != "" {
++							metadata.Process = filepath.Base(path)
++						}
+ 						metadata.ProcessPath = path
+ 						metadata.Uid = uid
+ 
