@@ -41,3 +41,6 @@ allow lujarch_proxy_core system_userdir_file:dir r_dir_perms;
 
 allow lujarch_proxy_core proc_net:file r_file_perms;
 allow lujarch_proxy_core proc_stat:file r_file_perms;
+# The Go runtime sizes its threads by the CPU quota of its cgroup.
+allow lujarch_proxy_core cgroup:dir search;
+allow lujarch_proxy_core cgroup:file r_file_perms;

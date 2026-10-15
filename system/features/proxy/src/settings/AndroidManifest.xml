@@ -17,6 +17,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lujarch.proxy.settings">
 
+    <!-- Per-app routing lists every installed app, and a route names its app. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <application>
         <meta-data
             android:name="org.lujarch.settings.contribution.proxy"

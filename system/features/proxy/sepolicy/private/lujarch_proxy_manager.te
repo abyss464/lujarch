@@ -20,6 +20,11 @@ allow lujarch_proxy_manager lujarch_proxy_data_file:file create_file_perms;
 allow lujarch_proxy_manager lujarch_proxy_core_exec:file rx_file_perms;
 allow lujarch_proxy_manager proc_net:file r_file_perms;
 allow lujarch_proxy_manager proc_stat:file r_file_perms;
+# The Go runtime of the core's check sizes its threads by the CPU quota of its cgroup; the check
+# looks at the virtual network interface's device without opening it.
+allow lujarch_proxy_manager cgroup:dir search;
+allow lujarch_proxy_manager cgroup:file r_file_perms;
+allow lujarch_proxy_manager tun_device:chr_file getattr;
 allow lujarch_proxy_manager self:tcp_socket { create_stream_socket_perms listen accept };
 allow lujarch_proxy_manager self:udp_socket create_socket_perms;
 

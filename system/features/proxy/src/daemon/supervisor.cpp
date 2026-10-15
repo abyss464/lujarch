@@ -162,7 +162,6 @@ void Supervisor::Start() {
     if (inotify_add_watch(inotify_.get(), kDir, IN_CLOSE_WRITE | IN_MOVED_TO) < 0) {
         PLOG(ERROR) << "cannot watch " << kDir << "; restart requests of the manager are not seen";
     }
-    status_.state = IProxy::STATE_OFF;
     // Rules a previous run of the daemon left.
     rules::UnblockIpv6();
     for (const char* name :
@@ -202,6 +201,8 @@ void Supervisor::Wake() {
 
 void Supervisor::RequestRestart() {
     restart_requested_ = true;
+    // Whoever asked sees the restart begin before the loop gets to it.
+    if (SettingIsOn(kFeature, "enabled")) SetState(IProxy::STATE_STARTING);
     Wake();
 }
 
@@ -417,7 +418,16 @@ void Supervisor::Loop() {
         }
         SetIpv6Block(false, "");
         SetState(IProxy::STATE_STARTING);
-        WaitEvent(backoff * 1000);
+        // The pause ends early only for the switch or a restart asked for.
+        const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(backoff);
+        for (;;) {
+            auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    until - std::chrono::steady_clock::now());
+            if (left.count() <= 0) break;
+            WaitEvent(left.count());
+            DrainEvents();
+            if (!SettingIsOn(kFeature, "enabled") || restart_requested_) break;
+        }
         backoff = std::min(backoff * 2, kMaxBackoff);
     }
 }
