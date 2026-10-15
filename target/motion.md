@@ -1,6 +1,6 @@
 # Motion
 
-Lujarch's own moments move in one language made from its mark (BRD-2): shards, the mark as a
+Lujarch's own moments move in one language made from its mark in motion (BRD-3): shards, the mark as a
 jaw of ten shards, water and one key light from the upper left, in red ochre on black. Every other
 animation is Android's. Each moment that has a switch plays Android's own animation while it is
 off, and with Remove animations on every moment jumps to its end.
