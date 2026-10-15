@@ -6,6 +6,7 @@
   
   <default remote="github" revision="refs/heads/lineage-24.0" sync-j="4" sync-c="true"/>
   
+  <project name="KernelSU-Next/KernelSU-Next" path="kernel/xiaomi/sm8550/KernelSU-Next" revision="1a879d6a866f80b1fa1c1009a2ffa747873cbb5e" upstream="refs/tags/v3.4.0" dest-branch="refs/tags/v3.4.0" clone-depth="1"/>
   <project name="LineageOS/android" path="android" revision="d4c6331bc603e5038a9e48f5e526e7f10c8b96d9" upstream="refs/heads/lineage-24.0" dest-branch="refs/heads/lineage-24.0"/>
   <project name="LineageOS/android_art" path="art" revision="747707d6ce1c145f2249f120c692e0aeb2b8a257" upstream="refs/heads/lineage-24.0" dest-branch="refs/heads/lineage-24.0" groups="pdk"/>
   <project name="LineageOS/android_bionic" path="bionic" revision="ff3bb041547924ac1a7504e4b3bd3ea18169ca2f" upstream="refs/heads/lineage-24.0" dest-branch="refs/heads/lineage-24.0" groups="pdk"/>

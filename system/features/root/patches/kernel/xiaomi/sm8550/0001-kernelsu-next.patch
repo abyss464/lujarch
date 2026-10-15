@@ -1,0 +1,39 @@
+diff --git a/.gitignore b/.gitignore
+index 10521188667cf0ebc93ca0f9d48a5e7934c38bc4..f3dcba6dbbc7412fa3ccf602e1e66f6f1046c9b2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -167,3 +167,6 @@ arch/*/boot/dts/vendor
+ 
+ # Documentation toolchain
+ sphinx_*/
++
++# KernelSU-Next, a project of its own checked out inside the kernel tree
++/KernelSU-Next/
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index 0d399ddaa185a7cdf5974f7f294f50032747f577..7696db475938f0806557d009ffd63cbd398c1f3e 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -236,4 +236,6 @@ source "drivers/interconnect/Kconfig"
+ source "drivers/counter/Kconfig"
+ 
+ source "drivers/most/Kconfig"
++
++source "drivers/kernelsu/Kconfig"
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+index a110338c860c770d4affa688375dc2086007a6b5..38f89bcf42d18c489ef17028ecd8fb7f36583ae4 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -187,3 +187,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
+ obj-$(CONFIG_INTERCONNECT)	+= interconnect/
+ obj-$(CONFIG_COUNTER)		+= counter/
+ obj-$(CONFIG_MOST)		+= most/
++obj-$(CONFIG_KSU)		+= kernelsu/
+diff --git a/drivers/kernelsu b/drivers/kernelsu
+new file mode 120000
+index 0000000000000000000000000000000000000000..b32a3654a68367844c8017e6f76065df608c8ee0
+--- /dev/null
++++ b/drivers/kernelsu
+@@ -0,0 +1 @@
++../KernelSU-Next/kernel
+\ No newline at end of file

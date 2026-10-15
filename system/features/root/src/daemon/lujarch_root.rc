@@ -1,0 +1,6 @@
+service lujarch_root /system_ext/bin/lujarch_root
+    class main
+    user root
+    # package_info: packages.list, for the callers and the packages' user IDs.
+    group root package_info
+    capabilities

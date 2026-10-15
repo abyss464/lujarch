@@ -125,6 +125,3 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Allowed with a custom profile | 已允许（自定义配置） | 許可（カスタム プロファイル） |
 | Restore default profile | 恢复默认配置 | デフォルトのプロファイルに戻す |
 | Mount namespace | 挂载命名空间 | マウント名前空間 |
-| Root requests refused | 被拒绝的 Root 请求 | 拒否された Root リクエスト |
-| App notifications | 应用通知 | アプリの通知 |
-| Android System | Android 系统 | Android システム |

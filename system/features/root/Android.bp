@@ -1,0 +1,76 @@
+// The interface of lujarch_root, for Lujarch Settings.
+aidl_interface {
+    name: "lujarch_root_aidl",
+    srcs: ["src/daemon/aidl/org/lujarch/root/*.aidl"],
+    local_include_dir: "src/daemon/aidl",
+    unstable: true,
+    system_ext_specific: true,
+    backend: {
+        java: {
+            platform_apis: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+    },
+}
+
+// The root daemon: KernelSU's app profiles for Root access.
+cc_binary {
+    name: "lujarch_root",
+    srcs: ["src/daemon/*.cpp"],
+    static_libs: [
+        "liblujarch_daemon",
+        "lujarch_root_aidl-ndk",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "liblog",
+    ],
+    init_rc: ["src/daemon/lujarch_root.rc"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+    arch: {
+        // KernelSU's su comes with the kernels that have KernelSU.
+        arm64: {
+            required: ["ksud"],
+        },
+    },
+}
+
+// KernelSU-Next's su (feature.toml, prebuilts), run by the kernel for the apps allowed root.
+cc_prebuilt_binary {
+    name: "ksud",
+    compile_multilib: "64",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+            srcs: ["prebuilt/arm64/ksud"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+    system_ext_specific: true,
+}
+
+// Root's pages in Lujarch Settings, its App info row and its search entry.
+android_library {
+    name: "LujarchRootSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "lujarch_root_aidl-java",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}

@@ -3,6 +3,7 @@
 #include <android/binder_auto_utils.h>
 #include <sys/types.h>
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -12,6 +13,9 @@ namespace lujarch {
 // Registers binder under name with servicemanager and serves calls on this thread and a pool of
 // threads. Returns only when registration fails.
 void Serve(const std::string& name, const ndk::SpAIBinder& binder, int threads = 2);
+
+// The uid of an installed package, from packages.list; nullopt when it is not installed.
+std::optional<uid_t> PackageUid(std::string_view package);
 
 // The packages that share the calling uid, from packages.list.
 std::vector<std::string> CallerPackages();

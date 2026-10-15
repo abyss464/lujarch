@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <plurals name="root_apps_category_count">
+        <item quantity="other">应用 · 已允许 %1$d 个</item>
+    </plurals>
+    <plurals name="root_grant_shared">
+        <item quantity="other">此应用与另外 %1$d 个应用共用用户 ID，Root 权限对它们同样生效。</item>
+    </plurals>
+    <plurals name="root_profile_capabilities_count">
+        <item quantity="other">%1$d 项</item>
+    </plurals>
+    <plurals name="root_shared_more">
+        <item quantity="other">及另外 %1$d 个应用</item>
+    </plurals>
+    <string name="error_root_profile">无法更改 Root 配置</string>
+    <string name="error_su_grant">无法授予 Root 权限权</string>
+    <string name="error_su_revoke">无法撤销 Root 权限权</string>
+    <string name="root_allow_switch">允许 Root 权限</string>
+    <string name="root_app_footer">这些是 KernelSU 为此应用的 su 会话应用的值。KernelSU 的配置模板和为自定义域附加的 SELinux 规则不提供：它们需要 KernelSU 的管理器应用，而从这里加载规则会更改整个系统的 SELinux 策略。关闭 Root 权限会将配置恢复为默认。</string>
+    <string name="root_app_system_state">%1$s · 系统应用</string>
+    <string name="root_apps_category">应用</string>
+    <string name="root_auth_continue">仍然继续</string>
+    <string name="root_auth_grant_subtitle">验证身份后向“%1$s”授予 Root 权限</string>
+    <string name="root_auth_grant_title">允许 Root 权限</string>
+    <string name="root_auth_profile_subtitle">验证身份后放宽“%1$s”的 Root 权限</string>
+    <string name="root_auth_profile_title">更改 Root 配置</string>
+    <string name="root_auth_set_lock">设置屏幕锁定</string>
+    <string name="root_auth_state_ok">授予 Root 权限，以及放宽 Root 配置的更改，都需要先验证屏幕锁定或指纹</string>
+    <!-- Root 权限：授予 Root 前验证本人身份 -->
+    <string name="root_auth_title">身份验证</string>
+    <string name="root_auth_unavailable_message">设置屏幕锁定后，Root 权限会要求验证；也可以仅凭刚才的确认继续。</string>
+    <string name="root_auth_unavailable_no_lock">此手机未设置屏幕锁定，无法验证身份。点按即可设置。</string>
+    <string name="root_auth_unavailable_other">目前无法在此手机上验证身份。点按可打开屏幕锁定设置。</string>
+    <string name="root_auth_unavailable_title">无法验证身份</string>
+    <string name="root_footer">请仅允许您信任的应用。获得 Root 权限权的应用可以读取所有数据、修改系统并隐藏自身行为。</string>
+    <string name="root_grant_confirm">允许</string>
+    <string name="root_grant_message">“%1$s”将能够以 Root 身份执行任意命令，完全控制此设备及其所有数据。</string>
+    <string name="root_grant_message_other">“%1$s”以系统身份运行（用户 ID %2$d）。允许后，所有以此身份运行的进程都能以 Root 身份执行任意命令。</string>
+    <string name="root_grant_message_shell">“%1$s”是 adb 使用的 Shell 身份（用户 ID 2000）。允许后，每台已授权进行 USB 调试或无线调试的电脑都能获得完整的 Root 权限，与开发者选项中的“Root 身份的调试”相同。</string>
+    <string name="root_grant_message_system">“%1$s”使用系统用户（用户 ID 1000），Android 的系统服务和许多系统应用共用此身份。允许后，所有以此身份运行的进程都能以 Root 身份执行任意命令；其中任何一个存在漏洞，都会使整个设备脱离 SELinux 的保护。</string>
+    <string name="root_grant_title">要允许 Root 权限吗？</string>
+    <!-- Root access -->
+    <string name="root_intro">在此允许的应用可以以 Root 身份（su）执行命令，从而完全控制此设备。</string>
+    <string name="root_ksu_title">KernelSU</string>
+    <string name="root_ksu_unavailable">此内核不含 KernelSU</string>
+    <string name="root_ksu_version">版本 %1$s</string>
+    <string name="root_namespace_category">挂载命名空间</string>
+    <string name="root_namespace_global">全局</string>
+    <string name="root_namespace_global_summary">Root 会话在系统的全局挂载命名空间中运行，其挂载对所有应用可见</string>
+    <string name="root_namespace_individual">独立</string>
+    <string name="root_namespace_individual_summary">每个 Root 会话使用独立的挂载副本，其更改不影响其他进程</string>
+    <string name="root_namespace_inherited">继承（默认）</string>
+    <string name="root_namespace_inherited_summary">Root 会话使用启动它的应用的挂载</string>
+    <string name="root_profile_capabilities">Linux 权能</string>
+    <string name="root_profile_capabilities_all">全部</string>
+    <string name="root_profile_category">Root 配置</string>
+    <string name="root_profile_domain">SELinux 域</string>
+    <string name="root_profile_domain_choice">%1$s\n%2$s</string>
+    <string name="root_profile_domain_invalid">请使用 user:role:type:level 格式，仅含 a–z、0–9 和 _</string>
+    <string name="root_profile_domain_ksu">KernelSU 的域，拥有全部权限（默认）</string>
+    <string name="root_profile_domain_message">SELinux 上下文，格式为 user:role:type:level，例如 u:r:shell:s0。系统会检查其策略中是否存在该上下文；若该域缺少程序所需的规则，su 会话将无法正常运行。</string>
+    <string name="root_profile_domain_other">其他域</string>
+    <string name="root_profile_domain_su">Android 的 su 域，仅存在于可调试版本</string>
+    <string name="root_profile_gid">组 ID</string>
+    <string name="root_profile_gid_message">此应用的 su 会话以此组 ID 运行。0 即 Root。</string>
+    <string name="root_profile_groups">附加组</string>
+    <string name="root_profile_groups_other">其他组 ID</string>
+    <string name="root_profile_groups_other_message">要添加的组 ID，用逗号分隔。</string>
+    <string name="root_profile_groups_too_many">KernelSU 最多保留 %1$d 个组</string>
+    <string name="root_profile_id_invalid">请输入 0 到 2147483646 之间的 ID</string>
+    <string name="root_profile_no_new_privs">禁止再次提权</string>
+    <string name="root_profile_no_new_privs_summary">su 会话中的程序无法再次调用 su 以重新获得此配置</string>
+    <string name="root_profile_none">无</string>
+    <string name="root_profile_reset">恢复默认配置</string>
+    <string name="root_profile_reset_confirm">恢复</string>
+    <string name="root_profile_reset_message">“%1$s”的 su 会话将重新使用 KernelSU 的默认 Root 配置。</string>
+    <string name="root_profile_reset_summary">KernelSU 默认配置：用户和组 0、全部权能、KernelSU 的域、继承的挂载命名空间</string>
+    <string name="root_profile_reset_title">要恢复默认配置吗？</string>
+    <string name="root_profile_root_id">0（Root）</string>
+    <string name="root_profile_source">配置来源</string>
+    <string name="root_profile_source_default">KernelSU 默认配置</string>
+    <string name="root_profile_source_own">为此应用单独写入</string>
+    <string name="root_profile_uid">用户 ID</string>
+    <string name="root_profile_uid_message">此应用的 su 会话以此用户 ID 运行。0 即 Root；其他 ID 会使会话失去 Root 的文件访问权限。</string>
+    <string name="root_profile_warning_continue">更改</string>
+    <string name="root_profile_warning_message">KernelSU 会完全按所选的值应用。缩小用户 ID、组、权能或 SELinux 域会使大多数请求 su 的程序无法正常工作；错误的值可能使此应用的 su 会话无法使用，直至在此恢复默认配置。</string>
+    <string name="root_profile_warning_title">要更改 Root 配置吗？</string>
+    <string name="root_shared_summary">用户 ID %1$d 与%2$s共用。KernelSU 按用户 ID 授予 Root 权限，因此对它们全部生效。</string>
+    <string name="root_shared_title">共用用户 ID</string>
+    <!-- Root 权限 -->
+    <string name="root_state_allowed">已允许</string>
+    <!-- Root 权限：配置的全部字段 -->
+    <string name="root_state_allowed_custom">已允许 · 自定义配置</string>
+    <string name="root_state_allowed_detail">已允许：此应用可以以 Root 身份执行命令</string>
+    <string name="root_state_allowed_shared">已允许 · 共用用户 ID</string>
+    <string name="root_state_forbidden">不可用：KernelSU 不向用户 ID 低于 2000 的系统身份（1000 除外）授予 Root 权限（此应用：%1$d）</string>
+    <string name="root_state_never_detail">从未允许</string>
+    <string name="root_state_not_allowed">未允许</string>
+    <string name="root_state_settings_app">不可用：Lujarch 自己的应用从不获得 Root 权限</string>
+    <string name="root_state_title">状态</string>
+    <!-- Page titles and state summaries -->
+    <string name="root_title">Root 权限</string>
+    <string name="status_unknown">未知</string>
+    <string name="error_load_root">无法加载 Root 权限</string>
+    <string name="root_error_invalid">这些值不能作为 Root 配置</string>
+    <string name="root_error_never_granted">此应用不能获得 Root 权限</string>
+    <string name="root_error_no_root">此应用没有 Root 权限</string>
+    <string name="root_error_not_installed">此应用未安装</string>
+    <string name="root_special_access">特殊应用权限</string>
+    <string name="root_summary">可以以 Root 身份运行命令的应用</string>
+    <string name="search_root_keywords">Root, 超级用户, Root 权限, su, superuser, KernelSU</string>
+</resources>

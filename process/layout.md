@@ -66,6 +66,11 @@ system/features/<feature>/
   architecture, offline (Go modules from the computer's module cache, crates from Cargo's), and
   stage it at `vendor/extra/features/<feature>/prebuilt/<arch>/<module>` for the feature's
   `Android.bp`.
+- A prebuilt is a program a feature takes as its upstream releases it, where the release is the
+  only build of it that matches the pinned source: `feature.toml` names it under
+  `[prebuilts.<name>]` with the `module` it becomes; `lock.toml` pins the `url` and `sha256` of
+  each architecture it exists for. `tools/lujarch fetch` downloads what the host lacks into the
+  host's `prebuilts` path, and the tools stage it like a component.
 - A feature that applies to some devices only says so in `feature.toml`; the build of another
   device leaves it out.
 - A feature's patches cover every upstream project it changes, including device projects
@@ -125,7 +130,7 @@ blob ids.
 - `lock.toml`: the upstream branch and AOSP tag, the build variant, each device's stock
   release, and every source or prebuilt a feature fetches (version, commit or URL, and hash):
   a component is `[components.<name>]` with its `commit` (and `version` and `url` where it has
-  them).
+  them); a prebuilt is `[prebuilts.<name>.<arch>]` with its `url` and `sha256`.
   A stock release is `[stock.<device>]` with `release`, `urls` (mirrors of one package) and
   `sha256`; `[stock.<device>.files]` holds the sha256 of every file the device takes from it.
   `tools/lujarch stock <device>` downloads, checks and unpacks the package under the host's
@@ -149,6 +154,7 @@ ccache = "..."
 stock = "..."         # unpacked stock releases
 ndk = "..."           # Android NDK for components built outside the tree
 go = "..."            # Go installation (GOROOT) for components built outside the tree
+prebuilts = "..."     # pinned prebuilts, each named by its sha256
 
 [sources]
 mihomo = "..."          # where each component's repository is; its commit is in lock.toml
