@@ -1300,6 +1300,10 @@ def mem_available_gb():
     return 0
 
 
+# The memory a build leaves to the desktop and everything else running.
+DESKTOP_RESERVE_GB = 10
+
+
 def build_budget(host):
     """The build's memory cap, pressure point and jobs: from host.toml, or from free memory."""
     gb = mem_available_gb()
@@ -1307,9 +1311,9 @@ def build_budget(host):
     if not mem_max:
         # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
         # holds it; squeezed by the cap instead, it stalls for hours.
-        cap = min(gb - 12, 60)
+        cap = min(gb - DESKTOP_RESERVE_GB, 60)
         if cap < 44:
-            die(f"only {gb} GB of memory free: a build needs at least 56 "
+            die(f"only {gb} GB of memory free: a build needs at least {44 + DESKTOP_RESERVE_GB} "
                 "(or set build.memory_max in host.toml)")
         mem_max = f"{cap}G"
     mem_high = host.get("build", "memory_high") or mem_max
