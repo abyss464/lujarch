@@ -79,10 +79,10 @@ index d6fe7160dbfe3a9a3ea2bbf5fa7a2f804b9e6061..3cc48360e48bd6622c2bf25442dbc30d
  }
 diff --git a/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt b/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..af88c48f00e142559593523b5d693833412bf0f6
+index 0000000000000000000000000000000000000000..d50c96a77019e47ea4b2744ff0ad34d7be758748
 --- /dev/null
 +++ b/src/com/android/settings/spa/app/specialaccess/LujarchInstallChoice.kt
-@@ -0,0 +1,108 @@
+@@ -0,0 +1,110 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -106,6 +106,7 @@ index 0000000000000000000000000000000000000000..af88c48f00e142559593523b5d693833
 +import android.app.AppOpsManager
 +import android.content.Context
 +import android.content.pm.ApplicationInfo
++import android.content.pm.PackageInfo
 +import android.content.pm.PackageManager
 +import android.os.UserHandle
 +import android.util.Log
@@ -156,6 +157,7 @@ index 0000000000000000000000000000000000000000..af88c48f00e142559593523b5d693833
 +            AppGlobals.getPackageManager()
 +                .getPackagesHoldingPermissions(arrayOf(Manifest.permission.INSTALL_PACKAGES), 0L, userId)
 +                .list
++                .filterIsInstance<PackageInfo>()
 +                .filter { info ->
 +                    val system = info.applicationInfo?.isSystemApp ?: true
 +                    !system || hasLauncher(info.packageName, userId)
