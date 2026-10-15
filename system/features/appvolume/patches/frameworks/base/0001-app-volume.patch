@@ -1,0 +1,2351 @@
+diff --git a/core/jni/android_media_AudioSystem.cpp b/core/jni/android_media_AudioSystem.cpp
+index 6401b3e4e3c6c5ad2f1212e4209572689f5afe23..07ca80233b28dad8b7999b9ea48614d1bef8fd85 100644
+--- a/core/jni/android_media_AudioSystem.cpp
++++ b/core/jni/android_media_AudioSystem.cpp
+@@ -2719,6 +2719,32 @@ static jint android_media_AudioSystem_setCurrentImeUid(JNIEnv *env, jobject thiz
+     return nativeToJavaStatus(status);
+ }
+ 
++// Lujarch per-app media volume: AudioService's whole table, as uids with their gains.
++static jint android_media_AudioSystem_setAppVolumes(JNIEnv *env, jobject thiz, jintArray uids,
++                                                    jfloatArray volumes,
++                                                    jintArray mediaStreams) {
++    if (uids == nullptr || volumes == nullptr || mediaStreams == nullptr ||
++        env->GetArrayLength(uids) != env->GetArrayLength(volumes)) {
++        return AUDIO_JAVA_BAD_VALUE;
++    }
++    const std::vector<uid_t> nativeUids = convertJIntArrayToUidVector(env, uids);
++    std::vector<float> nativeGains(nativeUids.size());
++    if (!nativeGains.empty()) {
++        env->GetFloatArrayRegion(volumes, 0, static_cast<jsize>(nativeGains.size()),
++                                 nativeGains.data());
++    }
++    std::vector<std::pair<uid_t, float>> nativeVolumes;
++    nativeVolumes.reserve(nativeUids.size());
++    for (size_t i = 0; i < nativeUids.size(); i++) {
++        nativeVolumes.emplace_back(nativeUids[i], nativeGains[i]);
++    }
++    std::vector<audio_stream_type_t> nativeStreams;
++    for (const uid_t stream : convertJIntArrayToUidVector(env, mediaStreams)) {
++        nativeStreams.push_back(static_cast<audio_stream_type_t>(stream));
++    }
++    return nativeToJavaStatus(AudioSystem::setAppVolumes(nativeVolumes, nativeStreams));
++}
++
+ static jboolean
+ android_media_AudioSystem_isHapticPlaybackSupported(JNIEnv *env, jobject thiz)
+ {
+@@ -3542,6 +3568,7 @@ static const JNINativeMethod gMethods[] = {
+         MAKE_AUDIO_SYSTEM_METHOD(setAssistantServicesUids),
+         MAKE_AUDIO_SYSTEM_METHOD(setActiveAssistantServicesUids),
+         MAKE_AUDIO_SYSTEM_METHOD(setA11yServicesUids),
++        MAKE_AUDIO_SYSTEM_METHOD(setAppVolumes),
+         MAKE_AUDIO_SYSTEM_METHOD(isHapticPlaybackSupported),
+         MAKE_AUDIO_SYSTEM_METHOD(isUltrasoundSupported),
+         MAKE_JNI_NATIVE_METHOD(
+diff --git a/media/java/android/media/AudioManager.java b/media/java/android/media/AudioManager.java
+index 5a7d9a4316bba8add166977ee0b3aeb01f4cf72b..76cf8ab6489574fdef1e6273ebbd2d0cf9a07a04 100644
+--- a/media/java/android/media/AudioManager.java
++++ b/media/java/android/media/AudioManager.java
+@@ -11146,6 +11146,44 @@ public class AudioManager {
+         }
+     }
+ 
++    /**
++     * @hide
++     * Lujarch per-app media volume: sets an app's share of the Media level, from 0 to 100
++     * percent (100, the default, leaves the app as loud as Media makes it). It scales only the
++     * app's playback on the streams the Media volume controls, and is kept per user and package
++     * until the app is uninstalled. Apps sharing a uid share one volume.
++     * @param uid the app's uid, of an app (app id 10000 and up) in any user
++     * @param percent the share in percent
++     * @throws IllegalArgumentException for a uid that is not an installed app's or a percent
++     *     out of range
++     */
++    @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS_PRIVILEGED)
++    public void setAppVolume(int uid, @IntRange(from = 0, to = 100) int percent) {
++        final IAudioService service = getService();
++        try {
++            service.setAppVolume(uid, percent);
++        } catch (RemoteException e) {
++            throw e.rethrowFromSystemServer();
++        }
++    }
++
++    /**
++     * @hide
++     * Lujarch per-app media volume: an app's share of the Media level in percent, 100 when it
++     * has none of its own.
++     * @param uid the app's uid
++     * @see #setAppVolume(int, int)
++     */
++    @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS_PRIVILEGED)
++    public @IntRange(from = 0, to = 100) int getAppVolume(int uid) {
++        final IAudioService service = getService();
++        try {
++            return service.getAppVolume(uid);
++        } catch (RemoteException e) {
++            throw e.rethrowFromSystemServer();
++        }
++    }
++
+     /**
+      * @hide
+      * Returns whether the system uses {@link AudioVolumeGroup} for volume control
+diff --git a/media/java/android/media/AudioSystem.java b/media/java/android/media/AudioSystem.java
+index 752ade8c06356412b73aa5bab7aa1679fe98df1b..c10a9cd3f5c0d98acd9613b2004fc07d45507e9c 100644
+--- a/media/java/android/media/AudioSystem.java
++++ b/media/java/android/media/AudioSystem.java
+@@ -2474,6 +2474,15 @@ public class AudioSystem
+      */
+     public static native int setCurrentImeUid(int uid);
+ 
++    /**
++     * @hide
++     * Lujarch per-app media volume: replaces AudioFlinger's table of app gains. A playback
++     * track whose uid is in {@code uids} and whose stream is in {@code mediaStreams} is scaled
++     * by the gain at the same index of {@code volumes}, in [0, 1]; every other track by 1.
++     */
++    public static native int setAppVolumes(@NonNull int[] uids, @NonNull float[] volumes,
++            @NonNull int[] mediaStreams);
++
+ 
+     /**
+      * @hide
+diff --git a/media/java/android/media/IAudioService.aidl b/media/java/android/media/IAudioService.aidl
+index fbed45d0b35c827a2d56ecabde5bece12559ac38..2ae55106189c6374f82323aa67dd5d242d911e05 100644
+--- a/media/java/android/media/IAudioService.aidl
++++ b/media/java/android/media/IAudioService.aidl
+@@ -892,4 +892,13 @@ interface IAudioService {
+     @EnforcePermission("MODIFY_PHONE_STATE")
+     IAudioModeSession createAudioModeSession(in AudioModeSessionRequest request,
+             in IAudioModeSessionCallback callback);
++
++    // Lujarch per-app media volume: the app's share of the Media level, 0 to 100 percent
++    @EnforcePermission("MODIFY_AUDIO_SETTINGS_PRIVILEGED")
++    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS_PRIVILEGED)")
++    void setAppVolume(int uid, int percent);
++
++    @EnforcePermission("MODIFY_AUDIO_SETTINGS_PRIVILEGED")
++    @JavaPassthrough(annotation="@android.annotation.RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS_PRIVILEGED)")
++    int getAppVolume(int uid);
+ }
+diff --git a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/ColumnVolumeSliders.kt b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/ColumnVolumeSliders.kt
+index 5a4938b677cda820862eecc43fa58c7008ea1770..3aa89156005e4a4ec2df26fc59d4029c81ddf4b8 100644
+--- a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/ColumnVolumeSliders.kt
++++ b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/ColumnVolumeSliders.kt
+@@ -28,12 +28,16 @@ import androidx.compose.animation.fadeOut
+ import androidx.compose.animation.scaleIn
+ import androidx.compose.animation.scaleOut
+ import androidx.compose.animation.shrinkVertically
++import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.RowScope
++import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+@@ -64,9 +68,9 @@ import com.google.common.annotations.VisibleForTesting
+ import platform.test.motion.compose.values.MotionTestValueKey
+ import platform.test.motion.compose.values.motionTestValues
+ 
+-private const val EXPAND_DURATION_MILLIS = 500
++internal const val EXPAND_DURATION_MILLIS = 500
+ private const val COLLAPSE_EXPAND_BUTTON_DELAY_MILLIS = 350
+-private const val COLLAPSE_DURATION_MILLIS = 300
++internal const val COLLAPSE_DURATION_MILLIS = 300
+ private const val EXPAND_BUTTON_ANIMATION_DURATION_MILLIS = 350
+ private const val TOP_SLIDER_ANIMATION_DURATION_MILLIS = 400
+ private const val SHRINK_FRACTION = 0.55f
+@@ -81,6 +85,10 @@ fun ColumnVolumeSliders(
+     sliderColors: PlatformSliderColors,
+     isExpandable: Boolean,
+     modifier: Modifier = Modifier,
++    // Lujarch per-app media volume: the playing apps' line and rows, right under the Media
++    // slider at mediaSliderIndex (in the always-visible head when Media comes first)
++    mediaSliderIndex: Int = -1,
++    mediaApps: (@Composable (Modifier) -> Unit)? = null,
+ ) {
+     require(viewModels.isNotEmpty())
+     Column(modifier = modifier) {
+@@ -113,6 +121,23 @@ fun ColumnVolumeSliders(
+                 materialSliderColors = VolumeSliderColors.Defaults,
+             )
+         }
++        if (mediaSliderIndex == 0 && mediaApps != null) {
++            // The app rows take the Media track's width: the expand button's column stays
++            // clear, and leaves with the button, on the button's own transition.
++            Row(
++                modifier = Modifier.fillMaxWidth(),
++                horizontalArrangement = Arrangement.spacedBy(8.dp),
++            ) {
++                mediaApps(Modifier.weight(1f))
++                AnimatedVisibility(
++                    visible = isExpandable,
++                    enter = expandButtonEnterTransition(),
++                    exit = expandButtonExitTransition(),
++                ) {
++                    Spacer(modifier = Modifier.width(40.dp))
++                }
++            }
++        }
+         AnimatedVisibility(
+             visible = isExpanded || !isExpandable,
+             label = "CollapsableSliders",
+@@ -169,6 +194,23 @@ fun ColumnVolumeSliders(
+                                 sliderViewModel.getSliderHapticsViewModelFactory(),
+                             materialSliderColors = VolumeSliderColors.Defaults,
+                         )
++                        if (index == mediaSliderIndex && mediaApps != null) {
++                            mediaApps(
++                                Modifier.fillMaxWidth()
++                                    .animateEnterExit(
++                                        enter =
++                                            enterTransition(
++                                                index = index,
++                                                totalCount = viewModels.size,
++                                            ),
++                                        exit =
++                                            exitTransition(
++                                                index = index,
++                                                totalCount = viewModels.size,
++                                            ),
++                                    )
++                            )
++                        }
+                     }
+                 }
+             }
+@@ -267,7 +309,7 @@ private fun RowScope.ExpandButton(
+     }
+ }
+ 
+-private fun enterTransition(index: Int, totalCount: Int): EnterTransition {
++internal fun enterTransition(index: Int, totalCount: Int): EnterTransition {
+     val enterDelay = ((totalCount - index + 1) * 10).coerceAtLeast(0)
+     val enterDuration = (EXPAND_DURATION_MILLIS - enterDelay).coerceAtLeast(100)
+     return scaleIn(
+@@ -282,7 +324,7 @@ private fun enterTransition(index: Int, totalCount: Int): EnterTransition {
+         fadeIn(animationSpec = tween(durationMillis = enterDuration, delayMillis = enterDelay))
+ }
+ 
+-private fun exitTransition(index: Int, totalCount: Int): ExitTransition {
++internal fun exitTransition(index: Int, totalCount: Int): ExitTransition {
+     val exitDuration = (COLLAPSE_DURATION_MILLIS - (totalCount - index + 1) * 10).coerceAtLeast(100)
+     return scaleOut(
+         targetScale = SCALE_FRACTION,
+diff --git a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/MediaAppVolumes.kt b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/MediaAppVolumes.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c10055eda54e1eccb8c89ddaea20333eaa743e58
+--- /dev/null
++++ b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/MediaAppVolumes.kt
+@@ -0,0 +1,268 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.ui.composable
++
++import androidx.compose.animation.AnimatedVisibility
++import androidx.compose.animation.EnterTransition
++import androidx.compose.animation.ExitTransition
++import androidx.compose.animation.core.MutableTransitionState
++import androidx.compose.animation.core.animateFloatAsState
++import androidx.compose.animation.core.tween
++import androidx.compose.animation.expandVertically
++import androidx.compose.animation.shrinkVertically
++import androidx.compose.foundation.Image
++import androidx.compose.foundation.background
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.offset
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.key
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.graphicsLayer
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.res.pluralStringResource
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.collapse
++import androidx.compose.ui.semantics.expand
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.zIndex
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.android.compose.PlatformSliderColors
++import com.android.compose.ui.graphics.painter.rememberDrawablePainter
++import com.android.systemui.res.R
++import com.android.systemui.volume.panel.component.volume.ui.viewmodel.AppVolumesViewModel
++
++// the icons the line shows at most; the count names them all
++private const val MAX_LINE_ICONS = 3
++
++/**
++ * Lujarch per-app media volume (VOL-1): under Media, one line with the playing apps' icons and
++ * count, which opens one row per app. There is no line while no app plays. The line is one button; its open or folded state is the owner's choice,
++ * kept in Settings.Secure. The rows open and fold with the panel's own slider transitions, and a
++ * row that appears while they are open enters with the same transition.
++ */
++@Composable
++fun MediaAppVolumes(
++    viewModel: AppVolumesViewModel,
++    sliderColors: PlatformSliderColors,
++    modifier: Modifier = Modifier,
++) {
++    val rows by viewModel.rows.collectAsStateWithLifecycle()
++    val storedExpanded by viewModel.isExpanded.collectAsStateWithLifecycle()
++    val expanded = storedExpanded
++    val visible = rows.isNotEmpty() && expanded != null
++    // Shown at once when the panel opens with apps playing; enters when the first app starts
++    // playing while the panel is open.
++    val lineState = remember { MutableTransitionState(visible) }
++    LaunchedEffect(visible) { lineState.targetState = visible }
++    AnimatedVisibility(
++        visibleState = lineState,
++        modifier = modifier,
++        enter = enterTransition(index = 0, totalCount = 1),
++        exit = ExitTransition.None,
++    ) {
++        if (expanded == null) return@AnimatedVisibility
++        Column(modifier = Modifier.fillMaxWidth()) {
++            AppsLine(
++                rows = rows,
++                isExpanded = expanded,
++                onToggle = { viewModel.onExpandedChanged(!expanded) },
++            )
++            AnimatedVisibility(
++                visible = expanded,
++                label = "MediaAppRows",
++                enter =
++                    expandVertically(animationSpec = tween(durationMillis = EXPAND_DURATION_MILLIS)),
++                exit =
++                    shrinkVertically(
++                        animationSpec = tween(durationMillis = COLLAPSE_DURATION_MILLIS)
++                    ),
++            ) {
++                // the rows there when the rows open ride the opening; later ones enter alone
++                val initialUids = remember { rows.map { it.uid }.toSet() }
++                Column {
++                    rows.forEachIndexed { index, row ->
++                        key(row.uid) {
++                            val rowModifier =
++                                Modifier.animateEnterExit(
++                                    enter =
++                                        if (row.uid in initialUids) {
++                                            enterTransition(index, rows.size)
++                                        } else {
++                                            EnterTransition.None
++                                        },
++                                    exit = exitTransition(index, rows.size),
++                                )
++                            if (row.uid in initialUids) {
++                                AppRow(row, sliderColors, rowModifier)
++                            } else {
++                                val rowState = remember {
++                                    MutableTransitionState(false).apply { targetState = true }
++                                }
++                                AnimatedVisibility(
++                                    visibleState = rowState,
++                                    modifier = rowModifier,
++                                    enter = enterTransition(index, rows.size),
++                                    exit = ExitTransition.None,
++                                ) {
++                                    AppRow(row, sliderColors)
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
++
++@Composable
++private fun AppsLine(
++    rows: List<AppVolumesViewModel.Row>,
++    isExpanded: Boolean,
++    onToggle: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    val count = rows.size
++    val actionLabel =
++        stringResource(
++            if (isExpanded) {
++                R.string.lujarch_volume_panel_hide_app_volumes
++            } else {
++                R.string.lujarch_volume_panel_show_app_volumes
++            }
++        )
++    val chevronRotation by
++        animateFloatAsState(
++            targetValue = if (isExpanded) 180f else 0f,
++            animationSpec = tween(durationMillis = EXPAND_DURATION_MILLIS),
++            label = "MediaAppsChevron",
++        )
++    Row(
++        modifier =
++            modifier
++                .fillMaxWidth()
++                .height(40.dp)
++                .clickable(onClickLabel = actionLabel, role = Role.Button, onClick = onToggle)
++                .semantics(mergeDescendants = true) {
++                    // TalkBack says whether the rows are open
++                    if (isExpanded) {
++                        collapse(actionLabel) {
++                            onToggle()
++                            true
++                        }
++                    } else {
++                        expand(actionLabel) {
++                            onToggle()
++                            true
++                        }
++                    }
++                },
++        verticalAlignment = Alignment.CenterVertically,
++    ) {
++        AppIconStack(rows.take(MAX_LINE_ICONS))
++        Text(
++            text = pluralStringResource(R.plurals.lujarch_volume_panel_apps_playing, count, count),
++            style = MaterialTheme.typography.bodyMedium,
++            color = MaterialTheme.colorScheme.onSurfaceVariant,
++            maxLines = 1,
++            modifier = Modifier.padding(start = 12.dp).weight(1f),
++        )
++        Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
++            Icon(
++                painter = painterResource(R.drawable.ic_arrow_down_24dp),
++                contentDescription = null,
++                tint = MaterialTheme.colorScheme.onSurfaceVariant,
++                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = chevronRotation },
++            )
++        }
++    }
++}
++
++/** The apps' icons, overlapping, the first on top, each on a ring of the sheet's colour. */
++@Composable
++private fun AppIconStack(rows: List<AppVolumesViewModel.Row>) {
++    val step = 14.dp
++    Box(modifier = Modifier.width(24.dp + step * (rows.size - 1)).height(24.dp)) {
++        rows.forEachIndexed { index, row ->
++            Box(
++                modifier =
++                    Modifier.offset(x = step * index)
++                        .zIndex((rows.size - index).toFloat())
++                        .size(24.dp)
++                        .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape),
++                contentAlignment = Alignment.Center,
++            ) {
++                Image(
++                    painter = rememberDrawablePainter(row.icon),
++                    contentDescription = null,
++                    modifier = Modifier.size(20.dp),
++                )
++            }
++        }
++    }
++}
++
++/**
++ * One app's row: thinner than a stream's, named in the secondary text style, filled with the
++ * deeper tone of Media's colour; only the app's icon keeps its own colours.
++ */
++@Composable
++private fun AppRow(
++    row: AppVolumesViewModel.Row,
++    sliderColors: PlatformSliderColors,
++    modifier: Modifier = Modifier,
++) {
++    val sliderViewModel = row.slider
++    val sliderState by sliderViewModel.slider.collectAsStateWithLifecycle()
++    VolumeSlider(
++        modifier = modifier.fillMaxWidth(),
++        state = sliderState,
++        onValueChange = { newValue: Float ->
++            sliderViewModel.onValueChanged(sliderState, newValue)
++        },
++        onValueChangeFinished = { sliderViewModel.onValueChangeFinished() },
++        onIconTapped = { sliderViewModel.toggleMuted(sliderState) },
++        sliderColors = sliderColors,
++        hapticsViewModelFactory = sliderViewModel.getSliderHapticsViewModelFactory(),
++        dimensions = VolumeSliderDimensions.App,
++        labelStyle = MaterialTheme.typography.bodyMedium,
++        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
++        materialSliderColors =
++            VolumeSliderColors.Defaults.copy(
++                activeTrackColor = MaterialTheme.colorScheme.primaryContainer
++            ),
++        keepIconColors = true,
++    )
++}
+diff --git a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlider.kt b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlider.kt
+index 902b27c6e224c7d72ae3388b579fed6dfa0a07ba..cc11c8ff97852a66fd3a5acc13da5ec509159302 100644
+--- a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlider.kt
++++ b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlider.kt
+@@ -40,14 +40,17 @@ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.semantics.clearAndSetSemantics
++import androidx.compose.ui.text.TextStyle
+ import androidx.compose.ui.unit.Dp
+ import androidx.compose.ui.unit.DpSize
+ import androidx.compose.ui.unit.dp
+ import com.android.compose.PlatformSliderColors
+ import com.android.systemui.common.shared.colors.SystemUISliderColors
++import com.android.systemui.common.shared.model.Icon as IconModel
+ import com.android.systemui.common.ui.compose.Icon
+ import com.android.systemui.compose.modifiers.sysuiResTag
+ import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
+@@ -77,21 +80,26 @@ fun VolumeSlider(
+     showLabel: Boolean = true,
+     dimensions: VolumeSliderDimensions = VolumeSliderDimensions.Defaults,
+     materialSliderColors: SliderColors = SystemUISliderColors.Defaults,
++    // Lujarch per-app media volume: an app row names itself in the secondary text style and
++    // keeps its icon's own colours
++    labelStyle: TextStyle = MaterialTheme.typography.titleMedium,
++    labelColor: Color = MaterialTheme.colorScheme.onSurface,
++    keepIconColors: Boolean = false,
+ ) {
+     Column(
+         modifier =
+             modifier
+                 .borderOnFocus(
+                     color = MaterialTheme.colorScheme.secondary,
+-                    cornerSize = CornerSize(SliderTrackRoundedCorner),
++                    cornerSize = CornerSize(dimensions.trackCornerSize),
+                 )
+                 .animateContentSize()
+     ) {
+         if (showLabel) {
+             Text(
+                 text = state.label,
+-                style = MaterialTheme.typography.titleMedium,
+-                color = MaterialTheme.colorScheme.onSurface,
++                style = labelStyle,
++                color = labelColor,
+                 modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
+             )
+         }
+@@ -128,9 +136,9 @@ fun VolumeSlider(
+                                     { iconsState ->
+                                         SliderIcon(
+                                             icon = {
+-                                                Icon(
++                                                TrackIcon(
+                                                     icon = icon,
+-                                                    tint = null,
++                                                    keepColors = keepIconColors,
+                                                     modifier =
+                                                         Modifier.size(dimensions.iconSize)
+                                                             .testTag(
+@@ -148,9 +156,9 @@ fun VolumeSlider(
+                                     { iconsState ->
+                                         SliderIcon(
+                                             icon = {
+-                                                Icon(
++                                                TrackIcon(
+                                                     icon = icon,
+-                                                    tint = null,
++                                                    keepColors = keepIconColors,
+                                                     modifier =
+                                                         Modifier.size(dimensions.iconSize)
+                                                             .testTag(
+@@ -163,7 +171,7 @@ fun VolumeSlider(
+                                         )
+                                     }
+                                 },
+-                            trackCornerSize = SliderTrackRoundedCorner,
++                            trackCornerSize = dimensions.trackCornerSize,
+                         )
+                     },
+                     thumb = { sliderState, interactionSource ->
+@@ -219,6 +227,19 @@ fun VolumeSlider(
+     }
+ }
+ 
++/**
++ * A slider's icon on its track: a stream's glyph tinted by the track, or an app's own icon in
++ * its own colours (Lujarch per-app media volume).
++ */
++@Composable
++private fun TrackIcon(icon: IconModel, keepColors: Boolean, modifier: Modifier = Modifier) {
++    if (keepColors) {
++        Icon(icon = icon, modifier = modifier, tint = Color.Unspecified)
++    } else {
++        Icon(icon = icon, tint = null, modifier = modifier)
++    }
++}
++
+ @VisibleForTesting
+ object VolumeSlidersMotionTestKeys {
+     const val ACTIVE_ICON_TAG = "Volume_Slider_activeStartIcon"
+@@ -236,6 +257,7 @@ data class VolumeSliderDimensions(
+     val thumbWidth: Dp,
+     val trackHeight: Dp,
+     val verticalPadding: Dp,
++    val trackCornerSize: Dp = SliderTrackRoundedCorner,
+ ) {
+     companion object {
+         val Defaults =
+@@ -246,6 +268,20 @@ data class VolumeSliderDimensions(
+                 trackHeight = 40.dp,
+                 verticalPadding = 4.dp,
+             )
++
++        /**
++         * Lujarch per-app media volume: an app row under Media, thinner than a stream's; the
++         * thumb is Material's default handle height (SliderTokens.HandleHeight).
++         */
++        val App =
++            VolumeSliderDimensions(
++                iconSize = 20.dp,
++                thumbHeight = 44.dp,
++                thumbWidth = 4.dp,
++                trackHeight = 32.dp,
++                verticalPadding = 2.dp,
++                trackCornerSize = 8.dp,
++            )
+     }
+ }
+ 
+diff --git a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlidersComponent.kt b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlidersComponent.kt
+index 770c5d5c247c24708ab86fc107ff655823b73f56..ae796bee9ce2e1bd0700eae24c49f456d1064f25 100644
+--- a/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlidersComponent.kt
++++ b/packages/SystemUI/compose/features/src/com/android/systemui/volume/panel/component/volume/ui/composable/VolumeSlidersComponent.kt
+@@ -16,13 +16,16 @@
+ 
+ package com.android.systemui.volume.panel.component.volume.ui.composable
+ 
++import android.media.AudioManager
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+ import androidx.compose.ui.Modifier
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.android.compose.PlatformSliderDefaults
++import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.AudioStreamSliderViewModel
+ import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.SliderViewModel
++import com.android.systemui.volume.panel.component.volume.ui.viewmodel.AppVolumesViewModel
+ import com.android.systemui.volume.panel.component.volume.ui.viewmodel.AudioVolumeComponentViewModel
+ import com.android.systemui.volume.panel.component.volume.ui.viewmodel.SlidersExpandableViewModel
+ import com.android.systemui.volume.panel.ui.composable.ComposeVolumePanelUiComponent
+@@ -34,6 +37,8 @@ class VolumeSlidersComponent
+ @Inject
+ constructor(
+     private val viewModel: AudioVolumeComponentViewModel,
++    // Lujarch per-app media volume; null only where a test builds the component without it
++    private val appVolumesViewModel: AppVolumesViewModel? = null,
+ ) : ComposeVolumePanelUiComponent {
+ 
+     @Composable
+@@ -59,13 +64,34 @@ constructor(
+             }
+             val isExpanded =
+                 (expandableViewModel as? SlidersExpandableViewModel.Expandable)?.isExpanded ?: true
++            val sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors()
++            // Lujarch per-app media volume: the playing apps under Media
++            val appsViewModel = appVolumesViewModel
++            val mediaApps: (@Composable (Modifier) -> Unit)? =
++                if (appsViewModel == null) {
++                    null
++                } else {
++                    { appsModifier ->
++                        MediaAppVolumes(
++                            viewModel = appsViewModel,
++                            sliderColors = sliderColors,
++                            modifier = appsModifier,
++                        )
++                    }
++                }
+             ColumnVolumeSliders(
+                 viewModels = sliderViewModels,
+                 isExpanded = isExpanded,
+                 onExpandedChanged = viewModel::onExpandedChanged,
+-                sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
++                sliderColors = sliderColors,
+                 isExpandable = expandableViewModel is SlidersExpandableViewModel.Expandable,
+                 modifier = modifier.fillMaxWidth(),
++                mediaSliderIndex =
++                    sliderViewModels.indexOfFirst {
++                        (it as? AudioStreamSliderViewModel)?.audioStream?.value ==
++                            AudioManager.STREAM_MUSIC
++                    },
++                mediaApps = mediaApps,
+             )
+         }
+     }
+diff --git a/packages/SystemUI/res/values-ja/lujarch_app_volume_strings.xml b/packages/SystemUI/res/values-ja/lujarch_app_volume_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..5488012275a0557ef10151a8296e8aedbc93a526
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_app_volume_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_volume_panel_app_volume">「%1$s」のメディアの音量</string>
++    <plurals name="lujarch_volume_panel_apps_playing">
++        <item quantity="other">%1$d 個のアプリが再生中</item>
++    </plurals>
++    <string name="lujarch_volume_panel_show_app_volumes">アプリの音量を表示</string>
++    <string name="lujarch_volume_panel_hide_app_volumes">アプリの音量を非表示</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_app_volume_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_app_volume_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e8d676134da1146e2fd214c33f0621e06b013f7
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_app_volume_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_volume_panel_app_volume">“%1$s”的媒体音量</string>
++    <plurals name="lujarch_volume_panel_apps_playing">
++        <item quantity="other">%1$d 个应用正在播放</item>
++    </plurals>
++    <string name="lujarch_volume_panel_show_app_volumes">显示应用音量</string>
++    <string name="lujarch_volume_panel_hide_app_volumes">隐藏应用音量</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_app_volume_strings.xml b/packages/SystemUI/res/values/lujarch_app_volume_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..c852144e3705222a3467d028ddc7fcf72c8926e2
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_app_volume_strings.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <!-- Accessibility name of an app's volume slider in the volume panel, the app's share of the Media volume; %1$s is the app's name [CHAR LIMIT=NONE] -->
++    <string name="lujarch_volume_panel_app_volume">%1$s media volume</string>
++    <!-- The line under the Media slider of the volume panel that opens one volume slider per playing app; %1$d is the number of apps playing [CHAR LIMIT=40] -->
++    <plurals name="lujarch_volume_panel_apps_playing">
++        <item quantity="one">%1$d app playing</item>
++        <item quantity="other">%1$d apps playing</item>
++    </plurals>
++    <!-- Accessibility action of the line of playing apps while their volume sliders are folded [CHAR LIMIT=NONE] -->
++    <string name="lujarch_volume_panel_show_app_volumes">Show app volumes</string>
++    <!-- Accessibility action of the line of playing apps while their volume sliders are open [CHAR LIMIT=NONE] -->
++    <string name="lujarch_volume_panel_hide_app_volumes">Hide app volumes</string>
++</resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeInteractor.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeInteractor.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..413fdd721bf53a5c061bd087ea887cf5e347bf34
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeInteractor.kt
+@@ -0,0 +1,63 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.appvolume
++
++import com.android.systemui.volume.panel.dagger.scope.VolumePanelScope
++import javax.inject.Inject
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.scan
++import kotlinx.coroutines.flow.stateIn
++
++/**
++ * Lujarch per-app media volume: the volume panel's app rows. Only apps playing on a media
++ * stream get one (the owner's choice); a row that appeared stays until the panel closes, in the
++ * order the rows appeared, so a slider never vanishes under the finger. The list lives and ends
++ * with the panel's scope.
++ */
++@VolumePanelScope
++class AppVolumeInteractor
++@Inject
++constructor(
++    @VolumePanelScope scope: CoroutineScope,
++    private val repository: AppVolumeRepository,
++) {
++    // name and icon per uid, loaded once for the panel's life; touched only by the flow below
++    private val apps = HashMap<Int, AppVolumeApp?>()
++
++    val rows: StateFlow<List<AppVolumeApp>> =
++        repository.playingApps
++            .scan(emptyList<AppVolumeList.PlayingApp>()) { shown, playing ->
++                AppVolumeList.grow(shown, playing)
++            }
++            .distinctUntilChanged()
++            .map { shown ->
++                shown.mapNotNull { app ->
++                    if (app.uid !in apps) apps[app.uid] = repository.appOf(app)
++                    apps[app.uid]
++                }
++            }
++            .distinctUntilChanged()
++            .stateIn(scope, SharingStarted.Eagerly, emptyList())
++
++    suspend fun getAppVolume(uid: Int): Int = repository.getAppVolume(uid)
++
++    suspend fun setAppVolume(uid: Int, percent: Int) = repository.setAppVolume(uid, percent)
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeList.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeList.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..81f09c2552e9b87d01cba9e51cce5c4f97bc444b
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeList.kt
+@@ -0,0 +1,85 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.appvolume
++
++/**
++ * Lujarch per-app media volume (VOL-1): which apps get a row in the volume panel.
++ * Plain Kotlin without Android classes, so it is tested on the host (design/tests/app-volume).
++ */
++object AppVolumeList {
++    // android.os.UserHandle and Process, restated for the host test
++    private const val PER_USER_RANGE = 100000
++    private const val FIRST_APPLICATION_UID = 10000
++    private const val LAST_APPLICATION_UID = 19999
++
++    /**
++     * AudioManager.STREAM_*: the streams AudioService may scale (MUSIC, TTS, ACCESSIBILITY,
++     * ASSISTANT), each only while its volume alias is STREAM_MUSIC (AppVolumes.mediaStreams).
++     */
++    const val STREAM_MUSIC = 3
++    val MEDIA_STREAM_CANDIDATES = listOf(STREAM_MUSIC, 9, 10, 11)
++
++    /** One player of AudioManager's playback configurations. */
++    data class Player(
++        val playerId: Int,
++        val uid: Int,
++        val pid: Int,
++        val active: Boolean,
++        val volumeControlStream: Int,
++    )
++
++    /** An app with an active player on a media stream, by its earliest such player. */
++    data class PlayingApp(val uid: Int, val pid: Int)
++
++    /** Whether the uid is an app's (app id 10000 to 19999, any user). */
++    fun isAppUid(uid: Int): Boolean {
++        if (uid < 0) return false
++        val appId = uid % PER_USER_RANGE
++        return appId in FIRST_APPLICATION_UID..LAST_APPLICATION_UID
++    }
++
++    /**
++     * The apps playing now: an active player on a media stream, of an app uid other than
++     * [ownUid], one entry per uid, in the order of their earliest player (the one created
++     * first). [isMediaStream] tells whether a stream's alias is STREAM_MUSIC.
++     */
++    fun playingApps(
++        players: List<Player>,
++        ownUid: Int,
++        isMediaStream: (Int) -> Boolean,
++    ): List<PlayingApp> =
++        players
++            .asSequence()
++            .filter { it.active && it.uid != ownUid && isAppUid(it.uid) }
++            .filter { it.volumeControlStream in MEDIA_STREAM_CANDIDATES }
++            .filter { isMediaStream(it.volumeControlStream) }
++            .sortedBy { it.playerId }
++            .distinctBy { it.uid }
++            .map { PlayingApp(it.uid, it.pid) }
++            .toList()
++
++    /**
++     * The panel's rows after [playing] was seen: the rows so far, in order, then the apps not
++     * among them in the order they came. A row never leaves while the panel is open, so a
++     * slider never vanishes under the finger.
++     */
++    fun grow(shown: List<PlayingApp>, playing: List<PlayingApp>): List<PlayingApp> {
++        val known = shown.mapTo(HashSet()) { it.uid }
++        val added = playing.filter { known.add(it.uid) }
++        return if (added.isEmpty()) shown else shown + added
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeRepository.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeRepository.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..0b08c7829ccee86ec9ed2b7664d4bfdd905d8e41
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/appvolume/AppVolumeRepository.kt
+@@ -0,0 +1,170 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.appvolume
++
++import android.app.ActivityManager
++import android.content.Context
++import android.content.pm.PackageManager
++import android.graphics.drawable.Drawable
++import android.media.AudioManager
++import android.media.AudioPlaybackConfiguration
++import android.os.Handler
++import android.os.Process
++import android.os.UserHandle
++import android.util.IconDrawableFactory
++import android.util.Log
++import com.android.systemui.dagger.qualifiers.Background
++import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
++import javax.inject.Inject
++import kotlin.coroutines.CoroutineContext
++import kotlinx.coroutines.channels.awaitClose
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.flowOn
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.withContext
++
++/** An app of the volume panel's rows: its uid, name and icon (with a work profile's badge). */
++data class AppVolumeApp(val uid: Int, val label: String, val icon: Drawable)
++
++/**
++ * Lujarch per-app media volume (VOL-1): the apps playing on the media streams, from
++ * AudioManager's playback configurations (SystemUI holds MODIFY_AUDIO_ROUTING, so they carry
++ * uids), and their shares of the Media level through AudioManager's hidden app volume API.
++ */
++class AppVolumeRepository
++@Inject
++constructor(
++    private val context: Context,
++    private val audioManager: AudioManager,
++    @Background private val backgroundHandler: Handler,
++    @Background private val backgroundContext: CoroutineContext,
++) {
++
++    /** The apps with an active player on a media stream, by their earliest player. */
++    val playingApps: Flow<List<AppVolumeList.PlayingApp>> =
++        conflatedCallbackFlow<List<AudioPlaybackConfiguration>> {
++                val callback =
++                    object : AudioManager.AudioPlaybackCallback() {
++                        override fun onPlaybackConfigChanged(
++                            configs: List<AudioPlaybackConfiguration>
++                        ) {
++                            trySend(configs)
++                        }
++                    }
++                audioManager.registerAudioPlaybackCallback(callback, backgroundHandler)
++                trySend(audioManager.activePlaybackConfigurations)
++                awaitClose { audioManager.unregisterAudioPlaybackCallback(callback) }
++            }
++            .map { configs -> playingApps(configs) }
++            .distinctUntilChanged()
++            .flowOn(backgroundContext)
++
++    // the aliases change only with TalkBack's independent volume; asked once per stream
++    private val mediaStreams = HashMap<Int, Boolean>()
++
++    private fun isMediaStream(stream: Int): Boolean =
++        synchronized(mediaStreams) {
++            mediaStreams.getOrPut(stream) {
++                try {
++                    audioManager.getStreamTypeAlias(stream) == AppVolumeList.STREAM_MUSIC
++                } catch (e: RuntimeException) {
++                    Log.w(TAG, "no alias for stream $stream", e)
++                    false
++                }
++            }
++        }
++
++    private fun playingApps(
++        configs: List<AudioPlaybackConfiguration>
++    ): List<AppVolumeList.PlayingApp> {
++        val players =
++            configs.map {
++                AppVolumeList.Player(
++                    playerId = it.playerInterfaceId,
++                    uid = it.clientUid,
++                    pid = it.clientPid,
++                    active = it.isActive,
++                    volumeControlStream = it.audioAttributes.volumeControlStream,
++                )
++            }
++        return AppVolumeList.playingApps(players, Process.myUid(), ::isMediaStream)
++    }
++
++    /**
++     * The app's name and icon, from the package that runs the player: the uid's only package,
++     * or for a shared uid the one whose process is [app]'s. Null when no package has the uid.
++     */
++    suspend fun appOf(app: AppVolumeList.PlayingApp): AppVolumeApp? =
++        withContext(backgroundContext) {
++            val pm = context.packageManager
++            val userId = UserHandle.getUserId(app.uid)
++            val packages = pm.getPackagesForUid(app.uid)?.toList().orEmpty()
++            if (packages.isEmpty()) {
++                Log.w(TAG, "no package has uid ${app.uid}")
++                return@withContext null
++            }
++            val packageName =
++                packages.singleOrNull()
++                    ?: processPackage(app.pid, packages)
++                    ?: packages.sorted().first()
++            try {
++                val info = pm.getApplicationInfoAsUser(packageName, 0, userId)
++                AppVolumeApp(
++                    uid = app.uid,
++                    label = info.loadLabel(pm).toString(),
++                    icon = IconDrawableFactory.newInstance(context).getBadgedIcon(info, userId),
++                )
++            } catch (e: PackageManager.NameNotFoundException) {
++                Log.w(TAG, "$packageName of uid ${app.uid} is gone", e)
++                null
++            }
++        }
++
++    private fun processPackage(pid: Int, packages: List<String>): String? =
++        context
++            .getSystemService(ActivityManager::class.java)
++            ?.runningAppProcesses
++            ?.firstOrNull { it.pid == pid }
++            ?.pkgList
++            ?.firstOrNull { it in packages }
++
++    /** The app's share of the Media level in percent; 100 when it cannot be read (logged). */
++    suspend fun getAppVolume(uid: Int): Int =
++        withContext(backgroundContext) {
++            try {
++                audioManager.getAppVolume(uid)
++            } catch (e: RuntimeException) {
++                Log.w(TAG, "cannot read the volume of uid $uid", e)
++                100
++            }
++        }
++
++    suspend fun setAppVolume(uid: Int, percent: Int) {
++        withContext(backgroundContext) {
++            try {
++                audioManager.setAppVolume(uid, percent)
++            } catch (e: RuntimeException) {
++                Log.w(TAG, "cannot set the volume of uid $uid to $percent", e)
++            }
++        }
++    }
++
++    private companion object {
++        const val TAG = "AppVolumeRepository"
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AppVolumeSliderViewModel.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AppVolumeSliderViewModel.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..390dab937bd57942d0c70ff1f92745bccc60d175
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AppVolumeSliderViewModel.kt
+@@ -0,0 +1,138 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel
++
++import android.content.Context
++import com.android.app.tracing.coroutines.launchTraced as launch
++import com.android.systemui.common.shared.model.Icon
++import com.android.systemui.haptics.slider.SliderHapticFeedbackFilter
++import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
++import com.android.systemui.res.R
++import com.android.systemui.volume.panel.component.volume.appvolume.AppVolumeApp
++import com.android.systemui.volume.panel.component.volume.appvolume.AppVolumeInteractor
++import dagger.assisted.Assisted
++import dagger.assisted.AssistedFactory
++import dagger.assisted.AssistedInject
++import java.text.NumberFormat
++import kotlin.math.roundToInt
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.filterNotNull
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.stateIn
++
++/**
++ * Lujarch per-app media volume: one app's row in the volume panel, 0 to 100 % of the Media
++ * level. A drag shows each value at once and sends the latest one, so a fast drag does not
++ * queue a call per step.
++ */
++class AppVolumeSliderViewModel
++@AssistedInject
++constructor(
++    @Assisted private val app: AppVolumeApp,
++    @Assisted private val coroutineScope: CoroutineScope,
++    private val context: Context,
++    private val interactor: AppVolumeInteractor,
++    private val hapticsViewModelFactory: SliderHapticsViewModel.Factory,
++) : SliderViewModel {
++
++    private val icon = Icon.Loaded(drawable = app.icon, contentDescription = null)
++    private val percent = MutableStateFlow<Int?>(null)
++    private val requested = MutableStateFlow<Int?>(null)
++
++    init {
++        coroutineScope.launch {
++            val stored = interactor.getAppVolume(app.uid)
++            // a drag that began before the read keeps its value
++            percent.compareAndSet(null, stored)
++        }
++        coroutineScope.launch {
++            requested.filterNotNull().collect { interactor.setAppVolume(app.uid, it) }
++        }
++    }
++
++    private val a11yName = context.getString(R.string.lujarch_volume_panel_app_volume, app.label)
++
++    override val slider: StateFlow<SliderState> =
++        percent
++            .map { value ->
++                if (value == null) {
++                    SliderState.Empty
++                } else {
++                    State(
++                        value = value.toFloat(),
++                        label = app.label,
++                        icon = icon,
++                        a11yContentDescription = a11yName,
++                        a11yStateDescription =
++                            NumberFormat.getPercentInstance().format(value / 100.0),
++                    )
++                }
++            }
++            .stateIn(coroutineScope, SharingStarted.Eagerly, SliderState.Empty)
++
++    override fun onValueChanged(state: SliderState, newValue: Float) {
++        val value = newValue.roundToInt().coerceIn(0, 100)
++        percent.value = value
++        requested.value = value
++    }
++
++    override fun onValueChangeFinished() {}
++
++    override fun toggleMuted(state: SliderState) {
++        // an app row has no mute: 0 % silences the app
++    }
++
++    override fun getSliderHapticsViewModelFactory(): SliderHapticsViewModel.Factory? =
++        if (slider.value != SliderState.Empty) hapticsViewModelFactory else null
++
++    private data class State(
++        override val value: Float,
++        override val label: String,
++        override val icon: Icon.Loaded,
++        override val a11yContentDescription: String,
++        override val a11yStateDescription: String,
++    ) : SliderState {
++        override val valueRange: ClosedFloatingPointRange<Float>
++            get() = 0f..100f
++
++        override val step: Float
++            get() = 1f
++
++        override val hapticFilter: SliderHapticFeedbackFilter
++            get() = SliderHapticFeedbackFilter()
++
++        override val isEnabled: Boolean
++            get() = true
++
++        override val a11yClickDescription: String?
++            get() = null
++
++        override val disabledMessage: String?
++            get() = null
++
++        override val isMutable: Boolean
++            get() = false
++    }
++
++    @AssistedFactory
++    interface Factory {
++        fun create(app: AppVolumeApp, coroutineScope: CoroutineScope): AppVolumeSliderViewModel
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AudioStreamSliderViewModel.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AudioStreamSliderViewModel.kt
+index 0226819880eab1976230bb6cdb45e8eb556e0ab7..21edd2e389f6428f99c5a1f4335666dcba0d7d23 100644
+--- a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AudioStreamSliderViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/slider/ui/viewmodel/AudioStreamSliderViewModel.kt
+@@ -74,7 +74,8 @@ constructor(
+ ) : SliderViewModel {
+ 
+     private val volumeChanges = MutableStateFlow<Int?>(null)
+-    private val audioStream = audioStreamWrapper.audioStream
++    // public for the volume panel, which puts the playing apps' line under Media (Lujarch)
++    val audioStream = audioStreamWrapper.audioStream
+     private val labelsByStream =
+         mapOf(
+             AudioStream(AudioManager.STREAM_MUSIC) to R.string.stream_music,
+diff --git a/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/ui/viewmodel/AppVolumesViewModel.kt b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/ui/viewmodel/AppVolumesViewModel.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..5d260a1e7a8911bc4c5de0ff9afea860fbd3ca87
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/volume/panel/component/volume/ui/viewmodel/AppVolumesViewModel.kt
+@@ -0,0 +1,109 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.volume.panel.component.volume.ui.viewmodel
++
++import android.graphics.drawable.Drawable
++import android.util.Log
++import com.android.app.tracing.coroutines.launchTraced as launch
++import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
++import com.android.systemui.volume.panel.component.volume.appvolume.AppVolumeInteractor
++import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.AppVolumeSliderViewModel
++import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.SliderViewModel
++import com.android.systemui.volume.panel.dagger.scope.VolumePanelScope
++import javax.inject.Inject
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.combine
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.stateIn
++
++/**
++ * Settings.Secure key of the owner's choice for the line of playing apps under Media: 1 open
++ * (the app rows shown), 0 (the default) folded.
++ */
++const val APPS_EXPANDED_SETTING = "lujarch_appvolume_expanded"
++
++/**
++ * Lujarch per-app media volume (VOL-1): the line under Media with the playing apps' icons and
++ * count, which opens one row per app.
++ */
++@VolumePanelScope
++class AppVolumesViewModel
++@Inject
++constructor(
++    @VolumePanelScope private val scope: CoroutineScope,
++    interactor: AppVolumeInteractor,
++    private val sliderViewModelFactory: AppVolumeSliderViewModel.Factory,
++    private val secureSettings: SecureSettingsRepository,
++) {
++
++    /** One app row: the slider, and the name and icon the line shows. */
++    data class Row(
++        val uid: Int,
++        val label: String,
++        val icon: Drawable,
++        val slider: SliderViewModel,
++    )
++
++    // one slider per app for the panel's life; touched only by the flow below
++    private val sliders = HashMap<Int, AppVolumeSliderViewModel>()
++
++    /** The rows in the order they appeared; the list only grows while the panel is open. */
++    val rows: StateFlow<List<Row>> =
++        interactor.rows
++            .map { apps ->
++                apps.map { app ->
++                    Row(
++                        uid = app.uid,
++                        label = app.label,
++                        icon = app.icon,
++                        slider =
++                            sliders.getOrPut(app.uid) {
++                                sliderViewModelFactory.create(app, scope)
++                            },
++                    )
++                }
++            }
++            .stateIn(scope, SharingStarted.Eagerly, emptyList())
++
++    // the owner's tap while the panel is open wins over the setting's echo of it
++    private val tapped = MutableStateFlow<Boolean?>(null)
++
++    /** Whether the rows are open; null until the stored choice is read. */
++    val isExpanded: StateFlow<Boolean?> =
++        combine(secureSettings.boolSetting(APPS_EXPANDED_SETTING, false), tapped) { stored, tap ->
++                tap ?: stored
++            }
++            .stateIn<Boolean?>(scope, SharingStarted.Eagerly, null)
++
++    fun onExpandedChanged(expanded: Boolean) {
++        tapped.value = expanded
++        scope.launch {
++            try {
++                secureSettings.setBoolean(APPS_EXPANDED_SETTING, expanded)
++            } catch (e: RuntimeException) {
++                Log.w(TAG, "could not save $APPS_EXPANDED_SETTING=$expanded", e)
++            }
++        }
++    }
++
++    private companion object {
++        const val TAG = "AppVolumesViewModel"
++    }
++}
+diff --git a/services/core/java/com/android/server/audio/AppVolumeHelper.java b/services/core/java/com/android/server/audio/AppVolumeHelper.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..1bcec676f4908b1ff9e044f289bd5cb1af629c1d
+--- /dev/null
++++ b/services/core/java/com/android/server/audio/AppVolumeHelper.java
+@@ -0,0 +1,446 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.audio;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.annotation.UserIdInt;
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.content.pm.PackageManagerInternal;
++import android.media.AudioSystem;
++import android.os.Environment;
++import android.os.Handler;
++import android.os.Process;
++import android.os.UserHandle;
++import android.util.AtomicFile;
++import android.util.Slog;
++import android.util.SparseArray;
++import android.util.Xml;
++
++import com.android.internal.annotations.GuardedBy;
++import com.android.internal.util.XmlUtils;
++import com.android.modules.utils.TypedXmlPullParser;
++import com.android.modules.utils.TypedXmlSerializer;
++import com.android.server.LocalServices;
++import com.android.server.utils.EventLogger;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileNotFoundException;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.io.PrintWriter;
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.List;
++import java.util.TreeSet;
++import java.util.function.IntUnaryOperator;
++
++/**
++ * Lujarch per-app media volume (VOL-1): the owner's per-app shares of the
++ * Media level, kept per user and package in /data/system_de/<user>/audio_app_volumes.xml and
++ * pushed to AudioFlinger as uids and gains, which applies them to the apps' playback on the
++ * media streams.
++ *
++ * <p>The whole table is pushed at once: when the system is ready, when a user starts or stops,
++ * after an audioserver restart, when the stream aliases change, when a share changes and when a
++ * package with a share is installed. An uninstall (not an update or an archive) drops the
++ * package's share in that user.
++ *
++ * <p>Every method may be called from any thread; they serialize on one lock, which is held
++ * while the table is pushed, so pushes never overtake each other. The file is written on the
++ * audio handler, {@link #PERSIST_DELAY_MS} after the last change, so a drag writes it once.
++ */
++final class AppVolumeHelper {
++    private static final String TAG = "AS.AppVolumeHelper";
++
++    private static final String FILE_NAME = "audio_app_volumes.xml";
++    private static final String TAG_ROOT = "app-volumes";
++    private static final String TAG_APP = "app";
++    private static final String ATTR_VERSION = "version";
++    private static final String ATTR_PACKAGE = "package";
++    private static final String ATTR_SHARED_USER = "shared-user";
++    private static final String ATTR_PERCENT = "percent";
++    private static final int VERSION = 1;
++
++    /** As AudioService's PERSIST_DELAY for the stream volumes. */
++    private static final long PERSIST_DELAY_MS = 500;
++
++    private final Context mContext;
++    private final AudioSystemAdapter mAudioSystem;
++    private final Handler mHandler;
++    private final IntUnaryOperator mStreamAlias;
++    private final EventLogger mLogger = new EventLogger(40, "app volume events");
++
++    private final Object mLock = new Object();
++    @GuardedBy("mLock")
++    private final AppVolumes mVolumes = new AppVolumes();
++    @GuardedBy("mLock")
++    private final TreeSet<Integer> mStartedUsers = new TreeSet<>();
++    @GuardedBy("mLock")
++    private final TreeSet<Integer> mDirtyUsers = new TreeSet<>();
++    @GuardedBy("mLock")
++    private boolean mSystemReady;
++    @GuardedBy("mLock")
++    private @Nullable AppVolumes.Push mLastPush;
++    @GuardedBy("mLock")
++    private int mLastPushStatus;
++
++    private final Runnable mPersistRunnable = this::persistDirtyUsers;
++
++    private final AppVolumes.Resolver mResolver = new AppVolumes.Resolver() {
++        @Override
++        public AppVolumes.Key keyOf(int uid) {
++            final PackageManagerInternal pmi = pm();
++            final String sharedUser = pmi.getAppsWithSharedUserIds().get(UserHandle.getAppId(uid));
++            if (sharedUser != null) {
++                return AppVolumes.Key.ofSharedUser(sharedUser);
++            }
++            final String name = pmi.getNameForUid(uid);
++            return name == null || !AppVolumes.isValidName(name)
++                    ? null : AppVolumes.Key.ofPackage(name);
++        }
++
++        @Override
++        public int uidOf(AppVolumes.Key key, int userId) {
++            final PackageManagerInternal pmi = pm();
++            if (key.sharedUser) {
++                final SparseArray<String> shared = pmi.getAppsWithSharedUserIds();
++                for (int i = 0; i < shared.size(); i++) {
++                    if (key.name.equals(shared.valueAt(i))) {
++                        return UserHandle.getUid(userId, shared.keyAt(i));
++                    }
++                }
++                return -1;
++            }
++            return pmi.getPackageUid(key.name, 0 /* flags */, userId);
++        }
++    };
++
++    AppVolumeHelper(@NonNull Context context, @NonNull AudioSystemAdapter audioSystem,
++            @NonNull Handler audioHandler, @NonNull IntUnaryOperator streamAlias) {
++        mContext = context;
++        mAudioSystem = audioSystem;
++        mHandler = audioHandler;
++        mStreamAlias = streamAlias;
++    }
++
++    private static PackageManagerInternal pm() {
++        return LocalServices.getService(PackageManagerInternal.class);
++    }
++
++    // ---- lifecycle
++
++    /** AudioService.onSystemReady(): the system user runs from boot. */
++    void onSystemReady() {
++        synchronized (mLock) {
++            mSystemReady = true;
++            startUserLocked(UserHandle.USER_SYSTEM);
++            pushLocked("system ready");
++        }
++        final IntentFilter filter = new IntentFilter();
++        filter.addAction(Intent.ACTION_PACKAGE_ADDED);
++        filter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED);
++        filter.addDataScheme("package");
++        mContext.registerReceiverForAllUsers(mPackageReceiver, filter, null, mHandler);
++    }
++
++    void onUserStarting(@UserIdInt int userId) {
++        synchronized (mLock) {
++            startUserLocked(userId);
++            if (mSystemReady) {
++                pushLocked("user " + userId + " starting");
++            }
++        }
++    }
++
++    void onUserStopped(@UserIdInt int userId) {
++        synchronized (mLock) {
++            if (!mStartedUsers.remove(userId)) {
++                return;
++            }
++            if (mDirtyUsers.remove(userId)) {
++                writeLocked(userId);
++            }
++            mVolumes.unload(userId);
++            if (mSystemReady) {
++                pushLocked("user " + userId + " stopped");
++            }
++        }
++    }
++
++    /** audioserver restarted with an empty table; AudioService restores its uid state now. */
++    void onAudioServerDied() {
++        synchronized (mLock) {
++            if (mSystemReady) {
++                pushLocked("audioserver restarted");
++            }
++        }
++    }
++
++    /** The stream aliases changed, so the set of media streams may have. */
++    void onStreamAliasesChanged() {
++        synchronized (mLock) {
++            if (mSystemReady) {
++                pushLocked("stream aliases changed");
++            }
++        }
++    }
++
++    // ---- API
++
++    /**
++     * @throws IllegalArgumentException for a uid that is not an installed app's in a started
++     *     user, or a percent out of 0..100
++     */
++    void setAppVolume(int uid, int percent) {
++        if (percent < 0 || percent > AppVolumes.DEFAULT_PERCENT) {
++            throw new IllegalArgumentException("percent " + percent + " is not in 0..100");
++        }
++        final AppVolumes.Key key = keyOrThrow(uid);
++        final int userId = AppVolumes.userIdOf(uid);
++        synchronized (mLock) {
++            if (!mStartedUsers.contains(userId)) {
++                throw new IllegalArgumentException("user " + userId + " is not running");
++            }
++            if (!mVolumes.set(userId, key, percent)) {
++                return;
++            }
++            mLogger.enqueue(new EventLogger.StringEvent(
++                    "set user " + userId + " " + key + " " + percent + "% (uid " + uid + ")"));
++            scheduleWriteLocked(userId);
++            if (mSystemReady) {
++                pushLocked(null);
++            }
++        }
++    }
++
++    /**
++     * @throws IllegalArgumentException for a uid that is not an installed app's
++     */
++    int getAppVolume(int uid) {
++        final AppVolumes.Key key = keyOrThrow(uid);
++        synchronized (mLock) {
++            return mVolumes.get(AppVolumes.userIdOf(uid), key);
++        }
++    }
++
++    private AppVolumes.Key keyOrThrow(int uid) {
++        if (!AppVolumes.isAppUid(uid)) {
++            throw new IllegalArgumentException("uid " + uid + " is not an app's");
++        }
++        final AppVolumes.Key key = mResolver.keyOf(uid);
++        if (key == null) {
++            throw new IllegalArgumentException("no package has uid " + uid);
++        }
++        return key;
++    }
++
++    // ---- packages
++
++    private final BroadcastReceiver mPackageReceiver = new BroadcastReceiver() {
++        @Override
++        public void onReceive(Context context, Intent intent) {
++            final String packageName =
++                    intent.getData() == null ? null : intent.getData().getSchemeSpecificPart();
++            final int extraUid = intent.getIntExtra(Intent.EXTRA_UID, Process.INVALID_UID);
++            final int userId = getSendingUserId();
++            if (packageName == null || extraUid == Process.INVALID_UID || userId < 0) {
++                return;
++            }
++            final int uid = UserHandle.getUid(userId, UserHandle.getAppId(extraUid));
++            if (!AppVolumes.isAppUid(uid)) {
++                return;
++            }
++            final AppVolumes.Key key = AppVolumes.Key.ofPackage(packageName);
++            synchronized (mLock) {
++                if (Intent.ACTION_PACKAGE_FULLY_REMOVED.equals(intent.getAction())) {
++                    // Sent only when the package's data is removed for the user: not for an
++                    // update, not for an archive. A reinstall starts at 100 %.
++                    if (mVolumes.remove(userId, key)) {
++                        mLogger.enqueue(new EventLogger.StringEvent(
++                                "removed user " + userId + " " + key + " (uninstalled)"));
++                        scheduleWriteLocked(userId);
++                        pushLocked(null);
++                    }
++                } else if (mStartedUsers.contains(userId)) {
++                    // Installed (new, or an update): its uid is resolved again for the push.
++                    final AppVolumes.Key current = mResolver.keyOf(uid);
++                    if (current != null && mVolumes.contains(userId, current)) {
++                        pushLocked("package " + packageName + " added in user " + userId);
++                    }
++                }
++            }
++        }
++    };
++
++    // ---- push
++
++    @GuardedBy("mLock")
++    private void pushLocked(@Nullable String reason) {
++        final int[] streams = AppVolumes.mediaStreams(mStreamAlias);
++        final AppVolumes.Push push = mVolumes.push(mStartedUsers, mResolver, streams);
++        final int status = mAudioSystem.setAppVolumes(push.uids, push.gains, push.mediaStreams);
++        mLastPush = push;
++        mLastPushStatus = status;
++        if (status != AudioSystem.SUCCESS) {
++            Slog.w(TAG, "setAppVolumes failed with status " + status + " ("
++                    + push.uids.length + " app(s))");
++            mLogger.enqueue(new EventLogger.StringEvent("push failed, status " + status));
++        } else if (reason != null) {
++            mLogger.enqueue(new EventLogger.StringEvent(
++                    "pushed " + push.uids.length + " app(s): " + reason));
++        }
++    }
++
++    // ---- persistence
++
++    private File fileOf(@UserIdInt int userId) {
++        return new File(Environment.getDataSystemDeDirectory(userId), FILE_NAME);
++    }
++
++    @GuardedBy("mLock")
++    private void startUserLocked(@UserIdInt int userId) {
++        if (!mStartedUsers.add(userId)) {
++            return;
++        }
++        final List<AppVolumes.Entry> entries = read(userId);
++        final int dropped = mVolumes.load(userId, entries);
++        if (dropped > 0) {
++            Slog.w(TAG, "user " + userId + ": " + dropped + " duplicate entries dropped");
++        }
++        if (!entries.isEmpty()) {
++            mLogger.enqueue(new EventLogger.StringEvent(
++                    "loaded user " + userId + ": " + entries.size() + " app(s)"));
++        }
++    }
++
++    /** The user's entries; a missing file is an empty table, a bad one is logged and skipped. */
++    private List<AppVolumes.Entry> read(@UserIdInt int userId) {
++        final List<AppVolumes.Entry> entries = new ArrayList<>();
++        final AtomicFile file = new AtomicFile(fileOf(userId));
++        try (FileInputStream in = file.openRead()) {
++            final TypedXmlPullParser parser = Xml.resolvePullParser(in);
++            XmlUtils.beginDocument(parser, TAG_ROOT);
++            final int depth = parser.getDepth();
++            while (XmlUtils.nextElementWithin(parser, depth)) {
++                if (!TAG_APP.equals(parser.getName())) {
++                    continue;
++                }
++                final AppVolumes.Entry entry = AppVolumes.Entry.parse(
++                        parser.getAttributeValue(null, ATTR_PACKAGE),
++                        parser.getAttributeValue(null, ATTR_SHARED_USER),
++                        parser.getAttributeValue(null, ATTR_PERCENT));
++                if (entry == null) {
++                    Slog.w(TAG, "user " + userId + ": skipped a bad entry in " + FILE_NAME);
++                    continue;
++                }
++                entries.add(entry);
++            }
++        } catch (FileNotFoundException e) {
++            // no shares in this user
++        } catch (IOException | org.xmlpull.v1.XmlPullParserException | RuntimeException e) {
++            // A bad file must not take the system down at boot: the shares are lost, logged.
++            Slog.e(TAG, "user " + userId + ": cannot read " + FILE_NAME + "; starting empty", e);
++            mLogger.enqueue(new EventLogger.StringEvent(
++                    "user " + userId + ": unreadable file ignored: " + e));
++            entries.clear();
++        }
++        return entries;
++    }
++
++    @GuardedBy("mLock")
++    private void scheduleWriteLocked(@UserIdInt int userId) {
++        mDirtyUsers.add(userId);
++        mHandler.removeCallbacks(mPersistRunnable);
++        mHandler.postDelayed(mPersistRunnable, PERSIST_DELAY_MS);
++    }
++
++    private void persistDirtyUsers() {
++        synchronized (mLock) {
++            for (int userId : mDirtyUsers) {
++                writeLocked(userId);
++            }
++            mDirtyUsers.clear();
++        }
++    }
++
++    /** Writes the user's table; an empty table deletes the file. */
++    @GuardedBy("mLock")
++    private void writeLocked(@UserIdInt int userId) {
++        final AtomicFile file = new AtomicFile(fileOf(userId));
++        final List<AppVolumes.Entry> entries = mVolumes.entries(userId);
++        if (entries.isEmpty()) {
++            file.delete();
++            return;
++        }
++        FileOutputStream out = null;
++        try {
++            out = file.startWrite();
++            final TypedXmlSerializer serializer = Xml.resolveSerializer(out);
++            serializer.startDocument(null, true);
++            serializer.startTag(null, TAG_ROOT);
++            serializer.attributeInt(null, ATTR_VERSION, VERSION);
++            for (AppVolumes.Entry entry : entries) {
++                serializer.startTag(null, TAG_APP);
++                serializer.attribute(null,
++                        entry.key.sharedUser ? ATTR_SHARED_USER : ATTR_PACKAGE, entry.key.name);
++                serializer.attribute(null, ATTR_PERCENT, Integer.toString(entry.percent));
++                serializer.endTag(null, TAG_APP);
++            }
++            serializer.endTag(null, TAG_ROOT);
++            serializer.endDocument();
++            file.finishWrite(out);
++        } catch (IOException e) {
++            Slog.e(TAG, "user " + userId + ": cannot write " + FILE_NAME, e);
++            file.failWrite(out);
++        }
++    }
++
++    // ---- dump
++
++    void dump(PrintWriter pw) {
++        pw.println("\nApp volumes (Lujarch per-app media volume):");
++        synchronized (mLock) {
++            pw.println("  media streams: "
++                    + Arrays.toString(AppVolumes.mediaStreams(mStreamAlias)));
++            pw.println("  started users: " + mStartedUsers);
++            printTableLocked(pw, "  ");
++            if (mLastPush != null) {
++                pw.println("  last push: " + mLastPush.uids.length + " app(s), streams "
++                        + Arrays.toString(mLastPush.mediaStreams) + ", status "
++                        + mLastPushStatus);
++            }
++        }
++        mLogger.dump(pw, "  ");
++    }
++
++    @GuardedBy("mLock")
++    private void printTableLocked(PrintWriter pw, String indent) {
++        for (int userId : mStartedUsers) {
++            for (AppVolumes.Entry e : mVolumes.entries(userId)) {
++                final int uid = mResolver.uidOf(e.key, userId);
++                pw.println(String.format(java.util.Locale.ROOT,
++                        "%suser %d %s percent %d uid %d gain %.4f", indent, userId, e.key,
++                        e.percent, uid, AppVolumes.gainOf(e.percent)));
++            }
++        }
++    }
++}
+diff --git a/services/core/java/com/android/server/audio/AppVolumes.java b/services/core/java/com/android/server/audio/AppVolumes.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..177405a3e80a09960c6c868297e4a4f9648b8159
+--- /dev/null
++++ b/services/core/java/com/android/server/audio/AppVolumes.java
+@@ -0,0 +1,334 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.audio;
++
++import java.util.ArrayList;
++import java.util.Collection;
++import java.util.List;
++import java.util.Map;
++import java.util.Objects;
++import java.util.TreeMap;
++import java.util.function.IntUnaryOperator;
++
++/**
++ * Lujarch per-app media volume (VOL-1): each user's table of apps' shares of the
++ * Media level, the taper from a share to a gain, and the table audioserver gets.
++ *
++ * <p>A share is a percent from 0 to 100, stored per user under the app's key (its package, or
++ * its shared user when several packages share its uid); 100 is the default and is stored as no
++ * entry. The gain is derived from it when the table is pushed, so the taper can change without
++ * touching stored shares.
++ *
++ * <p>Plain Java without Android dependencies, so the taper, the table and the uid mapping are
++ * tested on the host (design/tests/app-volume). Not thread safe: {@link AppVolumeHelper} holds
++ * its lock around every call.
++ */
++final class AppVolumes {
++    static final int DEFAULT_PERCENT = 100;
++
++    // android.os.Process and UserHandle, restated so this class needs no Android classes
++    static final int PER_USER_RANGE = 100000;
++    static final int FIRST_APPLICATION_UID = 10000;
++    static final int LAST_APPLICATION_UID = 19999;
++
++    // AudioSystem.STREAM_*: the streams the Media slider can control. A stream is a media stream
++    // while its volume alias is STREAM_MUSIC; DTMF, ring, notifications, alarms, calls and
++    // system sounds are never scaled, even on a platform that aliases them to Media.
++    static final int STREAM_MUSIC = 3;
++    private static final int[] MEDIA_STREAM_CANDIDATES = {
++            STREAM_MUSIC, 9 /* TTS */, 10 /* ACCESSIBILITY */, 11 /* ASSISTANT */};
++
++    /** The key an app's share is stored under. Ordered: packages first, then by name. */
++    static final class Key implements Comparable<Key> {
++        final boolean sharedUser;
++        final String name;
++
++        private Key(boolean sharedUser, String name) {
++            this.sharedUser = sharedUser;
++            this.name = Objects.requireNonNull(name);
++        }
++
++        static Key ofPackage(String packageName) {
++            return new Key(false, packageName);
++        }
++
++        static Key ofSharedUser(String sharedUserName) {
++            return new Key(true, sharedUserName);
++        }
++
++        @Override
++        public int compareTo(Key other) {
++            if (sharedUser != other.sharedUser) {
++                return sharedUser ? 1 : -1;
++            }
++            return name.compareTo(other.name);
++        }
++
++        @Override
++        public boolean equals(Object o) {
++            return o instanceof Key k && k.sharedUser == sharedUser && k.name.equals(name);
++        }
++
++        @Override
++        public int hashCode() {
++            return Objects.hash(sharedUser, name);
++        }
++
++        @Override
++        public String toString() {
++            return (sharedUser ? "shared-user " : "package ") + name;
++        }
++    }
++
++    /** One stored share, as the file holds it. */
++    static final class Entry {
++        final Key key;
++        final int percent;
++
++        Entry(Key key, int percent) {
++            this.key = key;
++            this.percent = percent;
++        }
++
++        /**
++         * The entry of one element of the file, or null when it is not a valid one: exactly one
++         * of the names, a name of package characters, a percent from 0 to 99.
++         */
++        static Entry parse(String packageName, String sharedUserName, String percentText) {
++            if ((packageName == null) == (sharedUserName == null) || percentText == null) {
++                return null;
++            }
++            final String name = packageName != null ? packageName : sharedUserName;
++            if (!isValidName(name)) {
++                return null;
++            }
++            final int percent;
++            try {
++                percent = Integer.parseInt(percentText);
++            } catch (NumberFormatException e) {
++                return null;
++            }
++            if (percent < 0 || percent >= DEFAULT_PERCENT) {
++                return null;
++            }
++            return new Entry(packageName != null ? Key.ofPackage(name) : Key.ofSharedUser(name),
++                    percent);
++        }
++
++        @Override
++        public boolean equals(Object o) {
++            return o instanceof Entry e && e.key.equals(key) && e.percent == percent;
++        }
++
++        @Override
++        public int hashCode() {
++            return Objects.hash(key, percent);
++        }
++
++        @Override
++        public String toString() {
++            return key + " " + percent + "%";
++        }
++    }
++
++    /** Resolves app uids to keys and back, from the package manager. */
++    interface Resolver {
++        /** The key of the app with this uid, or null when no package has the uid. */
++        Key keyOf(int uid);
++
++        /** The uid of the app under this key in the user, or -1 when it is not installed there. */
++        int uidOf(Key key, int userId);
++    }
++
++    /** What audioserver gets: parallel arrays of uids and gains, by uid, and the streams. */
++    static final class Push {
++        final int[] uids;
++        final float[] gains;
++        final int[] mediaStreams;
++
++        Push(int[] uids, float[] gains, int[] mediaStreams) {
++            this.uids = uids;
++            this.gains = gains;
++            this.mediaStreams = mediaStreams;
++        }
++    }
++
++    // user id -> key -> percent (never 100)
++    private final TreeMap<Integer, TreeMap<Key, Integer>> mTables = new TreeMap<>();
++
++    /**
++     * The taper: the gain a share gives, by the square law, the usual fader taper (-3 dB at
++     * 84 %, -6 dB at 71 %, -10 dB at 56 %, -20 dB at 32 %). Linear amplitude would put the
++     * whole range from 0 to -6 dB into the top half of the slider.
++     */
++    static float gainOf(int percent) {
++        final float share = Math.max(0, Math.min(DEFAULT_PERCENT, percent)) / 100f;
++        return share * share;
++    }
++
++    /** Whether the uid is an app's (app id 10000 to 19999, any user); system uids never are. */
++    static boolean isAppUid(int uid) {
++        if (uid < 0) {
++            return false;
++        }
++        final int appId = uid % PER_USER_RANGE;
++        return appId >= FIRST_APPLICATION_UID && appId <= LAST_APPLICATION_UID;
++    }
++
++    static int userIdOf(int uid) {
++        return uid / PER_USER_RANGE;
++    }
++
++    /**
++     * The streams the gains apply to: the candidates whose volume alias (by {@code aliasOf}) is
++     * STREAM_MUSIC, so the set follows the Media slider (accessibility leaves it when TalkBack
++     * makes its volume independent).
++     */
++    static int[] mediaStreams(IntUnaryOperator aliasOf) {
++        int count = 0;
++        final int[] streams = new int[MEDIA_STREAM_CANDIDATES.length];
++        for (int stream : MEDIA_STREAM_CANDIDATES) {
++            if (aliasOf.applyAsInt(stream) == STREAM_MUSIC) {
++                streams[count++] = stream;
++            }
++        }
++        final int[] result = new int[count];
++        System.arraycopy(streams, 0, result, 0, count);
++        return result;
++    }
++
++    /** The share of the key in the user, 100 without an entry. */
++    int get(int userId, Key key) {
++        final TreeMap<Key, Integer> table = mTables.get(userId);
++        final Integer percent = table == null ? null : table.get(key);
++        return percent == null ? DEFAULT_PERCENT : percent;
++    }
++
++    /**
++     * Sets the share of the key in the user; 100 removes the entry.
++     * @return whether the table changed
++     * @throws IllegalArgumentException for a percent out of 0..100
++     */
++    boolean set(int userId, Key key, int percent) {
++        if (percent < 0 || percent > DEFAULT_PERCENT) {
++            throw new IllegalArgumentException("percent " + percent + " is not in 0..100");
++        }
++        if (percent == DEFAULT_PERCENT) {
++            return remove(userId, key);
++        }
++        final Integer old = mTables.computeIfAbsent(userId, u -> new TreeMap<>()).put(key, percent);
++        return old == null || old != percent;
++    }
++
++    /** Removes the key's entry in the user (the app was uninstalled there). */
++    boolean remove(int userId, Key key) {
++        final TreeMap<Key, Integer> table = mTables.get(userId);
++        if (table == null || table.remove(key) == null) {
++            return false;
++        }
++        if (table.isEmpty()) {
++            mTables.remove(userId);
++        }
++        return true;
++    }
++
++    /** Whether the user has an entry for the key. */
++    boolean contains(int userId, Key key) {
++        final TreeMap<Key, Integer> table = mTables.get(userId);
++        return table != null && table.containsKey(key);
++    }
++
++    /** Forgets the user's table (the user stopped; its file keeps it). */
++    void unload(int userId) {
++        mTables.remove(userId);
++    }
++
++    /** The user's entries in key order, as the file holds them. */
++    List<Entry> entries(int userId) {
++        final List<Entry> entries = new ArrayList<>();
++        final TreeMap<Key, Integer> table = mTables.get(userId);
++        if (table != null) {
++            for (Map.Entry<Key, Integer> e : table.entrySet()) {
++                entries.add(new Entry(e.getKey(), e.getValue()));
++            }
++        }
++        return entries;
++    }
++
++    /**
++     * Replaces the user's table with the entries read from its file (the user started). A key
++     * that appears twice keeps its first entry.
++     * @return how many entries were dropped as duplicates
++     */
++    int load(int userId, Collection<Entry> entries) {
++        mTables.remove(userId);
++        int dropped = 0;
++        for (Entry e : entries) {
++            if (contains(userId, e.key)) {
++                dropped++;
++                continue;
++            }
++            set(userId, e.key, e.percent);
++        }
++        return dropped;
++    }
++
++    /**
++     * The table for audioserver: every entry of the given users resolved to its uid, with its
++     * gain, sorted by uid. An entry whose app is not installed in its user is left out.
++     */
++    Push push(Collection<Integer> userIds, Resolver resolver, int[] mediaStreams) {
++        final TreeMap<Integer, Float> byUid = new TreeMap<>();
++        for (int userId : userIds) {
++            final TreeMap<Key, Integer> table = mTables.get(userId);
++            if (table == null) {
++                continue;
++            }
++            for (Map.Entry<Key, Integer> e : table.entrySet()) {
++                final int uid = resolver.uidOf(e.getKey(), userId);
++                if (uid < 0 || !isAppUid(uid) || userIdOf(uid) != userId) {
++                    continue;
++                }
++                byUid.putIfAbsent(uid, gainOf(e.getValue()));
++            }
++        }
++        final int[] uids = new int[byUid.size()];
++        final float[] gains = new float[byUid.size()];
++        int i = 0;
++        for (Map.Entry<Integer, Float> e : byUid.entrySet()) {
++            uids[i] = e.getKey();
++            gains[i] = e.getValue();
++            i++;
++        }
++        return new Push(uids, gains, mediaStreams.clone());
++    }
++
++    /** Package names and shared user ids: letters, digits, '_' and '.', not empty. */
++    static boolean isValidName(String name) {
++        if (name == null || name.isEmpty() || name.length() > 255) {
++            return false;
++        }
++        for (int i = 0; i < name.length(); i++) {
++            final char c = name.charAt(i);
++            if (!(c == '.' || c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
++                    || (c >= 'A' && c <= 'Z'))) {
++                return false;
++            }
++        }
++        return true;
++    }
++}
+diff --git a/services/core/java/com/android/server/audio/AudioService.java b/services/core/java/com/android/server/audio/AudioService.java
+index 7f9555c7713cf23cfe9bf21a1ed0d0985b9bde2b..9cd8a1f747b9d9b36a194e65fbd6551ea9429f09 100644
+--- a/services/core/java/com/android/server/audio/AudioService.java
++++ b/services/core/java/com/android/server/audio/AudioService.java
+@@ -1368,6 +1368,9 @@ public class AudioService extends IAudioService.Stub
+ 
+     private final SoundDoseHelper mSoundDoseHelper;
+ 
++    /** Lujarch per-app media volume (VOL-1). */
++    private final AppVolumeHelper mAppVolumeHelper;
++
+     private final LoudnessCodecHelper mLoudnessCodecHelper;
+ 
+     private final HardeningEnforcer mHardeningEnforcer;
+@@ -1434,6 +1437,17 @@ public class AudioService extends IAudioService.Stub
+                 mService.systemReady();
+             }
+         }
++
++        // Lujarch per-app media volume: a user's shares count while it runs
++        @Override
++        public void onUserStarting(@NonNull TargetUser user) {
++            mService.mAppVolumeHelper.onUserStarting(user.getUserIdentifier());
++        }
++
++        @Override
++        public void onUserStopped(@NonNull TargetUser user) {
++            mService.mAppVolumeHelper.onUserStopped(user.getUserIdentifier());
++        }
+     }
+ 
+     final private IUidObserver mUidObserver = new UidObserver() {
+@@ -1764,6 +1778,10 @@ public class AudioService extends IAudioService.Stub
+         mSoundDoseHelper = new SoundDoseHelper(this, mContext, mAudioHandler, mSettings,
+                 mVolumeController);
+ 
++        mAppVolumeHelper = new AppVolumeHelper(mContext, mAudioSystem, mAudioHandler,
++                stream -> sStreamVolumeAlias == null
++                        ? -1 : sStreamVolumeAlias.get(stream, /*valueIfKeyNotFound=*/-1));
++
+         AudioSystem.setErrorCallback(mAudioSystemCallback);
+ 
+         updateAudioHalPids();
+@@ -2133,6 +2151,8 @@ public class AudioService extends IAudioService.Stub
+         synchronized (mSupportedSystemUsagesLock) {
+             AudioSystem.setSupportedSystemUsages(mSupportedSystemUsages);
+         }
++
++        mAppVolumeHelper.onSystemReady();
+     }
+ 
+     //-----------------------------------------------------------------
+@@ -2308,6 +2328,9 @@ public class AudioService extends IAudioService.Stub
+         // Restore stream volumes
+         onReinitVolumes("after audioserver restart");
+ 
++        // Restore the per-app media volumes (Lujarch): audioserver starts with none
++        mAppVolumeHelper.onAudioServerDied();
++
+         // Restore audio volume groups
+         restoreVolumeGroups();
+ 
+@@ -3116,6 +3139,10 @@ public class AudioService extends IAudioService.Stub
+                     getVssForStreamOrDefault(AudioSystem.STREAM_ACCESSIBILITY), 0);
+         }
+         dispatchStreamAliasingUpdate();
++        // Lujarch per-app media volume: the gains follow the streams the Media slider controls
++        if (mAppVolumeHelper != null) {
++            mAppVolumeHelper.onStreamAliasesChanged();
++        }
+     }
+ 
+     private void readDockAudioSettings(ContentResolver cr)
+@@ -6706,6 +6733,36 @@ public class AudioService extends IAudioService.Stub
+         return sStreamVolumeAlias.get(sourceStreamType, /*valueIfKeyNotFound=*/-1);
+     }
+ 
++    /**
++     * Lujarch per-app media volume.
++     * @see AudioManager#setAppVolume(int, int)
++     */
++    @android.annotation.EnforcePermission(MODIFY_AUDIO_SETTINGS_PRIVILEGED)
++    public void setAppVolume(int uid, int percent) {
++        super.setAppVolume_enforcePermission();
++        final long token = Binder.clearCallingIdentity();
++        try {
++            mAppVolumeHelper.setAppVolume(uid, percent);
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++
++    /**
++     * Lujarch per-app media volume.
++     * @see AudioManager#getAppVolume(int)
++     */
++    @android.annotation.EnforcePermission(MODIFY_AUDIO_SETTINGS_PRIVILEGED)
++    public int getAppVolume(int uid) {
++        super.getAppVolume_enforcePermission();
++        final long token = Binder.clearCallingIdentity();
++        try {
++            return mAppVolumeHelper.getAppVolume(uid);
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++
+     /**
+      * @see AudioManager#isVolumeControlUsingVolumeGroups()
+      * @return true when volume control is performed through volume groups, false if it uses
+@@ -14624,6 +14681,8 @@ public class AudioService extends IAudioService.Stub
+         }
+ 
+         mAudioSystem.dump(pw);
++
++        mAppVolumeHelper.dump(pw);
+     }
+ 
+     private void dumpSupportedSystemUsage(PrintWriter pw) {
+diff --git a/services/core/java/com/android/server/audio/AudioSystemAdapter.java b/services/core/java/com/android/server/audio/AudioSystemAdapter.java
+index aa46fe9bb3078a898e08ab13323d7480a3fd209d..5f137be360755db178e3838f4930dfaf54a16697 100644
+--- a/services/core/java/com/android/server/audio/AudioSystemAdapter.java
++++ b/services/core/java/com/android/server/audio/AudioSystemAdapter.java
+@@ -538,6 +538,15 @@ public class AudioSystemAdapter implements AudioSystem.RoutingUpdateCallback,
+         return AudioSystem.setCurrentImeUid(uid);
+     }
+ 
++    /**
++     * Same as {@link AudioSystem#setAppVolumes(int[], float[], int[])}
++     * @return a status code
++     */
++    public int setAppVolumes(@NonNull int[] uids, @NonNull float[] volumes,
++            @NonNull int[] mediaStreams) {
++        return AudioSystem.setAppVolumes(uids, volumes, mediaStreams);
++    }
++
+     /**
+      * Same as {@link AudioSystem#isStreamActive(int, int)}
+      */

@@ -1,0 +1,1041 @@
+diff --git a/media/libaudioclient/Android.bp b/media/libaudioclient/Android.bp
+index efd550d46f207072a9e5212d52fe87934240faf2..f0725c4707b37b4286ed4782d520291cd4e8c372 100644
+--- a/media/libaudioclient/Android.bp
++++ b/media/libaudioclient/Android.bp
+@@ -458,6 +458,7 @@ aidl_interface {
+     host_supported: true,
+     vendor_available: true,
+     srcs: [
++        "aidl/android/media/AppVolume.aidl",
+         "aidl/android/media/CreateEffectRequest.aidl",
+         "aidl/android/media/CreateEffectResponse.aidl",
+         "aidl/android/media/CreateRecordRequest.aidl",
+diff --git a/media/libaudioclient/AudioSystem.cpp b/media/libaudioclient/AudioSystem.cpp
+index 472440c2eb62d577d9fdac6aebe8782fcb94d28c..6e36c85cf93f19b21452ffcdca99c4ab4393d9b1 100644
+--- a/media/libaudioclient/AudioSystem.cpp
++++ b/media/libaudioclient/AudioSystem.cpp
+@@ -372,6 +372,21 @@ status_t AudioSystem::setMasterMute(bool mute) {
+     return NO_ERROR;
+ }
+ 
++status_t AudioSystem::setAppVolumes(const std::vector<std::pair<uid_t, float>>& volumes,
++                                    const std::vector<audio_stream_type_t>& mediaStreams) {
++    const sp<IAudioFlinger> af = get_audio_flinger();
++    if (af == nullptr) return AudioFlingerServiceTraits::getError();
++    std::vector<media::AppVolume> volumesAidl;
++    volumesAidl.reserve(volumes.size());
++    for (const auto& [uid, volume] : volumes) {
++        media::AppVolume v;
++        v.uid = VALUE_OR_RETURN_STATUS(legacy2aidl_uid_t_int32_t(uid));
++        v.volume = volume;
++        volumesAidl.push_back(v);
++    }
++    return af->setAppVolumes(volumesAidl, mediaStreams);
++}
++
+ status_t AudioSystem::getMasterVolume(float* volume) {
+     const sp<IAudioFlinger> af = get_audio_flinger();
+     if (af == nullptr) return AudioFlingerServiceTraits::getError();
+diff --git a/media/libaudioclient/IAudioFlinger.cpp b/media/libaudioclient/IAudioFlinger.cpp
+index ea5149a3d78727c6886f2be95fc49ffdaf5c5120..51cdead995cf98470690ff01de24d37995240475 100644
+--- a/media/libaudioclient/IAudioFlinger.cpp
++++ b/media/libaudioclient/IAudioFlinger.cpp
+@@ -913,6 +913,15 @@ status_t AudioFlingerClientAdapter::getFlushFromFrameSupport(
+             module, config, support));
+ }
+ 
++status_t AudioFlingerClientAdapter::setAppVolumes(
++        const std::vector<media::AppVolume>& volumes,
++        const std::vector<audio_stream_type_t>& mediaStreams) {
++    std::vector<AudioStreamType> mediaStreamsAidl = VALUE_OR_RETURN_STATUS(
++            convertContainer<std::vector<AudioStreamType>>(
++                    mediaStreams, legacy2aidl_audio_stream_type_t_AudioStreamType));
++    return statusTFromBinderStatus(mDelegate->setAppVolumes(volumes, mediaStreamsAidl));
++}
++
+ ////////////////////////////////////////////////////////////////////////////////////////////////////
+ // AudioFlingerServerAdapter
+ AudioFlingerServerAdapter::AudioFlingerServerAdapter(
+@@ -1475,4 +1484,13 @@ Status AudioFlingerServerAdapter::getFlushFromFrameSupport(
+     return Status::ok();
+ }
+ 
++Status AudioFlingerServerAdapter::setAppVolumes(
++        const std::vector<media::AppVolume>& volumes,
++        const std::vector<AudioStreamType>& mediaStreams) {
++    std::vector<audio_stream_type_t> mediaStreamsLegacy = VALUE_OR_RETURN_BINDER(
++            convertContainer<std::vector<audio_stream_type_t>>(
++                    mediaStreams, aidl2legacy_AudioStreamType_audio_stream_type_t));
++    return Status::fromStatusT(mDelegate->setAppVolumes(volumes, mediaStreamsLegacy));
++}
++
+ } // namespace android
+diff --git a/media/libaudioclient/MmapStreamInterface.cpp b/media/libaudioclient/MmapStreamInterface.cpp
+index fdc2da137395600a3e03f5ec2b977ff3b32d23de..08a77b150546e9bcf4270c6ff1ff7ab57b0db4ec 100644
+--- a/media/libaudioclient/MmapStreamInterface.cpp
++++ b/media/libaudioclient/MmapStreamInterface.cpp
+@@ -86,6 +86,17 @@ public:
+         return binder::Status::ok();
+     }
+ 
++    ::android::binder::Status onAppVolumeChanged(int32_t portId, float volume) final {
++        const audio_port_handle_t handle = VALUE_OR_RETURN_BINDER_STATUS(
++            aidl2legacy_int32_t_audio_port_handle_t(portId));
++        if (const auto callback = mCallback.promote()) {
++            callback->onAppVolumeChanged(handle, volume);
++        } else {
++            ALOGW_IF(mCallbackWarn++ < kSpamLimit, "%s: null callback", __func__);
++        }
++        return binder::Status::ok();
++    }
++
+ private:
+     static constexpr uint32_t kSpamLimit = 30;
+     const wp<MmapStreamCallback> mCallback;
+diff --git a/media/libaudioclient/aidl/android/media/AppVolume.aidl b/media/libaudioclient/aidl/android/media/AppVolume.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..f5ac1da56c236c52bdb32c65483d6f493c86092c
+--- /dev/null
++++ b/media/libaudioclient/aidl/android/media/AppVolume.aidl
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package android.media;
++
++/**
++ * The gain of one app's playback on the media streams (IAudioFlingerService.setAppVolumes).
++ * {@hide}
++ */
++parcelable AppVolume {
++    /* Interpreted as uid_t: the app's uid in one user. */
++    int uid;
++    /* A gain in [0, 1], applied on top of every other volume of the app's tracks. */
++    float volume;
++}
+diff --git a/media/libaudioclient/aidl/android/media/IAudioFlingerService.aidl b/media/libaudioclient/aidl/android/media/IAudioFlingerService.aidl
+index b50e6ef863913e44763ff05b22f3f7dc7abae6d1..dc72139c14fed845a1ee1dffdaf70292ff0e1f8a 100644
+--- a/media/libaudioclient/aidl/android/media/IAudioFlingerService.aidl
++++ b/media/libaudioclient/aidl/android/media/IAudioFlingerService.aidl
+@@ -16,12 +16,14 @@
+ 
+ package android.media;
+ 
++import android.media.AppVolume;
+ import android.media.AudioPatchFw;
+ import android.media.AudioPolicyConfig;
+ import android.media.AudioPortFw;
+ import android.media.AudioPortConfigFw;
+ import android.media.AudioUniqueIdUse;
+ import android.media.AudioVibratorInfo;
++import android.media.AppVolume;
+ import android.media.CreateEffectRequest;
+ import android.media.CreateEffectResponse;
+ import android.media.CreateRecordRequest;
+@@ -321,6 +323,13 @@ interface IAudioFlingerService {
+      */
+     FlushFromFrameSupport getFlushFromFrameSupport(int module, in AudioPortConfig config);
+ 
++    /**
++     * Replaces the per-app volumes (Lujarch, VOL-1). A playback track whose uid is listed and whose
++     * stream is one of mediaStreams is scaled by that app's volume; every other track by 1.
++     * Only system_server (app id 1000) and audioserver may call it.
++     */
++    void setAppVolumes(in AppVolume[] volumes, in AudioStreamType[] mediaStreams);
++
+     // When adding a new method, please review and update
+     // IAudioFlinger.h AudioFlingerServerAdapter::Delegate::TransactionCode
+     // AudioFlinger.cpp AudioFlinger::onTransactWrapper()
+diff --git a/media/libaudioclient/aidl/android/media/IMmapStreamCallback.aidl b/media/libaudioclient/aidl/android/media/IMmapStreamCallback.aidl
+index 60f4dd2068f8b685a9c005a4935f7804a9801e7a..b445001ed3ee8a2458480771b8e8f236d255d5c5 100644
+--- a/media/libaudioclient/aidl/android/media/IMmapStreamCallback.aidl
++++ b/media/libaudioclient/aidl/android/media/IMmapStreamCallback.aidl
+@@ -61,4 +61,13 @@ oneway interface IMmapStreamCallback {
+      * @param handle the handle of the wake up task.
+      */
+     void onWakeUp(in TimerQueueHandle handle);
++
++    /**
++     * Indicates the app volume of one client of a stream the AAudio service opened to mix its
++     * shared clients (Lujarch): the service applies it to that client's samples.
++     *
++     * @param portId the client's port.
++     * @param volume the gain in [0, 1].
++     */
++    void onAppVolumeChanged(in int portId, in float volume);
+ }
+diff --git a/media/libaudioclient/include/media/AudioSystem.h b/media/libaudioclient/include/media/AudioSystem.h
+index 4d8fe6251f6ab77b7998c1b735fc247e7e399726..33b53a4f5f235aa7ee05bf5e696acf693222817c 100644
+--- a/media/libaudioclient/include/media/AudioSystem.h
++++ b/media/libaudioclient/include/media/AudioSystem.h
+@@ -127,6 +127,17 @@ public:
+     static status_t setMasterMute(bool mute);
+     static status_t getMasterMute(bool* mute);
+ 
++    /**
++     * Lujarch per-app media volume: replaces AudioFlinger's table of app gains. A playback
++     * track whose uid is listed and whose stream is one of mediaStreams is scaled by the gain
++     * given for its uid; every other track by 1. Callable by system_server and audioserver.
++     * @param volumes the uids and their gains in [0, 1]
++     * @param mediaStreams the streams the gains apply to
++     * @return NO_ERROR if successful
++     */
++    static status_t setAppVolumes(const std::vector<std::pair<uid_t, float>>& volumes,
++                                  const std::vector<audio_stream_type_t>& mediaStreams);
++
+     /**
+      * Set volume for given AudioTrack port ids on specified output
+      * @param portIds to consider
+diff --git a/media/libaudioclient/include/media/IAudioFlinger.h b/media/libaudioclient/include/media/IAudioFlinger.h
+index 0a2c49003d4ab9a30395a22679bb5763fb2b2bf1..187801f5f56ae9968afa5b8bdc261cb42e0ed840 100644
+--- a/media/libaudioclient/include/media/IAudioFlinger.h
++++ b/media/libaudioclient/include/media/IAudioFlinger.h
+@@ -37,6 +37,7 @@
+ #include <vector>
+ 
+ #include <android/content/AttributionSourceState.h>
++#include <android/media/AppVolume.h>
+ #include <android/media/AudioVibratorInfo.h>
+ #include <android/media/BnAudioFlingerService.h>
+ #include <android/media/BpAudioFlingerService.h>
+@@ -405,6 +406,10 @@ public:
+             int module,
+             const media::audio::common::AudioPortConfig& config,
+             media::audio::common::FlushFromFrameSupport* support) = 0;
++
++    // Lujarch per-app media volume (VOL-1): replaces the table of app gains (system_server only).
++    virtual status_t setAppVolumes(const std::vector<media::AppVolume>& volumes,
++                                   const std::vector<audio_stream_type_t>& mediaStreams) = 0;
+ };
+ 
+ /**
+@@ -529,6 +534,8 @@ public:
+             int module,
+             const media::audio::common::AudioPortConfig& config,
+             media::audio::common::FlushFromFrameSupport *support) override;
++    status_t setAppVolumes(const std::vector<media::AppVolume>& volumes,
++                           const std::vector<audio_stream_type_t>& mediaStreams) override;
+ 
+ private:
+     const sp<media::IAudioFlingerService> mDelegate;
+@@ -633,6 +640,7 @@ public:
+                     media::BnAudioFlingerService::TRANSACTION_resetReferencesForTest,
+             GET_FLUSH_FROM_FRAME_SUPPORT =
+                     media::BnAudioFlingerService::TRANSACTION_getFlushFromFrameSupport,
++            SET_APP_VOLUMES = media::BnAudioFlingerService::TRANSACTION_setAppVolumes,
+         };
+ 
+     protected:
+@@ -775,6 +783,9 @@ public:
+             int module,
+             const media::audio::common::AudioPortConfig& config,
+             media::audio::common::FlushFromFrameSupport* _aidl_return) override;
++    Status setAppVolumes(const std::vector<media::AppVolume>& volumes,
++                         const std::vector<media::audio::common::AudioStreamType>& mediaStreams)
++            override;
+ private:
+     const sp<AudioFlingerServerAdapter::Delegate> mDelegate;
+ };
+diff --git a/media/libaudioclient/include/media/MmapStreamCallback.h b/media/libaudioclient/include/media/MmapStreamCallback.h
+index 7c80444a4a51f14a4c08f888684c53e3850410bd..ea34d2726423349dcad4c91bf41ab2bcbae38abe 100644
+--- a/media/libaudioclient/include/media/MmapStreamCallback.h
++++ b/media/libaudioclient/include/media/MmapStreamCallback.h
+@@ -64,6 +64,15 @@ class MmapStreamCallback : public virtual RefBase {
+      */
+     virtual void onWakeUp(android::audio_utils::TimerQueue::handle_t handle) = 0;
+ 
++    /**
++     * Lujarch per-app media volume: the app volume of one client of a stream opened by the
++     * AAudio service to mix its shared clients changed; the service applies it to that client.
++     * Only such a stream gets it, so the default ignores it.
++     * \param[in] handle the client's port
++     * \param[in] volume the gain in [0, 1]
++     */
++    virtual void onAppVolumeChanged(audio_port_handle_t /* handle */, float /* volume */) {}
++
+   protected:
+     MmapStreamCallback() {}
+     virtual ~MmapStreamCallback() {}
+diff --git a/services/audioflinger/AudioFlinger.cpp b/services/audioflinger/AudioFlinger.cpp
+index b37dc6fbba7214ddade337955a92e48027fa7f48..63b78c0129b07d1356ba4f7d079637c80306d9e7 100644
+--- a/services/audioflinger/AudioFlinger.cpp
++++ b/services/audioflinger/AudioFlinger.cpp
+@@ -244,6 +244,7 @@ BINDER_METHOD_ENTRY(getAudioPolicyConfig) \
+ BINDER_METHOD_ENTRY(getAudioMixPort) \
+ BINDER_METHOD_ENTRY(resetReferencesForTest) \
+ BINDER_METHOD_ENTRY(getFlushFromFrameSupport) \
++BINDER_METHOD_ENTRY(setAppVolumes) \
+ 
+ // singleton for Binder Method Statistics for IAudioFlinger
+ static auto& getIAudioFlingerStatistics() {
+@@ -641,6 +642,11 @@ status_t AudioFlinger::openMmapStreamImpl(bool isOutput,
+         const sp<IAfMmapThread>& thread = it->second;
+         thread->configure(&localAttr, streamType, actualSessionId, callback, *deviceIds, portId,
+                           offloadInfo);
++        // Lujarch per-app media volume: the AAudio service opens a stream under audioserver's
++        // own identity only to mix its shared clients (AAudioEndpointManager), and then applies
++        // each client's gain itself.
++        thread->setOpenedByAudioServer(
++                isAudioServerUid(static_cast<uid_t>(adjAttributionSource.uid)));
+         *handle = portId;
+         *sessionId = actualSessionId;
+         config->sample_rate = thread->sampleRate();
+@@ -795,6 +801,23 @@ void AudioFlinger::dumpInternals_l(int fd) {
+     }
+     dprintf(fd, "Bluetooth latency modes are %senabled\n",
+             mBluetoothLatencyModesEnabled ? "" : "not ");
++
++    // Lujarch per-app media volume: the table AudioService pushed (setAppVolumes)
++    {
++        audio_utils::lock_guard _l(mAppVolumesMutex);
++        std::string streams;
++        for (uint32_t stream = 0; stream < 32; ++stream) {
++            if (mAppVolumeStreams & (1u << stream)) {
++                if (!streams.empty()) streams += ",";
++                streams += std::to_string(stream);
++            }
++        }
++        dprintf(fd, "App volumes: %zu; media streams: %s\n", mAppVolumes.size(),
++                streams.empty() ? "none" : streams.c_str());
++        for (const auto& [uid, volume] : mAppVolumes) {
++            dprintf(fd, "  uid %u gain %.4f (%.2f dB)\n", uid, volume, 20.0 * log10(volume));
++        }
++    }
+ }
+ 
+ void AudioFlinger::dumpStats(int fd) {
+@@ -5177,6 +5200,59 @@ status_t AudioFlinger::getFlushFromFrameSupport(
+     return device->getFlushFromFrameSupport(config, support);
+ }
+ 
++status_t AudioFlinger::setAppVolumes(const std::vector<media::AppVolume>& volumes,
++                                     const std::vector<audio_stream_type_t>& mediaStreams) {
++    std::map<uid_t, float> table;
++    for (const auto& v : volumes) {
++        const uid_t uid = VALUE_OR_RETURN_STATUS(aidl2legacy_int32_t_uid_t(v.uid));
++        if (std::isnan(v.volume) || v.volume < 0.f || v.volume > 1.f) {
++            ALOGW("%s: uid %u volume %f is not in [0, 1]; table unchanged",
++                    __func__, uid, v.volume);
++            return BAD_VALUE;
++        }
++        if (v.volume != 1.f) {  // 1 is the default: no entry
++            table[uid] = v.volume;
++        }
++    }
++    uint32_t streams = 0;
++    for (const audio_stream_type_t stream : mediaStreams) {
++        if (static_cast<uint32_t>(stream) >= 32) {
++            ALOGW("%s: stream %d out of range; table unchanged", __func__, stream);
++            return BAD_VALUE;
++        }
++        streams |= 1u << stream;
++    }
++    // Under the AudioFlinger lock, which createTrack_l() also holds: a track created meanwhile
++    // reads either the old table and is updated below, or the new one.
++    audio_utils::lock_guard _l(mutex());
++    {
++        audio_utils::lock_guard _vl(mAppVolumesMutex);
++        mAppVolumes = std::move(table);
++        mAppVolumeStreams = streams;
++    }
++    ALOGV("%s: %zu app volume(s), streams %#x", __func__, volumes.size(), streams);
++    for (const auto& [_, thread] : mPlaybackThreads) {
++        thread->updateAppVolumes();
++    }
++    for (const auto& [_, thread] : mMmapThreads) {
++        thread->updateAppVolumes();
++    }
++    return NO_ERROR;
++}
++
++float AudioFlinger::getAppVolume(uid_t uid, audio_stream_type_t stream) const {
++    // AUDIO_STREAM_DEFAULT (-1) and the internal streams past 31 are never media streams
++    if (static_cast<uint32_t>(stream) >= 32) {
++        return 1.f;
++    }
++    audio_utils::lock_guard _l(mAppVolumesMutex);
++    if ((mAppVolumeStreams & (1u << stream)) == 0) {
++        return 1.f;
++    }
++    const auto it = mAppVolumes.find(uid);
++    return it != mAppVolumes.end() ? it->second : 1.f;
++}
++
+ // ----------------------------------------------------------------------------
+ 
+ status_t AudioFlinger::onTransactWrapper(TransactionCode code,
+@@ -5229,6 +5305,17 @@ status_t AudioFlinger::onTransactWrapper(TransactionCode code,
+             break;
+     }
+ 
++    // Lujarch per-app media volume: system_server's AudioService owns the table. The block below
++    // admits every uid under 10000, so this transaction is checked on its own; it is not
++    // reachable with MODIFY_AUDIO_SETTINGS.
++    if (code == TransactionCode::SET_APP_VOLUMES
++            && !isAudioServerOrSystemServerUid(IPCThreadState::self()->getCallingUid())) {
++        ALOGW("%s: setAppVolumes from PID %d refused for UID %d",
++              __func__, IPCThreadState::self()->getCallingPid(),
++              IPCThreadState::self()->getCallingUid());
++        return PERMISSION_DENIED;
++    }
++
+     // make sure the following transactions come from system components
+     switch (code) {
+         case TransactionCode::SET_MASTER_VOLUME:
+diff --git a/services/audioflinger/AudioFlinger.h b/services/audioflinger/AudioFlinger.h
+index 7655515763c6fad0d40c67412a69f27f5d379db8..dc7ae5cf07ef4b189e493af18bc57b2745984376 100644
+--- a/services/audioflinger/AudioFlinger.h
++++ b/services/audioflinger/AudioFlinger.h
+@@ -288,6 +288,10 @@ private:
+             const media::audio::common::AudioPortConfig& config,
+             media::audio::common::FlushFromFrameSupport* support) final EXCLUDES_AudioFlinger_Mutex;
+ 
++    status_t setAppVolumes(const std::vector<media::AppVolume>& volumes,
++                           const std::vector<audio_stream_type_t>& mediaStreams) final
++            EXCLUDES_AudioFlinger_Mutex;
++
+     status_t onTransactWrapper(TransactionCode code, const Parcel& data, uint32_t flags,
+             const std::function<status_t()>& delegate) final EXCLUDES_AudioFlinger_Mutex;
+ 
+@@ -450,6 +454,9 @@ private:
+         return mPrimaryHardwareDev.load() == device;
+     }
+ 
++    float getAppVolume(uid_t uid, audio_stream_type_t stream) const final
++            EXCLUDES(mAppVolumesMutex);
++
+     // ---- end of IAfThreadCallback interface
+ 
+     void setHasAlreadyCaptured_l(uid_t uid) REQUIRES(mutex());
+@@ -748,6 +755,14 @@ private:
+                 // Audio data transfer is directly handled by the client creating the MMAP stream
+     std::map<audio_io_handle_t, sp<IAfMmapThread>> mMmapThreads GUARDED_BY(mutex());
+ 
++    // Lujarch per-app media volume (setAppVolumes): the gain of each listed app uid and the
++    // streams, one bit per audio_stream_type_t, it applies to. mAppVolumesMutex is a leaf (the
++    // last in the lock order): it is taken under the AudioFlinger and thread locks, and nothing
++    // is locked while it is held.
++    mutable audio_utils::mutex mAppVolumesMutex{audio_utils::MutexOrder::kOtherMutex};
++    std::map<uid_t, float> mAppVolumes GUARDED_BY(mAppVolumesMutex);
++    uint32_t mAppVolumeStreams GUARDED_BY(mAppVolumesMutex) = 0;
++
+     // always returns non-null
+     sp<Client> registerClient(pid_t pid, uid_t uid) EXCLUDES_AudioFlinger_ClientMutex;
+ 
+diff --git a/services/audioflinger/IAfThread.h b/services/audioflinger/IAfThread.h
+index 6a940127737928b0d2b2df4e860e4de794433cef..47b32cde43aa64d4966b24717026890d58705fde 100644
+--- a/services/audioflinger/IAfThread.h
++++ b/services/audioflinger/IAfThread.h
+@@ -131,6 +131,10 @@ public:
+ 
+     virtual bool hasAlreadyCaptured(uid_t uid) const = 0;
+ 
++    // Lujarch per-app media volume: the gain of the app with this uid on this stream, 1 when the
++    // table has none. Takes only a leaf lock, so it may be called under any other lock.
++    virtual float getAppVolume(uid_t uid, audio_stream_type_t stream) const = 0;
++
+     virtual bool isPrimary(const AudioHwDevice* device) const = 0;
+ };
+ 
+@@ -433,6 +437,10 @@ public:
+     virtual status_t setPortsVolume(const std::vector<audio_port_handle_t> &portIds, float volume,
+             bool muted) EXCLUDES_ThreadBase_Mutex = 0;
+ 
++    // Lujarch per-app media volume: re-reads the app gain of every playback track of the thread
++    // (AudioFlinger::setAppVolumes changed the table).
++    virtual void updateAppVolumes() EXCLUDES_ThreadBase_Mutex = 0;
++
+     virtual void checkUpdateTrackMetadataForUid(uid_t uid) EXCLUDES_ThreadBase_Mutex = 0;
+ 
+     virtual AudioStreamOut* getOutput_l() const REQUIRES(mutex()) = 0;
+@@ -702,6 +710,11 @@ public:
+             const audio_offload_info_t* offloadInfo) EXCLUDES_ThreadBase_Mutex = 0;
+     virtual void disconnect() EXCLUDES_ThreadBase_Mutex = 0;
+ 
++    // Lujarch per-app media volume: whether audioserver itself opened the stream, i.e. the
++    // AAudio service mixes shared clients into it. Such a stream applies no app gain itself;
++    // each client's gain goes to the AAudio service through IMmapStreamCallback.
++    virtual void setOpenedByAudioServer(bool openedByAudioServer) EXCLUDES_ThreadBase_Mutex = 0;
++
+     // MmapStreamInterface handling (see adapter)
+     virtual status_t createMmapBuffer(
+             int32_t minSizeFrames, struct audio_mmap_buffer_info* info)
+diff --git a/services/audioflinger/IAfTrack.h b/services/audioflinger/IAfTrack.h
+index 0fcc4c8d312ed9616dde367ad0c712f511b58932..fa56dfd82de02a8d830c34a54b8fe95919f8bee6 100644
+--- a/services/audioflinger/IAfTrack.h
++++ b/services/audioflinger/IAfTrack.h
+@@ -418,6 +418,12 @@ class AfPlaybackCommon : public virtual RefBase {
+         }
+     }
+ 
++    // Lujarch per-app media volume: the gain of this track's app on the media streams, from
++    // AudioFlinger's table (setAppVolumes). The thread sets it under its lock; the mixing paths
++    // read it without one, so the audio thread never waits for a change.
++    void setAppVolume(float volume) { mAppVolume.store(volume, std::memory_order_relaxed); }
++    float appVolume() const { return mAppVolume.load(std::memory_order_relaxed); }
++
+   protected:
+     // The following methods are for notifying that sonifying playback intends to begin/end
+     // for playback hardening purposes.
+@@ -438,6 +444,7 @@ class AfPlaybackCommon : public virtual RefBase {
+     std::atomic<bool> mHasOpControlPartial {true};
+     std::atomic<bool> mHasOpControlFull {true};
+     mutable std::atomic<bool> mPlaybackHardeningLogged {false};
++    std::atomic<float> mAppVolume {1.f};
+     // the ref behind the optional is const
+     // these members are last in decl order to ensure it is destroyed first
+     std::optional<AppOpsSession> mOpControlPartialSession;
+@@ -491,7 +498,7 @@ public:
+                         "ST Usg CT "
+                         " G db  L dB  R dB  VS dB  PortVol dB  PortMuted "
+                         "  Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute"
+-                        "   Latency\n"sv;
++                        "  AppVol dB   Latency\n"sv;
+     }
+ 
+     sp<IAfTrack> asIAfTrack() final { return this; }
+@@ -677,7 +684,7 @@ public:
+     static constexpr std::string_view getLogHeader() {
+         using namespace std::literals;
+         return "Client(pid/uid) Session Port Id"
+-                "   Format Chn mask  SRate Flags Usg/Src PortVol dB PortMuted\n"sv;
++                "   Format Chn mask  SRate Flags Usg/Src PortVol dB PortMuted  AppVol dB\n"sv;
+     };
+ 
+     sp<IAfMmapTrack> asIAfMmapTrack() final { return this; }
+diff --git a/services/audioflinger/Threads.cpp b/services/audioflinger/Threads.cpp
+index 43c634e2140d6372255f41b15923facda36ded79..b5af5c9fde378c3dd49f84920d5861106fa07f36 100644
+--- a/services/audioflinger/Threads.cpp
++++ b/services/audioflinger/Threads.cpp
+@@ -2298,6 +2298,17 @@ status_t ThreadBase::setPortsVolume(
+     return NO_ERROR;
+ }
+ 
++void PlaybackThread::updateAppVolumes() {
++    audio_utils::lock_guard _l(mutex());
++    // Every track, not only the active ones: a track reads its gain when it is created and when
++    // the table changes, never when it starts.
++    for (const auto& track : mPlaybackTracksView) {
++        track->setAppVolume(mAfThreadCallback->getAppVolume(track->uid(), track->streamType()));
++    }
++    // an offload or direct thread may sleep until its next event
++    broadcast_l();
++}
++
+ void ThreadBase::checkUpdateTrackMetadataForUid(uid_t uid) {
+     audio_utils::lock_guard _l(mutex());
+     for (const auto& track : mActiveTracks) {
+@@ -2921,6 +2932,10 @@ sp<IAfTrack> PlaybackThread::createTrack_l(
+             // track must be cleared from the caller as the caller has the AF lock
+             goto Exit;
+         }
++        // Lujarch per-app media volume. The caller holds the AudioFlinger lock, as
++        // AudioFlinger::setAppVolumes() does while it updates the threads, so the new track
++        // gets the current gain and misses no change.
++        track->setAppVolume(mAfThreadCallback->getAppVolume(track->uid(), track->streamType()));
+         mTracks.add(track);
+         {
+             audio_utils::lock_guard _atCbL(audioTrackCbMutex());
+@@ -5887,6 +5902,9 @@ PlaybackThread::mixer_state MixerThread::prepareTracks_l(
+                     track->maybeLogPlaybackHardening(*amn);
+                 }
+                 handleVoipVolume_l(&volume);
++                // Lujarch per-app media volume (1 off the media streams); reaches the FastMixer
++                // through the cached volume, which it ramps
++                volume *= track->appVolume();
+ 
+                 // cache the combined master volume and stream type volume for fast mixer; this
+                 // lacks any synchronization or barrier so VolumeProvider may read a stale value
+@@ -6096,6 +6114,9 @@ PlaybackThread::mixer_state MixerThread::prepareTracks_l(
+             }
+ 
+             handleVoipVolume_l(&v);
++            // Lujarch per-app media volume (1 off the media streams): part of the track volume,
++            // its aux send level and a volume-controlling effect's input, and ramped as they are
++            v *= track->appVolume();
+             const auto amn = mAfThreadCallback->getAudioManagerNative();
+             if (amn) {
+                 track->maybeLogPlaybackHardening(*amn);
+@@ -6882,7 +6903,9 @@ void DirectOutputThread::processVolume_l(const sp<IAfTrack>& track, bool lastTra
+         left = right = 0;
+     } else {
+         float typeVolume = track->getPortVolume();
+-        const float v = mMasterVolume * typeVolume * shaperVolume;
++        // Lujarch per-app media volume (1 off the media streams), applied by the HAL or the
++        // effect chain with the rest of the track's volume
++        const float v = mMasterVolume * typeVolume * shaperVolume * track->appVolume();
+ 
+         if (left > GAIN_FLOAT_UNITY) {
+             left = GAIN_FLOAT_UNITY;
+@@ -10851,6 +10874,22 @@ status_t MmapThread::startTrack(audio_port_handle_t portId)
+         }
+     }
+ 
++    if (isOutput()) {
++        // Lujarch per-app media volume. Read in the hold of the thread lock that activates the
++        // track, so a concurrent AudioFlinger::setAppVolumes() either sees the track in
++        // updateAppVolumes() or stored its table before this read.
++        const float appVolume = mAfThreadCallback->getAppVolume(track->uid(), streamType_l());
++        track->asIAfMmapTrack()->setAppVolume(appVolume);
++        if (mOpenedByAudioServer) {
++            // The AAudio service mixes this client; it gets the gain before the start returns,
++            // so its mixer never mixes the client without one. The callback runs in this
++            // process and takes only the AAudio service's leaf lock.
++            if (const sp<media::IMmapStreamCallback> callback = mCallback.promote();
++                    callback != nullptr) {
++                callback->onAppVolumeChanged(portId, appVolume);
++            }
++        }
++    }
+     mActiveTracks.add(track);
+     sp<IAfEffectChain> chain = getEffectChain_l(mSessionId);
+     if (chain != 0) {
+@@ -11583,6 +11622,12 @@ NO_THREAD_SAFETY_ANALYSIS // access of track->processMuteEvent
+                 volume = 0;
+             } else {
+                 volume = mMasterVolume * track->getPortVolume();
++                // Lujarch per-app media volume: an exclusive stream has one client, whose gain
++                // this is; a stream the AAudio service opened carries every shared client, and
++                // the service applies each one's gain itself
++                if (!mOpenedByAudioServer) {
++                    volume *= track->appVolume();
++                }
+             }
+         }
+     }
+@@ -11648,6 +11693,30 @@ NO_THREAD_SAFETY_ANALYSIS // access of track->processMuteEvent
+     }
+ }
+ 
++void MmapPlaybackThread::updateAppVolumes()
++{
++    audio_utils::lock_guard _l(mutex());
++    const audio_stream_type_t stream = streamType_l();
++    const sp<media::IMmapStreamCallback> callback =
++            mOpenedByAudioServer ? mCallback.promote() : nullptr;
++    // MMAP tracks exist only while they are active
++    for (const auto& track : mActiveMmapTracksView) {
++        const float volume = mAfThreadCallback->getAppVolume(track->uid(), stream);
++        if (volume == track->appVolume()) {
++            continue;
++        }
++        track->setAppVolume(volume);
++        if (callback != nullptr) {
++            // Under the thread lock, as in start(): the AAudio service keeps the gain of a port
++            // from its start to its stop (after stop() removed the track), so no stale gain
++            // outlives the client. The callback takes only the service's leaf lock.
++            callback->onAppVolumeChanged(track->portId(), volume);
++        }
++    }
++    // processVolume_l() applies an exclusive client's gain when the thread loop wakes
++    broadcast_l();
++}
++
+ ThreadBase::MetadataUpdate MmapPlaybackThread::updateMetadata_l()
+ {
+     if (!isStreamInitialized_l() || !mActiveTracks.readAndClearHasChanged()) {
+@@ -11862,6 +11931,10 @@ void MmapPlaybackThread::dumpInternals_l(int fd, const Vector<String16>& args)
+     MmapThread::dumpInternals_l(fd, args);
+     dprintf(fd, "  HAL volume: %f", mHalVolFloat);
+     dprintf(fd, "\n");
++    // Lujarch per-app media volume: where this stream's clients get their app gains
++    dprintf(fd, "  App volumes: %s\n", mOpenedByAudioServer
++            ? "per client, by the AAudio service (opened by audioserver)"
++            : "in the HAL volume (one client)");
+     dprintf(fd, "  Master volume: %f Master mute %d\n", mMasterVolume, mMasterMute);
+     dprintf(fd, "  TimerQueueCallbacks: %d\n", mTimerQueueCallbacks.load());
+     dprintf(fd, "  TimerQueueCallback Ms: %lf\n", mTimerQueueCallbackNs.load() * 1e-6);
+diff --git a/services/audioflinger/Threads.h b/services/audioflinger/Threads.h
+index a60c88660b0731b4b7d591efb91e42309caa4402..1dd36f6eaae3fea1e33a9c99c8bdeec7936fda00 100644
+--- a/services/audioflinger/Threads.h
++++ b/services/audioflinger/Threads.h
+@@ -975,6 +975,9 @@ protected:
+     status_t setPortsVolume(const std::vector<audio_port_handle_t>& portIds, float volume,
+                             bool muted) final EXCLUDES_ThreadBase_Mutex;
+ 
++    // Lujarch per-app media volume: record threads have no playback track to scale.
++    void updateAppVolumes() override EXCLUDES_ThreadBase_Mutex {}
++
+     void checkUpdateTrackMetadataForUid(uid_t uid) final EXCLUDES_ThreadBase_Mutex;
+ 
+     // mThreadloopExecutor contains deferred functors and object (dtors) to
+@@ -1370,6 +1373,8 @@ public:
+         // Do nothing. It is only used for bit perfect thread
+     }
+ 
++    void updateAppVolumes() final EXCLUDES_ThreadBase_Mutex;
++
+     std::string getLocalLogHeader() const override;
+ 
+     sp<VolumeInterface> asVolumeInterface() final {
+@@ -2331,6 +2336,11 @@ class MmapThread : public ThreadBase, public virtual IAfMmapThread
+ 
+     void disconnect() final EXCLUDES_ThreadBase_Mutex;
+ 
++    void setOpenedByAudioServer(bool openedByAudioServer) final EXCLUDES_ThreadBase_Mutex {
++        audio_utils::lock_guard l(mutex());
++        mOpenedByAudioServer = openedByAudioServer;
++    }
++
+     // MmapStreamInterface for adapter.
+     status_t createMmapBuffer(int32_t minSizeFrames, struct audio_mmap_buffer_info* info) final
+             EXCLUDES_ThreadBase_Mutex;
+@@ -2459,6 +2469,11 @@ class MmapThread : public ThreadBase, public virtual IAfMmapThread
+ 
+     int32_t mNoCallbackWarningCount GUARDED_BY(mutex());
+     static constexpr int32_t kMaxNoCallbackWarnings = 5;
++
++    // Lujarch per-app media volume: the AAudio service opened this stream to mix its shared
++    // clients, so it applies each client's app gain (sent through mCallback) and the stream's
++    // volume carries none.
++    bool mOpenedByAudioServer GUARDED_BY(mutex()) = false;
+ };
+ 
+ class MmapPlaybackThread : public MmapThread,
+@@ -2490,6 +2505,8 @@ public:
+ 
+     void processVolume_l() final REQUIRES(mutex());
+ 
++    void updateAppVolumes() final EXCLUDES_ThreadBase_Mutex;
++
+     MetadataUpdate updateMetadata_l() final REQUIRES(mutex());
+ 
+     void toAudioPortConfig(struct audio_port_config* config) final;
+diff --git a/services/audioflinger/Tracks.cpp b/services/audioflinger/Tracks.cpp
+index b7b923192ff7ba13b379f4476a9fc9365b71698c..f3935dfa972dee6011eac2424f2bd5ebd70f4389 100644
+--- a/services/audioflinger/Tracks.cpp
++++ b/services/audioflinger/Tracks.cpp
+@@ -1254,6 +1254,7 @@ void Track::appendDump(String8& result, bool active) const
+             isBitPerfect() ? "true" : "false",
+             getInternalMute() ? "true" : "false"
+             );
++    result.appendFormat(" %10.2f", 20.0 * log10(appVolume()));
+ 
+     if (isServerLatencySupported()) {
+         double latencyMs;
+@@ -4048,6 +4049,7 @@ void MmapTrack::appendDump(String8& result, bool active __unused) const
+         result.appendFormat("%4x %2x", mAttr.usage, mAttr.content_type);
+         result.appendFormat("%11.2g", 20.0 * log10(getPortVolume()));
+         result.appendFormat("%12s", getPortMute() ? "true" : "false");
++        result.appendFormat(" %10.2f", 20.0 * log10(appVolume()));
+     } else {
+         result.appendFormat("%7x", mAttr.source);
+     }
+diff --git a/services/oboeservice/AAudioMixer.cpp b/services/oboeservice/AAudioMixer.cpp
+index 68909858eb9e6a571df2bab1681da7bcf8d0604c..cb9f18c39d52a90e9a7610c69cadef45b5bb98bd 100644
+--- a/services/oboeservice/AAudioMixer.cpp
++++ b/services/oboeservice/AAudioMixer.cpp
+@@ -46,7 +46,8 @@ void AAudioMixer::clear() {
+ }
+ 
+ int32_t AAudioMixer::mix(
+-        int streamIndex, const std::shared_ptr<FifoBuffer>& fifo, bool allowUnderflow) {
++        int streamIndex, const std::shared_ptr<FifoBuffer>& fifo, bool allowUnderflow,
++        float gainFrom, float gainTo) {
+     WrappingBuffer wrappingBuffer;
+     float *destination = mOutputBuffer.get();
+ 
+@@ -89,7 +90,7 @@ int32_t AAudioMixer::mix(
+                 framesToMixFromPart = framesAvailableFromPart;
+             }
+             mixPart(destination, (float *)wrappingBuffer.data[partIndex],
+-                    framesToMixFromPart);
++                    framesToMixFromPart, gainFrom, gainTo, framesDesired - framesLeft);
+ 
+             destination += framesToMixFromPart * mSamplesPerFrame;
+             framesLeft -= framesToMixFromPart;
+@@ -105,11 +106,29 @@ int32_t AAudioMixer::mix(
+     return (framesDesired - framesLeft); // framesRead
+ }
+ 
+-void AAudioMixer::mixPart(float *destination, float *source, int32_t numFrames) {
++// frameOffset: the first frame's index in the burst, for the gain ramp across the burst.
++void AAudioMixer::mixPart(float *destination, float *source, int32_t numFrames,
++                          float gainFrom, float gainTo, int32_t frameOffset) {
+     int32_t numSamples = numFrames * mSamplesPerFrame;
+-    // TODO maybe optimize using SIMD
+-    for (int sampleIndex = 0; sampleIndex < numSamples; sampleIndex++) {
+-        *destination++ += *source++;
++    if (gainFrom == 1.0f && gainTo == 1.0f) {
++        // TODO maybe optimize using SIMD
++        for (int sampleIndex = 0; sampleIndex < numSamples; sampleIndex++) {
++            *destination++ += *source++;
++        }
++    } else if (gainFrom == gainTo) {
++        for (int sampleIndex = 0; sampleIndex < numSamples; sampleIndex++) {
++            *destination++ += *source++ * gainTo;
++        }
++    } else {
++        // Lujarch per-app media volume: a linear ramp that reaches gainTo on the burst's last
++        // frame, so a change never steps within a burst
++        const float step = (gainTo - gainFrom) / mFramesPerBurst;
++        for (int32_t frame = 0; frame < numFrames; frame++) {
++            const float gain = gainFrom + step * (frameOffset + frame + 1);
++            for (int32_t channel = 0; channel < mSamplesPerFrame; channel++) {
++                *destination++ += *source++ * gain;
++            }
++        }
+     }
+ }
+ 
+diff --git a/services/oboeservice/AAudioMixer.h b/services/oboeservice/AAudioMixer.h
+index d7731785f6b1dde692340b4f244818d4467fd30a..f3ddec2e107bf5ecf80bf6f0ab3cfd4fae9e399a 100644
+--- a/services/oboeservice/AAudioMixer.h
++++ b/services/oboeservice/AAudioMixer.h
+@@ -35,18 +35,23 @@ public:
+      * @param streamIndex for marking stream variables in systrace
+      * @param fifo to read from
+      * @param allowUnderflow if true then allow mixer to advance read index past the write index
++     * @param gainFrom the stream's gain at the start of the burst (Lujarch per-app media volume)
++     * @param gainTo the stream's gain at the end of the burst, reached by a linear ramp
+      * @return frames read from this stream
+      */
+     int32_t mix(int streamIndex,
+                 const std::shared_ptr<android::FifoBuffer>& fifo,
+-                bool allowUnderflow);
++                bool allowUnderflow,
++                float gainFrom = 1.0f,
++                float gainTo = 1.0f);
+ 
+     float *getOutputBuffer();
+ 
+     int32_t getFramesPerBurst() const { return mFramesPerBurst; }
+ 
+ private:
+-    void mixPart(float *destination, float *source, int32_t numFrames);
++    void mixPart(float *destination, float *source, int32_t numFrames,
++                 float gainFrom, float gainTo, int32_t frameOffset);
+ 
+     std::unique_ptr<float[]> mOutputBuffer;
+     int32_t  mSamplesPerFrame = 0;
+diff --git a/services/oboeservice/AAudioService.cpp b/services/oboeservice/AAudioService.cpp
+index 95348fc7bb64715d5c728d0f9d5a657318db009a..deda8df41613396562b13d866c2d96df43b8f4b2 100644
+--- a/services/oboeservice/AAudioService.cpp
++++ b/services/oboeservice/AAudioService.cpp
+@@ -86,6 +86,16 @@ status_t AAudioService::dump(int fd, const Vector<String16>& /*args*/) {
+                  + mStreamTracker.dump()
+                  + AAudioClientTracker::getInstance().dump()
+                  + AAudioEndpointManager::getInstance().dump();
++        std::stringstream ss;
++        {
++            const std::lock_guard<std::mutex> lock(mClientAppVolumesLock);
++            ss << "App volumes of shared clients: " << mClientAppVolumes.size() << "\n";
++            for (const auto& [port, volume] : mClientAppVolumes) {
++                ss << "  port " << port << " gain " << std::fixed << std::setprecision(4)
++                   << volume << "\n";
++            }
++        }
++        result += ss.str();
+     }
+     (void)write(fd, result.c_str(), result.size());
+     return NO_ERROR;
+@@ -510,6 +520,27 @@ aaudio_result_t AAudioService::releaseClient(aaudio::aaudio_handle_t streamHandl
+     return serviceStream->releaseClient(clientHandle);
+ }
+ 
++void AAudioService::setClientAppVolume(audio_port_handle_t portHandle, float volume) {
++    const std::lock_guard<std::mutex> lock(mClientAppVolumesLock);
++    mClientAppVolumes[portHandle] = volume;
++}
++
++void AAudioService::eraseClientAppVolume(audio_port_handle_t portHandle) {
++    const std::lock_guard<std::mutex> lock(mClientAppVolumesLock);
++    mClientAppVolumes.erase(portHandle);
++}
++
++bool AAudioService::getClientAppVolume(audio_port_handle_t portHandle, float* volume) {
++    const std::lock_guard<std::mutex> lock(mClientAppVolumesLock);
++    const auto it = mClientAppVolumes.find(portHandle);
++    if (it == mClientAppVolumes.end()) {
++        return false;
++    }
++    *volume = it->second;
++    return true;
++}
++
++
+ // This is only called internally when AudioFlinger wants to tear down a stream.
+ // So we do not have to check permissions.
+ aaudio_result_t AAudioService::disconnectStreamByPortHandle(audio_port_handle_t portHandle) {
+diff --git a/services/oboeservice/AAudioService.h b/services/oboeservice/AAudioService.h
+index b538b940a50460f1da2e86c87851d4f4b7d4d951..b648ea449154f054f97370ea8ff63dc969b83659 100644
+--- a/services/oboeservice/AAudioService.h
++++ b/services/oboeservice/AAudioService.h
+@@ -20,6 +20,9 @@
+ #include <time.h>
+ #include <pthread.h>
+ 
++#include <map>
++#include <mutex>
++
+ #include <binder/BinderService.h>
+ #include <media/AudioClient.h>
+ 
+@@ -137,6 +140,17 @@ public:
+     aaudio_result_t closeStream(const sp<aaudio::AAudioServiceStreamBase>& serviceStream,
+                                 bool force);
+ 
++    /*
++     * Lujarch per-app media volume. The gain of each shared client's port, which AudioFlinger
++     * sends when the client starts and when its app volume changes, and the mixer applies.
++     * The lock is a leaf: AudioFlinger calls the setter under an MMAP thread's lock.
++     */
++    void setClientAppVolume(audio_port_handle_t portHandle, float volume);
++    // The client stopped, and AudioFlinger no longer has its track: forget its port.
++    void eraseClientAppVolume(audio_port_handle_t portHandle);
++    // The gain of the port; false (and *volume untouched) when there is none.
++    bool getClientAppVolume(audio_port_handle_t portHandle, float* volume);
++
+ private:
+     class Adapter : public aaudio::AAudioBinderAdapter {
+     public:
+@@ -201,6 +215,9 @@ private:
+     static constexpr int32_t        kRealTimeAudioPriorityClient = 2;
+     static constexpr int32_t        kRealTimeAudioPriorityService = 3;
+ 
++    std::mutex                                  mClientAppVolumesLock;
++    std::map<audio_port_handle_t, float>        mClientAppVolumes; // by mClientAppVolumesLock
++
+ };
+ 
+ } /* namespace android */
+diff --git a/services/oboeservice/AAudioServiceEndpointMMAP.cpp b/services/oboeservice/AAudioServiceEndpointMMAP.cpp
+index f47009887bc21360de64248c6c074ee4f64a1eab..9723fc99f615993aad82ec6185a0050f59ab2520 100644
+--- a/services/oboeservice/AAudioServiceEndpointMMAP.cpp
++++ b/services/oboeservice/AAudioServiceEndpointMMAP.cpp
+@@ -611,6 +611,17 @@ void AAudioServiceEndpointMMAP::onVolumeChanged(float volume) {
+     }
+ }
+ 
++// Lujarch per-app media volume. AudioFlinger calls this under the MMAP thread's lock for a
++// client of a stream the service opened to mix its shared clients, so it only stores the gain
++// for the mixer (AAudioServiceEndpointPlay) under the service's leaf lock.
++void AAudioServiceEndpointMMAP::onAppVolumeChanged(audio_port_handle_t portHandle, float volume) {
++    if (std::isnan(volume) || volume < 0.f || volume > 1.f) {
++        ALOGE("%s(%d) rejected gain %f", __func__, portHandle, volume);
++        return;
++    }
++    mAAudioService.setClientAppVolume(portHandle, volume);
++}
++
+ void AAudioServiceEndpointMMAP::onRoutingChanged(const android::DeviceIdVector& deviceIds) {
+     ALOGD("%s() called with dev %s, old = %s", __func__, android::toString(deviceIds).c_str(),
+           android::toString(getDeviceIds()).c_str());
+diff --git a/services/oboeservice/AAudioServiceEndpointMMAP.h b/services/oboeservice/AAudioServiceEndpointMMAP.h
+index 96848804e0a1fd01f15ea67238a406c9be88a44d..0f592883ecce0ebe5d8d863d252f843d05ee0943 100644
+--- a/services/oboeservice/AAudioServiceEndpointMMAP.h
++++ b/services/oboeservice/AAudioServiceEndpointMMAP.h
+@@ -105,6 +105,8 @@ public:
+ 
+     void onVolumeChanged(float volume) override;
+ 
++    void onAppVolumeChanged(audio_port_handle_t portHandle, float volume) override;
++
+     void onRoutingChanged(const android::DeviceIdVector& deviceIds) override;
+ 
+     void onSoundDoseChanged(bool active) final;
+diff --git a/services/oboeservice/AAudioServiceEndpointPlay.cpp b/services/oboeservice/AAudioServiceEndpointPlay.cpp
+index b47681f32ccabeb272ec3999370d6f1a646fdb39..18f530a8106086050540b15c496dbd30a76e336f 100644
+--- a/services/oboeservice/AAudioServiceEndpointPlay.cpp
++++ b/services/oboeservice/AAudioServiceEndpointPlay.cpp
+@@ -43,7 +43,17 @@ using namespace aaudio;   // TODO just import names needed
+ 
+ AAudioServiceEndpointPlay::AAudioServiceEndpointPlay(AAudioService& audioService)
+         : AAudioServiceEndpointShared(
+-                new AudioStreamInternalPlay(audioService.asAAudioServiceInterface(), true)) {}
++                new AudioStreamInternalPlay(audioService.asAAudioServiceInterface(), true)),
++          mAAudioService(audioService) {}
++
++aaudio_result_t AAudioServiceEndpointPlay::stopStream(sp<AAudioServiceStreamBase> stream,
++                                                      audio_port_handle_t clientHandle) {
++    const aaudio_result_t result = AAudioServiceEndpointShared::stopStream(stream, clientHandle);
++    // AudioFlinger removed the client's track, so it sends no more gains for this port. The
++    // mixer keeps the last gain for what the client still drains.
++    mAAudioService.eraseClientAppVolume(clientHandle);
++    return result;
++}
+ 
+ aaudio_result_t AAudioServiceEndpointPlay::open(const aaudio::AAudioStreamRequest &request) {
+     aaudio_result_t result = AAudioServiceEndpointShared::open(request);
+@@ -112,7 +122,17 @@ void *AAudioServiceEndpointPlay::callbackLoop() {
+                         int64_t positionOffset = mmapFramesWritten - clientFramesRead;
+                         streamShared->setTimestampPositionOffset(positionOffset);
+ 
+-                        int32_t framesMixed = mMixer.mix(index, fifo, allowUnderflow);
++                        // Lujarch per-app media volume: the client's gain (1 without one;
++                        // the last one once the client stopped and drains), ramped across
++                        // this burst from the one mixed last, or from none after a start
++                        float appVolume = streamShared->getMixerAppVolume();
++                        mAAudioService.getClientAppVolume(streamShared->getPortHandle(),
++                                                          &appVolume);
++                        const float appVolumeFrom = streamShared->isFlowing()
++                                ? streamShared->getMixerAppVolume() : appVolume;
++                        int32_t framesMixed = mMixer.mix(index, fifo, allowUnderflow,
++                                                         appVolumeFrom, appVolume);
++                        streamShared->setMixerAppVolume(appVolume);
+ 
+                         if (streamShared->isFlowing()) {
+                             // Consider it an underflow if we got less than a burst
+diff --git a/services/oboeservice/AAudioServiceEndpointPlay.h b/services/oboeservice/AAudioServiceEndpointPlay.h
+index 704502eb63a19b5f8a8be272b3b89abbd39b2330..c598be87d99eab7ced9424a94d4b8062b348628c 100644
+--- a/services/oboeservice/AAudioServiceEndpointPlay.h
++++ b/services/oboeservice/AAudioServiceEndpointPlay.h
+@@ -41,11 +41,16 @@ public:
+ 
+     aaudio_result_t open(const aaudio::AAudioStreamRequest &request) override;
+ 
++    aaudio_result_t stopStream(android::sp<AAudioServiceStreamBase> stream,
++                               audio_port_handle_t clientHandle) override;
++
+     void *callbackLoop() override;
+ 
+ private:
+     bool                     mLatencyTuningEnabled = false; // TODO implement tuning
+     AAudioMixer              mMixer;    //
++    // Lujarch per-app media volume: holds each shared client's gain by port
++    android::AAudioService  &mAAudioService;
+ };
+ 
+ } /* namespace aaudio */
+diff --git a/services/oboeservice/AAudioServiceStreamShared.h b/services/oboeservice/AAudioServiceStreamShared.h
+index 3175613c086ed62ff05fcd92a3e98446043e2005..bcc939ff1902eec2842fce5abc79abbbe9a2d604 100644
+--- a/services/oboeservice/AAudioServiceStreamShared.h
++++ b/services/oboeservice/AAudioServiceStreamShared.h
+@@ -81,6 +81,16 @@ public:
+         return mXRunCount.load();
+     }
+ 
++    // Lujarch per-app media volume: the gain the endpoint's mixer applied to this client in its
++    // last burst. Only the mixer thread of the endpoint reads and writes it.
++    float getMixerAppVolume() const {
++        return mMixerAppVolume;
++    }
++
++    void setMixerAppVolume(float volume) {
++        mMixerAppVolume = volume;
++    }
++
+     const char *getTypeText() const override { return "Shared"; }
+ 
+     // This is public so that the thread safety annotation, GUARDED_BY(),
+@@ -114,6 +124,7 @@ private:
+ 
+     std::atomic<int64_t>     mTimestampPositionOffset;
+     std::atomic<int32_t>     mXRunCount;
++    float                    mMixerAppVolume = 1.0f;
+ 
+ };
+ 
