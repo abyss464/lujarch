@@ -73,6 +73,10 @@ std::string TemplateConfig();
 // optionally followed by -N.
 bool IsBackupName(std::string_view name);
 
+// Whether the engine has an identity to start with: a configuration, and a certificate unless the
+// engine is to create the certificate and key on its first start (no key either).
+bool Present();
+
 // ---- commands ----
 
 Outcome CmdStatus(const Json::Value& request, uid_t uid);

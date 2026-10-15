@@ -20,7 +20,7 @@ or a recording. A page shown while the phone is locked says so and opens once it
 
 ### VLT-2 The sources are set up once
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > Sources
+- Home: Settings > Passwords & passkeys > Lujarch Vault > Sources
 - Switch: each source: on, off
 - Default: on once set up
 - Verify: vm
@@ -33,7 +33,7 @@ its keys are kept. A database the vault can no longer read says so, with Choose 
 
 ### VLT-3 Stored keys are forgotten on the owner's terms
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > Settings
+- Home: Settings > Passwords & passkeys > Lujarch Vault > Settings
 - Switch: Forget keys: Never, After a restart, After 1 day unused, After 7 days unused, After 30 days unused
 - Default: Never
 - Verify: vm
@@ -45,7 +45,7 @@ the passwords and the key file. The chosen policy deletes them by itself.
 
 ### VLT-4 Passwords are found and copied
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > Passwords
+- Home: Settings > Passwords & passkeys > Lujarch Vault > Passwords
 - Switch: Verify to reveal: on, off; Verify to copy: on, off
 - Default: Verify to reveal: on; Verify to copy: off
 - Verify: vm
@@ -57,7 +57,7 @@ What a page showed is hidden again when the page stops.
 
 ### VLT-5 2FA codes are shown, copied and added
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > 2FA codes; Quick Settings > 2FA codes
+- Home: Settings > Passwords & passkeys > Lujarch Vault > 2FA codes; Quick Settings > 2FA codes
 - Switch: none
 - Default: none
 - Verify: vm
@@ -71,7 +71,7 @@ unlocking on a locked phone.
 
 ### VLT-6 Copied secrets leave the clipboard
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > Settings
+- Home: Settings > Passwords & passkeys > Lujarch Vault > Settings
 - Switch: Clear the clipboard: Never, After 15 seconds, After 30 seconds, After 1 minute, After 2 minutes, After 5 minutes
 - Default: After 30 seconds
 - Verify: vm
@@ -83,7 +83,7 @@ the chosen time after the last copy.
 
 ### VLT-7 The vault fills apps and websites
 
-- Home: Settings > Passwords & accounts > Preferred service
+- Home: Settings > Passwords & passkeys > Preferred service
 - Switch: Preferred service: Lujarch Vault or another; Search the vault suggestion: on, off; Same host only: on, off
 - Default: Preferred service: Lujarch Vault; Search the vault suggestion: on; Same host only: off
 - Verify: vm
@@ -97,7 +97,7 @@ the suggestion says so and fills once tapped.
 
 ### VLT-8 Apps and sites can be left unfilled
 
-- Home: Settings > Passwords & accounts > Lujarch Vault > Settings > Apps and sites not filled
+- Home: Settings > Passwords & passkeys > Lujarch Vault > Settings > Apps and sites not filled
 - Switch: each app or site; Default scope for sites: This host only, Whole site
 - Default: none listed; Default scope for sites: This host only
 - Verify: vm

@@ -28,7 +28,7 @@ import org.lujarch.vault.ui.SettingsFragment
 
 /**
  * The vault's pages in Settings search (by their titles and keywords in the three languages), under
- * the vault's home in Settings: Passwords, passkeys & accounts > Lujarch
+ * the vault's home in Settings: Passwords & passkeys > Lujarch
  * Vault, the preferred service.
  * SettingsIntelligence queries every provider with the action
  * SEARCH_INDEXABLES_PROVIDER whose read and write permission is
@@ -90,7 +90,7 @@ class VaultSearchIndexablesProvider : SearchIndexablesProvider() {
     private class Screen(val cls: String, val title: String)
 
     /**
-     * The vault's home under Passwords, passkeys & accounts (Settings'
+     * The vault's home under Passwords & passkeys (Settings'
      * AccountDashboardFragment, where the preferred service's gear opens
      * it), the settings page under the home: (parent class, child class).
      * SettingsIntelligence adds the titles from the rows.
@@ -107,7 +107,7 @@ class VaultSearchIndexablesProvider : SearchIndexablesProvider() {
         /** The action of the result intents; SearchResultActivity's filter. */
         const val ACTION_SEARCH_RESULT = "org.lujarch.vault.action.SEARCH_RESULT"
         private const val RANK = 2
-        /** Settings' Passwords, passkeys & accounts page. */
+        /** Settings' Passwords & passkeys page. */
         private const val ACCOUNTS_CLASS = "com.android.settings.accounts.AccountDashboardFragment"
         private val HOME_CLASS: String = HomeFragment::class.java.name
         private val SETTINGS_CLASS: String = SettingsFragment::class.java.name

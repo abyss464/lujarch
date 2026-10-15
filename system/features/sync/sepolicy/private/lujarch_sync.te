@@ -40,8 +40,8 @@ allow lujarch_sync lujarch_sync_folder_file:lnk_file getattr;
 allow platform_app_all lujarch_sync:fd use;
 allow platform_app_all lujarch_sync_folder_file:file { read getattr };
 
-# The run conditions: links and rules over rtnetlink, power supply uevents, the charger from the
-# Health HAL.
-allow lujarch_sync self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read };
+# The run conditions: links (a privileged dump) and rules over rtnetlink, power supply uevents,
+# the charger from the Health HAL.
+allow lujarch_sync self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read nlmsg_readpriv };
 allow lujarch_sync self:netlink_kobject_uevent_socket create_socket_perms_no_ioctl;
 hal_client_domain(lujarch_sync, hal_health)

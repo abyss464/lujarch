@@ -36,9 +36,10 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
-import org.lujarch.settings.pages.showDialog
 import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.Pages
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.showDialog
 
 /**
  * Sync (Syncthing): the service switch, when it runs (Wi-Fi only, charging
@@ -93,7 +94,7 @@ class SyncFragment : SyncPageFragment() {
         statePref = device.add(Preference(prefContext)) {
             key = "state"
             setTitle(R.string.sync_service)
-            setSummary(R.string.loading)
+            setSummary(PagesR.string.loading)
             isSelectable = false
         }
         namePref = device.add(Preference(prefContext)) {
@@ -118,7 +119,7 @@ class SyncFragment : SyncPageFragment() {
             key = "identity"
             setTitle(R.string.sync_identity_title)
             setIcon(R.drawable.ic_key)
-            setSummary(R.string.loading)
+            setSummary(PagesR.string.loading)
             setOnPreferenceClickListener {
                 Pages.open(requireContext(), IdentityFragment::class.java, R.string.sync_identity_title)
                 true
@@ -137,7 +138,6 @@ class SyncFragment : SyncPageFragment() {
         conditionsCategory = screen.add(PreferenceCategory(prefContext)) {
             key = "conditions"
             setTitle(R.string.sync_conditions_category)
-            isVisible = false
         }
         wifiOnlyPref = conditionsCategory.add(SwitchPreferenceCompat(prefContext)) {
             key = "wifi_only"
@@ -340,22 +340,25 @@ class SyncFragment : SyncPageFragment() {
         renderPending(snap)
         renderFolders(context, snap)
         renderDevices(context, snap)
-        val anyRunning = snap.devices.any { !it.paused }
+        // Without devices there is nothing to pause or resume: the row offers Pause all, disabled.
+        val anyRunning = snap.devices.isEmpty() || snap.devices.any { !it.paused }
         pausePref.setTitle(if (anyRunning) R.string.sync_pause_all else R.string.sync_resume_all)
-        pausePref.setSummary(if (anyRunning) R.string.sync_pause_all_summary else R.string.sync_resume_all_summary)
+        if (snap.devices.isEmpty()) {
+            pausePref.summary = null
+        } else {
+            pausePref.setSummary(if (anyRunning) R.string.sync_pause_all_summary else R.string.sync_resume_all_summary)
+        }
         pausePref.setIcon(if (anyRunning) R.drawable.ic_pause else R.drawable.ic_play)
         pausePref.isEnabled = !busy && snap.devices.isNotEmpty()
     }
 
     private fun renderConditions(context: Context) {
         val c = conditions
-        conditionsCategory.isVisible = c != null || isUnsupported("conditions")
         wifiOnlyPref.isEnabled = c != null && !conditionsBusy
         chargingOnlyPref.isEnabled = c != null && !conditionsBusy
         if (c == null) {
-            val note = if (isUnsupported("conditions")) getString(R.string.error_needs_update_title) else null
-            wifiOnlyPref.summary = note
-            chargingOnlyPref.summary = note
+            wifiOnlyPref.summary = null
+            chargingOnlyPref.summary = null
             return
         }
         if (!conditionsBusy) {
@@ -390,8 +393,6 @@ class SyncFragment : SyncPageFragment() {
     private fun renderIdentity(snap: SyncSnapshot?) {
         val id = identity
         identityPref.summary = when {
-            id?.staged != null -> getString(R.string.sync_identity_staged_short)
-            id == null && isUnsupported("identity") -> getString(R.string.error_needs_update_title)
             id == null -> getString(R.string.status_unknown)
             !id.present -> getString(R.string.sync_identity_missing_summary)
             snap != null -> getString(R.string.sync_identity_present_summary, snap.myId.substringBefore('-'))

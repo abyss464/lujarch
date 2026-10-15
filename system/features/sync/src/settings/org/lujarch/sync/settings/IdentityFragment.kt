@@ -28,10 +28,11 @@ import com.android.settingslib.widget.TopIntroPreference
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
-import org.lujarch.settings.pages.RebuiltWithPage
-import org.lujarch.settings.pages.showDialog
 import org.lujarch.settings.pages.InputDialog
 import org.lujarch.settings.pages.Pages
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.RebuiltWithPage
+import org.lujarch.settings.pages.showDialog
 
 /**
  * This device's identity in the sync mesh (certificate and private key):
@@ -56,7 +57,7 @@ class IdentityFragment : SyncPageFragment() {
         currentPref = current.add(Preference(prefContext)) {
             key = "device_id"
             setTitle(R.string.sync_device_id)
-            setSummary(R.string.loading)
+            setSummary(PagesR.string.loading)
             setOnPreferenceClickListener {
                 deviceId?.let { SyncFormat.showDeviceId(this@IdentityFragment, it) }
                 true

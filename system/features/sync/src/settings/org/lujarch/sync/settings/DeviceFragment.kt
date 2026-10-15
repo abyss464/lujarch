@@ -32,12 +32,13 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import com.android.settingslib.widget.FooterPreference
 import com.android.settingslib.widget.MainSwitchPreference
-import org.lujarch.settings.pages.showDialog
+import org.json.JSONArray
+import org.json.JSONObject
 import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.InputDialog
 import org.lujarch.settings.pages.Pages
-import org.json.JSONArray
-import org.json.JSONObject
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.showDialog
 
 /**
  * One other device: whether this device syncs with it, its connection, its
@@ -80,7 +81,7 @@ class DeviceFragment : SyncPageFragment() {
         statePref = status.add(Preference(prefContext)) {
             key = "state"
             setTitle(R.string.sync_connection)
-            setSummary(R.string.loading)
+            setSummary(PagesR.string.loading)
             isSelectable = false
         }
         status.add(Preference(prefContext)) {
@@ -217,7 +218,7 @@ class DeviceFragment : SyncPageFragment() {
         addressesPref.summary = SyncFormat.addressesLabel(context, d.addresses)
         val shared = snap.folders.filter { deviceId in it.devices }
         foldersPref.summary = if (shared.isEmpty()) getString(R.string.sync_device_folders_none)
-        else shared.joinToString(getString(R.string.list_separator)) { it.label }
+        else shared.joinToString(getString(PagesR.string.list_separator)) { it.label }
         introducerPref.isChecked = d.introducer
         autoAcceptPref.isChecked = d.autoAcceptFolders
         untrustedPref.isChecked = d.untrusted
@@ -461,7 +462,7 @@ class DeviceFragment : SyncPageFragment() {
             "sync-untrusted", R.string.sync_untrusted_title,
             {
                 if (plain.isEmpty()) getString(R.string.sync_untrusted_message, d.name)
-                else getString(R.string.sync_untrusted_message_folders, d.name, plain.joinToString(getString(R.string.list_separator)) { it.label })
+                else getString(R.string.sync_untrusted_message_folders, d.name, plain.joinToString(getString(PagesR.string.list_separator)) { it.label })
             },
             R.string.sync_untrusted_confirm,
         ) {

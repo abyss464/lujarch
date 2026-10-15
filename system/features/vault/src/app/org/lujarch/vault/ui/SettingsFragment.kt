@@ -275,7 +275,7 @@ class SettingsFragment : BasePreferenceFragment() {
     companion object {
         private const val DEFAULT_CLIPBOARD_S = 30
 
-        /** Settings.ACTION_CREDENTIAL_PROVIDER, a flagged API; Settings' Passwords, passkeys & accounts page. */
+        /** Settings.ACTION_CREDENTIAL_PROVIDER, a flagged API; Settings' Passwords & passkeys page. */
         private const val ACTION_CREDENTIAL_PROVIDER = "android.settings.CREDENTIAL_PROVIDER"
         private const val MATCH_SUBDOMAINS = "subdomains"
         private const val MATCH_HOST = "host"

@@ -36,6 +36,7 @@
 #include <thread>
 
 #include "conditions.h"
+#include "identity.h"
 #include "rest.h"
 
 namespace lujarch::sync {
@@ -48,23 +49,13 @@ using android::base::unique_fd;
 constexpr int kMaxExits = 5;
 constexpr int kExitWindow = 300;
 constexpr int kMaxBackoff = 60;
-constexpr off_t kMaxEngineLog = 4 << 20;
+// The engine keeps its log and one older file, each at most this size.
+constexpr int kMaxEngineLog = 4 << 20;
 
 int64_t Monotonic() {
     return std::chrono::duration_cast<std::chrono::seconds>(
                    std::chrono::steady_clock::now().time_since_epoch())
             .count();
-}
-
-bool NonEmptyFile(const std::string& path) {
-    struct stat st;
-    return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0;
-}
-
-bool HasIdentity() {
-    const std::string home = rest::kHome;
-    return NonEmptyFile(rest::kConfigFile) &&
-           (NonEmptyFile(home + "/cert.pem") || !NonEmptyFile(home + "/key.pem"));
 }
 
 // The home and the sync storage: the engine's, 0750, so that the daemon reaches the
@@ -158,7 +149,7 @@ aidl::org::lujarch::sync::Status Supervisor::Status() {
         std::lock_guard lock(mutex_);
         status = status_;
     }
-    status.identity = HasIdentity();
+    status.identity = identity::Present();
     status.storageOk = StorageOk();
     return status;
 }
@@ -197,7 +188,7 @@ void Supervisor::Loop() {
             WaitEvent(-1);
             continue;
         }
-        if (!HasIdentity()) {
+        if (!identity::Present()) {
             LOG(WARNING) << "no device identity: import or create one in the Sync settings";
             SetState(ISync::STATE_NO_CONFIG);
             WaitEvent(-1);
@@ -252,20 +243,17 @@ void Supervisor::Loop() {
 }
 
 bool Supervisor::StartEngine() {
-    const std::string log = kEngineLog;
-    if (rename(log.c_str(), (log + ".1").c_str()) != 0 && errno != ENOENT) {
-        PLOG(WARNING) << "cannot keep the previous engine log";
-    }
-    int fds[2];
-    if (pipe2(fds, O_CLOEXEC) != 0) {
-        PLOG(ERROR) << "cannot start the engine: pipe2";
-        return false;
-    }
-    unique_fd read_end(fds[0]), write_end(fds[1]);
-    unique_fd null_fd(open("/dev/null", O_RDONLY | O_CLOEXEC));
-    std::vector<std::string> argv = {
-            kEngineBinary,  "serve",        std::string("--home=") + rest::kHome,
-            "--no-browser", "--no-upgrade", "--log-file=-"};
+    // The engine writes and rotates its own log in its home, which only its user may write.
+    unique_fd null_in(open("/dev/null", O_RDONLY | O_CLOEXEC));
+    unique_fd null_out(open("/dev/null", O_WRONLY | O_CLOEXEC));
+    std::vector<std::string> argv = {kEngineBinary,
+                                     "serve",
+                                     std::string("--home=") + rest::kHome,
+                                     "--no-browser",
+                                     "--no-upgrade",
+                                     std::string("--log-file=") + kEngineLog,
+                                     "--log-max-old-files=1",
+                                     "--log-max-size=" + std::to_string(kMaxEngineLog)};
     std::vector<char*> args;
     for (std::string& arg : argv) args.push_back(arg.data());
     args.push_back(nullptr);
@@ -287,8 +275,8 @@ bool Supervisor::StartEngine() {
             _exit(126);
         }
         umask(027);
-        if (dup2(null_fd.get(), STDIN_FILENO) < 0 || dup2(write_end.get(), STDOUT_FILENO) < 0 ||
-            dup2(write_end.get(), STDERR_FILENO) < 0) {
+        if (dup2(null_in.get(), STDIN_FILENO) < 0 || dup2(null_out.get(), STDOUT_FILENO) < 0 ||
+            dup2(null_out.get(), STDERR_FILENO) < 0) {
             _exit(126);
         }
         struct sigaction dfl = {};
@@ -298,11 +286,8 @@ bool Supervisor::StartEngine() {
         sigemptyset(&none);
         sigprocmask(SIG_SETMASK, &none, nullptr);
         execve(args[0], args.data(), envp.data());
-        static constexpr char kMessage[] = "lujarch_sync: cannot execute the engine\n";
-        (void)!write(STDERR_FILENO, kMessage, sizeof(kMessage) - 1);
         _exit(127);
     }
-    write_end.reset();
     unique_fd pidfd(pidfd_open(pid, 0));
     if (pidfd < 0) {
         PLOG(ERROR) << "pidfd_open of the engine";
@@ -318,20 +303,6 @@ bool Supervisor::StartEngine() {
     }
     rest::SetRunning(true);
     LOG(INFO) << "engine started";
-    std::thread([output = std::move(read_end), log] {
-        unique_fd file(open(log.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0600));
-        if (file < 0) PLOG(ERROR) << "cannot write " << log;
-        char buf[8192];
-        off_t written = 0;
-        for (;;) {
-            ssize_t n = TEMP_FAILURE_RETRY(read(output.get(), buf, sizeof(buf)));
-            if (n <= 0) return;
-            if (file >= 0 && written < kMaxEngineLog) {
-                written += n;
-                if (!android::base::WriteFully(file.get(), buf, n)) file.reset();
-            }
-        }
-    }).detach();
     return true;
 }
 
@@ -350,7 +321,11 @@ Supervisor::End Supervisor::WaitEngine() {
         TEMP_FAILURE_RETRY(waitpid(engine_, &status, 0));
         if (end == End::kExited) {
             if (WIFEXITED(status)) {
-                LOG(WARNING) << "engine exited with " << WEXITSTATUS(status);
+                const int code = WEXITSTATUS(status);
+                LOG(WARNING) << "engine exited with " << code
+                             << (code == 126   ? " (cannot become the engine's user)"
+                                 : code == 127 ? " (cannot execute the engine)"
+                                               : "; its log is " + std::string(kEngineLog));
             } else if (WIFSIGNALED(status)) {
                 LOG(WARNING) << "engine killed by signal " << WTERMSIG(status);
             }

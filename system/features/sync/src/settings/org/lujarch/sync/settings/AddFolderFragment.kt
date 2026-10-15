@@ -23,9 +23,10 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceScreen
 import com.android.settingslib.widget.FooterPreference
 import com.android.settingslib.widget.TopIntroPreference
-import org.lujarch.settings.pages.showDialog
 import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.Pages
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.showDialog
 
 /**
  * Adds a folder, new or offered by another device: its name, ID, local
@@ -175,7 +176,7 @@ class AddFolderFragment : SyncPageFragment() {
         dirPref.summary = dir?.let { getString(R.string.sync_local_folder_value, it) } ?: getString(R.string.sync_value_required)
         typePref.summary = SyncFormat.typeLabel(context, type) + "\n" + SyncFormat.typeSummary(context, type)
         devicesPref.summary = if (devices.isEmpty()) getString(R.string.sync_shared_with_none)
-        else devices.joinToString(getString(R.string.list_separator)) { snapshot?.deviceName(it) ?: it.substringBefore('-') }
+        else devices.joinToString(getString(PagesR.string.list_separator)) { snapshot?.deviceName(it) ?: it.substringBefore('-') }
         typePref.isSelectable = !receiveEncrypted
         encryptionPref.isVisible = !receiveEncrypted && devices.isNotEmpty()
         val missing = missingPasswords()

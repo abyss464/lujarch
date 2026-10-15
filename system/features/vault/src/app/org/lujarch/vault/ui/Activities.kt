@@ -79,7 +79,7 @@ abstract class BaseActivity : CollapsingToolbarBaseActivity() {
 
 /**
  * The vault's home (no launcher icon): the autofill service's settings, which
- * Settings opens from Passwords, passkeys & accounts > Preferred service
+ * Settings opens from Passwords & passkeys > Preferred service
  *, and the Quick Settings tile's long press (an alias). Exported
  * behind the signature permission org.lujarch.vault.permission.OPEN.
  */

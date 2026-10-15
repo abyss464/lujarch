@@ -313,7 +313,7 @@
     <string name="sync_rate_unlimited">不限</string>
     <string name="sync_rate_value">%1$d KiB/秒</string>
     <string name="sync_rates_category">速率限制</string>
-    <!-- 云端、地址、监听地址、发现与中继服务器、替换设备（D-033） -->
+    <!-- 云端、地址、监听地址、发现与中继服务器、替换设备 -->
     <string name="sync_reach_cloud">云端</string>
     <string name="sync_reach_lan">局域网</string>
     <string name="sync_reconnect">重试间隔</string>

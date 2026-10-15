@@ -27,11 +27,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import org.lujarch.settings.pages.PageRequest
-import org.lujarch.settings.pages.RebuiltWithPage
-import org.lujarch.settings.pages.showDialog
 import org.lujarch.settings.pages.BasePreferenceFragment
 import org.lujarch.settings.pages.InputDialog
+import org.lujarch.settings.pages.PageRequest
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.RebuiltWithPage
+import org.lujarch.settings.pages.showDialog
 
 /** A Sync page: runs the owner's changes and reloads afterwards. */
 abstract class SyncPageFragment : BasePreferenceFragment() {
@@ -62,7 +63,7 @@ abstract class SyncPageFragment : BasePreferenceFragment() {
         } catch (e: ActivityNotFoundException) {
             scanFor.take()
             Log.w(TAG, "${javaClass.simpleName}: the QR scanner cannot be opened: ${e.message}")
-            Toast.makeText(requireContext(), R.string.error_page, Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), PagesR.string.error_page, Toast.LENGTH_LONG).show()
         }
     }
 

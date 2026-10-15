@@ -9,5 +9,6 @@ service lujarch_sync /system_ext/bin/lujarch_sync
     class main
     user root
     # 5100: the engine's group; the daemon starts the engine and installs identities as its user.
-    group root 5100 inet
+    # package_info: callers are told apart by their package (/data/system/packages.list).
+    group root 5100 inet package_info
     capabilities SETUID SETGID KILL

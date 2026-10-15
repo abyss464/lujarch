@@ -236,8 +236,7 @@ abstract class BasePreferenceFragment : SettingsBasePreferenceFragment(), PageDi
             .setView(view)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val text = edit.text
-                val chars = CharArray(text.length)
-                text.getChars(0, text.length, chars, 0)
+                val chars = CharArray(text.length) { text[it] }
                 // Overwrite the field's buffer before it is dropped.
                 text.replace(0, text.length, " ".repeat(text.length))
                 text.clear()

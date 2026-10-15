@@ -48,6 +48,7 @@
 
 #include "conditions.h"
 #include "rest.h"
+#include "supervisor.h"
 
 namespace lujarch::sync::identity {
 
@@ -59,7 +60,6 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr char kStateProperty[] = "lujarch.sync.state";
 // Written into each backup: the device ID it held.
 constexpr char kBackupIdFile[] = "device-id";
 
@@ -483,16 +483,20 @@ bool IsBackupName(std::string_view name) {
     return name.size() == 15 || (name[15] == '-' && name.size() > 16);
 }
 
+bool Present() {
+    const auto nonempty = [](const char* name) {
+        bool has_data = false;
+        return FileExists(std::string(rest::kHome) + "/" + name, &has_data) && has_data;
+    };
+    return HasConfig() && (nonempty("cert.pem") || !nonempty("key.pem"));
+}
+
 // ---- commands ----
 
 Outcome CmdStatus(const Json::Value&, uid_t) {
     Json::Value reply(Json::objectValue);
-    Json::Value files(Json::objectValue);
-    for (const char* name : {"cert.pem", "key.pem", "config.xml"}) {
-        bool nonempty = false;
-        files[name] = FileExists(std::string(rest::kHome) + "/" + name, &nonempty) && nonempty;
-    }
-    reply["files"] = files;
+    reply["present"] = Present();
+    reply["config"] = HasConfig();
     reply["enabled"] = SettingIsOn("sync", "enabled");
     const std::string state = android::base::GetProperty(kStateProperty, "");
     reply["state"] = state.empty() ? Json::Value() : Json::Value(state);

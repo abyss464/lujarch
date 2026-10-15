@@ -329,7 +329,7 @@
     <string name="sync_rate_unlimited">Unlimited</string>
     <string name="sync_rate_value">%1$d KiB/s</string>
     <string name="sync_rates_category">Rate limits</string>
-    <!-- Cloud hub, addresses, listen addresses, discovery and relay servers, replacing a device (D-033) -->
+    <!-- Cloud hub, addresses, listen addresses, discovery and relay servers, replacing a device -->
     <string name="sync_reach_cloud">Cloud</string>
     <string name="sync_reach_lan">Local network</string>
     <string name="sync_reconnect">Retry interval</string>

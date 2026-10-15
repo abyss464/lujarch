@@ -313,7 +313,7 @@
     <string name="sync_rate_unlimited">無制限</string>
     <string name="sync_rate_value">%1$d KiB/秒</string>
     <string name="sync_rates_category">速度制限</string>
-    <!-- Cloud hub, addresses, listen addresses, discovery and relay servers, replacing a device (D-033) -->
+    <!-- Cloud hub, addresses, listen addresses, discovery and relay servers, replacing a device -->
     <string name="sync_reach_cloud">クラウド</string>
     <string name="sync_reach_lan">ローカル ネットワーク</string>
     <string name="sync_reconnect">再試行の間隔</string>

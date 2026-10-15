@@ -114,7 +114,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Only while charging | 仅在充电时运行 | 充電中のみ |
 | Device identity | 设备身份 | デバイスの識別情報 |
 | Sync storage | 同步存储 | 同期ストレージ |
-| Passwords & accounts | 密码和账号 | パスワードとアカウント |
+| Passwords & passkeys | 密码和通行密钥 | パスワードとパスキー |
 | Preferred service | 首选服务 | 優先するサービス |
 | Lujarch Vault | Lujarch 保险库 | Lujarch 保管庫 |
 | 2FA codes | 两步验证码 | 2FA コード |

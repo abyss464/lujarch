@@ -53,9 +53,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LujarchVault">
 
-        <!-- The vault's home: Settings > Passwords, passkeys & accounts >
-             Preferred service: Lujarch Vault (the autofill service's settings
-             activity; D-051). -->
+        <!-- The vault's home: Settings > Passwords & passkeys > Preferred service:
+             Lujarch Vault (the autofill service's settings activity). -->
         <activity
             android:name=".ui.VaultActivity"
             android:exported="true"

@@ -106,16 +106,13 @@ data class SyncInfo(val syncEnabled: Boolean, val syncState: String) {
 
 /** The engine's device identity on this device. */
 data class IdentityState(
-    val hasCert: Boolean,
-    val hasKey: Boolean,
+    /** The engine has an identity to start with (it may create the key and certificate then). */
+    val present: Boolean,
     val hasConfig: Boolean,
     val enabled: Boolean,
     val state: String?,
     val backups: List<IdentityBackup>,
-) {
-    val present: Boolean
-        get() = hasCert && hasKey && hasConfig
-}
+)
 
 /** A previous identity kept when it was replaced; [name] is YYYYMMDD-HHMMSS[-N]. */
 data class IdentityBackup(val name: String, val deviceId: String?, val complete: Boolean)
@@ -266,12 +263,10 @@ object SyncClient {
 
     suspend fun identity(): IdentityState {
         val r = json("identity", call("identity", TIMEOUT_SHORT_MS) { it.identity() })
-        val files = r.optJSONObject("files") ?: JSONObject()
         val backups = r.optJSONArray("backups") ?: JSONArray()
         return IdentityState(
-            hasCert = files.optBoolean("cert.pem"),
-            hasKey = files.optBoolean("key.pem"),
-            hasConfig = files.optBoolean("config.xml"),
+            present = r.optBoolean("present"),
+            hasConfig = r.optBoolean("config"),
             enabled = r.optBoolean("enabled"),
             state = r.stringOrNull("state"),
             backups = (0 until backups.length()).mapNotNull { i ->
@@ -332,6 +327,13 @@ internal fun normalizeJson(value: Any?): Any? {
 }
 
 /** A string value, or null when absent, JSON null or empty. */
+/** A boolean that the service may write as a JSON boolean or as the text "true". */
+internal fun JSONObject.looseBoolean(name: String): Boolean = when (val v = opt(name)) {
+    is Boolean -> v
+    is String -> v.equals("true", ignoreCase = true)
+    else -> false
+}
+
 internal fun JSONObject.stringOrNull(name: String): String? {
     val value = opt(name)
     if (value == null || value == JSONObject.NULL) return null

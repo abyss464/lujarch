@@ -237,7 +237,7 @@ class ImportIdentityFragment : SyncPageFragment() {
             .create()
     }
 
-    private var staged: IdentityStaged? = null
+    private var staged: IdentityInstalled? = null
 
     private fun import() {
         val c = cert ?: return

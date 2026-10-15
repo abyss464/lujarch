@@ -30,9 +30,10 @@ import androidx.fragment.app.Fragment
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
-import org.lujarch.settings.pages.showDialog
 import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.InputDialog
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.showDialog
 
 /** The sync service's state in words. */
 fun syncStateLabel(context: Context, state: String): String = when (state) {
@@ -236,7 +237,7 @@ object SyncFormat {
             .setMessage(twoLines(id))
             .setView(image)
             .setPositiveButton(R.string.sync_copy) { _, _ -> copy(requireContext(), getString(R.string.sync_device_id), id) }
-            .setNegativeButton(R.string.action_close, null)
+            .setNegativeButton(PagesR.string.action_close, null)
             .create()
     }
 

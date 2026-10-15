@@ -26,11 +26,12 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import com.android.settingslib.widget.FooterPreference
 import com.android.settingslib.widget.MainSwitchPreference
-import org.lujarch.settings.pages.showDialog
+import org.json.JSONObject
 import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.InputDialog
 import org.lujarch.settings.pages.Pages
-import org.json.JSONObject
+import org.lujarch.settings.pages.R as PagesR
+import org.lujarch.settings.pages.showDialog
 
 /**
  * One folder: whether it syncs, its state, its local folder (movable to
@@ -83,7 +84,7 @@ class FolderFragment : SyncPageFragment() {
         statePref = status.add(Preference(prefContext)) {
             key = "state"
             setTitle(R.string.sync_state)
-            setSummary(R.string.loading)
+            setSummary(PagesR.string.loading)
             isSelectable = false
         }
         localPref = status.add(Preference(prefContext)) {
@@ -281,7 +282,7 @@ class FolderFragment : SyncPageFragment() {
         typePref.summary = SyncFormat.typeLabel(context, f.type) + "\n" + SyncFormat.typeSummary(context, f.type)
         typePref.isSelectable = f.type != Syncthing.TYPE_RECEIVE_ENCRYPTED
         devicesPref.summary = if (f.devices.isEmpty()) getString(R.string.sync_shared_with_none)
-        else f.devices.joinToString(getString(R.string.list_separator)) { snap.deviceName(it) }
+        else f.devices.joinToString(getString(PagesR.string.list_separator)) { snap.deviceName(it) }
         encryptionPref.isVisible = f.type != Syncthing.TYPE_RECEIVE_ENCRYPTED && f.devices.isNotEmpty()
         encryptionPref.summary = when {
             f.encryptedFor.isEmpty() -> getString(R.string.sync_encryption_none)
