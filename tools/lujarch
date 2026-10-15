@@ -1254,9 +1254,14 @@ def build_budget(host):
             die(f"only {gb} GB of memory free: a build needs at least 56 "
                 "(or set build.memory_max in host.toml)")
         mem_max = f"{cap}G"
-    mem_high = host.get("build", "memory_high") or f"{int(mem_max.rstrip('G')) - 1}G"
-    jobs = int(host.get("build", "jobs", 0) or 0) or min(int(mem_max.rstrip("G")) // 3, 26)
+    mem_high = host.get("build", "memory_high") or mem_max
+    jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
     return mem_max, mem_high, jobs
+
+
+def fitting_jobs(mem_max):
+    # siso keeps about 26 GB, and every Java or R8 job, which no job pool limits, up to 4 GB.
+    return max(4, (int(mem_max.rstrip("G")) - 26) // 4)
 
 
 def release_config(tree):
@@ -1351,10 +1356,9 @@ m -j{jobs} {modules}
     with open(logfile, "w") as f:
         run = subprocess.run(command(jobs), cwd=tree, env=env, stdout=f, stderr=subprocess.STDOUT)
     if run.returncode < 0 or run.returncode in (137, 143):
-        # The scope's memory cap killed the build. siso keeps about 26 GB and every R8 job,
-        # which no job pool limits, up to 4 GB: the build goes on from where it stopped with
-        # as many jobs as fit.
-        fewer = max(4, (int(mem_max.rstrip("G")) - 26) // 4)
+        # The scope's memory cap killed the build: it goes on from where it stopped with half
+        # the jobs.
+        fewer = max(2, jobs // 2)
         log(f"the build hit its memory cap (exit {run.returncode}); continuing with {fewer} jobs")
         with open(logfile, "a") as f:
             run = subprocess.run(command(fewer), cwd=tree, env=env, stdout=f,
