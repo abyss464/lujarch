@@ -134,3 +134,10 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Record battery usage | 记录电池用量 | バッテリー使用量を記録 |
 | Full battery history | 完整电池历史 | バッテリーの完全な履歴 |
 | Lowest CPU frequency when idle | 空闲时使用最低频率 | アイドル時は最低の CPU 周波数 |
+| Linux development environment | Linux 开发环境 | Linux 開発環境 |
+| Use Linux development environment | 使用 Linux 开发环境 | Linux 開発環境を使用 |
+| Root sessions | Root 会话 | Root セッション |
+| Remote access | 远程访问 | リモート アクセス |
+| Services | 服务 | サービス |
+| System | 系统 | システム |
+| Modes | 模式 | モード |
