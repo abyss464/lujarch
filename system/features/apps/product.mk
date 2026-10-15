@@ -1,7 +1,10 @@
 # Google's services from MindTheGapps (APP-1): Play services, Google Services Framework and the
 # Play Store with what they need to run, and nothing else of Google's.
+# MindTheGapps' Play services for x86_64 predates Android 17's services framework, so only arm64
+# products have them.
+ifeq ($(LUJARCH_ARCH),arm64)
 PRODUCT_SOONG_NAMESPACES += \
-    vendor/gapps/$(LUJARCH_ARCH) \
+    vendor/gapps/arm64 \
     vendor/gapps/common \
     vendor/gapps/overlay
 
@@ -22,15 +25,7 @@ PRODUCT_PACKAGES += \
     privapp-permissions-mtg.xml \
     sysconfig-mtg.xml
 
-ifeq ($(LUJARCH_ARCH),arm64)
 PRODUCT_PACKAGES += \
     allowed_apex_com.google.android.gmssystem.xml \
     com.google.android.gmssystem.prodvic
-else
-PRODUCT_PACKAGES += \
-    GmsCore
 endif
-
-# LineageOS' camera and audio effects are not in the image (APP-4).
-PRODUCT_NO_CAMERA := true
-TARGET_EXCLUDES_AUDIOFX := true

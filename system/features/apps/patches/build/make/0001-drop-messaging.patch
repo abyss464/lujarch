@@ -1,0 +1,23 @@
+diff --git a/target/product/aosp_base_telephony.mk b/target/product/aosp_base_telephony.mk
+index 0d4e3335613d0f1c86a193836fb63d3176ac04d6..f33bb8bcded7cadd6b8a08ad615ea17a3197a1de 100644
+--- a/target/product/aosp_base_telephony.mk
++++ b/target/product/aosp_base_telephony.mk
+@@ -15,5 +15,4 @@
+ #
+ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+ 
+-PRODUCT_PACKAGES += \
+-    messaging
++# Lujarch (APP-4): no messaging app of Android's
+diff --git a/target/product/aosp_product.mk b/target/product/aosp_product.mk
+index 67ab7a74338804a798d1e388bf73a4dd12ce255a..9960c68badc8b15203934652e9068ade6eb20a17 100644
+--- a/target/product/aosp_product.mk
++++ b/target/product/aosp_product.mk
+@@ -32,7 +32,6 @@ PRODUCT_PRODUCT_PROPERTIES += \
+ # More AOSP packages
+ PRODUCT_PACKAGES += \
+     initial-package-stopped-states-aosp.xml \
+-    messaging \
+     PhotoTable \
+     preinstalled-packages-platform-aosp-product.xml \
+     ThemePicker \
