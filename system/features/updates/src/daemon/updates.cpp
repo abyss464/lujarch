@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <poll.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
@@ -123,6 +124,8 @@ bool WriteAtomic(const std::string& path, const std::string& data) {
         PLOG(ERROR) << "cannot create " << tmp;
         return false;
     }
+    // update_engine reads the confirmation as a member of the system group.
+    if (fchmod(fd.get(), 0640) != 0) PLOG(WARNING) << "cannot make " << tmp << " group-readable";
     if (!android::base::WriteFully(fd.get(), data.data(), data.size()) || fsync(fd.get()) != 0) {
         PLOG(ERROR) << "cannot write " << tmp;
         unlink(tmp.c_str());
