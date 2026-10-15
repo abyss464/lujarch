@@ -413,8 +413,8 @@ def check_order(findings):
     for entry in sorted(with_patches - set(listed)):
         findings.add("system/order", 0, f"{entry} has patches but is not listed")
     projects = upstream_projects() if (ROOT / "upstream.xml").exists() else {}
-    for entry in sorted(with_patches):
-        pdir = SYSTEM / entry / "patches"
+    for entry in sorted(with_patches) + (["tools"] if TOOL_PATCHES.is_dir() else []):
+        pdir = entry_patches(entry)
         for path in sorted(p for p in pdir.rglob("*") if p.is_file()):
             project = path.parent.relative_to(pdir).as_posix()
             if not PATCH_NAME_RE.match(path.name):
@@ -565,9 +565,13 @@ def order_entries():
     return [l.strip() for l in path.read_text(encoding="utf-8").split("\n") if l.strip()]
 
 
+TOOL_PATCHES = ROOT / "tools" / "patches"
+
+
 def patch_dirs():
-    """The patch directories of system/order, in order, as (entry, patches/ path)."""
-    result = []
+    """The patch directories in application order, as (entry, patches/ path): the build
+    system's own, which reach no image, then those of system/order."""
+    result = [("tools", TOOL_PATCHES)] if TOOL_PATCHES.is_dir() else []
     for entry in order_entries():
         pdir = SYSTEM / entry / "patches"
         if not pdir.is_dir():
@@ -1065,7 +1069,11 @@ def cmd_unpatch(_args):
 
 def entry_of(patch):
     parts = Path(rel(patch)).parts
-    return f"{parts[1]}/{parts[2]}"
+    return "tools" if parts[0] == "tools" else f"{parts[1]}/{parts[2]}"
+
+
+def entry_patches(entry):
+    return TOOL_PATCHES if entry == "tools" else SYSTEM / entry / "patches"
 
 
 def reproduces(where, parent, commit, patch):
@@ -1088,7 +1096,7 @@ def save_project(tree, project, entry, args, pinned, wanted):
     if base != pinned or len(made) != len(wanted) or \
             not all(in_sync(m, p) for m, p in zip(made, wanted)):
         die(f"{project} is not upstream.xml plus its patches; lujarch patch first")
-    pdir = SYSTEM / entry / "patches" / project
+    pdir = entry_patches(entry) / project
     existing = sorted(pdir.glob("*.patch")) if pdir.is_dir() else []
     new = False
     if args.patch:
@@ -1111,7 +1119,7 @@ def save_project(tree, project, entry, args, pinned, wanted):
 
     pgit(where, "add", "-A", check=True)
     work = commit_index(where, "lujarch save\n")
-    order = order_entries()
+    order = ["tools"] + order_entries()
     after = sorted(wanted + ([target] if new else []),
                    key=lambda p: (order.index(entry_of(p)), p.name))
     by_patch = {p: m[0] for m, p in zip(made, wanted)}
@@ -1158,10 +1166,11 @@ def cmd_save(args):
     entry = args.entry.strip("/")
     if entry.startswith("system/"):
         entry = entry[len("system/"):]
-    if not re.fullmatch(r"(features|device)/[a-z0-9-]+", entry) or not (SYSTEM / entry).is_dir():
-        die(f"{args.entry}: not a feature or device directory under system/")
-    if entry not in order_entries():
-        die(f"{entry} is not in system/order; add it where its patches apply")
+    if entry != "tools":
+        if not re.fullmatch(r"(features|device)/[a-z0-9-]+", entry) or not (SYSTEM / entry).is_dir():
+            die(f"{args.entry}: not tools or a feature or device directory under system/")
+        if entry not in order_entries():
+            die(f"{entry} is not in system/order; add it where its patches apply")
     pins = upstream_projects()
     if args.projects:
         projects = [p.strip("/") for p in args.projects]
@@ -1238,8 +1247,8 @@ def build_budget(host):
     gb = mem_available_gb()
     mem_max = host.get("build", "memory_max") or ""
     if not mem_max:
-        # Android 17's soong_build analysis peaks above 52 GB with Go's default heap growth
-        # (GOGC below keeps it lower); squeezed under its peak it stalls for hours.
+        # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
+        # holds it; squeezed by the cap instead, it stalls for hours.
         cap = min(gb - 12, 60)
         if cap < 44:
             die(f"only {gb} GB of memory free: a build needs at least 56 "
@@ -1319,7 +1328,8 @@ m -j{jobs} {modules}
         "CCACHE_EXEC": "/usr/bin/ccache",
         "CCACHE_DIR": str(host.path_of("paths", "ccache")),
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
-        "GOGC": "50",
+        # The analysis's Go heap stays under the cap (tools/patches/build/soong).
+        "GOMEMLIMIT": f"{int(mem_max.rstrip('G')) - 6}GiB",
     })
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
     def command(jobs):
@@ -1534,7 +1544,7 @@ def main():
     sub.add_parser("patch", help="apply the patches of system/order")
     sub.add_parser("unpatch", help="revert the patches of system/order")
     save = sub.add_parser("save", help="save the tree's changes into an entry's patches")
-    save.add_argument("entry", help="features/<feature> or device/<device>")
+    save.add_argument("entry", help="tools, features/<feature> or device/<device>")
     save.add_argument("projects", nargs="*", help="projects to save (default: every changed one)")
     which = save.add_mutually_exclusive_group()
     which.add_argument("--name", help="start a new patch NNNN-<name>.patch")

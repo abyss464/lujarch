@@ -1,0 +1,17 @@
+diff --git a/ui/build/soong.go b/ui/build/soong.go
+index 4521b4abef559c568e568dc6c113d385339d14fd..a186f3bec97ebe7a0b8ee64992b0408b53c31058 100644
+--- a/ui/build/soong.go
++++ b/ui/build/soong.go
+@@ -215,6 +215,12 @@ func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstra
+ 
+ 	commonArgs = append(commonArgs, "-l", filepath.Join(pb.config.FileListDir(), "Android.bp.list"))
+ 	invocationEnv := make(map[string]string)
++	// The analysis runs with an empty environment; these set how its Go runtime uses memory.
++	for _, name := range []string{"GOGC", "GOMEMLIMIT"} {
++		if value, ok := pb.config.Environment().Get(name); ok {
++			invocationEnv[name] = value
++		}
++	}
+ 	if pb.debugPort != "" {
+ 		//debug mode
+ 		commonArgs = append(commonArgs, "--delve_listen", pb.debugPort,
