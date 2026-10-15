@@ -1520,6 +1520,163 @@ def booted(host_out):
     return out.returncode == 0 and out.stdout.strip() == "1"
 
 
+def wait_booted(host_out, timeout):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if container_state() != "running":
+            return False
+        if booted(host_out):
+            return True
+        time.sleep(5)
+    return False
+
+
+def screen_nodes(host_out):
+    """The on-screen elements as (text, centre x, centre y), from a uiautomator dump."""
+    adb(host_out, "shell", "uiautomator", "dump", "/data/local/tmp/ui.xml")
+    xml = adb(host_out, "shell", "cat", "/data/local/tmp/ui.xml").stdout
+    nodes = []
+    for node in re.findall(r"<node [^>]*>", xml):
+        text = re.search(r' text="([^"]*)"', node)
+        bounds = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node)
+        if text and bounds:
+            x1, y1, x2, y2 = map(int, bounds.groups())
+            nodes.append((text.group(1), (x1 + x2) // 2, (y1 + y2) // 2))
+    return nodes
+
+
+def adb_root(host_out):
+    """Restarts adbd as root; true when it is."""
+    adb(host_out, "root")
+    for _ in range(12):
+        time.sleep(2)
+        subprocess.run([adb_binary(host_out), "connect", f"127.0.0.1:{ADB_PORT}"],
+                       capture_output=True, text=True, timeout=30)
+        try:
+            if adb(host_out, "shell", "id", "-u").stdout.strip() == "0":
+                return True
+        except subprocess.TimeoutExpired:
+            pass
+    return False
+
+
+def provision(host_out):
+    """Leaves a booted virtual device ready for tests: set up, awake while it runs, Developer
+    options and Rooted debugging on, adb as root, on the virtual Wi-Fi network."""
+    for command in (
+        ["settings", "put", "secure", "user_setup_complete", "1"],
+        ["settings", "put", "global", "device_provisioned", "1"],
+        ["settings", "put", "global", "development_settings_enabled", "1"],
+        ["svc", "power", "stayon", "true"],
+        ["input", "keyevent", "KEYCODE_WAKEUP"],
+        ["wm", "dismiss-keyguard"],
+    ):
+        adb(host_out, "shell", *command)
+    if not adb_root(host_out):
+        # Rooted debugging is switched only by the system user, through its Developer options row.
+        adb(host_out, "shell", "am", "start", "-W", "-a",
+            "android.settings.APPLICATION_DEVELOPMENT_SETTINGS")
+        for _ in range(10):
+            row = [n for n in screen_nodes(host_out) if n[0] == "Rooted debugging"]
+            if row:
+                adb(host_out, "shell", "input", "tap", str(row[0][1]), str(row[0][2]))
+                break
+            adb(host_out, "shell", "input", "swipe", "540", "1600", "540", "700", "300")
+            time.sleep(1)
+        else:
+            die("Rooted debugging is not in Developer options")
+        if not adb_root(host_out):
+            die("adb does not run as root after Rooted debugging was turned on")
+    # Wi-Fi takes a while to come up after a start; it is joined once it is on.
+    for _ in range(30):
+        status = adb(host_out, "shell", "cmd", "wifi", "status").stdout
+        if 'connected to "VirtWifi"' in status:
+            break
+        if "Wifi is enabled" in status:
+            adb(host_out, "shell", "cmd", "wifi", "connect-network", "VirtWifi", "open")
+        time.sleep(2)
+    else:
+        log("the virtual device did not join its Wi-Fi network")
+    adb(host_out, "shell", "am", "start", "-a", "android.intent.action.MAIN",
+        "-c", "android.intent.category.HOME")
+
+
+def installed_files(host, info, modules):
+    """The files the named modules install into the vm image, with the modules they require,
+    as paths relative to the product directory."""
+    product = Path(info["product_out"])
+    module_info = json.loads((product / "module-info.json").read_text())
+    tree_product = os.path.relpath(product, host.tree)
+    files, seen, queue = [], set(), list(modules)
+    while queue:
+        name = queue.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        entry = module_info.get(name)
+        if entry is None:
+            die(f"no module {name} in {product / 'module-info.json'}")
+        queue += entry.get("required") or []
+        for path in entry.get("installed") or []:
+            rel = os.path.relpath(path, tree_product)
+            if rel.startswith("..") or rel.split("/", 1)[0] in (
+                    "system_other", "fake_packages", "obj", "testcases", "data", "symbols"):
+                continue
+            if rel not in files:
+                files.append(rel)
+    return product, files
+
+
+def vm_sync(host, info, host_out, modules):
+    """Copies what the named modules install into the running virtual device, keeping its data,
+    and restarts it."""
+    product, files = installed_files(host, info, modules)
+    if not files:
+        die("the modules install nothing into the image")
+    missing = [f for f in files if not (product / f).is_file()]
+    if missing:
+        die(f"not built: {', '.join(missing)} (lujarch build vm {' '.join(modules)})")
+    if not adb_root(host_out):
+        provision(host_out)
+    remount = adb(host_out, "remount", timeout=300)
+    said = (remount.stdout + remount.stderr).strip()
+    if remount.returncode and "reboot" not in said.lower():
+        die(f"adb remount: {said}")
+    if "reboot" in said.lower():
+        # The first remount turns verification off, which takes effect at the next start.
+        log("making the system partitions writable; restarting the virtual device once")
+        adb(host_out, "reboot", timeout=60)
+        time.sleep(10)
+        if not wait_booted(host_out, 600) or not adb_root(host_out):
+            die("the virtual device did not come back after making its partitions writable")
+        remount = adb(host_out, "remount", timeout=300)
+        if remount.returncode:
+            die(f"adb remount: {(remount.stdout + remount.stderr).strip()}")
+    for rel in files:
+        push = adb(host_out, "push", str(product / rel), "/" + rel, timeout=600)
+        if push.returncode:
+            die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
+        log(f"copied /{rel}")
+    # Packages, init scripts, the SELinux policy and file labels are read when the system starts.
+    log("restarting the virtual device; its data stays")
+    adb(host_out, "reboot", timeout=60)
+    time.sleep(10)
+    if not wait_booted(host_out, 600):
+        die("the virtual device did not come back after the copy")
+    provision(host_out)
+    relabel = adb(host_out, "shell", "restorecon", "-v", *["/" + f for f in files])
+    if relabel.stdout.strip():
+        # Labels of new file contexts are applied after the start that loaded them.
+        log("relabelled with the new file contexts; restarting the virtual device once more")
+        adb(host_out, "reboot", timeout=60)
+        time.sleep(10)
+        if not wait_booted(host_out, 600):
+            die("the virtual device did not come back after relabelling")
+        provision(host_out)
+    log(f"synced {len(files)} files of {' '.join(modules)}; adb 127.0.0.1:{ADB_PORT}")
+    return 0
+
+
 def cmd_vm(args):
     host = Host()
     info, host_out, home, common = vm_paths(host)
@@ -1532,6 +1689,12 @@ def cmd_vm(args):
             subprocess.run(["docker", "exec", VM_CONTAINER, "/cf/host/bin/stop_cvd"],
                            capture_output=True, timeout=120)
         return subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True).returncode
+    if args.action == "sync":
+        if state != "running" or not booted(host_out):
+            die("the virtual device is not running (lujarch vm start)")
+        if not args.modules:
+            die("name the modules to copy: lujarch vm sync <module>...")
+        return vm_sync(host, info, host_out, args.modules)
     if args.action == "status":
         up = "booted" if state == "running" and booted(host_out) else (state or "not running")
         print(f"vm: {up}; build {info['commit']} ({info['built']}); adb 127.0.0.1:{ADB_PORT}; "
@@ -1592,7 +1755,8 @@ def cmd_vm(args):
             die(f"the virtual device stopped while booting; log {logfile}")
         if booted(host_out):
             save_log()
-            log(f"booted; adb 127.0.0.1:{ADB_PORT}; screen {WEBRTC_URL}")
+            provision(host_out)
+            log(f"booted and ready; adb 127.0.0.1:{ADB_PORT} as root; screen {WEBRTC_URL}")
             return 0
         time.sleep(10)
     save_log()
@@ -1626,7 +1790,8 @@ def main():
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
     vm = sub.add_parser("vm", help="the virtual device")
-    vm.add_argument("action", choices=("start", "stop", "status"))
+    vm.add_argument("action", choices=("start", "stop", "status", "sync"))
+    vm.add_argument("modules", nargs="*", help="sync: the modules to copy into the running device")
     vm.add_argument("--timeout", type=int, default=900, help="seconds to wait for the boot")
     args = parser.parse_args()
     return {

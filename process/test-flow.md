@@ -26,6 +26,12 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
 - Every test that does not depend on the Xiaomi 13's hardware runs here.
 - Test components (probes, harness apps) are installed into the virtual device when a test runs.
   No test code is ever part of an image.
+- `tools/lujarch vm start` boots the `vm` build with empty data and leaves it ready for tests:
+  set up, awake, Developer options and Rooted debugging on, adb as root, on its Wi-Fi network.
+- `tools/lujarch vm sync <module>...` copies what the named modules install (with the modules
+  they require) into the running virtual device after `tools/lujarch build vm <module>...`, and
+  restarts it with its data kept. The SELinux policy of `system_ext` is the module
+  `selinux_policy_system_ext`.
 
 The virtual device has no Xiaomi hardware, no Qualcomm TEE, no bootloader of its own, no Google
 apps (they exist only for arm64), no arm64-only programs, and no real performance or battery.
