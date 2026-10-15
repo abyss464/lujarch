@@ -1,0 +1,281 @@
+diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
+index ad58bc9aab9a3257b31a0b8c5718f777017bdb3b..756008a2d8d5498f4dea1fc3f93cc9baa841fc2f 100644
+--- a/res/values-ja/lujarch_strings.xml
++++ b/res/values-ja/lujarch_strings.xml
+@@ -24,4 +24,7 @@
+     <string name="lujarch_drawer_section_collapse">「%1$s」を折りたたむ</string>
+     <string name="lujarch_drawer_section_unnamed">名前のないセクション</string>
+     <string name="lujarch_drawer_section_numbered">セクション %1$d</string>
++    <string name="lujarch_drawer_sort_title">アプリドロワーの並べ替え</string>
++    <string name="lujarch_drawer_sort_name">名前順</string>
++    <string name="lujarch_drawer_sort_color">アイコンの色順</string>
+ </resources>
+diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
+index 844c8ab53635cf17579f31ab21538747fb4e6a0b..b2af0c3a877cca64369429431bc2edbf73979a94 100644
+--- a/res/values-zh-rCN/lujarch_strings.xml
++++ b/res/values-zh-rCN/lujarch_strings.xml
+@@ -24,4 +24,7 @@
+     <string name="lujarch_drawer_section_collapse">收起“%1$s”</string>
+     <string name="lujarch_drawer_section_unnamed">未命名分区</string>
+     <string name="lujarch_drawer_section_numbered">分区 %1$d</string>
++    <string name="lujarch_drawer_sort_title">应用抽屉排序</string>
++    <string name="lujarch_drawer_sort_name">按名称</string>
++    <string name="lujarch_drawer_sort_color">按图标颜色</string>
+ </resources>
+diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
+index 88fbecdea5b84eb1a96cc5120baa454d39939a71..9e91f3e1bd915eb93c4e31ab43f0e12ea8f23541 100644
+--- a/res/values/lujarch_strings.xml
++++ b/res/values/lujarch_strings.xml
+@@ -33,4 +33,19 @@
+     <string name="lujarch_drawer_section_unnamed">Unnamed section</string>
+     <!-- Name of an unnamed drawer section in lists; %1$d is its place [CHAR LIMIT=30] -->
+     <string name="lujarch_drawer_section_numbered">Section %1$d</string>
++    <!-- Launcher setting: the order of the app drawer [CHAR LIMIT=40] -->
++    <string name="lujarch_drawer_sort_title">Sort apps in drawer</string>
++    <!-- Order of the app drawer: alphabetical [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_sort_name">By name</string>
++    <!-- Order of the app drawer: by the hue of the app icons [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_sort_color">By icon color</string>
++    <string-array name="lujarch_drawer_sort_entries" translatable="false">
++        <item>@string/lujarch_drawer_sort_name</item>
++        <item>@string/lujarch_drawer_sort_color</item>
++    </string-array>
++    <!-- AppInfoComparator.SORT_NAME and SORT_COLOR. -->
++    <string-array name="lujarch_drawer_sort_values" translatable="false">
++        <item>0</item>
++        <item>1</item>
++    </string-array>
+ </resources>
+diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
+index 83a4142ad5eac0a150978459176087a245905cc0..e865b28bc517acf6b9341045fa156cdc6b8f1a06 100644
+--- a/res/xml/launcher_preferences.xml
++++ b/res/xml/launcher_preferences.xml
+@@ -104,6 +104,15 @@
+         android:key="pref_trust_apps"
+         android:title="@string/trust_apps_manager_name" />
+ 
++    <!-- Lujarch (LCH-2): the drawer's order, kept in Settings.Secure (SettingsActivity). -->
++    <ListPreference
++        android:key="pref_drawer_sort_mode"
++        android:title="@string/lujarch_drawer_sort_title"
++        android:entries="@array/lujarch_drawer_sort_entries"
++        android:entryValues="@array/lujarch_drawer_sort_values"
++        android:persistent="false"
++        launcher:useSimpleSummaryProvider="true" />
++
+     <!-- Lujarch (LCH-1): the owner's drawer sections; the page is filled in code
+          (DrawerSectionsSettings). -->
+     <androidx.preference.PreferenceScreen
+diff --git a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
+index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9bdcf682fa 100644
+--- a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
++++ b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
+@@ -27,6 +27,10 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
+ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_PRIVATE_SPACE_USER_INSTALLED_APPS_COUNT;
+ 
+ import android.content.Context;
++import android.database.ContentObserver;
++import android.os.Handler;
++import android.os.Looper;
++import android.provider.Settings;
+ import android.text.Spannable;
+ import android.text.SpannableString;
+ import android.text.style.ImageSpan;
+@@ -131,6 +135,19 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+     private final boolean mSortSections;
+     // Lujarch (LCH-1): the fast scroller's mark for an unnamed drawer section.
+     private static final String DIVIDER_SECTION = "\u2014";
++    // Lujarch (LCH-2): sorted by icon color, name sections would be scattered through the list,
++    // so the fast scroller gets a single section.
++    private boolean mSortByColor;
++    private static final String COLOR_SECTION = "\u2022";
++    // The list lives as long as the all-apps view and follows the order the owner sets.
++    private final ContentObserver mSortObserver =
++            new ContentObserver(new Handler(Looper.getMainLooper())) {
++                @Override
++                public void onChange(boolean selfChange) {
++                    updateSortMode();
++                    onAppsUpdated();
++                }
++            };
+ 
+     public AlphabeticalAppsList(ActivityContext activityContext, @Nullable AllAppsStore appsStore,
+             WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
+@@ -139,6 +156,9 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+ 
+         Context context = activityContext.asContext();
+         mAppNameComparator = new AppInfoComparator(context);
++        updateSortMode();
++        context.getContentResolver().registerContentObserver(
++                Settings.Secure.getUriFor(AppInfoComparator.SETTING_SORT), false, mSortObserver);
+         mWorkProviderManager = workProfileManager;
+         mPrivateProviderManager = privateProfileManager;
+         mDrawerSections = DrawerSections.get(context);
+@@ -254,6 +274,12 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+         return true;
+     }
+ 
++    private void updateSortMode() {
++        mSortByColor = AppInfoComparator.sortMode(mActivityContext.asContext())
++                == AppInfoComparator.SORT_COLOR;
++        mAppNameComparator.setSortByColor(mSortByColor);
++    }
++
+     /**
+      * Updates internals when the set of apps are updated.
+      */
+@@ -286,7 +312,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+ 
+         // As a special case for some languages (currently only Simplified Chinese), we may need to
+         // coalesce sections
+-        if (mSortSections) {
++        if (mSortSections && !mSortByColor) {
+             // Compute the section headers. We use a TreeMap with the section name comparator to
+             // ensure that the sections are ordered when we iterate over it later
+             appSteam = appSteam.collect(Collectors.groupingBy(
+@@ -544,7 +570,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+                 mAdapterItems.add(AdapterItem.asApp(info));
+             }
+ 
+-            String sectionName = info.sectionName;
++            String sectionName = mSortByColor ? COLOR_SECTION : info.sectionName;
+             // Create a new section if the section names do not match
+             if (!sectionName.equals(lastSectionName)) {
+                 Log.d(TAG, "addAppsWithSections: adding sectionName: " + sectionName
+diff --git a/src/com/android/launcher3/allapps/AppInfoComparator.java b/src/com/android/launcher3/allapps/AppInfoComparator.java
+index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..9c676c963260d54982d84cbcbed6daffda9c45b2 100644
+--- a/src/com/android/launcher3/allapps/AppInfoComparator.java
++++ b/src/com/android/launcher3/allapps/AppInfoComparator.java
+@@ -16,8 +16,10 @@
+ package com.android.launcher3.allapps;
+ 
+ import android.content.Context;
++import android.graphics.Color;
+ import android.os.Process;
+ import android.os.UserHandle;
++import android.provider.Settings;
+ import android.text.TextUtils;
+ 
+ import com.android.launcher3.model.data.AppInfo;
+@@ -34,6 +36,18 @@ public class AppInfoComparator implements Comparator<AppInfo> {
+     private final UserCache mUserManager;
+     private final UserHandle mMyUser;
+     private final LabelComparator mLabelComparator;
++    private boolean mSortByColor;
++
++    /** Lujarch (LCH-2): the drawer's order, in Settings.Secure: SORT_NAME (default), SORT_COLOR. */
++    public static final String SETTING_SORT = "lujarch_launcher_drawer_sort";
++    public static final String SORT_PREFERENCE_KEY = "pref_drawer_sort_mode";
++    public static final int SORT_NAME = 0;
++    public static final int SORT_COLOR = 1;
++
++    // Icon colors are grouped into hue bands of this width; greys go after
++    // every band (see colorBand).
++    private static final float HUE_BAND = 15f;
++    private static final int GREY_BAND = (int) (360f / HUE_BAND);
+ 
+     public AppInfoComparator(Context context) {
+         mUserManager = UserCache.INSTANCE.get(context);
+@@ -41,10 +55,27 @@ public class AppInfoComparator implements Comparator<AppInfo> {
+         mLabelComparator = new LabelComparator();
+     }
+ 
++    /** The drawer's order the owner set (LCH-2). */
++    public static int sortMode(Context context) {
++        return Settings.Secure.getInt(context.getContentResolver(), SETTING_SORT, SORT_NAME);
++    }
++
++    /** Sorts by icon color first (hue band, then brighter first), then as stock. */
++    public void setSortByColor(boolean sortByColor) {
++        mSortByColor = sortByColor;
++    }
++
+     @Override
+     public int compare(AppInfo a, AppInfo b) {
++        int result;
++        if (mSortByColor) {
++            result = compareColor(a, b);
++            if (result != 0) {
++                return result;
++            }
++        }
+         // Order by the title in the current locale
+-        int result = mLabelComparator.compare(getSortingTitle(a), getSortingTitle(b));
++        result = mLabelComparator.compare(getSortingTitle(a), getSortingTitle(b));
+         if (result != 0) {
+             return result;
+         }
+@@ -64,6 +95,37 @@ public class AppInfoComparator implements Comparator<AppInfo> {
+         }
+     }
+ 
++    private static int compareColor(AppInfo a, AppInfo b) {
++        float[] ha = hsv(a);
++        float[] hb = hsv(b);
++        int result = Integer.compare(colorBand(ha), colorBand(hb));
++        if (result != 0) {
++            return result;
++        }
++        // Within a band: brighter, then more saturated, first.
++        result = Float.compare(hb[2], ha[2]);
++        return result != 0 ? result : Float.compare(hb[1], ha[1]);
++    }
++
++    /** HSV of the icon's dominant color (extracted by the icon cache). */
++    private static float[] hsv(AppInfo info) {
++        float[] hsv = new float[3];
++        Color.colorToHSV(info.bitmap != null ? info.bitmap.color : 0, hsv);
++        return hsv;
++    }
++
++    /**
++     * Hue band of a color. Colors with little saturation or brightness read as
++     * grey or black whatever their hue, so they share the last band. The wheel
++     * starts half a band before red, so reds (near 0 and near 360) stay together.
++     */
++    private static int colorBand(float[] hsv) {
++        if (hsv[1] < 0.2f || hsv[2] < 0.2f) {
++            return GREY_BAND;
++        }
++        return (int) (((hsv[0] + HUE_BAND / 2) % 360f) / HUE_BAND);
++    }
++
+     private String getSortingTitle(AppInfo info) {
+         if (!TextUtils.isEmpty(info.appTitle)) {
+             return info.appTitle.toString();
+diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
+index 4269269a4d95c3ee814f2991dd37cc4c664e398e..050ec199aacb00ace26c96313fb06fc0030b5ee1 100644
+--- a/src/com/android/launcher3/settings/SettingsActivity.java
++++ b/src/com/android/launcher3/settings/SettingsActivity.java
+@@ -45,6 +45,7 @@ import androidx.fragment.app.DialogFragment;
+ import androidx.fragment.app.Fragment;
+ import androidx.fragment.app.FragmentActivity;
+ import androidx.fragment.app.FragmentManager;
++import androidx.preference.ListPreference;
+ import androidx.preference.Preference;
+ import androidx.preference.PreferenceFragmentCompat;
+ import androidx.preference.PreferenceFragmentCompat.OnPreferenceStartFragmentCallback;
+@@ -58,6 +59,7 @@ import com.android.launcher3.BuildConfig;
+ import com.android.launcher3.InvariantDeviceProfile;
+ import com.android.launcher3.LauncherFiles;
+ import com.android.launcher3.R;
++import com.android.launcher3.allapps.AppInfoComparator;
+ import com.android.launcher3.display.DisplayController;
+ import com.android.launcher3.display.LauncherDisplayInfo;
+ import com.android.launcher3.lineage.LineageUtils;
+@@ -379,6 +381,15 @@ public class SettingsActivity extends FragmentActivity
+                 case SHOW_HOTSEAT_QSB_KEY:
+                     return launcherApps != null &&
+                             launcherApps.isPackageEnabled(SEARCH_PACKAGE, myUserHandle());
++                case AppInfoComparator.SORT_PREFERENCE_KEY: {
++                    // Lujarch (LCH-2): the drawer's order lives in Settings.Secure.
++                    ListPreference list = (ListPreference) preference;
++                    list.setValue(String.valueOf(AppInfoComparator.sortMode(getContext())));
++                    list.setOnPreferenceChangeListener((pref, value) -> Settings.Secure.putInt(
++                            getContext().getContentResolver(), AppInfoComparator.SETTING_SORT,
++                            Integer.parseInt((String) value)));
++                    return true;
++                }
+             }
+             return true;
+         }
