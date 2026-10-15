@@ -1,0 +1,1616 @@
+diff --git a/res/layout/lujarch_drawer_section_header.xml b/res/layout/lujarch_drawer_section_header.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f8ddc4be6f47c4bf49d12936366ba8720fbd7bd
+--- /dev/null
++++ b/res/layout/lujarch_drawer_section_header.xml
+@@ -0,0 +1,51 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Lujarch (LCH-1): the divider of a drawer section. A hairline across the list; the
++     section's name before it when the owner gave one; a faint chevron after it while the
++     section is folded. Nothing else. Tap: fold or unfold; long press: the section's actions.
++-->
++<LinearLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:app="http://schemas.android.com/apk/res-auto"
++    android:layout_width="match_parent"
++    android:layout_height="@dimen/lujarch_drawer_divider_height"
++    android:paddingStart="@dimen/ps_header_layout_margin"
++    android:paddingEnd="@dimen/ps_header_layout_margin"
++    android:background="@android:color/transparent"
++    android:gravity="center_vertical"
++    android:orientation="horizontal"
++    android:clickable="true"
++    android:focusable="true"
++    android:importantForAccessibility="yes">
++
++    <TextView
++        android:id="@+id/lujarch_section_title"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_marginEnd="@dimen/lujarch_drawer_divider_text_gap"
++        android:maxLines="1"
++        android:ellipsize="end"
++        android:textDirection="locale"
++        android:textSize="12sp"
++        android:letterSpacing="0.06"
++        android:fontFamily="variable-label-medium"
++        android:textColor="@color/materialColorOnSurfaceVariant"
++        android:importantForAccessibility="no" />
++
++    <View
++        android:id="@+id/lujarch_section_line"
++        android:layout_width="0dp"
++        android:layout_height="@dimen/lujarch_drawer_divider_line"
++        android:layout_weight="1"
++        android:background="@color/materialColorOutlineVariant" />
++
++    <ImageView
++        android:id="@+id/lujarch_section_chevron"
++        android:layout_width="@dimen/lujarch_drawer_divider_chevron"
++        android:layout_height="@dimen/lujarch_drawer_divider_chevron"
++        android:layout_marginStart="@dimen/lujarch_drawer_divider_text_gap"
++        android:src="@drawable/ic_expand_more"
++        android:alpha="0.5"
++        app:tint="@color/materialColorOnSurfaceVariant"
++        android:importantForAccessibility="no" />
++</LinearLayout>
+diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ad58bc9aab9a3257b31a0b8c5718f777017bdb3b
+--- /dev/null
++++ b/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,27 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_drawer_sections_title">アプリドロワーのセクション</string>
++    <string name="lujarch_drawer_section_rename">名前を変更</string>
++    <string name="lujarch_drawer_section_move_up">上に移動</string>
++    <string name="lujarch_drawer_section_move_down">下に移動</string>
++    <string name="lujarch_drawer_section_delete">削除</string>
++    <string name="lujarch_drawer_section_expand">「%1$s」を展開</string>
++    <string name="lujarch_drawer_section_collapse">「%1$s」を折りたたむ</string>
++    <string name="lujarch_drawer_section_unnamed">名前のないセクション</string>
++    <string name="lujarch_drawer_section_numbered">セクション %1$d</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..844c8ab53635cf17579f31ab21538747fb4e6a0b
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,27 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <string name="lujarch_drawer_sections_title">应用抽屉分区</string>
++    <string name="lujarch_drawer_section_rename">重命名</string>
++    <string name="lujarch_drawer_section_move_up">上移</string>
++    <string name="lujarch_drawer_section_move_down">下移</string>
++    <string name="lujarch_drawer_section_delete">删除</string>
++    <string name="lujarch_drawer_section_expand">展开“%1$s”</string>
++    <string name="lujarch_drawer_section_collapse">收起“%1$s”</string>
++    <string name="lujarch_drawer_section_unnamed">未命名分区</string>
++    <string name="lujarch_drawer_section_numbered">分区 %1$d</string>
++</resources>
+diff --git a/res/values/lujarch_dimens.xml b/res/values/lujarch_dimens.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..c52aecd2822f32e87899169d6610e7dfa88f7998
+--- /dev/null
++++ b/res/values/lujarch_dimens.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project -->
++<resources>
++    <!-- Drawer sections: the divider row, its hairline, the gap to the name and the chevron,
++         the folded chevron's size, and the accent line that shows where a dragged app goes. -->
++    <dimen name="lujarch_drawer_divider_height">40dp</dimen>
++    <dimen name="lujarch_drawer_divider_line">1dp</dimen>
++    <dimen name="lujarch_drawer_divider_text_gap">12dp</dimen>
++    <dimen name="lujarch_drawer_divider_chevron">16dp</dimen>
++    <dimen name="lujarch_drawer_divider_drop_width">2dp</dimen>
++</resources>
+diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..88fbecdea5b84eb1a96cc5120baa454d39939a71
+--- /dev/null
++++ b/res/values/lujarch_strings.xml
+@@ -0,0 +1,36 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2026 The Lujarch Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources>
++    <!-- Title of the launcher settings page that lists the app drawer sections the owner made [CHAR LIMIT=40] -->
++    <string name="lujarch_drawer_sections_title">App drawer sections</string>
++    <!-- Action on a drawer section: give it a name [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_rename">Rename</string>
++    <!-- Action on a drawer section: move it one place up [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_move_up">Move up</string>
++    <!-- Action on a drawer section: move it one place down [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_move_down">Move down</string>
++    <!-- Action on a drawer section: delete it; its apps go back to the drawer [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_delete">Delete</string>
++    <!-- Accessibility action on a folded drawer section; %1$s is its name [CHAR LIMIT=NONE] -->
++    <string name="lujarch_drawer_section_expand">Expand %1$s</string>
++    <!-- Accessibility action on an open drawer section; %1$s is its name [CHAR LIMIT=NONE] -->
++    <string name="lujarch_drawer_section_collapse">Collapse %1$s</string>
++    <!-- Name shown for a drawer section the owner did not name [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_unnamed">Unnamed section</string>
++    <!-- Name of an unnamed drawer section in lists; %1$d is its place [CHAR LIMIT=30] -->
++    <string name="lujarch_drawer_section_numbered">Section %1$d</string>
++</resources>
+diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
+index 3ef77952145555bb6aa2dd445ffb1251904c8c20..83a4142ad5eac0a150978459176087a245905cc0 100644
+--- a/res/xml/launcher_preferences.xml
++++ b/res/xml/launcher_preferences.xml
+@@ -104,4 +104,11 @@
+         android:key="pref_trust_apps"
+         android:title="@string/trust_apps_manager_name" />
+ 
++    <!-- Lujarch (LCH-1): the owner's drawer sections; the page is filled in code
++         (DrawerSectionsSettings). -->
++    <androidx.preference.PreferenceScreen
++        android:key="pref_drawer_sections"
++        android:title="@string/lujarch_drawer_sections_title"
++        android:persistent="false" />
++
+ </androidx.preference.PreferenceScreen>
+diff --git a/src/com/android/launcher3/Launcher.java b/src/com/android/launcher3/Launcher.java
+index 9d3341aa308553b5165417c9c26c497fd9fac67d..cf5b1adc8b1a21529271534aac396be4cd11829c 100644
+--- a/src/com/android/launcher3/Launcher.java
++++ b/src/com/android/launcher3/Launcher.java
+@@ -1204,6 +1204,12 @@ public class Launcher extends StatefulActivity<LauncherState>
+ 
+         // Setup the drag controller (drop targets have to be added in reverse order in priority)
+         mDropTargetBar.setup(mDragController);
++        // Lujarch (LCH-1): drags inside the app drawer move apps between drawer sections; added last,
++        // so it is asked first, and enabled only for a drag that started in the drawer.
++        com.android.launcher3.lujarch.DrawerSectionDrag sectionDrag =
++                new com.android.launcher3.lujarch.DrawerSectionDrag(this);
++        mDragController.addDragListener(sectionDrag);
++        mDragController.addDropTarget(sectionDrag);
+         mAllAppsController.setupViews(mScrimView, mAppsView);
+ 
+         mWorkspace.getPageIndicator().setShouldAutoHide(
+diff --git a/src/com/android/launcher3/Workspace.java b/src/com/android/launcher3/Workspace.java
+index 6e417053a9c5402339a5cb46abd93fae18fa7d3d..8c4fa7eede5c978df661856fda3f0e29fa321db4 100644
+--- a/src/com/android/launcher3/Workspace.java
++++ b/src/com/android/launcher3/Workspace.java
+@@ -605,7 +605,10 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
+         if (mAccessibilityDragListener != null) {
+             mAccessibilityDragListener.onDragStart(dragObject, options);
+         }
+-        if (!mLauncher.isInState(EDIT_MODE)) {
++        // Lujarch (LCH-1): a drag in the app drawer stays in it; it springs the home screen open
++        // only when dragged above the list (DrawerSectionDrag).
++        if (!mLauncher.isInState(EDIT_MODE) && !com.android.launcher3.lujarch.DrawerSectionDrag
++                .keepsDrawer(mLauncher, dragObject, options)) {
+             mLauncher.getStateManager().goToState(
+                     (enableCursorDrivenWorkflows() && options.isMouseDrag)
+                             ? DESKTOP_DRAG_MODE : SPRING_LOADED);
+diff --git a/src/com/android/launcher3/allapps/ActivityAllAppsContainerView.java b/src/com/android/launcher3/allapps/ActivityAllAppsContainerView.java
+index b5d4b5de847f9ec13a5914d4aac7873c5d715ba2..d927bcd9d7b545b703b34ea833e628542d7d94d9 100644
+--- a/src/com/android/launcher3/allapps/ActivityAllAppsContainerView.java
++++ b/src/com/android/launcher3/allapps/ActivityAllAppsContainerView.java
+@@ -1633,6 +1633,14 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
+                     new ViewGroupFocusHelper(mRecyclerView)) : new FocusedItemDecorator(
+                     mRecyclerView);
+             mRecyclerView.addItemDecoration(focusedItemDecorator);
++            if (!isSearch()) {
++                // Lujarch (LCH-1): where a dragged app would go among the drawer sections.
++                mRecyclerView.addItemDecoration(new com.android.launcher3.lujarch
++                        .DrawerDropIndicator(mRecyclerView.getContext(), mAppsList));
++                AllAppsRecyclerView sectionsRv = mRecyclerView;
++                mAppsList.setBeforeSectionsUpdate(() -> com.android.launcher3.lujarch
++                        .DrawerSectionAnimations.animateNextUpdate(sectionsRv));
++            }
+             mOnFocusChangeListener = focusedItemDecorator.getFocusListener();
+             mAdapter.setIconFocusListener(mOnFocusChangeListener);
+             applyPadding();
+diff --git a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
+index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa0737aa6e61 100644
+--- a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
++++ b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
+@@ -39,6 +39,8 @@ import androidx.recyclerview.widget.DiffUtil;
+ import com.android.launcher3.Flags;
+ import com.android.launcher3.R;
+ import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
++import com.android.launcher3.lujarch.DrawerSectionHeaderItem;
++import com.android.launcher3.lujarch.DrawerSections;
+ import com.android.launcher3.model.data.AppInfo;
+ import com.android.launcher3.model.data.ItemInfo;
+ import com.android.launcher3.util.LabelComparator;
+@@ -46,6 +48,7 @@ import com.android.launcher3.views.ActivityContext;
+ 
+ import java.io.PrintWriter;
+ import java.util.ArrayList;
++import java.util.LinkedHashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Objects;
+@@ -94,6 +97,18 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+     // The set of apps from the system
+     private final List<AppInfo> mApps = new ArrayList<>();
+     private final List<AppInfo> mPrivateApps = new ArrayList<>();
++    // Lujarch drawer sections (LCH-1): the apps the owner put in each section, in section order;
++    // they are left out of mApps and shown after it.
++    private final LinkedHashMap<Integer, List<AppInfo>> mSectionApps = new LinkedHashMap<>();
++    private final DrawerSections mDrawerSections;
++    // Run before a section change is dispatched to the list (its motion).
++    @Nullable
++    private Runnable mBeforeSectionsUpdate;
++    // Kept in a field: the store holds its listeners weakly.
++    private final Runnable mDrawerSectionsListener = () -> {
++        if (mBeforeSectionsUpdate != null) mBeforeSectionsUpdate.run();
++        onAppsUpdated();
++    };
+     @Nullable
+     private final AllAppsStore mAllAppsStore;
+ 
+@@ -114,6 +129,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+     private int mNumAppRowsInAdapter;
+     private Predicate<ItemInfo> mItemFilter;
+     private final boolean mSortSections;
++    // Lujarch (LCH-1): the fast scroller's mark for an unnamed drawer section.
++    private static final String DIVIDER_SECTION = "\u2014";
+ 
+     public AlphabeticalAppsList(ActivityContext activityContext, @Nullable AllAppsStore appsStore,
+             WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
+@@ -124,6 +141,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+         mAppNameComparator = new AppInfoComparator(context);
+         mWorkProviderManager = workProfileManager;
+         mPrivateProviderManager = privateProfileManager;
++        mDrawerSections = DrawerSections.get(context);
++        mDrawerSections.addListener(mDrawerSectionsListener);
+         mNumAppsPerRowAllApps =
+                 mActivityContext.getDeviceProfile().getAllAppsProfile().getNumShownAllAppsColumns();
+         if (mAllAppsStore != null) {
+@@ -141,6 +160,11 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+         mSortSections = context.getResources().getBoolean(R.bool.config_appsListSortSections);
+     }
+ 
++    /** Lujarch (LCH-1): runs before each drawer section change reaches the list. */
++    public void setBeforeSectionsUpdate(@Nullable Runnable r) {
++        mBeforeSectionsUpdate = r;
++    }
++
+     /** Set the number of apps per row when device profile changes. */
+     public void setNumAppsPerRowAllApps(int numAppsPerRow) {
+         mNumAppsPerRowAllApps = numAppsPerRow;
+@@ -274,7 +298,20 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+                     .flatMap(ArrayList::stream);
+         }
+ 
+-        appSteam.forEachOrdered(mApps::add);
++        mSectionApps.clear();
++        for (DrawerSections.Section section : mDrawerSections.getSections()) {
++            mSectionApps.put(section.id, new ArrayList<>());
++        }
++        appSteam.forEachOrdered(info -> {
++            // Search results come from their own list, so a sectioned app is still found.
++            List<AppInfo> section = mSectionApps.get(
++                    mDrawerSections.sectionOf(DrawerSections.keyOf(info)));
++            if (section != null) {
++                section.add(info);
++            } else {
++                mApps.add(info);
++            }
++        });
+         privateAppStream.forEachOrdered(mPrivateApps::add);
+         // Recompose the set of adapter items from the current set of apps
+         if (mSearchResults.isEmpty()) {
+@@ -314,6 +351,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+                     Log.d(TAG, "Adding FastScrollSection for work edu card.");
+                 }
+                 position = addAppsWithSections(mApps, position);
++                position = addDrawerSections(position);
+             }
+             if (Flags.enablePrivateSpace()) {
+                 position = addPrivateSpaceItems(position);
+@@ -341,6 +379,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+                 item.rowIndex = 0;
+                 if (BaseAllAppsAdapter.isDividerViewType(item.viewType)
+                         || BaseAllAppsAdapter.isPrivateSpaceHeaderView(item.viewType)
++                        || BaseAllAppsAdapter.isDrawerSectionHeaderView(item.viewType)
+                         || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)) {
+                     numAppsInSection = 0;
+                 } else if (BaseAllAppsAdapter.isIconViewType(item.viewType)) {
+@@ -363,6 +402,37 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+         }
+     }
+ 
++    /**
++     * Lujarch drawer sections (LCH-1), after the main list: a divider for each section that holds
++     * apps, then its apps unless the owner collapsed it. No container, only the divider.
++     */
++    private int addDrawerSections(int position) {
++        for (Map.Entry<Integer, List<AppInfo>> e : mSectionApps.entrySet()) {
++            List<AppInfo> apps = e.getValue();
++            DrawerSections.Section section = mDrawerSections.getSection(e.getKey());
++            if (apps.isEmpty() || section == null) {
++                continue;
++            }
++            boolean collapsed = mDrawerSections.isCollapsed(section.id);
++            mAdapterItems.add(new DrawerSectionHeaderItem(section.id, section.name, collapsed));
++            mFastScrollerSections.add(new FastScrollSectionInfo(
++                    section.name.isEmpty() ? DIVIDER_SECTION
++                            : section.name.substring(0, section.name.offsetByCodePoints(0, 1)),
++                    position));
++            position++;
++            if (collapsed) {
++                continue;
++            }
++            for (int i = 0; i < apps.size(); i++) {
++                AdapterItem item = AdapterItem.asApp(apps.get(i));
++                item.drawerSectionId = section.id;
++                mAdapterItems.add(item);
++                position++;
++            }
++        }
++        return position;
++    }
++
+     int addPrivateSpaceItems(int position) {
+         if (mPrivateProviderManager != null
+                 && !mPrivateProviderManager.isPrivateSpaceHidden()
+diff --git a/src/com/android/launcher3/allapps/BaseAllAppsAdapter.java b/src/com/android/launcher3/allapps/BaseAllAppsAdapter.java
+index eeb2229268eae84886920296ac778a1364ea126a..1622dad5cbdf738c00ada648dfdbd254e2d31189 100644
+--- a/src/com/android/launcher3/allapps/BaseAllAppsAdapter.java
++++ b/src/com/android/launcher3/allapps/BaseAllAppsAdapter.java
+@@ -41,6 +41,10 @@ import androidx.recyclerview.widget.RecyclerView;
+ import com.android.launcher3.BubbleTextView;
+ import com.android.launcher3.R;
+ import com.android.launcher3.allapps.search.SearchAdapterProvider;
++import com.android.launcher3.lujarch.DrawerSectionDrag;
++import com.android.launcher3.lujarch.DrawerSectionHeaderItem;
++import com.android.launcher3.lujarch.DrawerSections;
++import com.android.launcher3.lujarch.DrawerSectionsSettings;
+ import com.android.launcher3.model.data.AppInfo;
+ import com.android.launcher3.popup.PopupContainerWithArrow;
+ import com.android.launcher3.touch.CustomActionsListener;
+@@ -67,7 +71,9 @@ public abstract class BaseAllAppsAdapter
+     public static final int VIEW_TYPE_PRIVATE_SPACE_SYS_APPS_DIVIDER = 1 << 7;
+     public static final int VIEW_TYPE_BOTTOM_VIEW_TO_SCROLL_TO = 1 << 8;
+     public static final int VIEW_TYPE_PRIVATE_SPACE_APP_ICON = 1 << 9;
+-    public static final int NEXT_ID = 10;
++    // Lujarch (LCH-1): the divider of a drawer section (com.android.launcher3.lujarch).
++    public static final int VIEW_TYPE_DRAWER_SECTION_HEADER = 1 << 10;
++    public static final int NEXT_ID = 11;
+ 
+     // Common view type masks
+     public static final int VIEW_TYPE_MASK_DIVIDER = VIEW_TYPE_ALL_APPS_DIVIDER;
+@@ -109,6 +115,8 @@ public abstract class BaseAllAppsAdapter
+         public AppInfo itemInfo = null;
+         // Private App Decorator
+         public SectionDecorationInfo decorationInfo = null;
++        // Lujarch (LCH-1): the drawer section this item belongs to, -1 for the main list.
++        public int drawerSectionId = -1;
+         public AdapterItem(int viewType) {
+             this.viewType = viewType;
+         }
+@@ -146,8 +154,11 @@ public abstract class BaseAllAppsAdapter
+                 if (itemInfo == null || other.itemInfo == null) {
+                     return itemInfo == other.itemInfo;
+                 }
+-                // Both itemInfo and other.itemInfo are non-null here
+-                return java.util.Objects.equals(itemInfo.user, other.itemInfo.user)
++                // Both itemInfo and other.itemInfo are non-null here. Lujarch (LCH-1): the
++                // same app in another drawer section is another row, so an app that changes
++                // section is a removal plus an insertion.
++                return drawerSectionId == other.drawerSectionId
++                        && java.util.Objects.equals(itemInfo.user, other.itemInfo.user)
+                         && java.util.Objects.equals(itemInfo.getTargetComponent(),
+                                 other.itemInfo.getTargetComponent());
+             }
+@@ -159,6 +170,13 @@ public abstract class BaseAllAppsAdapter
+          * as well. Returning true will prevent redrawing of thee item.
+          */
+         public boolean isContentSame(AdapterItem other) {
++            // Lujarch (LCH-1): a drawer section change moves app rows without changing them; an app
++            // shifted by it keeps its view as it is.
++            if (itemInfo != null && other.itemInfo != null && decorationInfo == null
++                    && other.decorationInfo == null
++                    && com.android.launcher3.lujarch.DrawerSectionAnimations.isSectionUpdate()) {
++                return true;
++            }
+             return itemInfo == null && other.itemInfo == null;
+         }
+ 
+@@ -215,6 +233,11 @@ public abstract class BaseAllAppsAdapter
+         return isViewType(viewType, VIEW_TYPE_MASK_PRIVATE_SPACE_HEADER);
+     }
+ 
++    /** Checks if the passed viewType represents a Lujarch drawer section header (LCH-1). */
++    public static boolean isDrawerSectionHeaderView(int viewType) {
++        return isViewType(viewType, VIEW_TYPE_DRAWER_SECTION_HEADER);
++    }
++
+     /** Checks if the passed viewType represents private space system apps divider. */
+     public static boolean isPrivateSpaceSysAppsDividerView(int viewType) {
+         return isViewType(viewType, VIEW_TYPE_MASK_PRIVATE_SPACE_SYS_APPS_DIVIDER);
+@@ -258,6 +281,26 @@ public abstract class BaseAllAppsAdapter
+             case VIEW_TYPE_PRIVATE_SPACE_HEADER:
+                 return new ViewHolder(mLayoutInflater.inflate(
+                         R.layout.private_space_header, parent, false));
++            case VIEW_TYPE_DRAWER_SECTION_HEADER: {
++                ViewHolder holder = new ViewHolder(mLayoutInflater.inflate(
++                        R.layout.lujarch_drawer_section_header, parent, false));
++                // A tap folds the section, a long press opens its actions (name, order,
++                // delete), the same as on the settings page.
++                holder.itemView.setOnClickListener(v -> {
++                    DrawerSectionHeaderItem header = sectionHeaderAt(holder);
++                    if (header != null) {
++                        DrawerSections.get(v.getContext()).toggleCollapsed(header.sectionId);
++                    }
++                });
++                holder.itemView.setOnLongClickListener(v -> {
++                    DrawerSectionHeaderItem header = sectionHeaderAt(holder);
++                    if (header != null) {
++                        DrawerSectionsSettings.showActions(v.getContext(), header.sectionId, null);
++                    }
++                    return header != null;
++                });
++                return holder;
++            }
+             case VIEW_TYPE_BOTTOM_VIEW_TO_SCROLL_TO:
+                 return new ViewHolder(new View(mActivityContext.asContext()));
+             default:
+@@ -278,6 +321,11 @@ public abstract class BaseAllAppsAdapter
+                 BubbleTextView icon = (BubbleTextView) holder.itemView;
+                 icon.reset();
+                 icon.applyFromApplicationInfo(adapterItem.itemInfo);
++                // Lujarch (LCH-1): the app being dragged stays hidden in whichever view shows it,
++                // and no other app inherits the hidden state of a recycled view.
++                if (DrawerSectionDrag.hides(adapterItem.itemInfo)) {
++                    icon.setVisibility(View.INVISIBLE);
++                }
+                 icon.setOnFocusChangeListener(mIconFocusListener);
+                 icon.configureMinimalPopup(
+                         holder.getItemViewType() == VIEW_TYPE_PRIVATE_SPACE_APP_ICON);
+@@ -341,6 +389,13 @@ public abstract class BaseAllAppsAdapter
+                                 : new SectionDecorationInfo(
+                                         mActivityContext.asContext(), ROUND_NOTHING);
+                 break;
++            case VIEW_TYPE_DRAWER_SECTION_HEADER: {
++                AdapterItem item = mApps.getAdapterItems().get(position);
++                if (item instanceof DrawerSectionHeaderItem header) {
++                    header.bind(holder.itemView);
++                }
++                break;
++            }
+             case VIEW_TYPE_BOTTOM_VIEW_TO_SCROLL_TO:
+             case VIEW_TYPE_ALL_APPS_DIVIDER:
+             case VIEW_TYPE_WORK_DISABLED_CARD:
+@@ -356,6 +411,16 @@ public abstract class BaseAllAppsAdapter
+         }
+     }
+ 
++    @Nullable
++    private DrawerSectionHeaderItem sectionHeaderAt(ViewHolder holder) {
++        int position = holder.getBindingAdapterPosition();
++        if (position >= 0 && position < mApps.getAdapterItems().size()
++                && mApps.getAdapterItems().get(position) instanceof DrawerSectionHeaderItem h) {
++            return h;
++        }
++        return null;
++    }
++
+     private BubbleTextView getIconOnCreateSetup(ViewGroup parent) {
+         int layout = mActivityContext.getDeviceProfile().inv.enableTwoLinesInAllApps
+                 ? R.layout.all_apps_icon_twoline : R.layout.all_apps_icon;
+diff --git a/src/com/android/launcher3/dragndrop/LauncherDragController.java b/src/com/android/launcher3/dragndrop/LauncherDragController.java
+index ccdc54734257ab1ec9cd51c98e10549ddb719a6b..23ad4c8af5e5969f75eb4e1b270f19819c2c1c04 100644
+--- a/src/com/android/launcher3/dragndrop/LauncherDragController.java
++++ b/src/com/android/launcher3/dragndrop/LauncherDragController.java
+@@ -134,7 +134,9 @@ public class LauncherDragController extends DragController {
+ 
+     @Override
+     protected void exitDrag() {
+-        if (!mIsInPreDrag && !mLauncher.isInState(EDIT_MODE)) {
++        // Lujarch (LCH-1): a drag that ended in the app drawer leaves it open.
++        if (!mIsInPreDrag && !mLauncher.isInState(EDIT_MODE)
++                && !mLauncher.isInState(com.android.launcher3.LauncherState.ALL_APPS)) {
+             mLauncher.getStateManager().goToState(NORMAL, SPRING_LOADED_EXIT_DELAY);
+         }
+     }
+diff --git a/src/com/android/launcher3/lujarch/DrawerDropIndicator.java b/src/com/android/launcher3/lujarch/DrawerDropIndicator.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..f8176eaef68421c0d2869b74c52a635da9ef6f4f
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerDropIndicator.java
+@@ -0,0 +1,121 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Paint;
++import android.graphics.Rect;
++import android.view.View;
++
++import androidx.recyclerview.widget.RecyclerView;
++
++import com.android.launcher3.DeviceProfile;
++import com.android.launcher3.R;
++import com.android.launcher3.allapps.AlphabeticalAppsList;
++import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
++import com.android.launcher3.views.ActivityContext;
++
++import java.util.List;
++
++/**
++ * While an app is dragged in the drawer, the divider of the section it would go into is
++ * drawn in the accent colour; below the last row, where a new section would start, a line in
++ * the accent colour shows the new divider. Nothing is shown for the main list.
++ */
++public class DrawerDropIndicator extends RecyclerView.ItemDecoration {
++    private final AlphabeticalAppsList mApps;
++    private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
++    private final int mInset;
++    private final int mGap;
++    private final Context mContext;
++
++    public DrawerDropIndicator(Context context, AlphabeticalAppsList apps) {
++        mContext = context;
++        mApps = apps;
++        mPaint.setColor(context.getColor(R.color.materialColorPrimary));
++        mPaint.setStrokeWidth(context.getResources().getDimension(
++                R.dimen.lujarch_drawer_divider_drop_width));
++        mPaint.setStrokeCap(Paint.Cap.ROUND);
++        mInset = context.getResources().getDimensionPixelSize(R.dimen.ps_header_layout_margin);
++        mGap = context.getResources().getDimensionPixelSize(R.dimen.lujarch_drawer_divider_height);
++    }
++
++    /**
++     * While an app is dragged in the list, its end opens a slot to drop into a new section: the
++     * space a new section takes for its divider and one row, so the drop lands where the
++     * accent line showed.
++     */
++    @Override
++    public void getItemOffsets(Rect outRect, View view, RecyclerView parent,
++            RecyclerView.State state) {
++        int pos = parent.getChildAdapterPosition(view);
++        if (pos >= 0 && pos == state.getItemCount() - 1 && DrawerSectionDrag.dragging(parent)) {
++            outRect.bottom = newSectionHeight(parent, pos);
++        }
++    }
++
++    /**
++     * The height a new section takes: its divider and one app row, as the list lays them out
++     * (margins and decoration insets included), taken from a laid-out row of each kind; the
++     * configured sizes where the list shows none.
++     */
++    private int newSectionHeight(RecyclerView parent, int last) {
++        DeviceProfile dp = ActivityContext.lookupContext(mContext).getDeviceProfile();
++        int divider = mGap;
++        int row = dp.getAllAppsProfile().getCellHeightPx();
++        boolean sawDivider = false;
++        boolean sawRow = false;
++        List<AdapterItem> items = mApps.getAdapterItems();
++        RecyclerView.LayoutManager lm = parent.getLayoutManager();
++        for (int i = 0; lm != null && i < parent.getChildCount() && !(sawDivider && sawRow); i++) {
++            View child = parent.getChildAt(i);
++            int pos = parent.getChildAdapterPosition(child);
++            // Not the last row: its own height holds the slot being sized.
++            if (pos < 0 || pos >= last || pos >= items.size()) continue;
++            AdapterItem item = items.get(pos);
++            RecyclerView.LayoutParams lp = (RecyclerView.LayoutParams) child.getLayoutParams();
++            int h = lm.getDecoratedMeasuredHeight(child) + lp.topMargin + lp.bottomMargin;
++            if (item instanceof DrawerSectionHeaderItem && !sawDivider) {
++                divider = h;
++                sawDivider = true;
++            } else if (item.itemInfo != null && item.decorationInfo == null && !sawRow) {
++                row = h;
++                sawRow = true;
++            }
++        }
++        return divider + row;
++    }
++
++    @Override
++    public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
++        int target = DrawerSectionDrag.activeTarget(parent);
++        if (target == DrawerSectionDrag.TARGET_NONE || target == DrawerSectionDrag.TARGET_MAIN) {
++            return;
++        }
++        List<AdapterItem> items = mApps.getAdapterItems();
++        float left = parent.getPaddingLeft() + mInset;
++        float right = parent.getWidth() - parent.getPaddingRight() - mInset;
++        int lastBottom = Integer.MIN_VALUE;
++        for (int i = 0; i < parent.getChildCount(); i++) {
++            View child = parent.getChildAt(i);
++            int pos = parent.getChildAdapterPosition(child);
++            if (pos < 0 || pos >= items.size()) continue;
++            AdapterItem item = items.get(pos);
++            if (item.itemInfo != null || item instanceof DrawerSectionHeaderItem) {
++                lastBottom = Math.max(lastBottom, child.getBottom());
++            }
++            if (target >= 0 && item instanceof DrawerSectionHeaderItem h && h.sectionId == target) {
++                float y = (child.getTop() + child.getBottom()) / 2f;
++                c.drawLine(left, y, right, y, mPaint);
++                return;
++            }
++        }
++        if (target == DrawerSectionDrag.TARGET_NEW && lastBottom != Integer.MIN_VALUE) {
++            float y = lastBottom + mGap / 2f;
++            c.drawLine(left, y, right, y, mPaint);
++        }
++    }
++}
+diff --git a/src/com/android/launcher3/lujarch/DrawerSectionAnimations.java b/src/com/android/launcher3/lujarch/DrawerSectionAnimations.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..219cc68c4a94af93865396415f2db9a03c49ede8
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerSectionAnimations.java
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import androidx.recyclerview.widget.DefaultItemAnimator;
++import androidx.recyclerview.widget.RecyclerView;
++
++/**
++ * Motion for drawer section changes (LCH-1), in the native language: RecyclerView's own item
++ * animator, with its own durations, for the one list update a section change causes (an app
++ * moved, a section folded or unfolded, a divider added or gone): rows fade out and in, the rest
++ * slide to their places. The drawer list runs without an
++ * item animator otherwise (ActivityAllAppsContainerView), so installs and updates stay as
++ * they were.
++ */
++public final class DrawerSectionAnimations {
++    // True while the list update a section change causes is being computed: only the places
++    // of the app rows change then, not what they show.
++    private static boolean sSectionUpdate;
++
++    private DrawerSectionAnimations() {}
++
++    /**
++     * Whether the list update being computed is a section change. The app rows then keep their
++     * content (AdapterItem.isContentSame), so the rows that only shift are not rebound.
++     */
++    public static boolean isSectionUpdate() {
++        return sSectionUpdate;
++    }
++
++    /** Animates the next update of the list; call right before the update is dispatched. */
++    public static void animateNextUpdate(RecyclerView rv) {
++        if (rv != null) {
++            // The update is computed synchronously after this call; the flag ends with it.
++            sSectionUpdate = true;
++            rv.post(() -> sSectionUpdate = false);
++        }
++        attachAnimator(rv);
++    }
++
++    /**
++     * Animates the next layout of the list when it changes places without an adapter change (the
++     * slot below the last row closing): attaches the animator and asks the layout manager for
++     * simple animations, which RecyclerView otherwise runs only after an adapter change. Call
++     * before the layout is requested.
++     */
++    public static void animateNextLayout(RecyclerView rv) {
++        if (rv == null || !rv.isAttachedToWindow()) return;
++        attachAnimator(rv);
++        RecyclerView.LayoutManager lm = rv.getLayoutManager();
++        if (lm != null) lm.requestSimpleAnimationsInNextLayout();
++    }
++
++    private static void attachAnimator(RecyclerView rv) {
++        if (rv == null || !rv.isAttachedToWindow() || rv.getItemAnimator() != null) return;
++        DefaultItemAnimator animator = new DefaultItemAnimator();
++        // A rebound row keeps its place; a crossfade of the same icon would only flicker.
++        animator.setSupportsChangeAnimations(false);
++        rv.setItemAnimator(animator);
++        long settle = animator.getRemoveDuration() + animator.getMoveDuration()
++                + animator.getAddDuration();
++        rv.postDelayed(() -> animator.isRunning(() -> {
++            if (rv.getItemAnimator() == animator) rv.setItemAnimator(null);
++        }), settle);
++    }
++}
+diff --git a/src/com/android/launcher3/lujarch/DrawerSectionDrag.java b/src/com/android/launcher3/lujarch/DrawerSectionDrag.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..c048b6e5352ad0083eb72d254d4d22dd15b7a31d
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerSectionDrag.java
+@@ -0,0 +1,391 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_ALL_APPS;
++import static com.android.launcher3.LauncherState.ALL_APPS;
++import static com.android.launcher3.LauncherState.SPRING_LOADED;
++
++import android.graphics.Rect;
++import android.view.View;
++import android.view.ViewTreeObserver;
++
++import androidx.annotation.Nullable;
++import androidx.recyclerview.widget.RecyclerView;
++
++import com.android.launcher3.BubbleTextView;
++import com.android.launcher3.DropTarget;
++import com.android.launcher3.Launcher;
++import com.android.launcher3.allapps.AllAppsRecyclerView;
++import com.android.launcher3.allapps.AlphabeticalAppsList;
++import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
++import com.android.launcher3.dragndrop.DragController;
++import com.android.launcher3.dragndrop.DragLayer;
++import com.android.launcher3.dragndrop.DragOptions;
++import com.android.launcher3.dragndrop.DragView;
++import com.android.launcher3.model.data.ItemInfo;
++import com.android.launcher3.pm.UserCache;
++
++import java.util.List;
++
++/**
++ * Long-press and drag inside the app drawer moves an app between drawer sections: over a
++ * section (its divider or its apps) it goes into that section, over the main list back to it,
++ * below everything into a new, unnamed section. The drawer stays open while the finger is over
++ * the list; dragged above the list (onto the search bar, the top edge) it closes and the drag
++ * carries on as Launcher3's own drag to the home screen.
++ *
++ * Highest-priority drop target (added after the drop target bar), enabled only for a drag
++ * that started in the drawer, so every other drag is untouched.
++ */
++public class DrawerSectionDrag implements DropTarget, DragController.DragListener {
++    /** Drop targets besides a section id. */
++    public static final int TARGET_NONE = Integer.MIN_VALUE;
++    public static final int TARGET_MAIN = -1;
++    public static final int TARGET_NEW = -2;
++
++    private static final float SCROLL_ZONE = 0.12f;
++    private static final int SCROLL_STEP_DP = 14;
++
++    @Nullable
++    private static DrawerSectionDrag sActive;
++    // The key of the app being dragged: its row stays hidden, in whichever view shows it, from
++    // the drag's start until its drag view has settled (or the drag ends). Part of what a row
++    // binds, so a recycled or rebound view never keeps or inherits the hidden state.
++    @Nullable
++    private static String sHiddenKey;
++
++    private final Launcher mLauncher;
++    private boolean mEnabled;
++    // The finger is up and the drop is settling: the drag no longer shows a slot or a target,
++    // while the drag itself (and its deferred end) lasts until the drop animation ends.
++    private boolean mDropped;
++    private int mTarget = TARGET_NONE;
++    @Nullable
++    private AllAppsRecyclerView mRecyclerView;
++    private int mScrollDir;
++    private final Runnable mScroller = this::scrollStep;
++
++    public DrawerSectionDrag(Launcher launcher) {
++        mLauncher = launcher;
++    }
++
++    /**
++     * Whether a drag stays in the drawer: it starts in the drawer (not from search results'
++     * other kinds or a private space app) while the drawer is open. Workspace asks this before
++     * it springs the home screen open.
++     */
++    public static boolean keepsDrawer(Launcher launcher, DragObject d, DragOptions options) {
++        if (options.isAccessibleDrag || !launcher.isInState(ALL_APPS)
++                || d.dragSource != launcher.getAppsView()) {
++            return false;
++        }
++        ItemInfo info = d.dragInfo;
++        if (info == null || info.container != CONTAINER_ALL_APPS
++                || DrawerSections.keyOf(info) == null) {
++            return false;
++        }
++        AllAppsRecyclerView rv = launcher.getAppsView().getActiveRecyclerView();
++        return rv != null && rv.getApps() != null && !launcher.getAppsView().isSearching()
++                && !UserCache.INSTANCE.get(launcher).getUserInfo(info.user).isPrivate();
++    }
++
++    /** Whether an app is being dragged in this list (the end of the list opens a slot). */
++    public static boolean dragging(RecyclerView rv) {
++        DrawerSectionDrag d = sActive;
++        return d != null && d.mEnabled && !d.mDropped && d.mRecyclerView == rv;
++    }
++
++    /** Whether the row of this app stays hidden: it is the app being dragged. */
++    public static boolean hides(@Nullable ItemInfo info) {
++        String hidden = sHiddenKey;
++        return hidden != null && info != null && hidden.equals(DrawerSections.keyOf(info));
++    }
++
++    /** The drop target of the drag in progress, for the indicator; TARGET_NONE when idle. */
++    public static int activeTarget(RecyclerView rv) {
++        DrawerSectionDrag d = sActive;
++        return d != null && d.mEnabled && !d.mDropped && d.mRecyclerView == rv ? d.mTarget
++                : TARGET_NONE;
++    }
++
++    @Override
++    public void onDragStart(DragObject dragObject, DragOptions options) {
++        mEnabled = keepsDrawer(mLauncher, dragObject, options);
++        mDropped = false;
++        mRecyclerView = mEnabled ? mLauncher.getAppsView().getActiveRecyclerView() : null;
++        mTarget = TARGET_NONE;
++        sActive = mEnabled ? this : null;
++        sHiddenKey = mEnabled ? DrawerSections.keyOf(dragObject.dragInfo) : null;
++        if (mRecyclerView != null) mRecyclerView.invalidateItemDecorations();
++    }
++
++    @Override
++    public void onDragEnd() {
++        stopScroll();
++        boolean slotOpen = mEnabled && !mDropped;
++        mEnabled = false;
++        mDropped = false;
++        mTarget = TARGET_NONE;
++        String hidden = sHiddenKey;
++        sHiddenKey = null;
++        if (mRecyclerView != null) {
++            if (hidden != null) {
++                // The app's row shows again wherever it is bound now.
++                for (int i = 0; i < mRecyclerView.getChildCount(); i++) {
++                    View child = mRecyclerView.getChildAt(i);
++                    if (child instanceof BubbleTextView
++                            && child.getTag() instanceof ItemInfo tag
++                            && hidden.equals(DrawerSections.keyOf(tag))) {
++                        child.setVisibility(View.VISIBLE);
++                    }
++                }
++            }
++            // The slot below the list closes with a layout only if it was still open: after a
++            // drop it closed with the update, and another layout pass has nothing to change.
++            if (slotOpen) {
++                DrawerSectionAnimations.animateNextLayout(mRecyclerView);
++                mRecyclerView.invalidateItemDecorations();
++            }
++        }
++        mRecyclerView = null;
++        if (sActive == this) sActive = null;
++    }
++
++    @Override
++    public boolean isDropEnabled() {
++        return mEnabled && mLauncher.isInState(ALL_APPS);
++    }
++
++    @Override
++    public void getHitRectRelativeToDragLayer(Rect outRect) {
++        // The whole drawer; above the list the drag is handed to the home screen (onDragOver).
++        mLauncher.getDragLayer().getDescendantRectRelativeToSelf(mLauncher.getAppsView(), outRect);
++    }
++
++    @Override
++    public View getDropView() {
++        return mRecyclerView;
++    }
++
++    @Override
++    public void onDragEnter(DragObject d) {}
++
++    @Override
++    public void onDragOver(DragObject d) {
++        AllAppsRecyclerView rv = mRecyclerView;
++        if (rv == null) return;
++        if (d.y < 0) {
++            // Above the list: the owner wants the home screen. Hand over to Launcher3's drag.
++            handOff();
++            return;
++        }
++        int zone = (int) (rv.getHeight() * SCROLL_ZONE);
++        int dir = d.y > rv.getHeight() - zone ? 1 : d.y < zone ? -1 : 0;
++        if (dir != mScrollDir) {
++            mScrollDir = dir;
++            rv.removeCallbacks(mScroller);
++            if (dir != 0) rv.postOnAnimation(mScroller);
++        }
++        setTarget(targetAt(rv, d.y));
++    }
++
++    @Override
++    public void onDragExit(DragObject d) {
++        if (!d.dragComplete) {
++            stopScroll();
++            setTarget(TARGET_NONE);
++        }
++    }
++
++    @Override
++    public boolean acceptDrop(DragObject d) {
++        return isDropEnabled();
++    }
++
++    @Override
++    public void onDrop(DragObject d, DragOptions options) {
++        AllAppsRecyclerView rv = mRecyclerView;
++        int target = rv == null ? TARGET_NONE : targetAt(rv, d.y);
++        String key = DrawerSections.keyOf(d.dragInfo);
++        if (key == null || target == TARGET_NONE || rv == null) {
++            d.deferDragViewCleanupPostAnimation = false;
++            return;
++        }
++        // The drop ends the autoscroll (the drag's end, and so onDragExit's stop, waits for the
++        // drop animation) and the slot below the list, in the same layout pass as the section
++        // update: the item animator then slides the gap closed with the rest of the update.
++        // A drop that changes nothing commits no update, so the slot's closing is animated
++        // by itself.
++        stopScroll();
++        mDropped = true;
++        DrawerSectionAnimations.animateNextLayout(rv);
++        rv.invalidateItemDecorations();
++        DrawerSections store = DrawerSections.get(mLauncher);
++        int current = store.sectionOf(key);
++        if (target == TARGET_MAIN) {
++            store.removeFromSection(key);
++        } else if (target == TARGET_NEW) {
++            store.createWith(key);
++        } else if (target != current) {
++            store.moveTo(key, target);
++        }
++        // The drag view settles into the app's new place once the list has laid it out, with
++        // Launcher3's own drop animation; that animation ends the drag.
++        DragView dragView = d.dragView;
++        rv.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
++            @Override
++            public boolean onPreDraw() {
++                rv.getViewTreeObserver().removeOnPreDrawListener(this);
++                settle(rv, dragView, key);
++                return true;
++            }
++        });
++    }
++
++    private void settle(AllAppsRecyclerView rv, DragView dragView, String key) {
++        DragLayer dragLayer = mLauncher.getDragLayer();
++        // By the app's place in the new list: while the list animates, the row it left can
++        // still be a child (fading out) and carry the same app.
++        View icon = null;
++        List<AdapterItem> items = rv.getApps().getAdapterItems();
++        for (int i = 0; i < items.size() && icon == null; i++) {
++            AdapterItem item = items.get(i);
++            if (item.itemInfo != null && key.equals(DrawerSections.keyOf(item.itemInfo))) {
++                RecyclerView.ViewHolder holder = rv.findViewHolderForAdapterPosition(i);
++                icon = holder == null ? null : holder.itemView;
++            }
++        }
++        if (!(icon instanceof BubbleTextView target)) {
++            // Folded away or off screen: the drag view fades where it is.
++            Rect at = new Rect();
++            dragLayer.getViewRectRelativeToSelf(dragView, at);
++            dragLayer.animateViewIntoPosition(dragView, at.left, at.top, 0f, 0.8f, 0.8f, null,
++                    DragLayer.ANIMATION_END_DISAPPEAR, -1, null);
++            return;
++        }
++        // The row may have been laid out below (or above) the visible area (a drop in the part
++        // of the slot under the list's padding), where the icon would settle out of sight: the
++        // list scrolls it in with its own smooth scroll, and the destination below is the row's
++        // place after that scroll.
++        int top = target.getTop();
++        int bottom = target.getBottom();
++        int visibleTop = rv.getPaddingTop();
++        int visibleBottom = rv.getHeight() - rv.getPaddingBottom();
++        int scroll = 0;
++        if (bottom > visibleBottom) {
++            scroll = bottom - visibleBottom;
++        } else if (top < visibleTop) {
++            scroll = top - visibleTop;
++        }
++        if (scroll != 0) rv.smoothScrollBy(0, scroll);
++        // As DragLayer.animateViewIntoPosition does for a workspace icon, from the row's laid
++        // out place (not its animated one: the item animator may still be moving it).
++        float[] coord = {target.getLeft(), target.getTop() - scroll};
++        float scale = dragLayer.getDescendantCoordRelativeToSelf(rv, coord);
++        Rect dest = new Rect();
++        target.getWorkspaceVisualDragBounds(dest);
++        float toScale = scale * dest.width()
++                / (dragView.getMeasuredWidth() - dragView.getBlurSizeOutline());
++        float shiftX = dragView.getMeasuredWidth() * (1 - toScale) / 2;
++        float shiftY = dragView.getMeasuredHeight() * (1 - toScale) / 2;
++        int toX = Math.round(coord[0] + scale * dest.left
++                - toScale * dragView.getBlurSizeOutline() / 2 - shiftX);
++        int toY = Math.round(coord[1] + scale * dest.top
++                - toScale * dragView.getBlurSizeOutline() / 2 - shiftY);
++        target.setVisibility(View.INVISIBLE);
++        dragLayer.animateViewIntoPosition(dragView, toX, toY, 1f, toScale, toScale,
++                () -> {
++                    if (key.equals(sHiddenKey)) sHiddenKey = null;
++                    // Unless a rebind gave the view to another app, which is already shown.
++                    if (target.getTag() instanceof ItemInfo tag
++                            && key.equals(DrawerSections.keyOf(tag))) {
++                        target.setVisibility(View.VISIBLE);
++                    }
++                }, DragLayer.ANIMATION_END_DISAPPEAR, -1,
++                null);
++    }
++
++    @Override
++    public void prepareAccessibilityDrop() {}
++
++    private void handOff() {
++        stopScroll();
++        setTarget(TARGET_NONE);
++        mEnabled = false;
++        if (sActive == this) sActive = null;
++        if (mRecyclerView != null) mRecyclerView.invalidateItemDecorations();
++        mLauncher.getStateManager().goToState(SPRING_LOADED);
++    }
++
++    private void setTarget(int target) {
++        if (target != mTarget) {
++            mTarget = target;
++            if (mRecyclerView != null) mRecyclerView.invalidate();
++        }
++    }
++
++    private void scrollStep() {
++        AllAppsRecyclerView rv = mRecyclerView;
++        if (rv == null || mScrollDir == 0 || !mEnabled) return;
++        float density = rv.getResources().getDisplayMetrics().density;
++        rv.scrollBy(0, (int) (mScrollDir * SCROLL_STEP_DP * density));
++        rv.postOnAnimation(mScroller);
++    }
++
++    private void stopScroll() {
++        mScrollDir = 0;
++        if (mRecyclerView != null) mRecyclerView.removeCallbacks(mScroller);
++    }
++
++    /**
++     * The target under y (the list's coordinates): the section of the row there (a divider is
++     * its section's), the main list for a main row, a new section below the last row.
++     */
++    static int targetAt(AllAppsRecyclerView rv, float y) {
++        AlphabeticalAppsList apps = rv.getApps();
++        List<AdapterItem> items = apps.getAdapterItems();
++        int lastPlaceable = -1;
++        for (int i = items.size() - 1; i >= 0 && lastPlaceable < 0; i--) {
++            if (isPlaceable(items.get(i))) lastPlaceable = i;
++        }
++        boolean lastShown = false;
++        int lastBottom = Integer.MIN_VALUE;
++        AdapterItem above = null;
++        int aboveBottom = Integer.MIN_VALUE;
++        for (int i = 0; i < rv.getChildCount(); i++) {
++            View child = rv.getChildAt(i);
++            int pos = rv.getChildAdapterPosition(child);
++            if (pos < 0 || pos >= items.size()) continue;
++            AdapterItem item = items.get(pos);
++            if (!isPlaceable(item)) continue;
++            int top = child.getTop();
++            int bottom = child.getBottom();
++            lastBottom = Math.max(lastBottom, bottom);
++            lastShown |= pos == lastPlaceable;
++            if (y >= top && y <= bottom) {
++                return sectionOf(item);
++            }
++            if (bottom < y && bottom > aboveBottom) {
++                above = item;
++                aboveBottom = bottom;
++            }
++        }
++        // Below the list's last row: the slot DrawerDropIndicator opens while dragging.
++        if (lastShown && y > lastBottom) {
++            return TARGET_NEW;
++        }
++        return above != null ? sectionOf(above) : TARGET_MAIN;
++    }
++
++    private static boolean isPlaceable(AdapterItem item) {
++        return item instanceof DrawerSectionHeaderItem
++                || (item.itemInfo != null && item.decorationInfo == null);
++    }
++
++    private static int sectionOf(AdapterItem item) {
++        return item.drawerSectionId >= 0 ? item.drawerSectionId : TARGET_MAIN;
++    }
++}
+diff --git a/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java b/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..4dc2bc30e2cc4a54b52195ea8b77de61038e83ca
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java
+@@ -0,0 +1,57 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_DRAWER_SECTION_HEADER;
++
++import android.view.View;
++import android.widget.TextView;
++
++import com.android.launcher3.R;
++import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
++
++import java.util.Objects;
++
++/**
++ * The divider of a drawer section in the app list: a hairline, the section's name before it
++ * when it has one, a faint chevron after it while the section is folded.
++ */
++public class DrawerSectionHeaderItem extends AdapterItem {
++    public final int sectionId;
++    public final String name;
++    public final boolean collapsed;
++
++    public DrawerSectionHeaderItem(int sectionId, String name, boolean collapsed) {
++        super(VIEW_TYPE_DRAWER_SECTION_HEADER);
++        this.sectionId = sectionId;
++        this.name = name;
++        this.collapsed = collapsed;
++        this.drawerSectionId = sectionId;
++    }
++
++    public void bind(View view) {
++        TextView title = view.findViewById(R.id.lujarch_section_title);
++        View chevron = view.findViewById(R.id.lujarch_section_chevron);
++        title.setText(name);
++        title.setVisibility(name.isEmpty() ? View.GONE : View.VISIBLE);
++        chevron.setVisibility(collapsed ? View.VISIBLE : View.GONE);
++        String label = name.isEmpty()
++                ? view.getContext().getString(R.string.lujarch_drawer_section_unnamed) : name;
++        view.setContentDescription(view.getContext().getString(collapsed
++                ? R.string.lujarch_drawer_section_expand
++                : R.string.lujarch_drawer_section_collapse, label));
++    }
++
++    @Override
++    public boolean isSameAs(AdapterItem other) {
++        return other instanceof DrawerSectionHeaderItem h && h.sectionId == sectionId;
++    }
++
++    @Override
++    public boolean isContentSame(AdapterItem other) {
++        return other instanceof DrawerSectionHeaderItem h
++                && h.collapsed == collapsed && Objects.equals(h.name, name);
++    }
++}
+diff --git a/src/com/android/launcher3/lujarch/DrawerSections.java b/src/com/android/launcher3/lujarch/DrawerSections.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..c409c81e8d3f441256b847ae5563ac75cc1fe0a2
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerSections.java
+@@ -0,0 +1,237 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import android.content.ComponentName;
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.os.UserHandle;
++import android.util.Log;
++
++import androidx.annotation.Nullable;
++
++import com.android.launcher3.model.data.ItemInfo;
++
++import org.json.JSONArray;
++import org.json.JSONException;
++import org.json.JSONObject;
++
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.HashMap;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Map;
++import java.util.Set;
++import java.util.WeakHashMap;
++
++/**
++ * Drawer sections (LCH-1): groups of apps the owner makes in the app drawer by dragging, shown below the main list after a divider,
++ * unnamed unless the owner names them, foldable. A section exists while it holds apps. The
++ * system makes none and suggests none.
++ *
++ * One store for the drawer, the long-press menu and the settings page: a JSON document in
++ * its own preferences file. Apps are keyed by component and user, so a work profile's copy
++ * of an app is placed on its own. Called on the main thread only.
++ */
++public final class DrawerSections {
++    private static final String TAG = "LujarchDrawerSections";
++    private static final String PREFS = "lujarch_drawer_sections";
++    private static final String KEY_STATE = "state";
++
++    /** A section: its id never changes, its name is the owner's. */
++    public static final class Section {
++        public final int id;
++        public final String name;
++
++        Section(int id, String name) {
++            this.id = id;
++            this.name = name;
++        }
++    }
++
++    private static DrawerSections sInstance;
++
++    private final SharedPreferences mPrefs;
++    private final List<Section> mSections = new ArrayList<>();
++    private final Map<String, Integer> mMembers = new HashMap<>();
++    private final Set<Integer> mCollapsed = new HashSet<>();
++    private int mNextId = 1;
++    // Held weakly: a drawer list registers itself and goes with its all-apps view.
++    private final Set<Runnable> mListeners = Collections.newSetFromMap(new WeakHashMap<>());
++
++    public static DrawerSections get(Context context) {
++        if (sInstance == null) {
++            sInstance = new DrawerSections(context.getApplicationContext());
++        }
++        return sInstance;
++    }
++
++    private DrawerSections(Context context) {
++        mPrefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
++        load();
++    }
++
++    /** The key of an app in the store, or null for an item without a component. */
++    @Nullable
++    public static String keyOf(ItemInfo info) {
++        ComponentName cn = info.getTargetComponent();
++        return cn == null ? null : keyOf(cn, info.user);
++    }
++
++    public static String keyOf(ComponentName cn, UserHandle user) {
++        return cn.flattenToString() + "#" + user.getIdentifier();
++    }
++
++    public List<Section> getSections() {
++        return Collections.unmodifiableList(new ArrayList<>(mSections));
++    }
++
++    @Nullable
++    public Section getSection(int id) {
++        for (Section s : mSections) {
++            if (s.id == id) return s;
++        }
++        return null;
++    }
++
++    /** The id of the section the app is in, or -1 when it is in the main list. */
++    public int sectionOf(@Nullable String key) {
++        if (key == null) return -1;
++        Integer id = mMembers.get(key);
++        return id == null || getSection(id) == null ? -1 : id;
++    }
++
++    public boolean isCollapsed(int id) {
++        return mCollapsed.contains(id);
++    }
++
++    public void toggleCollapsed(int id) {
++        if (!mCollapsed.remove(id)) mCollapsed.add(id);
++        commit();
++    }
++
++    /** Puts the app in the section (out of any other). */
++    public void moveTo(String key, int id) {
++        if (getSection(id) == null) return;
++        mMembers.put(key, id);
++        commit();
++    }
++
++    /** Takes the app out of its section, back to the main list. */
++    public void removeFromSection(String key) {
++        if (mMembers.remove(key) != null) commit();
++    }
++
++    /** Makes an unnamed section at the end holding the app. */
++    public void createWith(String key) {
++        int id = mNextId++;
++        mSections.add(new Section(id, ""));
++        mMembers.put(key, id);
++        commit();
++    }
++
++    public void rename(int id, String name) {
++        for (int i = 0; i < mSections.size(); i++) {
++            if (mSections.get(i).id == id) {
++                mSections.set(i, new Section(id, name.trim()));
++                commit();
++                return;
++            }
++        }
++    }
++
++    /** Moves the section one place up (-1) or down (+1). */
++    public void move(int id, int by) {
++        for (int i = 0; i < mSections.size(); i++) {
++            if (mSections.get(i).id == id) {
++                int j = i + by;
++                if (j < 0 || j >= mSections.size()) return;
++                Collections.swap(mSections, i, j);
++                commit();
++                return;
++            }
++        }
++    }
++
++    /** Deletes the section; its apps go back to the main list. */
++    public void delete(int id) {
++        mSections.removeIf(s -> s.id == id);
++        mMembers.values().removeIf(v -> v == id);
++        mCollapsed.remove(id);
++        commit();
++    }
++
++    /** The caller keeps a strong reference to the listener for as long as it listens. */
++    public void addListener(Runnable listener) {
++        mListeners.add(listener);
++    }
++
++    public void removeListener(Runnable listener) {
++        mListeners.remove(listener);
++    }
++
++    private void commit() {
++        // A section exists while it holds apps: the last app dragged out ends it.
++        mSections.removeIf(s -> !mMembers.containsValue(s.id));
++        mCollapsed.removeIf(id -> getSection(id) == null);
++        save();
++        for (Runnable l : new ArrayList<>(mListeners)) l.run();
++    }
++
++    private void load() {
++        String json = mPrefs.getString(KEY_STATE, null);
++        if (json == null) return;
++        try {
++            JSONObject o = new JSONObject(json);
++            mNextId = o.optInt("nextId", 1);
++            JSONArray sections = o.optJSONArray("sections");
++            for (int i = 0; sections != null && i < sections.length(); i++) {
++                JSONObject s = sections.getJSONObject(i);
++                mSections.add(new Section(s.getInt("id"), s.getString("name")));
++            }
++            JSONObject members = o.optJSONObject("members");
++            if (members != null) {
++                for (java.util.Iterator<String> it = members.keys(); it.hasNext(); ) {
++                    String k = it.next();
++                    mMembers.put(k, members.getInt(k));
++                }
++            }
++            JSONArray collapsed = o.optJSONArray("collapsed");
++            for (int i = 0; collapsed != null && i < collapsed.length(); i++) {
++                mCollapsed.add(collapsed.getInt(i));
++            }
++        } catch (JSONException e) {
++            // A broken store shows every app in the main list; the owner's apps stay usable.
++            Log.e(TAG, "Unreadable drawer sections, starting empty", e);
++            mSections.clear();
++            mMembers.clear();
++            mCollapsed.clear();
++        }
++    }
++
++    private void save() {
++        try {
++            JSONObject o = new JSONObject();
++            o.put("nextId", mNextId);
++            JSONArray sections = new JSONArray();
++            for (Section s : mSections) {
++                sections.put(new JSONObject().put("id", s.id).put("name", s.name));
++            }
++            o.put("sections", sections);
++            JSONObject members = new JSONObject();
++            for (Map.Entry<String, Integer> e : mMembers.entrySet()) {
++                members.put(e.getKey(), (int) e.getValue());
++            }
++            o.put("members", members);
++            JSONArray collapsed = new JSONArray();
++            for (int id : mCollapsed) collapsed.put(id);
++            o.put("collapsed", collapsed);
++            mPrefs.edit().putString(KEY_STATE, o.toString()).apply();
++        } catch (JSONException e) {
++            Log.e(TAG, "Cannot save drawer sections", e);
++        }
++    }
++}
+diff --git a/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java b/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0577b22605bf1720134d541a854defbc805b74c1
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java
+@@ -0,0 +1,135 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ * SPDX-License-Identifier: Apache-2.0
++ */
++package com.android.launcher3.lujarch;
++
++import android.app.AlertDialog;
++import android.content.Context;
++import android.text.InputType;
++import android.view.WindowManager;
++import android.widget.EditText;
++import android.widget.FrameLayout;
++
++import androidx.annotation.Nullable;
++import androidx.preference.Preference;
++import androidx.preference.PreferenceFragmentCompat;
++import androidx.preference.PreferenceScreen;
++
++import com.android.launcher3.R;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.function.Consumer;
++
++/**
++ * The actions of a drawer section (name, move up, move down, delete), from a long press on
++ * its divider in the drawer and from the settings page, which lists the sections in drawer
++ * order. Sections are made by dragging an app below the last row of the drawer; deleting one
++ * puts its apps back in the main list.
++ */
++public final class DrawerSectionsSettings {
++    public static final String KEY = "pref_drawer_sections";
++
++    private DrawerSectionsSettings() {}
++
++    /** Fills the settings page; called again after every change made on it. */
++    public static void fill(PreferenceFragmentCompat fragment) {
++        PreferenceScreen screen = fragment.getPreferenceScreen();
++        Context context = screen.getContext();
++        screen.removeAll();
++        List<DrawerSections.Section> sections = DrawerSections.get(context).getSections();
++        for (int i = 0; i < sections.size(); i++) {
++            DrawerSections.Section section = sections.get(i);
++            Preference row = new Preference(context);
++            row.setKey("lujarch_drawer_section_" + section.id);
++            row.setTitle(label(context, section, i));
++            row.setPersistent(false);
++            row.setOnPreferenceClickListener(p -> {
++                showActions(context, section.id, () -> fill(fragment));
++                return true;
++            });
++            screen.addPreference(row);
++        }
++    }
++
++    /** A section's name, or its place ("Section 2") when the owner gave it none. */
++    static String label(Context context, DrawerSections.Section section, int index) {
++        return section.name.isEmpty()
++                ? context.getString(R.string.lujarch_drawer_section_numbered, index + 1)
++                : section.name;
++    }
++
++    /** The section's actions; onChange runs after one changed the store. */
++    public static void showActions(Context context, int sectionId, @Nullable Runnable onChange) {
++        DrawerSections store = DrawerSections.get(context);
++        List<DrawerSections.Section> sections = store.getSections();
++        int index = -1;
++        for (int i = 0; i < sections.size(); i++) {
++            if (sections.get(i).id == sectionId) index = i;
++        }
++        if (index < 0) return;
++        DrawerSections.Section section = sections.get(index);
++        Runnable changed = () -> {
++            if (onChange != null) onChange.run();
++        };
++        List<CharSequence> labels = new ArrayList<>();
++        List<Runnable> actions = new ArrayList<>();
++        labels.add(context.getString(R.string.lujarch_drawer_section_rename));
++        actions.add(() -> askName(context, R.string.lujarch_drawer_section_rename, section.name,
++                name -> {
++                    store.rename(section.id, name);
++                    changed.run();
++                }));
++        if (index > 0) {
++            labels.add(context.getString(R.string.lujarch_drawer_section_move_up));
++            actions.add(() -> {
++                store.move(section.id, -1);
++                changed.run();
++            });
++        }
++        if (index < sections.size() - 1) {
++            labels.add(context.getString(R.string.lujarch_drawer_section_move_down));
++            actions.add(() -> {
++                store.move(section.id, 1);
++                changed.run();
++            });
++        }
++        labels.add(context.getString(R.string.lujarch_drawer_section_delete));
++        actions.add(() -> {
++            store.delete(section.id);
++            changed.run();
++        });
++        new AlertDialog.Builder(context)
++                .setTitle(label(context, section, index))
++                .setItems(labels.toArray(new CharSequence[0]),
++                        (d, which) -> actions.get(which).run())
++                .setNegativeButton(android.R.string.cancel, null)
++                .show();
++    }
++
++    /** Asks for a name; an empty name is allowed and leaves the section unnamed. */
++    private static void askName(Context context, int titleRes, String initial,
++            Consumer<String> onName) {
++        EditText field = new EditText(context);
++        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
++        field.setSingleLine(true);
++        field.setText(initial);
++        field.setSelection(initial.length());
++        FrameLayout frame = new FrameLayout(context);
++        int pad = context.getResources().getDimensionPixelSize(R.dimen.ps_header_layout_margin);
++        frame.setPadding(pad, pad / 2, pad, 0);
++        frame.addView(field);
++        AlertDialog dialog = new AlertDialog.Builder(context)
++                .setTitle(titleRes)
++                .setView(frame)
++                .setPositiveButton(android.R.string.ok,
++                        (d, w) -> onName.accept(field.getText().toString().trim()))
++                .setNegativeButton(android.R.string.cancel, null)
++                .create();
++        dialog.setOnShowListener(d -> field.requestFocus());
++        dialog.getWindow().setSoftInputMode(
++                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
++        dialog.show();
++    }
++}
+diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
+index d4b18483c008e22f85afc213c818c3ae7ba3ff7e..4269269a4d95c3ee814f2991dd37cc4c664e398e 100644
+--- a/src/com/android/launcher3/settings/SettingsActivity.java
++++ b/src/com/android/launcher3/settings/SettingsActivity.java
+@@ -233,6 +233,10 @@ public class SettingsActivity extends FragmentActivity
+ 
+             getPreferenceManager().setSharedPreferencesName(LauncherFiles.SHARED_PREFERENCES_KEY);
+             setPreferencesFromResource(R.xml.launcher_preferences, rootKey);
++            if (com.android.launcher3.lujarch.DrawerSectionsSettings.KEY.equals(rootKey)) {
++                com.android.launcher3.lujarch.DrawerSectionsSettings.fill(this);
++                return;
++            }
+ 
+             PreferenceScreen screen = getPreferenceScreen();
+             for (int i = screen.getPreferenceCount() - 1; i >= 0; i--) {

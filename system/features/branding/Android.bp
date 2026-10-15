@@ -1,0 +1,15 @@
+// The system's version (BRD-1), from the init file the tools generate.
+prebuilt_etc {
+    name: "lujarch_branding_version.rc",
+    src: "generated/version.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+// Settings' launcher icon (BRD-2).
+runtime_resource_overlay {
+    name: "LujarchBrandingSettingsIcon",
+    manifest: "src/overlay/settings/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/settings/res"],
+    system_ext_specific: true,
+}

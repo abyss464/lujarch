@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="icons_app_icon_title">图标</string>
+    <string name="icons_original">原始</string>
+    <string name="icons_fitted">适配</string>
+    <string name="icons_redrawn">重绘</string>
+    <string name="icons_app_icon_footer">此应用的图标是一张单独的图片。“重绘”会把它的标志用一种颜色画在纯色底上；“适配”会把图片放在由它自己的颜色组成的底上。不是标志的图片会被适配。</string>
+    <string name="icons_off">适配应用图标已关闭</string>
+    <string name="icons_off_summary">在“壁纸与风格”中开启后即可选择此应用的图标</string>
+    <string name="icons_fit_title">适配应用图标</string>
+    <string name="icons_fit_summary">让单张图片的应用图标与其他图标形状一致</string>
+    <string name="icons_fit_keywords">图标, 形状, 旧式图标, 自适应图标, icon, adaptive icon</string>
+    <string name="icons_wallpaper_and_style">壁纸与风格</string>
+    <string name="icons_error_load">无法读取此应用的图标</string>
+    <string name="icons_error_set">无法更改此应用的图标</string>
+</resources>

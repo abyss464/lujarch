@@ -1,0 +1,11 @@
+[fit]
+table = "secure"
+type = "bool"
+default = true
+item = "ICON-1"
+
+[notifications]
+table = "secure"
+type = "bool"
+default = true
+item = "ICON-2"

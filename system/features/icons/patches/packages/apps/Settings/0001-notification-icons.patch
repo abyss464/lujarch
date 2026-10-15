@@ -1,0 +1,115 @@
+diff --git a/res/values-ja/lujarch_icons_strings.xml b/res/values-ja/lujarch_icons_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..64e5299eb176721aa79f22a1c171cf3a0b597641
+--- /dev/null
++++ b/res/values-ja/lujarch_icons_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Notification icons (ICON-2). -->
++<resources>
++    <string name="lujarch_notification_icon_fix_title">通知アイコンを揃える</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_icons_strings.xml b/res/values-zh-rCN/lujarch_icons_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..54a6c1cbb4c4d8d20121f84c8144bf5499ac96c8
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_icons_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Notification icons (ICON-2). -->
++<resources>
++    <string name="lujarch_notification_icon_fix_title">适配通知图标</string>
++</resources>
+diff --git a/res/values/lujarch_icons_strings.xml b/res/values/lujarch_icons_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..234a22fd1675c60c03d6cc388842fb888bd551cf
+--- /dev/null
++++ b/res/values/lujarch_icons_strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Notification icons (ICON-2). -->
++<resources>
++    <!-- Switch in Settings > Notifications: apps whose notification icons show as filled shapes get silhouettes of their logos [CHAR LIMIT=40] -->
++    <string name="lujarch_notification_icon_fix_title">Fit notification icons</string>
++</resources>
+diff --git a/res/xml/configure_notification_settings.xml b/res/xml/configure_notification_settings.xml
+index a9bc5419bdfe5c70a3ed7b118a33fbd33a7762c3..790231465b3170780e3caca910f9da2330550756 100644
+--- a/res/xml/configure_notification_settings.xml
++++ b/res/xml/configure_notification_settings.xml
+@@ -199,6 +199,14 @@
+              android:title="@string/silent_notifications_status_bar"
+              settings:controller="com.android.settings.notification.SilentStatusBarPreferenceController"/>
+ 
++        <!-- Lujarch (ICON-2): monochrome icons (ANIP) for apps whose notification icons
++             break the design. -->
++        <SwitchPreferenceCompat
++            android:key="lujarch_icons_notifications"
++            android:order="25"
++            android:title="@string/lujarch_notification_icon_fix_title"
++            settings:controller="com.android.settings.notification.LujarchNotificationIconFixController"/>
++
+         <SwitchPreferenceCompat
+             android:key="show_snooze_options"
+             android:order="26"
+diff --git a/src/com/android/settings/notification/LujarchNotificationIconFixController.java b/src/com/android/settings/notification/LujarchNotificationIconFixController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed739e1525d3ef79124c7bf01ef03e1c0a490767
+--- /dev/null
++++ b/src/com/android/settings/notification/LujarchNotificationIconFixController.java
+@@ -0,0 +1,56 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package com.android.settings.notification;
++
++import android.content.Context;
++import android.provider.Settings;
++
++import com.android.settings.R;
++import com.android.settings.core.TogglePreferenceController;
++
++/**
++ * Lujarch (ICON-2): Fit notification icons, monochrome icons of the Android Notification Icon
++ * Project for apps whose notification icons break the design; SystemUI's NotificationIconFix
++ * reads the setting for each notification it receives. On by default.
++ */
++public class LujarchNotificationIconFixController extends TogglePreferenceController {
++    static final String SETTING = "lujarch_icons_notifications";
++
++    public LujarchNotificationIconFixController(Context context, String key) {
++        super(context, key);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return new java.io.File("/system_ext/etc/lujarch/icons/anip-bundle.zip").exists()
++                ? AVAILABLE : UNSUPPORTED_ON_DEVICE;
++    }
++
++    @Override
++    public boolean isChecked() {
++        return Settings.Global.getInt(mContext.getContentResolver(), SETTING, 1) != 0;
++    }
++
++    @Override
++    public boolean setChecked(boolean isChecked) {
++        return Settings.Global.putInt(mContext.getContentResolver(), SETTING, isChecked ? 1 : 0);
++    }
++
++    @Override
++    public int getSliceHighlightMenuRes() {
++        return R.string.menu_key_notifications;
++    }
++}

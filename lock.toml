@@ -69,3 +69,7 @@ commit = "2ca95cf1498104113fdfde46df4107f2450a0f71"
 [prebuilts.ksud.arm64]
 url = "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/ksud-aarch64-linux-android"
 sha256 = "52ba3da465459bfbac98dd25c53f8d31f93ee5a8ee89d84f67a28fe0d18cdef2"
+
+[prebuilts.anip.common]
+url = "https://github.com/BetterAndroid/android-notification-icon-project/releases/download/9e0b877/anip-bundle-9e0b877.zip"
+sha256 = "5129c718d2144d4256c5d16a11444dcaa26b895ee6b467e4cc76d50d1f1739b8"

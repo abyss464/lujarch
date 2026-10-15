@@ -1,0 +1,7 @@
+# By name is 0, by icon color 1.
+
+[drawer_sort]
+table = "secure"
+type = "int"
+default = 0
+item = "LCH-2"

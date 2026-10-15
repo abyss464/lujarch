@@ -38,7 +38,8 @@ directory, the target file and every identifier (process/conventions.md).
 
 ```
 system/features/<feature>/
-├── feature.toml          prefix (the target CODE), devices it applies to, components it builds
+├── feature.toml          prefix (the target CODE), devices it applies to, components it builds,
+│                         prebuilts it takes, apps whose texts it renames
 ├── patches/<project>/    NNNN-<what>.patch, changes to the upstream project at that tree path
 ├── components/<name>/    NNNN-<what>.patch, changes to a component's source
 ├── src/                  what the feature adds: apps, daemons, libraries, configs, overlays
@@ -66,11 +67,17 @@ system/features/<feature>/
   architecture, offline (Go modules from the computer's module cache, crates from Cargo's), and
   stage it at `vendor/extra/features/<feature>/prebuilt/<arch>/<module>` for the feature's
   `Android.bp`.
-- A prebuilt is a program a feature takes as its upstream releases it, where the release is the
-  only build of it that matches the pinned source: `feature.toml` names it under
+- A prebuilt is a program or data a feature takes as its upstream releases it, where the release
+  is the only build of it that matches the pinned source: `feature.toml` names it under
   `[prebuilts.<name>]` with the `module` it becomes; `lock.toml` pins the `url` and `sha256` of
-  each architecture it exists for. `tools/lujarch fetch` downloads what the host lacks into the
-  host's `prebuilts` path, and the tools stage it like a component.
+  each architecture it exists for, or of `common` when it has none. `tools/lujarch fetch`
+  downloads what the host lacks into the host's `prebuilts` path, and the tools stage it like a
+  component.
+- A rename is `[renames.<name>]` in `feature.toml`: an app's `package` and its resource
+  directories `res` in the tree. The tools generate a static overlay of the app in which every
+  string of those directories whose text names LineageOS says Lujarch in its place, in every
+  locale, except the strings named under `keep`; a `keep` entry that names no such string stops
+  the staging.
 - A feature that applies to some devices only says so in `feature.toml`; the build of another
   device leaves it out.
 - A feature's patches cover every upstream project it changes, including device projects

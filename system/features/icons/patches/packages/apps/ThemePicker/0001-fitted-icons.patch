@@ -1,0 +1,184 @@
+diff --git a/res/layout/floating_sheet_app_icon.xml b/res/layout/floating_sheet_app_icon.xml
+index 07d4a3469844b8461ea4ae87b2456b68d86cb7e2..76670b221d378c1c70e8e6b8825fb6375790f265 100644
+--- a/res/layout/floating_sheet_app_icon.xml
++++ b/res/layout/floating_sheet_app_icon.xml
+@@ -145,6 +145,44 @@
+                     app:layout_constraintEnd_toEndOf="parent"
+                     android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
+             </androidx.constraintlayout.widget.ConstraintLayout>
++
++            <!-- Lujarch (ICON-1): fitted icons, next to themed icons: both decide how every
++                 app icon in the system looks. -->
++            <androidx.constraintlayout.widget.ConstraintLayout
++                android:id="@+id/lujarch_fit_icon_toggle_entry"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:paddingVertical="@dimen/floating_sheet_content_vertical_padding"
++                android:clipToPadding="false"
++                android:clipChildren="false">
++
++                <TextView
++                    style="@style/CustomizationOptionEntryTitleTextStyle"
++                    android:id="@+id/lujarch_fit_icon_toggle_title"
++                    android:layout_width="0dp"
++                    android:layout_height="wrap_content"
++                    android:text="@string/lujarch_fit_icon_title"
++                    android:layout_marginStart="@dimen/floating_sheet_content_horizontal_padding"
++                    android:layout_marginEnd="@dimen/floating_sheet_clock_style_clock_size_text_margin_end"
++                    android:importantForAccessibility="no"
++                    app:layout_constraintStart_toStartOf="parent"
++                    app:layout_constraintEnd_toStartOf="@+id/lujarch_fit_icon_toggle"
++                    app:layout_constraintTop_toTopOf="parent"
++                    app:layout_constraintBottom_toBottomOf="parent" />
++
++                <com.google.android.material.materialswitch.MaterialSwitch
++                    style="@style/SettingslibSwitchStyle.Expressive"
++                    android:id="@+id/lujarch_fit_icon_toggle"
++                    android:layout_width="wrap_content"
++                    android:layout_height="wrap_content"
++                    android:layout_marginEnd="@dimen/floating_sheet_content_horizontal_padding"
++                    android:contentDescription="@string/lujarch_fit_icon_title"
++                    android:clickable="true"
++                    app:layout_constraintTop_toTopOf="parent"
++                    app:layout_constraintBottom_toBottomOf="parent"
++                    app:layout_constraintEnd_toEndOf="parent"
++                    android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
++            </androidx.constraintlayout.widget.ConstraintLayout>
+         </LinearLayout>
+ 
+         <LinearLayout
+diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb745294d34b3c90ac9cb661a5715448813db7cf
+--- /dev/null
++++ b/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Fitted icons (ICON-1). -->
++<resources>
++    <string name="lujarch_fit_icon_title">アプリアイコンを揃える</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ae8b88d11b1342820c07922a1dcb165ad35998c3
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Fitted icons (ICON-1). -->
++<resources>
++    <string name="lujarch_fit_icon_title">适配应用图标</string>
++</resources>
+diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..d24b2fe1cf1ff251a21d0e3fbf6ffebfa410eb65
+--- /dev/null
++++ b/res/values/lujarch_strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2026 The Lujarch Project. Fitted icons (ICON-1). -->
++<resources>
++    <!-- Switch in the app icon sheet, beside Themed icons: legacy app icons get the shape of all others [CHAR LIMIT=40] -->
++    <string name="lujarch_fit_icon_title">Fit app icons</string>
++</resources>
+diff --git a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
+index 67c38ce722bb636f3e7ee92330d31beb7ef165df..32055ad4df0f0d5f6606ee3182c70d03007958c1 100644
+--- a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
++++ b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
+@@ -18,6 +18,7 @@ package com.android.customization.picker.icon.ui.binder
+ 
+ import android.content.Context
+ import android.content.res.ColorStateList
++import android.provider.Settings
+ import android.view.View
+ import android.view.ViewGroup
+ import android.view.ViewTreeObserver.OnGlobalLayoutListener
+@@ -36,6 +37,7 @@ import com.android.customization.picker.icon.shared.model.IconStyleModel
+ import com.android.customization.picker.icon.ui.util.IconStyleViewUtil
+ import com.android.customization.picker.icon.ui.viewmodel.AppIconPickerViewModel.Tab
+ import com.android.customization.picker.icon.ui.viewmodel.ShapeIconViewModel
++import com.android.internal.lujarch.icons.LujarchIcons
+ import com.android.themepicker.R
+ import com.android.wallpaper.config.BaseFlags
+ import com.android.wallpaper.customization.ui.binder.FloatingSheetHeightAnimationBinder
+@@ -50,10 +52,12 @@ import com.android.wallpaper.picker.option.ui.adapter.OptionItemAdapter2
+ import com.google.android.material.materialswitch.MaterialSwitch
+ import java.lang.ref.WeakReference
+ import kotlinx.coroutines.CoroutineDispatcher
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.filterNotNull
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ 
+ object AppIconFloatingSheetBinder {
+ 
+@@ -145,6 +149,10 @@ object AppIconFloatingSheetBinder {
+         val themedIconsSwitch = view.requireViewById<MaterialSwitch>(R.id.themed_icon_toggle)
+         val themedIconEntry = view.requireViewById<ViewGroup>(R.id.themed_icon_toggle_entry)
+         val themedIconTitle = view.requireViewById<TextView>(R.id.themed_icon_toggle_title)
++        // Lujarch (ICON-1): fitted icons, the system's switch, beside themed icons.
++        val fitIconsSwitch = view.requireViewById<MaterialSwitch>(R.id.lujarch_fit_icon_toggle)
++        val fitIconEntry = view.requireViewById<ViewGroup>(R.id.lujarch_fit_icon_toggle_entry)
++        val fitIconTitle = view.requireViewById<TextView>(R.id.lujarch_fit_icon_toggle_title)
+         val themedIconBetaLabel = view.requireViewById<TextView>(R.id.themed_icon_beta_title)
+         val showAppLabelsTitle = view.requireViewById<TextView>(R.id.show_app_labels_title)
+         val showAppLabelsSwitch = view.requireViewById<MaterialSwitch>(R.id.show_app_labels_switch)
+@@ -154,6 +162,12 @@ object AppIconFloatingSheetBinder {
+             shouldAnimate = isFloatingSheetActive,
+             lifecycleOwner = lifecycleOwner,
+         )
++        ColorUpdateBinder.bind(
++            setColor = { color -> fitIconTitle.setTextColor(color) },
++            color = colorUpdateViewModel.colorOnSurface,
++            shouldAnimate = isFloatingSheetActive,
++            lifecycleOwner = lifecycleOwner,
++        )
+ 
+         data class FloatingSheetHeightsViewModel(
+             val styleContentHeight: Int? = null,
+@@ -223,6 +237,43 @@ object AppIconFloatingSheetBinder {
+ 
+         lifecycleOwner.lifecycleScope.launch {
+             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
++                launch {
++                    val resolver = view.context.contentResolver
++                    val enabled =
++                        withContext(Dispatchers.IO) {
++                            Settings.Global.getInt(resolver, LujarchIcons.SETTING_FIT, 1) != 0
++                        }
++                    fitIconsSwitch.setOnCheckedChangeListener(null)
++                    fitIconsSwitch.isChecked = enabled
++                    var switchBinding =
++                        SwitchColorBinder.bind(
++                            switch = fitIconsSwitch,
++                            isChecked = enabled,
++                            colorUpdateViewModel = colorUpdateViewModel,
++                            shouldAnimateColor = isFloatingSheetActive,
++                            lifecycleOwner = lifecycleOwner,
++                        )
++                    fitIconEntry.setOnClickListener { fitIconsSwitch.toggle() }
++                    fitIconsSwitch.setOnCheckedChangeListener { _, checked ->
++                        switchBinding.destroy()
++                        switchBinding =
++                            SwitchColorBinder.bind(
++                                switch = fitIconsSwitch,
++                                isChecked = checked,
++                                colorUpdateViewModel = colorUpdateViewModel,
++                                shouldAnimateColor = isFloatingSheetActive,
++                                lifecycleOwner = lifecycleOwner,
++                            )
++                        launch(Dispatchers.IO) {
++                            Settings.Global.putInt(
++                                resolver,
++                                LujarchIcons.SETTING_FIT,
++                                if (checked) 1 else 0,
++                            )
++                        }
++                    }
++                }
++
+                 launch {
+                     viewModel.shapeOptions.collect { options ->
+                         shapeOptionListAdapter.setItems(options) {

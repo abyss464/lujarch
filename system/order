@@ -8,3 +8,6 @@ features/battery
 features/cpu
 features/statusbar
 features/appvolume
+features/branding
+features/icons
+features/launcher
