@@ -1383,10 +1383,10 @@ index 0000000000000000000000000000000000000000..3f3e8754b45a45558543e01d951bd026
 +}
 diff --git a/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java b/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..8017232670dc7eb6e26226bb115cc4abeb7a3d4a
+index 0000000000000000000000000000000000000000..4718e618fa7d2907629eb1cb3d6d08c7f0f30fbe
 --- /dev/null
 +++ b/services/core/java/com/android/server/lujarch/icons/LujarchIconService.java
-@@ -0,0 +1,453 @@
+@@ -0,0 +1,462 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + * SPDX-License-Identifier: Apache-2.0
@@ -1674,11 +1674,20 @@ index 0000000000000000000000000000000000000000..8017232670dc7eb6e26226bb115cc4ab
 +        }
 +    }
 +
-+    /** Drops a removed app's entries. */
++    /** Drops a removed app's entries and the owner's choice for it, as Android drops its other
++     * choices for an app with the app. */
 +    private void forget(String pkg) {
 +        File[] files = mCacheDir.listFiles((d, n) -> n.startsWith(pkg + "@"));
 +        if (files != null) for (File f : files) f.delete();
 +        mResults.evictAll();
++        boolean chosen;
++        synchronized (mLock) {
++            chosen = mModes.remove(pkg) != null;
++        }
++        if (chosen) {
++            Slog.i(TAG, pkg + ": removed, its icon choice with it");
++            writeState();
++        }
 +    }
 +
 +    /** Drops entries of versions no longer installed and of older algorithm versions. */

@@ -1,34 +1,34 @@
 diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
-index ad58bc9aab9a3257b31a0b8c5718f777017bdb3b..756008a2d8d5498f4dea1fc3f93cc9baa841fc2f 100644
+index 15bbf3aff7beb54fc4fea5e73b1e37f42c78cebe..a5854ade5e96e757aa033da2490798fe5f4565ed 100644
 --- a/res/values-ja/lujarch_strings.xml
 +++ b/res/values-ja/lujarch_strings.xml
 @@ -24,4 +24,7 @@
      <string name="lujarch_drawer_section_collapse">「%1$s」を折りたたむ</string>
-     <string name="lujarch_drawer_section_unnamed">名前のないセクション</string>
+     <string name="lujarch_drawer_sections_none">アプリをアプリドロワーの最後の行より下にドラッグすると、セクションが作成されます。</string>
      <string name="lujarch_drawer_section_numbered">セクション %1$d</string>
 +    <string name="lujarch_drawer_sort_title">アプリドロワーの並べ替え</string>
 +    <string name="lujarch_drawer_sort_name">名前順</string>
 +    <string name="lujarch_drawer_sort_color">アイコンの色順</string>
  </resources>
 diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
-index 844c8ab53635cf17579f31ab21538747fb4e6a0b..b2af0c3a877cca64369429431bc2edbf73979a94 100644
+index b6068b212b67e4ffe1edb0f944d52deac942372f..b49a51b4edabf127e172be26ce7dae31d6345887 100644
 --- a/res/values-zh-rCN/lujarch_strings.xml
 +++ b/res/values-zh-rCN/lujarch_strings.xml
 @@ -24,4 +24,7 @@
      <string name="lujarch_drawer_section_collapse">收起“%1$s”</string>
-     <string name="lujarch_drawer_section_unnamed">未命名分区</string>
+     <string name="lujarch_drawer_sections_none">将应用拖到应用抽屉最后一行的下方即可新建分区。</string>
      <string name="lujarch_drawer_section_numbered">分区 %1$d</string>
 +    <string name="lujarch_drawer_sort_title">应用抽屉排序</string>
 +    <string name="lujarch_drawer_sort_name">按名称</string>
 +    <string name="lujarch_drawer_sort_color">按图标颜色</string>
  </resources>
 diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
-index 88fbecdea5b84eb1a96cc5120baa454d39939a71..9e91f3e1bd915eb93c4e31ab43f0e12ea8f23541 100644
+index 2227718abbebfd67da5e4612d3a5586ff2549eba..dec909f6933012dff510d9c550bc974197c77b26 100644
 --- a/res/values/lujarch_strings.xml
 +++ b/res/values/lujarch_strings.xml
 @@ -33,4 +33,19 @@
-     <string name="lujarch_drawer_section_unnamed">Unnamed section</string>
-     <!-- Name of an unnamed drawer section in lists; %1$d is its place [CHAR LIMIT=30] -->
+     <string name="lujarch_drawer_sections_none">Drag an app below the last row of the app drawer to make a section.</string>
+     <!-- Name of a drawer section the owner did not name; %1$d is its place [CHAR LIMIT=30] -->
      <string name="lujarch_drawer_section_numbered">Section %1$d</string>
 +    <!-- Launcher setting: the order of the app drawer [CHAR LIMIT=40] -->
 +    <string name="lujarch_drawer_sort_title">Sort apps in drawer</string>
@@ -67,7 +67,7 @@ index 83a4142ad5eac0a150978459176087a245905cc0..e865b28bc517acf6b9341045fa156cdc
           (DrawerSectionsSettings). -->
      <androidx.preference.PreferenceScreen
 diff --git a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
-index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9bdcf682fa 100644
+index 9269c4999f2949779446bf0fcb84e29be9dc4514..4b89ddd87e8ed620629ef0434a6e71c29e667511 100644
 --- a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
 +++ b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
 @@ -27,6 +27,10 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
@@ -81,7 +81,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
  import android.text.Spannable;
  import android.text.SpannableString;
  import android.text.style.ImageSpan;
-@@ -131,6 +135,19 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -132,6 +136,19 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
      private final boolean mSortSections;
      // Lujarch (LCH-1): the fast scroller's mark for an unnamed drawer section.
      private static final String DIVIDER_SECTION = "\u2014";
@@ -101,7 +101,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
  
      public AlphabeticalAppsList(ActivityContext activityContext, @Nullable AllAppsStore appsStore,
              WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
-@@ -139,6 +156,9 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -140,6 +157,9 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
  
          Context context = activityContext.asContext();
          mAppNameComparator = new AppInfoComparator(context);
@@ -111,7 +111,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
          mWorkProviderManager = workProfileManager;
          mPrivateProviderManager = privateProfileManager;
          mDrawerSections = DrawerSections.get(context);
-@@ -254,6 +274,12 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -255,6 +275,12 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
          return true;
      }
  
@@ -124,7 +124,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
      /**
       * Updates internals when the set of apps are updated.
       */
-@@ -286,7 +312,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -287,7 +313,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
  
          // As a special case for some languages (currently only Simplified Chinese), we may need to
          // coalesce sections
@@ -133,7 +133,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
              // Compute the section headers. We use a TreeMap with the section name comparator to
              // ensure that the sections are ordered when we iterate over it later
              appSteam = appSteam.collect(Collectors.groupingBy(
-@@ -544,7 +570,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -548,7 +574,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                  mAdapterItems.add(AdapterItem.asApp(info));
              }
  
@@ -143,7 +143,7 @@ index 9c74b0617d7a8db4c185064c6327aa0737aa6e61..6457430fd3398ff45242225cd9d8de9b
              if (!sectionName.equals(lastSectionName)) {
                  Log.d(TAG, "addAppsWithSections: adding sectionName: " + sectionName
 diff --git a/src/com/android/launcher3/allapps/AppInfoComparator.java b/src/com/android/launcher3/allapps/AppInfoComparator.java
-index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..9c676c963260d54982d84cbcbed6daffda9c45b2 100644
+index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..c4bbe445c4d8d06f893570f5c9d2664451eae775 100644
 --- a/src/com/android/launcher3/allapps/AppInfoComparator.java
 +++ b/src/com/android/launcher3/allapps/AppInfoComparator.java
 @@ -16,8 +16,10 @@
@@ -205,7 +205,7 @@ index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..9c676c963260d54982d84cbcbed6daff
          if (result != 0) {
              return result;
          }
-@@ -64,6 +95,37 @@ public class AppInfoComparator implements Comparator<AppInfo> {
+@@ -64,6 +95,38 @@ public class AppInfoComparator implements Comparator<AppInfo> {
          }
      }
  
@@ -229,12 +229,13 @@ index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..9c676c963260d54982d84cbcbed6daff
 +    }
 +
 +    /**
-+     * Hue band of a color. Colors with little saturation or brightness read as
-+     * grey or black whatever their hue, so they share the last band. The wheel
-+     * starts half a band before red, so reds (near 0 and near 360) stay together.
++     * Hue band of a color. Colors with little saturation or brightness, or little of both
++     * together (a dark muted slate), read as grey or black whatever their hue, so they share
++     * the last band. The wheel starts half a band before red, so reds (near 0 and near 360)
++     * stay together.
 +     */
 +    private static int colorBand(float[] hsv) {
-+        if (hsv[1] < 0.2f || hsv[2] < 0.2f) {
++        if (hsv[1] < 0.2f || hsv[2] < 0.2f || hsv[1] * hsv[2] < 0.12f) {
 +            return GREY_BAND;
 +        }
 +        return (int) (((hsv[0] + HUE_BAND / 2) % 360f) / HUE_BAND);
@@ -244,7 +245,7 @@ index bbf8e5a5fb0d9bdb9402b7c8c74d0bc1de549064..9c676c963260d54982d84cbcbed6daff
          if (!TextUtils.isEmpty(info.appTitle)) {
              return info.appTitle.toString();
 diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
-index 4269269a4d95c3ee814f2991dd37cc4c664e398e..050ec199aacb00ace26c96313fb06fc0030b5ee1 100644
+index ca1d8fea93a392f9eb8091edd76f1d754cd9fbb3..5dc38d6c4c0b2a45da021eec3e1469b5de3f72b0 100644
 --- a/src/com/android/launcher3/settings/SettingsActivity.java
 +++ b/src/com/android/launcher3/settings/SettingsActivity.java
 @@ -45,6 +45,7 @@ import androidx.fragment.app.DialogFragment;
@@ -263,7 +264,7 @@ index 4269269a4d95c3ee814f2991dd37cc4c664e398e..050ec199aacb00ace26c96313fb06fc0
  import com.android.launcher3.display.DisplayController;
  import com.android.launcher3.display.LauncherDisplayInfo;
  import com.android.launcher3.lineage.LineageUtils;
-@@ -379,6 +381,15 @@ public class SettingsActivity extends FragmentActivity
+@@ -388,6 +390,15 @@ public class SettingsActivity extends FragmentActivity
                  case SHOW_HOTSEAT_QSB_KEY:
                      return launcherApps != null &&
                              launcherApps.isPackageEnabled(SEARCH_PACKAGE, myUserHandle());

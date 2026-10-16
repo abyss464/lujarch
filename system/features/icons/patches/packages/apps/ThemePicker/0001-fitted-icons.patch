@@ -123,39 +123,10 @@ index 42959c114dc1071b1205864727a4140050859814..b2d0749acb5306860981bef193a8d77e
 +    <string name="camera_package" translatable="false">com.android.settings</string>
  </resources>
 diff --git a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
-index 67c38ce722bb636f3e7ee92330d31beb7ef165df..ad3a6f6f95ebf8358c5f94f1a60e8f3981752ac8 100644
+index 67c38ce722bb636f3e7ee92330d31beb7ef165df..9afc1372d48c8f3c37dc9ea1de0474b41a79d41c 100644
 --- a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
 +++ b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
-@@ -18,6 +18,7 @@ package com.android.customization.picker.icon.ui.binder
- 
- import android.content.Context
- import android.content.res.ColorStateList
-+import android.provider.Settings
- import android.view.View
- import android.view.ViewGroup
- import android.view.ViewTreeObserver.OnGlobalLayoutListener
-@@ -36,6 +37,7 @@ import com.android.customization.picker.icon.shared.model.IconStyleModel
- import com.android.customization.picker.icon.ui.util.IconStyleViewUtil
- import com.android.customization.picker.icon.ui.viewmodel.AppIconPickerViewModel.Tab
- import com.android.customization.picker.icon.ui.viewmodel.ShapeIconViewModel
-+import com.android.internal.lujarch.icons.LujarchIcons
- import com.android.themepicker.R
- import com.android.wallpaper.config.BaseFlags
- import com.android.wallpaper.customization.ui.binder.FloatingSheetHeightAnimationBinder
-@@ -50,10 +52,12 @@ import com.android.wallpaper.picker.option.ui.adapter.OptionItemAdapter2
- import com.google.android.material.materialswitch.MaterialSwitch
- import java.lang.ref.WeakReference
- import kotlinx.coroutines.CoroutineDispatcher
-+import kotlinx.coroutines.Dispatchers
- import kotlinx.coroutines.flow.MutableStateFlow
- import kotlinx.coroutines.flow.combine
- import kotlinx.coroutines.flow.filterNotNull
- import kotlinx.coroutines.launch
-+import kotlinx.coroutines.withContext
- 
- object AppIconFloatingSheetBinder {
- 
-@@ -145,6 +149,10 @@ object AppIconFloatingSheetBinder {
+@@ -145,6 +145,10 @@ object AppIconFloatingSheetBinder {
          val themedIconsSwitch = view.requireViewById<MaterialSwitch>(R.id.themed_icon_toggle)
          val themedIconEntry = view.requireViewById<ViewGroup>(R.id.themed_icon_toggle_entry)
          val themedIconTitle = view.requireViewById<TextView>(R.id.themed_icon_toggle_title)
@@ -166,7 +137,7 @@ index 67c38ce722bb636f3e7ee92330d31beb7ef165df..ad3a6f6f95ebf8358c5f94f1a60e8f39
          val themedIconBetaLabel = view.requireViewById<TextView>(R.id.themed_icon_beta_title)
          val showAppLabelsTitle = view.requireViewById<TextView>(R.id.show_app_labels_title)
          val showAppLabelsSwitch = view.requireViewById<MaterialSwitch>(R.id.show_app_labels_switch)
-@@ -154,6 +162,12 @@ object AppIconFloatingSheetBinder {
+@@ -154,6 +158,12 @@ object AppIconFloatingSheetBinder {
              shouldAnimate = isFloatingSheetActive,
              lifecycleOwner = lifecycleOwner,
          )
@@ -179,51 +150,37 @@ index 67c38ce722bb636f3e7ee92330d31beb7ef165df..ad3a6f6f95ebf8358c5f94f1a60e8f39
  
          data class FloatingSheetHeightsViewModel(
              val styleContentHeight: Int? = null,
-@@ -223,6 +237,43 @@ object AppIconFloatingSheetBinder {
+@@ -223,6 +233,29 @@ object AppIconFloatingSheetBinder {
  
          lifecycleOwner.lifecycleScope.launch {
              lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
 +                launch {
-+                    val resolver = view.context.contentResolver
-+                    val enabled =
-+                        withContext(Dispatchers.IO) {
-+                            Settings.Global.getInt(resolver, LujarchIcons.SETTING_FIT, 1) != 0
-+                        }
-+                    fitIconsSwitch.setOnCheckedChangeListener(null)
-+                    fitIconsSwitch.isChecked = enabled
-+                    var switchBinding =
-+                        SwitchColorBinder.bind(
-+                            switch = fitIconsSwitch,
-+                            isChecked = enabled,
-+                            colorUpdateViewModel = colorUpdateViewModel,
-+                            shouldAnimateColor = isFloatingSheetActive,
-+                            lifecycleOwner = lifecycleOwner,
-+                        )
-+                    fitIconEntry.setOnClickListener { fitIconsSwitch.toggle() }
-+                    fitIconsSwitch.setOnCheckedChangeListener { _, checked ->
-+                        switchBinding.destroy()
++                    var switchBinding: SwitchColorBinder.Binding? = null
++                    viewModel.previewingIsFitIconsEnabled.collect {
++                        fitIconsSwitch.isChecked = it
++                        switchBinding?.destroy()
 +                        switchBinding =
 +                            SwitchColorBinder.bind(
 +                                switch = fitIconsSwitch,
-+                                isChecked = checked,
++                                isChecked = it,
 +                                colorUpdateViewModel = colorUpdateViewModel,
 +                                shouldAnimateColor = isFloatingSheetActive,
 +                                lifecycleOwner = lifecycleOwner,
 +                            )
-+                        launch(Dispatchers.IO) {
-+                            Settings.Global.putInt(
-+                                resolver,
-+                                LujarchIcons.SETTING_FIT,
-+                                if (checked) 1 else 0,
-+                            )
-+                        }
 +                    }
 +                }
++
++                launch {
++                    viewModel.toggleFitIcons.collect {
++                        fitIconsSwitch.setOnCheckedChangeListener { _, _ -> it.invoke() }
++                    }
++                }
++                fitIconEntry.setOnClickListener { fitIconsSwitch.toggle() }
 +
                  launch {
                      viewModel.shapeOptions.collect { options ->
                          shapeOptionListAdapter.setItems(options) {
-@@ -341,7 +392,9 @@ object AppIconFloatingSheetBinder {
+@@ -341,7 +374,9 @@ object AppIconFloatingSheetBinder {
                          }
                      }
                  } else {
@@ -234,3 +191,187 @@ index 67c38ce722bb636f3e7ee92330d31beb7ef165df..ad3a6f6f95ebf8358c5f94f1a60e8f39
  
                      launch {
                          viewModel.isShapeOptionsAvailable.collect { shapeAvailable ->
+diff --git a/src/com/android/customization/picker/icon/ui/viewmodel/AppIconPickerViewModel.kt b/src/com/android/customization/picker/icon/ui/viewmodel/AppIconPickerViewModel.kt
+index a74037246e87e0c752cffb814e649cc0485d0b7f..05ac20558ddcb2ad31bc414d32407a049959c608 100644
+--- a/src/com/android/customization/picker/icon/ui/viewmodel/AppIconPickerViewModel.kt
++++ b/src/com/android/customization/picker/icon/ui/viewmodel/AppIconPickerViewModel.kt
+@@ -17,12 +17,15 @@
+ package com.android.customization.picker.icon.ui.viewmodel
+ 
+ import android.content.Context
++import android.database.ContentObserver
++import android.provider.Settings
+ import android.util.Log
+ import com.android.customization.model.grid.ShapeOptionModel
+ import com.android.customization.module.logging.ThemesUserEventLogger
+ import com.android.customization.picker.icon.domain.interactor.AppIconInteractor
+ import com.android.customization.picker.icon.shared.model.IconStyle
+ import com.android.customization.picker.icon.shared.model.IconStyleModel
++import com.android.internal.lujarch.icons.LujarchIcons
+ import com.android.themepicker.R
+ import com.android.wallpaper.config.BaseFlags
+ import com.android.wallpaper.picker.common.icon.ui.viewmodel.Icon
+@@ -38,21 +41,26 @@ import java.util.Locale
+ import kotlin.time.Duration.Companion.milliseconds
+ import kotlinx.coroutines.CancellationException
+ import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.TimeoutCancellationException
++import kotlinx.coroutines.channels.awaitClose
+ import kotlinx.coroutines.coroutineScope
+ import kotlinx.coroutines.flow.Flow
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.SharedFlow
+ import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.callbackFlow
+ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.drop
+ import kotlinx.coroutines.flow.filterNotNull
++import kotlinx.coroutines.flow.flowOn
+ import kotlinx.coroutines.flow.flowOf
+ import kotlinx.coroutines.flow.map
+ import kotlinx.coroutines.flow.shareIn
+ import kotlinx.coroutines.flow.stateIn
+ import kotlinx.coroutines.flow.take
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ import kotlinx.coroutines.withTimeout
+ 
+ class AppIconPickerViewModel
+@@ -143,6 +151,53 @@ constructor(
+         }
+     val isIconStyleAvailable = iconStylesModels.map { it.size > 1 }
+ 
++    //// Lujarch (ICON-1): Fit app icons, previewed on the sheet and written on Apply like the
++    //// switches beside it.
++    private val isFitIconsEnabled: SharedFlow<Boolean> =
++        callbackFlow {
++                val resolver = applicationContext.contentResolver
++                fun read() = Settings.Global.getInt(resolver, LujarchIcons.SETTING_FIT, 1) != 0
++                val observer =
++                    object : ContentObserver(null) {
++                        override fun onChange(selfChange: Boolean) {
++                            trySend(read())
++                        }
++                    }
++                resolver.registerContentObserver(
++                    Settings.Global.getUriFor(LujarchIcons.SETTING_FIT),
++                    false,
++                    observer,
++                )
++                trySend(read())
++                awaitClose { resolver.unregisterContentObserver(observer) }
++            }
++            .flowOn(Dispatchers.IO)
++            .shareIn(scope = viewModelScope, started = SharingStarted.Lazily, replay = 1)
++    private val overridingIsFitIconsEnabled = MutableStateFlow<Boolean?>(null)
++    val previewingIsFitIconsEnabled: Flow<Boolean> =
++        combine(overridingIsFitIconsEnabled, isFitIconsEnabled) { overriding, current ->
++            overriding ?: current
++        }
++    val toggleFitIcons: Flow<() -> Unit> =
++        previewingIsFitIconsEnabled.map { { overridingIsFitIconsEnabled.value = !it } }
++
++    private suspend fun applyFitIcons(enabled: Boolean) {
++        val written =
++            withContext(Dispatchers.IO) {
++                try {
++                    Settings.Global.putInt(
++                        applicationContext.contentResolver,
++                        LujarchIcons.SETTING_FIT,
++                        if (enabled) 1 else 0,
++                    )
++                } catch (e: RuntimeException) {
++                    Log.e(TAG, "Fit app icons not written", e)
++                    false
++                }
++            }
++        Log.i(TAG, "Fit app icons ${if (enabled) "on" else "off"}: written $written")
++    }
++
+     //// App labels
+     private val overridingShouldShowAppLabels = MutableStateFlow<Boolean?>(null)
+     private val shouldShowAppLabels: SharedFlow<Boolean> =
+@@ -346,6 +401,8 @@ constructor(
+             isThemedIconEnabled,
+             overridingShouldShowAppLabels,
+             shouldShowAppLabels,
++            overridingIsFitIconsEnabled,
++            isFitIconsEnabled,
+         ) { args: Array<Any?> ->
+             val overridingShapeKey = args[0] as String?
+             val selectedShape = args[1] as OptionItemViewModel2<ShapeIconViewModel>
+@@ -353,6 +410,9 @@ constructor(
+             val currentIsThemedIconEnabled = args[3] as Boolean
+             val overridingShouldShowAppLabels = args[4] as Boolean?
+             val shouldShowAppLabels = args[5] as Boolean
++            val overridingIsFitIconsEnabled = args[6] as Boolean?
++            val fitIconsNeedsUpdate =
++                overridingIsFitIconsEnabled != null && overridingIsFitIconsEnabled != args[7]
+ 
+             val shapeNeedsUpdate =
+                 overridingShapeKey != null && overridingShapeKey != selectedShape.key.value
+@@ -362,8 +422,14 @@ constructor(
+             val shouldShowAppLabelsNeedsUpdate =
+                 overridingShouldShowAppLabels != null &&
+                     overridingShouldShowAppLabels != shouldShowAppLabels
+-            if (shapeNeedsUpdate || themedIconNeedsUpdate || shouldShowAppLabelsNeedsUpdate) {
++            if (
++                shapeNeedsUpdate ||
++                    themedIconNeedsUpdate ||
++                    shouldShowAppLabelsNeedsUpdate ||
++                    fitIconsNeedsUpdate
++            ) {
+                 {
++                    if (fitIconsNeedsUpdate) overridingIsFitIconsEnabled?.let { applyFitIcons(it) }
+                     if (shapeNeedsUpdate) {
+                         overridingShapeKey?.let {
+                             interactor.applyShape(it)
+@@ -403,6 +469,8 @@ constructor(
+             selectedIconStyle,
+             overridingShouldShowAppLabels,
+             shouldShowAppLabels,
++            overridingIsFitIconsEnabled,
++            isFitIconsEnabled,
+         ) { args: Array<Any?> ->
+             val overridingShapeKey = args[0] as String?
+             val selectedShape = args[1] as OptionItemViewModel2<ShapeIconViewModel>
+@@ -410,6 +478,9 @@ constructor(
+             val currentIconStyle = args[3] as IconStyle
+             val overridingShouldShowAppLabels = args[4] as Boolean?
+             val shouldShowAppLabels = args[5] as Boolean
++            val overridingIsFitIconsEnabled = args[6] as Boolean?
++            val fitIconsNeedsUpdate =
++                overridingIsFitIconsEnabled != null && overridingIsFitIconsEnabled != args[7]
+ 
+             val shapeNeedsUpdate =
+                 overridingShapeKey != null && overridingShapeKey != selectedShape.key.value
+@@ -418,8 +489,11 @@ constructor(
+             val showAppLabelsNeedsUpdate =
+                 overridingShouldShowAppLabels != null &&
+                     overridingShouldShowAppLabels != shouldShowAppLabels
+-            if (shapeNeedsUpdate || styleNeedsUpdate || showAppLabelsNeedsUpdate) {
++            if (
++                shapeNeedsUpdate || styleNeedsUpdate || showAppLabelsNeedsUpdate || fitIconsNeedsUpdate
++            ) {
+                 {
++                    if (fitIconsNeedsUpdate) overridingIsFitIconsEnabled?.let { applyFitIcons(it) }
+                     if (shapeNeedsUpdate) {
+                         overridingShapeKey?.let {
+                             interactor.applyShape(it)
+@@ -471,6 +545,7 @@ constructor(
+         overridingShapeKey.value = null
+         overridingIsThemedIconEnabled.value = null
+         overridingShouldShowAppLabels.value = null
++        overridingIsFitIconsEnabled.value = null
+         _selectedTab.value = Tab.STYLE
+     }
+ 
+@@ -478,6 +553,7 @@ constructor(
+         overridingShapeKey.value = null
+         overridingIconStyle.value = null
+         overridingShouldShowAppLabels.value = null
++        overridingIsFitIconsEnabled.value = null
+         _selectedTab.value = Tab.STYLE
+     }
+ 

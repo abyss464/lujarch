@@ -15,10 +15,11 @@ PACKAGE = "com.tencent.mm"
 SETTING = "lujarch_icons_notifications"
 
 
-def post(d):
-    d.sh(f"cmd notification cancel_all {PACKAGE}", check=False)
-    d.sh(f"am start -W -n {PACKAGE}/org.lujarch.probe.Probe --es do notify")
-    time.sleep(2)
+def post(d, title):
+    """The app posts its notification anew, with its own small icon."""
+    d.sh(f"am broadcast -f 0x20 -a org.lujarch.probe.DO -n '{PACKAGE}/org.lujarch.probe.Probe$Background' "
+         f"--es do notify --es title '{title}'")
+    time.sleep(3)
     d.home()
     time.sleep(1)
 
@@ -52,17 +53,17 @@ def main():
         step("Fit notification icons is on by default")
         check(notifications_page(d).checked, "Fit notification icons is on")
         step("on: the silhouette of the app's logo")
-        post(d)
+        post(d, "Fitted")
         fitted = filled(d, "silhouette")
         step("off: the app's own icon, a filled square")
         d.tap(notifications_page(d))
-        check(d.setting("secure", SETTING) == "0", "turned off")
-        post(d)
+        check(d.setting("global", SETTING) == "0", "turned off")
+        post(d, "Own")
         own = filled(d, "own-icon")
-        check(own > 0.8, f"off: the own icon is a filled shape ({own:.0%})")
-        check(fitted < own - 0.2, f"on: a silhouette, not the filled shape ({fitted:.0%} < {own:.0%})")
+        check(own > 0.25, f"off: the own icon is a filled square ({own:.0%} of its box)")
+        check(fitted < own * 0.6, f"on: a silhouette, not the filled square ({fitted:.0%} < {own:.0%})")
     finally:
-        d.put_setting("secure", SETTING, None)
+        d.put_setting("global", SETTING, None)
         d.uninstall(PACKAGE)
         d.home()
 

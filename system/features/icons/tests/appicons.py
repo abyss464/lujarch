@@ -8,93 +8,179 @@ timeout: 1200
 """
 import time
 
-from lujarch_test import AppProbe, check, device, note, png, run, share_near, step
+from lujarch_test import check, device, install_probe, note, png, run, step
 
 SETTING = "lujarch_icons_fit"
+# The logo probe: a white logo on a red ground, as a single picture.
+LOGO = ("org.lujarch.probe.logo", "Logo probe")
 RED = (204, 60, 40)
+# The launcher's own record of Themed icons, which Wallpaper & style sets.
+THEMED = "content query --uri content://com.android.launcher3.grid_control/icon_themed"
 
 
 def drawer_icon(d, name):
-    """The drawer's screenshot and the box of the app's icon in it."""
+    """The shares of the app's drawer icon that are red (the picture's ground) and white (the
+    ground Android puts a picture on)."""
     d.drawer()
     node = d.scroll_to(text=name)
-    path = d.shot(f"drawer-{name.lower()}")
+    return shares(d.shot(f"drawer-{name.lower().replace(' ', '-')}"), node)
+
+
+def home_icon(d, name):
+    """The same shares of the app's icon on the home screen, where Themed icons apply."""
+    d.home()
+    time.sleep(1)
+    node = next((n for n in d.ui() if n.text == name), None)
+    if not node:
+        # On the home screen as the owner puts it there: the icon's menu in the drawer.
+        d.drawer()
+        icon = d.scroll_to(text=name)
+        d.sh(f"input swipe {icon.x} {icon.y} {icon.x} {icon.y} 1200")
+        d.tap(d.wait(text="Add to home screen"))
+        time.sleep(2)
+        d.home()
+        time.sleep(1)
+        node = next((n for n in d.ui() if n.text == name), None)
+    check(node, f"{name} is on the home screen")
+    return shares(d.shot(f"home-{name.lower().replace(' ', '-')}"), node, home=True)
+
+
+def shares(path, node, home=False):
+    w, h, rows = png(path)
     x1, y1, x2, y2 = node.bounds
     size = x2 - x1
-    side = min(size, (y2 - y1)) * 3 // 5
-    left = x1 + (size - side) // 2
-    return path, (left, y1 + 8, left + side, y1 + 8 + side)
+    cx, cy, r = (x1 + x2) // 2, y1 + size * 3 // 5, size * 29 // 100
+    if home:
+        # A home screen cell is taller: its icon is the first band that stands out from the
+        # wallpaper; its label follows.
+        band = []
+        for y in range(y1, min(y2, h), 4):
+            line = rows[y][x1:x2:6]
+            if sum(1 for px in line if max(px[:3]) - min(px[:3]) > 40 or min(px[:3]) > 200) >= 5:
+                band.append(y)
+            elif band:
+                break
+        check(band, "the icon shows")
+        cy, r = (band[0] + band[-1]) // 2, (band[-1] - band[0]) * 42 // 100
+    counts, total = {"red": 0, "white": 0}, 0
+    for y in range(cy - r, cy + r, 2):
+        for x in range(cx - r, cx + r, 2):
+            if (x - cx) ** 2 + (y - cy) ** 2 > r * r:
+                continue
+            total += 1
+            pixel = rows[y][x][:3]
+            if sum(abs(a - b) for a, b in zip(pixel, RED)) < 90:
+                counts["red"] += 1
+            if min(pixel) > 225:
+                counts["white"] += 1
+    return {k: v / total for k, v in counts.items()}
 
 
-def corners_red(path, box):
-    """The share of the icon box's corners the red picture fills: a square fills them, the icon
-    shape leaves them to the wallpaper."""
-    x1, y1, x2, y2 = box
-    c = max(4, (x2 - x1) // 10)
-    shares = [share_near(path, RED, 90, (x, y, x + c, y + c), 1)
-              for x, y in ((x1, y1), (x2 - c, y1), (x1, y2 - c), (x2 - c, y2 - c))]
-    return sum(shares) / 4
-
-
-def choose(d, p, choice):
+def app_info(d):
     d.unlock()
-    d.start(f"-f 0x10008000 -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:{p.PACKAGE}")
+    d.start(f"-f 0x10008000 -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:{LOGO[0]}")
+    d.wait(text="App info", timeout=20)
+
+
+def choose(d, choice):
+    app_info(d)
     d.tap(d.scroll_to(text="Icon"))
     d.tap(d.wait(text=choice, timeout=15))
     time.sleep(2)
     d.home()
 
 
+def icons_page(d):
+    """Wallpaper & style > Icons."""
+    d.unlock()
+    d.home()
+    d.start("-n com.android.wallpaper/com.android.customization.picker.CustomizationPickerActivity")
+    d.swipe(800, 800, 200, 800)
+    d.tap(d.scroll_to(text="Icons"))
+    time.sleep(1)
+
+
+def themed(d, on):
+    """Wallpaper & style > Icons: Minimal (themed icons) or Default, applied."""
+    want = "boolean_value=1" if on else "boolean_value=0"
+    for style in ("Default" if on else "Minimal", "Minimal" if on else "Default"):
+        if want in d.sh(THEMED, check=False):
+            break
+        # The page applies a change only: the other style is applied first when the page
+        # already shows the chosen one.
+        icons_page(d)
+        d.tap(d.wait(text="Minimal" if on else "Default"))
+        time.sleep(1)
+        apply = d.find(text="Apply")
+        if apply and apply.enabled:
+            d.tap(apply, wait=4)
+            continue
+        d.tap(d.wait(text=style))
+        time.sleep(1)
+        d.tap(text="Apply", wait=4)
+    deadline = time.monotonic() + 15
+    while want not in d.sh(THEMED, check=False) and time.monotonic() < deadline:
+        time.sleep(1)
+    check(want in d.sh(THEMED, check=False), f"Themed icons {'on' if on else 'off'}")
+    d.home()
+
+
 def main():
     d = device()
-    p = AppProbe(d)
-    p.install()
+    d.uninstall(LOGO[0])
+    install_probe("logo")
     try:
         step("Fit app icons is on; the probe's picture is Redrawn by default")
-        check(d.setting("secure", SETTING) in (None, "1"), "Fit app icons is on")
-        d.unlock()
-        d.start(f"-f 0x10008000 -a android.settings.APPLICATION_DETAILS_SETTINGS "
-                f"-d package:{p.PACKAGE}")
+        check(d.setting("global", SETTING) in (None, "1"), "Fit app icons is on")
+        app_info(d)
         check("Redrawn" in d.summary("Icon"), "App info > Icon: Redrawn")
         d.tap(d.scroll_to(text="Icon"))
         for c in ("Original", "Fitted", "Redrawn"):
             check(d.wait(text=c, timeout=15), f"Icon offers {c}")
         d.shot("icon-choices")
         d.home()
-        redrawn = drawer_icon(d, "Probe")
-        step("Original: the app's own square picture")
-        choose(d, p, "Original")
-        original = drawer_icon(d, "Probe")
+        redrawn = drawer_icon(d, LOGO[1])
+        step("Original: Android's own icon for a picture, on its white ground")
+        choose(d, "Original")
+        original = drawer_icon(d, LOGO[1])
         step("Fitted: the picture on a ground of its own colors, in the icon shape")
-        choose(d, p, "Fitted")
-        fitted = drawer_icon(d, "Probe")
-        o, f, r = (corners_red(*x) for x in (original, fitted, redrawn))
-        rf = share_near(redrawn[0], RED, 90, redrawn[1], 2)
-        ff = share_near(fitted[0], RED, 90, fitted[1], 2)
-        note(f"red corners: original {o:.2f}, fitted {f:.2f}, redrawn {r:.2f}; red overall: "
-             f"fitted {ff:.2f}, redrawn {rf:.2f}")
-        check(o > 0.8, "Original keeps the square picture")
-        check(f < 0.3 and r < 0.3, "Fitted and Redrawn take the icon shape")
-        check(ff > 0.5, "Fitted keeps the picture's colors")
-        check(rf < ff - 0.2, "Redrawn draws it in one color on a plain ground")
+        choose(d, "Fitted")
+        fitted = drawer_icon(d, LOGO[1])
+        note(f"original {original}, fitted {fitted}, redrawn {redrawn}")
+        check(original["white"] > 0.4, "Original: Android puts the picture on its white ground")
+        check(fitted["red"] > 0.6 and redrawn["red"] > 0.6,
+              "Fitted and Redrawn fill the icon shape with the picture's ground")
 
-        step("Fit app icons off: the own icon, and no Icon row")
-        d.unlock()
-        d.start("-f 0x10008000 -n com.android.wallpaper/.picker.CustomizationPickerActivity", wait=3)
+        step("Themed icons on the home screen: Redrawn has a themed, one-color version")
+        with d.settings_kept(("secure", "theme_customization_overlay_packages")):
+            choose(d, "Redrawn")
+            colored = home_icon(d, LOGO[1])
+            themed(d, True)
+            redrawn_themed = home_icon(d, LOGO[1])
+            note(f"home: {colored}, themed {redrawn_themed}")
+            check(colored["red"] > 0.5, "without Themed icons, its colors")
+            check(redrawn_themed["red"] < 0.1, "with Themed icons, its themed, one-color version")
+            themed(d, False)
+
+        step("Fit app icons off, applied like the switches beside it: the own icon, no Icon row")
+        icons_page(d)
         d.tap(d.switch_of("Fit app icons"))
-        check(d.setting("secure", SETTING) == "0", "turned off")
-        off = drawer_icon(d, "Probe")
-        check(corners_red(*off) > 0.8, "every app shows its own icon")
-        d.start(f"-f 0x10008000 -a android.settings.APPLICATION_DETAILS_SETTINGS "
-                f"-d package:{p.PACKAGE}")
-        d.wait(text="App info")
+        time.sleep(1)
+        check(d.setting("global", SETTING) in (None, "1"), "toggled, nothing changes before Apply")
+        d.shot("fit-off")
+        d.tap(d.wait(text="Apply"), wait=3)
+        check(d.setting("global", SETTING) == "0", "applied, it is off")
+        off = drawer_icon(d, LOGO[1])
+        check(off["white"] > 0.4, f"every app shows its own icon ({off})")
+        app_info(d)
         rows = set()
         for _ in range(4):
             rows |= set(d.texts())
             d.swipe(540, 1800, 540, 700)
         check("Icon" not in rows, "App info has no Icon row")
     finally:
-        d.put_setting("secure", SETTING, None)
+        d.put_setting("global", SETTING, None)
+        d.uninstall(LOGO[0])
         d.home()
 
 

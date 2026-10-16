@@ -57,7 +57,7 @@ index 0000000000000000000000000000000000000000..7f8ddc4be6f47c4bf49d12936366ba87
 +</LinearLayout>
 diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..ad58bc9aab9a3257b31a0b8c5718f777017bdb3b
+index 0000000000000000000000000000000000000000..15bbf3aff7beb54fc4fea5e73b1e37f42c78cebe
 --- /dev/null
 +++ b/res/values-ja/lujarch_strings.xml
 @@ -0,0 +1,27 @@
@@ -85,12 +85,12 @@ index 0000000000000000000000000000000000000000..ad58bc9aab9a3257b31a0b8c5718f777
 +    <string name="lujarch_drawer_section_delete">削除</string>
 +    <string name="lujarch_drawer_section_expand">「%1$s」を展開</string>
 +    <string name="lujarch_drawer_section_collapse">「%1$s」を折りたたむ</string>
-+    <string name="lujarch_drawer_section_unnamed">名前のないセクション</string>
++    <string name="lujarch_drawer_sections_none">アプリをアプリドロワーの最後の行より下にドラッグすると、セクションが作成されます。</string>
 +    <string name="lujarch_drawer_section_numbered">セクション %1$d</string>
 +</resources>
 diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..844c8ab53635cf17579f31ab21538747fb4e6a0b
+index 0000000000000000000000000000000000000000..b6068b212b67e4ffe1edb0f944d52deac942372f
 --- /dev/null
 +++ b/res/values-zh-rCN/lujarch_strings.xml
 @@ -0,0 +1,27 @@
@@ -118,7 +118,7 @@ index 0000000000000000000000000000000000000000..844c8ab53635cf17579f31ab21538747
 +    <string name="lujarch_drawer_section_delete">删除</string>
 +    <string name="lujarch_drawer_section_expand">展开“%1$s”</string>
 +    <string name="lujarch_drawer_section_collapse">收起“%1$s”</string>
-+    <string name="lujarch_drawer_section_unnamed">未命名分区</string>
++    <string name="lujarch_drawer_sections_none">将应用拖到应用抽屉最后一行的下方即可新建分区。</string>
 +    <string name="lujarch_drawer_section_numbered">分区 %1$d</string>
 +</resources>
 diff --git a/res/values/lujarch_dimens.xml b/res/values/lujarch_dimens.xml
@@ -140,7 +140,7 @@ index 0000000000000000000000000000000000000000..c52aecd2822f32e87899169d6610e7df
 +</resources>
 diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..88fbecdea5b84eb1a96cc5120baa454d39939a71
+index 0000000000000000000000000000000000000000..2227718abbebfd67da5e4612d3a5586ff2549eba
 --- /dev/null
 +++ b/res/values/lujarch_strings.xml
 @@ -0,0 +1,36 @@
@@ -175,9 +175,9 @@ index 0000000000000000000000000000000000000000..88fbecdea5b84eb1a96cc5120baa454d
 +    <string name="lujarch_drawer_section_expand">Expand %1$s</string>
 +    <!-- Accessibility action on an open drawer section; %1$s is its name [CHAR LIMIT=NONE] -->
 +    <string name="lujarch_drawer_section_collapse">Collapse %1$s</string>
-+    <!-- Name shown for a drawer section the owner did not name [CHAR LIMIT=30] -->
-+    <string name="lujarch_drawer_section_unnamed">Unnamed section</string>
-+    <!-- Name of an unnamed drawer section in lists; %1$d is its place [CHAR LIMIT=30] -->
++    <!-- App drawer sections, while there is none: how one is made [CHAR LIMIT=NONE] -->
++    <string name="lujarch_drawer_sections_none">Drag an app below the last row of the app drawer to make a section.</string>
++    <!-- Name of a drawer section the owner did not name; %1$d is its place [CHAR LIMIT=30] -->
 +    <string name="lujarch_drawer_section_numbered">Section %1$d</string>
 +</resources>
 diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
@@ -249,19 +249,20 @@ index b5d4b5de847f9ec13a5914d4aac7873c5d715ba2..d927bcd9d7b545b703b34ea833e62854
              mAdapter.setIconFocusListener(mOnFocusChangeListener);
              applyPadding();
 diff --git a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
-index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa0737aa6e61 100644
+index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9269c4999f2949779446bf0fcb84e29be9dc4514 100644
 --- a/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
 +++ b/src/com/android/launcher3/allapps/AlphabeticalAppsList.java
-@@ -39,6 +39,8 @@ import androidx.recyclerview.widget.DiffUtil;
+@@ -39,6 +39,9 @@ import androidx.recyclerview.widget.DiffUtil;
  import com.android.launcher3.Flags;
  import com.android.launcher3.R;
  import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 +import com.android.launcher3.lujarch.DrawerSectionHeaderItem;
 +import com.android.launcher3.lujarch.DrawerSections;
++import com.android.launcher3.lujarch.DrawerSectionsSettings;
  import com.android.launcher3.model.data.AppInfo;
  import com.android.launcher3.model.data.ItemInfo;
  import com.android.launcher3.util.LabelComparator;
-@@ -46,6 +48,7 @@ import com.android.launcher3.views.ActivityContext;
+@@ -46,6 +49,7 @@ import com.android.launcher3.views.ActivityContext;
  
  import java.io.PrintWriter;
  import java.util.ArrayList;
@@ -269,7 +270,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
  import java.util.List;
  import java.util.Map;
  import java.util.Objects;
-@@ -94,6 +97,18 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -94,6 +98,18 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
      // The set of apps from the system
      private final List<AppInfo> mApps = new ArrayList<>();
      private final List<AppInfo> mPrivateApps = new ArrayList<>();
@@ -288,7 +289,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
      @Nullable
      private final AllAppsStore mAllAppsStore;
  
-@@ -114,6 +129,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -114,6 +130,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
      private int mNumAppRowsInAdapter;
      private Predicate<ItemInfo> mItemFilter;
      private final boolean mSortSections;
@@ -297,7 +298,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
  
      public AlphabeticalAppsList(ActivityContext activityContext, @Nullable AllAppsStore appsStore,
              WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
-@@ -124,6 +141,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -124,6 +142,8 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
          mAppNameComparator = new AppInfoComparator(context);
          mWorkProviderManager = workProfileManager;
          mPrivateProviderManager = privateProfileManager;
@@ -306,7 +307,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
          mNumAppsPerRowAllApps =
                  mActivityContext.getDeviceProfile().getAllAppsProfile().getNumShownAllAppsColumns();
          if (mAllAppsStore != null) {
-@@ -141,6 +160,11 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -141,6 +161,11 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
          mSortSections = context.getResources().getBoolean(R.bool.config_appsListSortSections);
      }
  
@@ -318,7 +319,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
      /** Set the number of apps per row when device profile changes. */
      public void setNumAppsPerRowAllApps(int numAppsPerRow) {
          mNumAppsPerRowAllApps = numAppsPerRow;
-@@ -274,7 +298,20 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -274,7 +299,20 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                      .flatMap(ArrayList::stream);
          }
  
@@ -340,7 +341,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
          privateAppStream.forEachOrdered(mPrivateApps::add);
          // Recompose the set of adapter items from the current set of apps
          if (mSearchResults.isEmpty()) {
-@@ -314,6 +351,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -314,6 +352,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                      Log.d(TAG, "Adding FastScrollSection for work edu card.");
                  }
                  position = addAppsWithSections(mApps, position);
@@ -348,7 +349,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
              }
              if (Flags.enablePrivateSpace()) {
                  position = addPrivateSpaceItems(position);
-@@ -341,6 +379,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -341,6 +380,7 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
                  item.rowIndex = 0;
                  if (BaseAllAppsAdapter.isDividerViewType(item.viewType)
                          || BaseAllAppsAdapter.isPrivateSpaceHeaderView(item.viewType)
@@ -356,7 +357,7 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
                          || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)) {
                      numAppsInSection = 0;
                  } else if (BaseAllAppsAdapter.isIconViewType(item.viewType)) {
-@@ -363,6 +402,37 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
+@@ -363,6 +403,40 @@ public class AlphabeticalAppsList implements AllAppsStore.OnUpdateListener {
          }
      }
  
@@ -372,7 +373,10 @@ index b0e467f94b91cb86ae5bd4b884d271fbfbcfa417..9c74b0617d7a8db4c185064c6327aa07
 +                continue;
 +            }
 +            boolean collapsed = mDrawerSections.isCollapsed(section.id);
-+            mAdapterItems.add(new DrawerSectionHeaderItem(section.id, section.name, collapsed));
++            mAdapterItems.add(new DrawerSectionHeaderItem(section.id, section.name,
++                    DrawerSectionsSettings.label(mActivityContext.asContext(), section,
++                            mDrawerSections.getSections().indexOf(section)),
++                    collapsed));
 +            mFastScrollerSections.add(new FastScrollSectionInfo(
 +                    section.name.isEmpty() ? DIVIDER_SECTION
 +                            : section.name.substring(0, section.name.offsetByCodePoints(0, 1)),
@@ -1154,10 +1158,10 @@ index 0000000000000000000000000000000000000000..c048b6e5352ad0083eb72d254d4d22dd
 +}
 diff --git a/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java b/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..4dc2bc30e2cc4a54b52195ea8b77de61038e83ca
+index 0000000000000000000000000000000000000000..c03bae0693b26cef7de51efeafef50fa3d814e63
 --- /dev/null
 +++ b/src/com/android/launcher3/lujarch/DrawerSectionHeaderItem.java
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,59 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + * SPDX-License-Identifier: Apache-2.0
@@ -1181,12 +1185,15 @@ index 0000000000000000000000000000000000000000..4dc2bc30e2cc4a54b52195ea8b77de61
 +public class DrawerSectionHeaderItem extends AdapterItem {
 +    public final int sectionId;
 +    public final String name;
++    /** The name, or the section's place ("Section 2") when it has none. */
++    public final String label;
 +    public final boolean collapsed;
 +
-+    public DrawerSectionHeaderItem(int sectionId, String name, boolean collapsed) {
++    public DrawerSectionHeaderItem(int sectionId, String name, String label, boolean collapsed) {
 +        super(VIEW_TYPE_DRAWER_SECTION_HEADER);
 +        this.sectionId = sectionId;
 +        this.name = name;
++        this.label = label;
 +        this.collapsed = collapsed;
 +        this.drawerSectionId = sectionId;
 +    }
@@ -1197,8 +1204,6 @@ index 0000000000000000000000000000000000000000..4dc2bc30e2cc4a54b52195ea8b77de61
 +        title.setText(name);
 +        title.setVisibility(name.isEmpty() ? View.GONE : View.VISIBLE);
 +        chevron.setVisibility(collapsed ? View.VISIBLE : View.GONE);
-+        String label = name.isEmpty()
-+                ? view.getContext().getString(R.string.lujarch_drawer_section_unnamed) : name;
 +        view.setContentDescription(view.getContext().getString(collapsed
 +                ? R.string.lujarch_drawer_section_expand
 +                : R.string.lujarch_drawer_section_collapse, label));
@@ -1212,7 +1217,8 @@ index 0000000000000000000000000000000000000000..4dc2bc30e2cc4a54b52195ea8b77de61
 +    @Override
 +    public boolean isContentSame(AdapterItem other) {
 +        return other instanceof DrawerSectionHeaderItem h
-+                && h.collapsed == collapsed && Objects.equals(h.name, name);
++                && h.collapsed == collapsed && Objects.equals(h.name, name)
++                && Objects.equals(h.label, label);
 +    }
 +}
 diff --git a/src/com/android/launcher3/lujarch/DrawerSections.java b/src/com/android/launcher3/lujarch/DrawerSections.java
@@ -1460,10 +1466,10 @@ index 0000000000000000000000000000000000000000..c409c81e8d3f441256b847ae5563ac75
 +}
 diff --git a/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java b/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..0577b22605bf1720134d541a854defbc805b74c1
+index 0000000000000000000000000000000000000000..70bece983312860890e89b0939df3bed191f88c6
 --- /dev/null
 +++ b/src/com/android/launcher3/lujarch/DrawerSectionsSettings.java
-@@ -0,0 +1,135 @@
+@@ -0,0 +1,142 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + * SPDX-License-Identifier: Apache-2.0
@@ -1505,6 +1511,13 @@ index 0000000000000000000000000000000000000000..0577b22605bf1720134d541a854defbc
 +        Context context = screen.getContext();
 +        screen.removeAll();
 +        List<DrawerSections.Section> sections = DrawerSections.get(context).getSections();
++        if (sections.isEmpty()) {
++            Preference none = new Preference(context);
++            none.setSummary(R.string.lujarch_drawer_sections_none);
++            none.setSelectable(false);
++            none.setPersistent(false);
++            screen.addPreference(none);
++        }
 +        for (int i = 0; i < sections.size(); i++) {
 +            DrawerSections.Section section = sections.get(i);
 +            Preference row = new Preference(context);
@@ -1520,7 +1533,7 @@ index 0000000000000000000000000000000000000000..0577b22605bf1720134d541a854defbc
 +    }
 +
 +    /** A section's name, or its place ("Section 2") when the owner gave it none. */
-+    static String label(Context context, DrawerSections.Section section, int index) {
++    public static String label(Context context, DrawerSections.Section section, int index) {
 +        return section.name.isEmpty()
 +                ? context.getString(R.string.lujarch_drawer_section_numbered, index + 1)
 +                : section.name;
@@ -1600,17 +1613,33 @@ index 0000000000000000000000000000000000000000..0577b22605bf1720134d541a854defbc
 +    }
 +}
 diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
-index d4b18483c008e22f85afc213c818c3ae7ba3ff7e..4269269a4d95c3ee814f2991dd37cc4c664e398e 100644
+index d4b18483c008e22f85afc213c818c3ae7ba3ff7e..ca1d8fea93a392f9eb8091edd76f1d754cd9fbb3 100644
 --- a/src/com/android/launcher3/settings/SettingsActivity.java
 +++ b/src/com/android/launcher3/settings/SettingsActivity.java
-@@ -233,6 +233,10 @@ public class SettingsActivity extends FragmentActivity
+@@ -233,6 +233,13 @@ public class SettingsActivity extends FragmentActivity
  
              getPreferenceManager().setSharedPreferencesName(LauncherFiles.SHARED_PREFERENCES_KEY);
              setPreferencesFromResource(R.xml.launcher_preferences, rootKey);
 +            if (com.android.launcher3.lujarch.DrawerSectionsSettings.KEY.equals(rootKey)) {
 +                com.android.launcher3.lujarch.DrawerSectionsSettings.fill(this);
++                if (getActivity() != null) {
++                    getActivity().setTitle(getPreferenceScreen().getTitle());
++                }
 +                return;
 +            }
  
              PreferenceScreen screen = getPreferenceScreen();
              for (int i = screen.getPreferenceCount() - 1; i >= 0; i--) {
+@@ -329,6 +336,12 @@ public class SettingsActivity extends FragmentActivity
+             LauncherApps launcherApps = getContext().getSystemService(LauncherApps.class);
+             LauncherDisplayInfo info = DisplayController.INSTANCE.get(getContext()).getInfo();
+             switch (preference.getKey()) {
++                case com.android.launcher3.lujarch.DrawerSectionsSettings.KEY:
++                    // Lujarch (LCH-1): its page is filled in code, so the screen holds no rows
++                    // and would not open on a tap by itself.
++                    preference.setOnPreferenceClickListener(p -> ((SettingsActivity) requireActivity())
++                            .onPreferenceStartScreen(this, (PreferenceScreen) p));
++                    return true;
+                 case NOTIFICATION_DOTS_PREFERENCE_KEY:
+                     return BuildConfig.NOTIFICATION_DOTS_ENABLED;
+                 case DEVELOPER_OPTIONS_KEY:
