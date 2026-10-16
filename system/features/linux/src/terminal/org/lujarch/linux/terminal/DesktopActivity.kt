@@ -184,6 +184,7 @@ class DesktopActivity : LinuxActivity() {
     /** While started: a connection to the desktop, made again when it ends; why there is none. */
     private suspend fun keepAttached() {
         var since = 0L
+        var failed: Int? = null
         while (true) {
             val h = handle
             if (h != 0L && !NativeDisplay.nativeAttached(h)) {
@@ -191,9 +192,12 @@ class DesktopActivity : LinuxActivity() {
                     val connection = Linux.call("attachDisplay") { it.attachDisplay() }
                     if (handle == h) NativeDisplay.nativeAttach(h, connection.detachFd()) else connection.close()
                     since = System.currentTimeMillis()
+                    failed = null
                     message.visibility = View.GONE
                 } catch (e: LinuxException) {
-                    Log.w(TAG, e.message ?: "attachDisplay")
+                    // Once for each reason, not at every retry.
+                    if (failed != e.code) Log.w(TAG, e.message ?: "attachDisplay")
+                    failed = e.code
                     show(
                         when (e.code) {
                             ILinux.ERROR_NOT_RUNNING -> R.string.state_stopped
