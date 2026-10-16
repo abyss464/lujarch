@@ -36,7 +36,7 @@ index 799ac531193ca9aeb6c3fb5164b018c40e82ba2d..c656c90c57e2809677b522f501b8c002
                          android:layout_width="wrap_content"
 diff --git a/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..735cdee468dbe1fe25ec6296f263930e53517d03
+index 0000000000000000000000000000000000000000..ca438d51ec7818c278632ee80db171559d2a7950
 --- /dev/null
 +++ b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
 @@ -0,0 +1,57 @@
@@ -83,9 +83,9 @@ index 0000000000000000000000000000000000000000..735cdee468dbe1fe25ec6296f263930e
 +    <string name="lujarch_sb_chip_battery_plug">充電器の接続</string>
 +    <string name="lujarch_sb_chip_display_connected">ディスプレイの接続</string>
 +    <string name="lujarch_sb_chip_live">ライブ通知</string>
-+    <string name="lujarch_sb_privacy_chip">カメラとマイクのチップ</string>
++    <string name="lujarch_sb_privacy_chip">プライバシー チップ</string>
 +    <string name="lujarch_sb_privacy_chip_summary">オフ: このチップが表示されずにアプリがカメラやマイクを使用できます</string>
-+    <string name="lujarch_sb_privacy_location">位置情報インジケーター</string>
++    <string name="lujarch_sb_privacy_location">位置情報</string>
 +    <string name="lujarch_sb_privacy_location_summary">オフ: このインジケーターが表示されずにアプリが位置情報を読み取れます</string>
 +    <string name="lujarch_sb_privacy_ring">プライバシー リング</string>
 +    <string name="lujarch_sb_privacy_ring_summary">オフ: 代わりにプライバシー ドットが表示されます（オンの場合）</string>
@@ -99,7 +99,7 @@ index 0000000000000000000000000000000000000000..735cdee468dbe1fe25ec6296f263930e
 +</resources>
 diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..bba411717fccff85b4351a207cf80bd024b9126b
+index 0000000000000000000000000000000000000000..85838f77e2ac703fbb562452afe068f49255890f
 --- /dev/null
 +++ b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
 @@ -0,0 +1,63 @@
@@ -151,9 +151,9 @@ index 0000000000000000000000000000000000000000..bba411717fccff85b4351a207cf80bd0
 +    <string name="lujarch_sb_chip_display_connected">显示屏已连接</string>
 +    <string name="lujarch_sb_chip_live">实时通知</string>
 +
-+    <string name="lujarch_sb_privacy_chip">相机和麦克风提示</string>
++    <string name="lujarch_sb_privacy_chip">隐私提示</string>
 +    <string name="lujarch_sb_privacy_chip_summary">关闭后，应用使用相机或麦克风时不会显示此提示</string>
-+    <string name="lujarch_sb_privacy_location">位置信息提示</string>
++    <string name="lujarch_sb_privacy_location">位置信息</string>
 +    <string name="lujarch_sb_privacy_location_summary">关闭后，应用读取位置信息时不会显示此提示</string>
 +    <string name="lujarch_sb_privacy_ring">隐私环</string>
 +    <string name="lujarch_sb_privacy_ring_summary">关闭后，改为显示隐私圆点（如已开启）</string>
@@ -166,9 +166,25 @@ index 0000000000000000000000000000000000000000..bba411717fccff85b4351a207cf80bd0
 +    <string name="lujarch_sb_lyrics">状态栏歌词</string>
 +    <string name="lujarch_sb_lyrics_summary">播放带歌词的歌曲时，当前这句显示在状态栏左侧；点按打开播放器</string>
 +</resources>
+diff --git a/packages/SystemUI/res/values/config.xml b/packages/SystemUI/res/values/config.xml
+index 140bb805af522ea0a29cbc1ff4e754227d67f5fc..391eaf3d0a22c2a0539383d6072c3f24dc53d046 100644
+--- a/packages/SystemUI/res/values/config.xml
++++ b/packages/SystemUI/res/values/config.xml
+@@ -577,10 +577,7 @@
+          status bar that are part of this list are never displayed. Each item in the list must be a
+          string defined in core/res/res/config.xml to properly exclude the icon.
+      -->
+-    <string-array name="config_statusBarIconsToExclude" translatable="false">
+-        <item>@*android:string/status_bar_rotate</item>
+-        <item>@*android:string/status_bar_headset</item>
+-    </string-array>
++    <string-array name="config_statusBarIconsToExclude" translatable="false" />
+ 
+ 
+     <!-- Whether to show estimate in QS header. Default to false in case there's not enough
 diff --git a/packages/SystemUI/res/values/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..1af5eda32f780541be6ecdd3686b83ff3afc757c
+index 0000000000000000000000000000000000000000..521f8d59ec85cdde28e5e7f959322e20ec6195d5
 --- /dev/null
 +++ b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
 @@ -0,0 +1,75 @@
@@ -231,9 +247,9 @@ index 0000000000000000000000000000000000000000..1af5eda32f780541be6ecdd3686b83ff
 +
 +    <!-- Privacy indicators: each says what an app can do unseen once the switch is off
 +         [CHAR LIMIT=40] [CHAR LIMIT=80] -->
-+    <string name="lujarch_sb_privacy_chip">Camera and microphone chip</string>
++    <string name="lujarch_sb_privacy_chip">Privacy chip</string>
 +    <string name="lujarch_sb_privacy_chip_summary">Off: apps can use the camera or microphone without this chip showing</string>
-+    <string name="lujarch_sb_privacy_location">Location indicator</string>
++    <string name="lujarch_sb_privacy_location">Location</string>
 +    <string name="lujarch_sb_privacy_location_summary">Off: apps can read your location without this indicator showing</string>
 +    <string name="lujarch_sb_privacy_ring">Privacy ring</string>
 +    <string name="lujarch_sb_privacy_ring_summary">Off: the privacy dot shows in its place, if it is on</string>
@@ -454,6 +470,77 @@ index a781ab309b321431c1e423510431de251b0382e3..6303271336102e173b0621a66184c3e5
          privacyChipLogged = false
      }
  
+diff --git a/packages/SystemUI/src/com/android/systemui/shade/ShadeHeaderController.kt b/packages/SystemUI/src/com/android/systemui/shade/ShadeHeaderController.kt
+index 15bb93fade3285f5a519c3558372c4dd030ed63b..fef64ab9c5fb03d5bf0ea2d3be2624e9e795c216 100644
+--- a/packages/SystemUI/src/com/android/systemui/shade/ShadeHeaderController.kt
++++ b/packages/SystemUI/src/com/android/systemui/shade/ShadeHeaderController.kt
+@@ -71,6 +71,7 @@ import com.android.systemui.shade.carrier.ShadeCarrierGroup
+ import com.android.systemui.shade.carrier.ShadeCarrierGroupController
+ import com.android.systemui.shade.data.repository.ShadeDisplaysRepository
+ import com.android.systemui.statusbar.phone.StatusBarLocation
++import com.android.systemui.statusbar.lujarch.StatusBarHideList
+ import com.android.systemui.statusbar.phone.StatusIconContainer
+ import com.android.systemui.statusbar.phone.StatusOverlayHoverListenerFactory
+ import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
+@@ -122,6 +123,7 @@ constructor(
+     private val nextAlarmController: NextAlarmController,
+     private val activityStarter: ActivityStarter,
+     private val statusOverlayHoverListenerFactory: StatusOverlayHoverListenerFactory,
++    private val hideList: StatusBarHideList,
+ ) : ViewController<View>(header), Dumpable {
+ 
+     private val statusBarContentInsetsProvider
+@@ -131,6 +133,7 @@ constructor(
+ 
+     companion object {
+         const val TRACK_NAME = "ShadeHeaderController"
++        private const val BATTERY_SLOT = "battery"
+ 
+         /** IDs for transitions and constraints for the [MotionLayout]. */
+         @VisibleForTesting internal val HEADER_TRANSITION_ID = R.id.header_transition
+@@ -359,7 +362,7 @@ constructor(
+         SystemStatusIconsLayoutHelper.configurePaddingForNewStatusBarIcons(statusIcons)
+ 
+         // Configure the compose battery view
+-        val batteryComposeView = createBatteryComposeView()
++        batteryComposeView = createBatteryComposeView()
+         mView.requireViewById<ViewGroup>(R.id.hover_system_icons_container).apply {
+             addView(batteryComposeView, -1)
+         }
+@@ -391,6 +394,16 @@ constructor(
+             android.graphics.Color.WHITE
+         }
+ 
++    private lateinit var batteryComposeView: ComposeView
++
++    private val hideListListener = StatusBarHideList.Listener { updateBatteryHidden() }
++
++    /** The battery item of Status bar items (SB-1) holds in the header as in the status bar. */
++    private fun updateBatteryHidden() {
++        batteryComposeView.visibility =
++            if (hideList.isHidden(BATTERY_SLOT)) View.GONE else View.VISIBLE
++    }
++
+     private fun createBatteryComposeView(): ComposeView {
+         return ComposeView(mView.context).apply {
+             setContent {
+@@ -416,6 +429,8 @@ constructor(
+ 
+     override fun onViewAttached() {
+         privacyIconsController.chipVisibilityListener = chipVisibilityListener
++        hideList.addListener(hideListListener)
++        updateBatteryHidden()
+         updateVisibility()
+         updateTransition()
+         updateCarrierGroupPadding()
+@@ -441,6 +456,7 @@ constructor(
+ 
+     override fun onViewDetached() {
+         clock.setOnClickListener(null)
++        hideList.removeListener(hideListListener)
+         privacyIconsController.chipVisibilityListener = null
+         dumpManager.unregisterDumpable(this::class.java.simpleName)
+         configurationController.removeCallback(configurationControllerListener)
 diff --git a/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt b/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt
 index b2045c548aac686ef3cda00a86ebf109130e9332..f35ea6f966c60fa47970d3d7037c695b2d8a108d 100644
 --- a/packages/SystemUI/src/com/android/systemui/shade/data/repository/PrivacyChipRepository.kt
