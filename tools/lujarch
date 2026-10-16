@@ -2809,6 +2809,9 @@ def restart_framework(host_out):
 def restart_device(host_out, files):
     """Restarts the virtual device with its data kept, then labels the files with the file
     contexts that start loaded, and restarts it once more when that changed a label."""
+    # The package manager keeps each package's parsed manifest under a key that an APEX's
+    # packages do not change when the APEX is replaced; it parses them again without its cache.
+    adb(host_out, "shell", "rm -rf /data/system/package_cache/*")
     adb(host_out, "reboot", timeout=60)
     time.sleep(10)
     if not wait_booted(host_out, 600):
@@ -2933,6 +2936,10 @@ def vm_sync(host, info, host_out, modules):
                 f"programs:\n{listed(stale)}")
             restart_device(host_out, files)
             restarted.append("the device")
+    if changed:
+        # Settings search indexes the pages again only when the build's fingerprint changes, as an
+        # update changes it; a copy keeps it, so the index is dropped and built from the copies.
+        adb(host_out, "shell", "pm", "clear", "com.android.settings.intelligence")
     log(f"synced {len(files)} files{' of ' + ' '.join(synced) if synced else ''}, "
         f"copied {len(changed)}; restarted {', '.join(restarted) or 'nothing'}; "
         f"adb 127.0.0.1:{ADB_PORT}")

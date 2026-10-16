@@ -43,7 +43,9 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   (zygote, system_server and the apps) for apps, overlays, permissions and the system
   configuration; the whole device for what init and the kernel read only when it starts (init
   scripts, the SELinux policy and file contexts, VINTF, the framework's jars, properties), for
-  files no known reader reads, and when a process still runs a replaced program. The boot image
+  files no known reader reads, and when a process still runs a replaced program. A whole-device
+  restart parses every package's manifest again, and after any copy Settings search builds its
+  index again, as both happen after an update. The boot image
   (`dex_bootjars`) and the boot classpath jars of `system` are built and copied as one unit:
   naming one of them brings all. Code compiled ahead of time against an earlier boot image and
   not copied with the unit runs without that compiled code. The SELinux policy of `system_ext`
