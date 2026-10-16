@@ -1,0 +1,98 @@
+diff --git a/recovery.cpp b/recovery.cpp
+index 44c7261f021c11bb3c02cd4e282879ae52662c97..1cf3cfa089558e5b038d007cd17731b9447d2bf0 100644
+--- a/recovery.cpp
++++ b/recovery.cpp
+@@ -29,7 +29,6 @@
+ #include <functional>
+ #include <iterator>
+ #include <memory>
+-#include <regex>
+ #include <string>
+ #include <vector>
+ 
+@@ -883,17 +882,9 @@ Device::BuiltinAction start_recovery(Device* device, const std::vector<std::stri
+     ui->SetStage(st_cur, st_max);
+   }
+ 
+-  // Extract the YYYYMMDD / YYYYMMDD_HHMMSS timestamp from the full version string.
+-  // Assume the first instance of "-[0-9]{8}-", or "-[0-9]{8}_[0-9]{6}-" in case
+-  // LINEAGE_VERSION_APPEND_TIME_OF_DAY is set to true has the desired date.
+-  std::string ver = android::base::GetProperty("ro.lineage.version", "");
+-  std::smatch ver_date_match;
+-  std::regex_search(ver, ver_date_match, std::regex("-(\\d{8}(_\\d{6})?)-"));
+-  std::string ver_date = ver_date_match.str(1);  // Empty if no match.
+-
++  // Lujarch (BRD-3): the system's name and version
+   std::vector<std::string> title_lines = {
+-    "Version " + android::base::GetProperty("ro.lineage.build.version", "(unknown)") +
+-        " (" + ver_date + ")",
++    "Lujarch " + android::base::GetProperty("ro.lujarch.version", "(unknown)"),
+   };
+   title_lines.push_back("Product name - " + android::base::GetProperty("ro.product.device", ""));
+   if (android::base::GetBoolProperty("ro.build.ab_update", false)) {
+diff --git a/recovery_ui/screen_ui.cpp b/recovery_ui/screen_ui.cpp
+index 0dcc4c6dde9f9fb3f217d8786bc7e20b0812ee75..2c5be3cff5b8552a2f82d672948336bbd1354a2f 100644
+--- a/recovery_ui/screen_ui.cpp
++++ b/recovery_ui/screen_ui.cpp
+@@ -581,10 +581,11 @@ void ScreenRecoveryUI::draw_foreground_locked() {
+   }
+ }
+ 
+-/* recovery dark:  #7C4DFF
+-   recovery light: #F890FF
+-   fastbootd dark: #E65100
+-   fastboot light: #FDD835 */
++/* Lujarch (BRD-3): the mark's colours, the same in recovery and fastbootd, whose header images
++   name the mode:
++     red ochre   #B5462B  the selected menu row and the scrollbar; the unselected row is 20% of it
++     light ochre #D6998A  the header and the info lines
++     #FFF5EE              the text on the selected row */
+ void ScreenRecoveryUI::SetColor(UIElement e) const {
+   switch (e) {
+     case UIElement::BATTERY_LOW:
+@@ -594,41 +595,24 @@ void ScreenRecoveryUI::SetColor(UIElement e) const {
+         gr_color(0xc7, 0x15, 0x85, 255);
+       break;
+     case UIElement::INFO:
+-      if (fastbootd_logo_enabled_)
+-        gr_color(0xfd, 0xd8, 0x35, 255);
+-      else
+-        gr_color(0xf8, 0x90, 0xff, 255);
+-      break;
+     case UIElement::HEADER:
+-      if (fastbootd_logo_enabled_)
+-        gr_color(0xfd, 0xd8,0x35, 255);
+-      else
+-        gr_color(0xf8, 0x90, 0xff, 255);
++      gr_color(0xd6, 0x99, 0x8a, 255);
+       break;
+     case UIElement::MENU:
+       gr_color(0xd8, 0xd8, 0xd8, 255);
+       break;
+     case UIElement::MENU_BG:
+-      if (fastbootd_logo_enabled_)
+-        gr_color(0xe6 * 0.20, 0x51 * 0.20, 0x00 * 0.20, 255);
+-      else
+-        gr_color(0x7c * 0.20, 0x4d * 0.20, 0xff * 0.20, 255);
++      gr_color(0xb5 * 0.20, 0x46 * 0.20, 0x2b * 0.20, 255);
+       break;
+     case UIElement::MENU_SEL_BG:
+     case UIElement::SCROLLBAR:
+-      if (fastbootd_logo_enabled_)
+-        gr_color(0xe6, 0x51, 0x00, 255);
+-      else
+-        gr_color(0x7c, 0x4d, 0xff, 255);
++      gr_color(0xb5, 0x46, 0x2b, 255);
+       break;
+     case UIElement::MENU_SEL_BG_ACTIVE:
+       gr_color(0, 156, 100, 255);
+       break;
+     case UIElement::MENU_SEL_FG:
+-      if (fastbootd_logo_enabled_)
+-        gr_color(0, 0, 0, 255);
+-      else
+-        gr_color(0xd8, 0xd8, 0xd8, 255);
++      gr_color(0xff, 0xf5, 0xee, 255);
+       break;
+     case UIElement::LOG:
+       gr_color(196, 196, 196, 255);

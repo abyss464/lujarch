@@ -6,10 +6,31 @@ prebuilt_etc {
     system_ext_specific: true,
 }
 
+// The same in recovery and fastbootd, whose title names the system (BRD-3).
+prebuilt_etc {
+    name: "lujarch_branding_version_recovery.rc",
+    src: "generated/version.rc",
+    sub_dir: "init",
+    recovery: true,
+}
+
 // Settings' launcher icon (BRD-2).
 runtime_resource_overlay {
     name: "LujarchBrandingSettingsIcon",
     manifest: "src/overlay/settings/AndroidManifest.xml",
     resource_dirs: ["src/overlay/settings/res"],
     system_ext_specific: true,
+}
+
+// The mark's geometry for SystemUI's moments (BRD-3), from the generated Kotlin data.
+filegroup {
+    name: "lujarch_branding_symbol_data",
+    srcs: ["generated/SymbolData.kt"],
+}
+
+// The boot animation (MOT-1, BRD-3), which LineageOS' bootanimation.zip installs in place of its
+// own, the dark theme's included: it is black already.
+filegroup {
+    name: "lujarch_branding_bootanimation",
+    srcs: ["generated/bootanimation.zip"],
 }

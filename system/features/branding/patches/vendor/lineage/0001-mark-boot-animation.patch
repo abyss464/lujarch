@@ -1,0 +1,14 @@
+diff --git a/bootanimation/Android.bp b/bootanimation/Android.bp
+index bcd8e3fa1b308761a890d6caead05c6c0b3b24cc..6b9ce15ce69058934a4a19fa314f2124793e9631 100644
+--- a/bootanimation/Android.bp
++++ b/bootanimation/Android.bp
+@@ -49,7 +49,8 @@ genrule {
+ 
+ prebuilt_media {
+     name: "bootanimation.zip",
+-    src: ":gen-bootanimation.zip",
++    // Lujarch (MOT-1): the mark's (features/branding)
++    src: ":lujarch_branding_bootanimation",
+     product_specific: true,
+ }
+ 

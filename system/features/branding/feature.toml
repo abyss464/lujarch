@@ -25,3 +25,29 @@ res = ["packages/apps/SetupWizard/app/src/main/res"]
 [renames.updater]
 package = "org.lineageos.updater"
 res = ["packages/apps/Updater/app/src/main/res"]
+
+# The mark's images (BRD-3), each made from the one drawing in src/mark: the geometry SystemUI's
+# moments draw and the System updates card's mark and colours (into the card's rename overlay),
+# at every staging; the boot animation (MOT-1) and recovery's and fastbootd's images by
+# `lujarch fetch`, since they need Node and rsvg-convert.
+[generated.symbol_data]
+script = "src/mark/kotlin.py"
+output = "SymbolData.kt"
+
+[generated.updater_mark]
+script = "src/mark/vector.py"
+output = "updater/res/drawable/lineage_mark_tight.xml"
+
+[generated.updater_colors]
+script = "src/mark/colors.py"
+output = "updater/res/values/colors.xml"
+
+[generated.bootanimation]
+script = "src/mark/bootanimation.py"
+output = "bootanimation.zip"
+fetch = ["node", "rsvg-convert"]
+
+[generated.recovery]
+script = "src/mark/recovery.py"
+output = "recovery/res"
+fetch = ["node", "rsvg-convert"]

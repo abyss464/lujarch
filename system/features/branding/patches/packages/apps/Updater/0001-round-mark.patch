@@ -1,0 +1,14 @@
+diff --git a/app/src/main/java/org/lineageos/updater/deviceinfo/UpdaterCard.kt b/app/src/main/java/org/lineageos/updater/deviceinfo/UpdaterCard.kt
+index 2d7795f93c9cb890fe366db3706bb3851410d01b..6ef1c35098650171826014a55acacf57dd020eaf 100644
+--- a/app/src/main/java/org/lineageos/updater/deviceinfo/UpdaterCard.kt
++++ b/app/src/main/java/org/lineageos/updater/deviceinfo/UpdaterCard.kt
+@@ -52,7 +52,8 @@ import kotlin.math.roundToInt
+ private const val MARK_X_HEIGHT_RATIO = 0.55f
+ 
+ // Brand guide: "Do not warp, transform". Derive width from height to keep logo proportions.
+-private const val MARK_WIDTH_MULTIPLIER = 2.5f
++// Lujarch (BRD-3): the mark is round.
++private const val MARK_WIDTH_MULTIPLIER = 1f
+ 
+ // Brand guide: "higher numbers' lower edges". Scale the gap from the mark, not a fixed dp.
+ private const val VERSION_MARK_SPACING_RATIO = 0.10f
