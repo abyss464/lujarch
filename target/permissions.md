@@ -16,7 +16,9 @@ made an app stop.
 
 Every permission, special app access and background control of this file takes its choices from
 this one set, with the same words everywhere, and offers only the choices that act differently
-for it.
+for it. A choice Android offers for one permission that acts unlike every choice of the set keeps
+Android's words: Always allow all and Allow limited access for Photos and videos, Allow to keep
+app working for Nearby devices, Ask every time or allow when you share for Location.
 
 - Allow only while using the app: the access works while the app is on screen or runs a
   foreground service the user sees.
