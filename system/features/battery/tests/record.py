@@ -13,7 +13,9 @@ from lujarch_test import AppProbe, check, device, note, run, step
 
 RECORD = "lujarch_battery_record"
 FULL = "lujarch_battery_full_history"
-DAYS = re.compile(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today)$")
+# The chart's days and hours, as it describes them: "October 10, <1 mAh", "12:00 - 13:00, 5 mW".
+DAY = re.compile(r"^(Today|[A-Z][a-z]+ \d{1,2}), ")
+HOUR = re.compile(r"^\d\d:\d\d - \d\d:\d\d, ")
 
 
 def usage_page(d):
@@ -24,9 +26,16 @@ def usage_page(d):
 
 
 def menu(d):
+    """The menu's items, each with whether its check box is ticked."""
     d.tap(desc="More options")
     time.sleep(1)
-    return {n.text: n.checked for n in d.ui() if n.text}
+    nodes = d.ui()
+    items = {}
+    for n in nodes:
+        if n.text:
+            boxes = [b for b in nodes if b.checkable and abs(b.y - n.y) < 40]
+            items[n.text] = boxes[0].checked if boxes else None
+    return items
 
 
 def wake_lock_recorded(d, p):
@@ -49,10 +58,15 @@ def main():
     try:
         step("Battery usage: the past 7 days by the hour, as a chart and per app")
         usage_page(d)
-        texts = d.texts()
-        days = [t for t in texts if DAYS.match(t)]
-        check(len(days) == 7, f"seven days ({days})")
-        check(any(re.fullmatch(r"\d\d", t) for t in texts), "hours on the axis")
+        nodes = d.ui()
+        days = [n.desc for n in nodes if DAY.match(n.desc)]
+        hours = [n for n in nodes if HOUR.match(n.desc)]
+        note(f"days: {days}")
+        check(len(days) == 7 and days[-1].startswith("Today"), f"the past 7 days ({len(days)})")
+        check(len(hours) == 24, f"today hour by hour ({len(hours)} hours)")
+        used = next((n for n in hours if not n.desc.endswith(" 0\u00a0mW")), hours[-1])
+        d.tap(used)
+        check(d.wait(text=used.desc.split(",")[0], timeout=10), f"an hour opens its record ({used.desc})")
         d.shot("battery-usage")
         items = menu(d)
         note(f"menu: {items}")

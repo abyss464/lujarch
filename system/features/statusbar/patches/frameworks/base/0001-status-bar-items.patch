@@ -2352,7 +2352,7 @@ index 913d6cf3c800a39712f785e82e141c80c47f7bc9..ff63af3a6a75d4ec09a716236dc7b798
                  setList(mHideList);
              }
 diff --git a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
-index ee4dc9ea52c59234c05e3d41108b93959b9f580f..af5c4b89b3964f1ca1160ed06baf7abfefdc26ba 100644
+index ee4dc9ea52c59234c05e3d41108b93959b9f580f..e013ac5867693f223254e1ad1742ed7fa9eb865a 100644
 --- a/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
 +++ b/packages/SystemUI/src/com/android/systemui/tuner/StatusBarTuner.java
 @@ -15,15 +15,28 @@
@@ -2384,7 +2384,7 @@ index ee4dc9ea52c59234c05e3d41108b93959b9f580f..af5c4b89b3964f1ca1160ed06baf7abf
  public class StatusBarTuner extends SettingsBasePreferenceFragment {
  
      private MetricsLogger mMetricsLogger;
-@@ -31,6 +44,27 @@ public class StatusBarTuner extends SettingsBasePreferenceFragment {
+@@ -31,6 +44,33 @@ public class StatusBarTuner extends SettingsBasePreferenceFragment {
      @Override
      public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
          setPreferencesFromResource(R.xml.status_bar_prefs, rootKey);
@@ -2408,6 +2408,12 @@ index ee4dc9ea52c59234c05e3d41108b93959b9f580f..af5c4b89b3964f1ca1160ed06baf7abf
 +                }
 +                category.addPreference(pref);
 +            }
++        }
++        // A Settings search result names the row to bring into view.
++        final String highlight = getActivity() == null ? null
++                : getActivity().getIntent().getStringExtra(":settings:fragment_args_key");
++        if (savedInstanceState == null && highlight != null) {
++            scrollToPreference(highlight);
 +        }
      }
  

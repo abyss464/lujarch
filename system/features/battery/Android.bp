@@ -1,0 +1,8 @@
+// The switches of Battery usage's menu in Settings search.
+android_library {
+    name: "LujarchBatterySettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+}

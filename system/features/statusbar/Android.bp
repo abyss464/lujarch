@@ -5,3 +5,12 @@ runtime_resource_overlay {
     resource_dirs: ["src/overlay/lineageparts/res"],
     system_ext_specific: true,
 }
+
+// The switches of Status bar items in Settings search.
+android_library {
+    name: "LujarchStatusbarSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+}

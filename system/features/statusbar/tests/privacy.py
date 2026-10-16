@@ -21,16 +21,17 @@ def items_page(d):
 
 
 def during(d, p, action, seconds=14):
-    """What the top of the screen shows while the probe does action for seconds."""
+    """The status bar's elements (description and id) while the probe does action."""
     p.clear()
     d.sh(f"am start -n {p.PACKAGE}/.Probe --activity-single-top --es do {action} "
          f"--ei seconds {seconds}")
-    time.sleep(4)
+    time.sleep(2)
+    d.home()
     seen = set()
-    for _ in range(3):
-        seen |= {(n.desc or n.text) for n in d.ui(windows=True) if n.bounds[3] <= 200
-                 and (n.desc or n.text)}
-        time.sleep(1)
+    for _ in range(4):
+        seen |= {(n.desc or n.text, n.rid.split("/")[-1]) for n in d.ui(windows=True)
+                 if n.bounds[3] <= 200 and (n.desc or n.text)}
+        time.sleep(0.5)
     deadline = time.monotonic() + seconds + 10
     while action not in p.results() and time.monotonic() < deadline:
         time.sleep(1)
@@ -38,8 +39,13 @@ def during(d, p, action, seconds=14):
     return seen
 
 
-def announced(seen, word):
-    return any(word in s.lower() for s in seen)
+def chip(seen, word):
+    """Whether the privacy chip announces word."""
+    return any(rid == "privacy_chip" and word in desc.lower() for desc, rid in seen)
+
+
+def location(seen):
+    return any("location" in desc.lower() for desc, _ in seen)
 
 
 def main():
@@ -59,9 +65,9 @@ def main():
         d.shot("privacy-indicators")
 
         step("on: the chip announces the microphone, the indicator the location")
-        check(announced(during(d, p, "mic"), "microphone"), "the chip announces the microphone")
+        check(chip(during(d, p, "mic"), "microphone"), "the chip announces the microphone")
         d.shot("mic-in-use")
-        check(announced(during(d, p, "track"), "location"), "the location indicator shows")
+        check(location(during(d, p, "track")), "the location indicator shows")
 
         step("off without a confirmation: nothing announces it")
         items_page(d)
@@ -70,8 +76,11 @@ def main():
             time.sleep(1)
             check(not d.find(text="Cancel") and not d.switch_of(name).checked,
                   f"{name} turned off without a confirmation")
-        check(not announced(during(d, p, "mic"), "microphone"), "no chip for the microphone")
-        check(not announced(during(d, p, "track"), "location"), "no location indicator")
+        seen = during(d, p, "mic")
+        check(not chip(seen, "microphone"), "no chip for the microphone")
+        check(any(rid.startswith("privacy_dot") for _, rid in seen),
+              "the privacy dot, still on, still shows")
+        check(not location(during(d, p, "track")), "no location indicator")
     finally:
         items_page(d)
         for name in SWITCHES:
