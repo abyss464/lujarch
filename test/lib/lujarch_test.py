@@ -94,6 +94,7 @@ class Node:
         self.checkable = attrs.get("checkable") == "true"
         self.enabled = attrs.get("enabled") == "true"
         self.selected = attrs.get("selected") == "true"
+        self.password = attrs.get("password") == "true"
         x1, y1, x2, y2 = map(int, re.findall(r"\d+", attrs.get("bounds", "[0,0][0,0]")))
         self.bounds = (x1, y1, x2, y2)
         self.x, self.y = (x1 + x2) // 2, (y1 + y2) // 2
@@ -252,23 +253,37 @@ class Device:
         """The screen as the screen reader probe (test/probes/ui) answers it, started on the
         first call; None when it cannot run. It reads pages that never fall still, which
         uiautomator's dump refuses."""
+        out = self._reader(b"windows\n" if windows else b"active\n")
+        return out if out and "<hierarchy" in out else None
+
+    def _reader(self, command, timeout=10):
+        """The screen reader probe's answer to a command, the probe installed as its source is
+        now and started on the first call; None when it cannot run."""
         port = 27100 + int(self.serial.rsplit(":", 1)[-1]) - 6520
 
         def ask():
             with contextlib.suppress(OSError):
-                with socket.create_connection(("127.0.0.1", port), timeout=10) as c:
-                    c.sendall(b"windows\n" if windows else b"active\n")
+                with socket.create_connection(("127.0.0.1", port), timeout=timeout) as c:
+                    c.sendall(command)
                     data = b""
                     while chunk := c.recv(65536):
                         data += chunk
-                if b"<hierarchy" in data:
+                if data:
                     return data.decode("utf-8", "replace")
             return None
 
+        apk = probe("ui")
+        if getattr(self, "_reader_apk", None) == apk and (out := ask()) is not None:
+            return out
+        stamp = "/data/local/tmp/lujarch-ui.apk-name"
+        if self.sh(f"cat {stamp}", check=False).strip() != apk.name or \
+                not self.package_installed("org.lujarch.probe.ui"):
+            self.sh("am force-stop org.lujarch.probe.ui", check=False)
+            self.install(apk)
+            self.sh(f"echo {apk.name} > {stamp}")
+        self._reader_apk = apk
         if (out := ask()) is not None:
             return out
-        if not self.package_installed("org.lujarch.probe.ui"):
-            self.install(probe("ui"))
         self.adb("forward", f"tcp:{port}", "localabstract:lujarch-ui", check=False)
         subprocess.Popen([ADB, "-s", self.serial, "shell",
                           "am instrument -w org.lujarch.probe.ui/.Server"],
@@ -279,6 +294,14 @@ class Device:
             if (out := ask()) is not None:
                 return out
         return None
+
+    def drag(self, x1, y1, x2, y2, hold=1.0, move=0.8):
+        """A finger pressed at x1, y1 for hold seconds, moved to x2, y2 over move seconds,
+        resting there a moment, then lifted, as one gesture."""
+        done = self._reader(f"drag {x1} {y1} {x2} {y2} {int(hold * 1000)} {int(move * 1000)}\n"
+                            .encode(), timeout=30)
+        check(done and done.strip() == "ok", f"dragged from {x1}, {y1} to {x2}, {y2}")
+        time.sleep(1)
 
     def ui(self, tries=3, windows=False):
         """The screen's elements: of the focused window, or with windows of every window (the
@@ -343,9 +366,9 @@ class Device:
         return n
 
     def middle(self, n, **what):
-        """The element found by `what`, brought from near an edge, where a tap lands on the bars
-        or the gesture area and its row can be cut off, to the middle of the screen."""
-        if 300 < n.y < 2150:
+        """The element found by `what`, brought from under the status bar or the gesture area,
+        where a tap lands on them and its row can be cut off, to the middle of the screen."""
+        if 100 < n.y < 2150:
             return n
         self.swipe(540, 1200 + (n.y - 1200) // 2, 540, 1200 - (n.y - 1200) // 2, 600)
         return self.find(**what) or n

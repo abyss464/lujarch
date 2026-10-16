@@ -7,6 +7,9 @@ import android.graphics.Rect;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.InputDevice;
+import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
@@ -19,7 +22,8 @@ import java.util.List;
 /**
  * Answers each connection to the abstract socket "lujarch-ui" with the screen's elements as
  * uiautomator's dump writes them: "active" for the focused window, "windows" for every window.
- * It reads the tree as it is, without waiting for the screen to be still.
+ * It reads the tree as it is, without waiting for the screen to be still. "drag x1 y1 x2 y2 hold
+ * move" drags as a finger does: pressed for hold ms, moved over move ms, rested, lifted.
  */
 public class Server extends Instrumentation {
     private static final String SOCKET = "lujarch-ui";
@@ -44,6 +48,18 @@ public class Server extends Instrumentation {
                     BufferedReader in = new BufferedReader(new InputStreamReader(
                             client.getInputStream(), StandardCharsets.UTF_8));
                     String command = in.readLine();
+                    if (command != null && command.startsWith("drag ")) {
+                        String[] a = command.split(" ");
+                        drag(ui, Float.parseFloat(a[1]), Float.parseFloat(a[2]), Float.parseFloat(a[3]),
+                                Float.parseFloat(a[4]), Long.parseLong(a[5]), Long.parseLong(a[6]));
+                        OutputStream o = client.getOutputStream();
+                        o.write("ok\n".getBytes(StandardCharsets.UTF_8));
+                        o.flush();
+                        continue;
+                    }
+                    // Every read is fresh: pages such as Quick Settings' editor scroll without
+                    // telling the cache, which would keep answering where things were.
+                    ui.clearCache();
                     StringBuilder out = new StringBuilder("<?xml version='1.0' encoding='UTF-8'"
                             + " standalone='yes' ?><hierarchy rotation=\"0\">");
                     if ("windows".equals(command)) {
@@ -70,6 +86,32 @@ public class Server extends Instrumentation {
         }
     }
 
+    private static void drag(UiAutomation ui, float x1, float y1, float x2, float y2, long hold,
+            long move) throws InterruptedException {
+        long down = SystemClock.uptimeMillis();
+        touch(ui, down, MotionEvent.ACTION_DOWN, x1, y1);
+        Thread.sleep(hold);
+        int steps = (int) Math.max(1, move / 16);
+        for (int i = 1; i <= steps; i++) {
+            float t = i / (float) steps;
+            touch(ui, down, MotionEvent.ACTION_MOVE, x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
+            Thread.sleep(16);
+        }
+        // At rest over the target, as a finger lingers before it lets go.
+        for (int i = 0; i < 12; i++) {
+            touch(ui, down, MotionEvent.ACTION_MOVE, x2, y2);
+            Thread.sleep(50);
+        }
+        touch(ui, down, MotionEvent.ACTION_UP, x2, y2);
+    }
+
+    private static void touch(UiAutomation ui, long down, int action, float x, float y) {
+        MotionEvent e = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+        e.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        ui.injectInputEvent(e, true);
+        e.recycle();
+    }
+
     private static void write(StringBuilder out, AccessibilityNodeInfo n) {
         Rect r = new Rect();
         n.getBoundsInScreen(r);
@@ -82,6 +124,7 @@ public class Server extends Instrumentation {
                 .append("\" checked=\"").append(n.isChecked())
                 .append("\" enabled=\"").append(n.isEnabled())
                 .append("\" selected=\"").append(n.isSelected())
+                .append("\" password=\"").append(n.isPassword())
                 .append("\" bounds=\"[").append(r.left).append(',').append(r.top).append("][")
                 .append(r.right).append(',').append(r.bottom).append("]\">");
         for (int i = 0; i < n.getChildCount(); i++) {

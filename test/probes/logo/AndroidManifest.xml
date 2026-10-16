@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An app whose icon is a single picture: a white logo, a ring round a dot, on a red ground. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.probe.logo"
+    android:versionCode="1"
+    android:versionName="1.0">
+    <application android:label="Logo probe" android:icon="@mipmap/ic_logo" android:hasCode="false">
+        <activity android:name="android.app.Activity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

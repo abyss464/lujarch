@@ -251,6 +251,15 @@ public class Probe extends Activity {
                 CharSequence t = clip.getItemAt(0).getText();
                 return t == null ? "" : t.toString();
             }
+            case "clipsensitive": {
+                // Whether what is on the clipboard is marked sensitive, as a keyboard's strip reads it.
+                ClipboardManager cm = c.getSystemService(ClipboardManager.class);
+                android.content.ClipDescription desc = cm.getPrimaryClipDescription();
+                if (desc == null) return "empty";
+                android.os.PersistableBundle extras = desc.getExtras();
+                return extras != null && extras.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE)
+                        ? "sensitive" : "plain";
+            }
             case "copy": {
                 ClipboardManager cm = c.getSystemService(ClipboardManager.class);
                 cm.setPrimaryClip(ClipData.newPlainText("probe", intent.getStringExtra("text")));
@@ -417,6 +426,13 @@ public class Probe extends Activity {
                     return "connected " + (n > 0 ? new String(buf, 0, n).split("\r\n")[0] : "");
                 }
             }
+            case "list": {
+                // A directory read as any app reads files: its entries, or why not.
+                java.io.File dir = new java.io.File(intent.getStringExtra("path"));
+                String[] names = dir.list();
+                return names != null ? "listed " + names.length
+                        : dir.exists() ? "denied" : "unreachable";
+            }
             case "vibrate": {
                 c.getSystemService(Vibrator.class).vibrate(VibrationEffect.createOneShot(200, 128));
                 return "vibrated";
@@ -438,12 +454,19 @@ public class Probe extends Activity {
                 return "in " + seconds + " s";
             }
             case "pick":
+            case "get":
             case "save":
             case "tree": {
                 if (!(c instanceof Activity)) return "not on screen";
                 Intent i;
                 int code;
-                if (a.equals("pick")) {
+                if (a.equals("get")) {
+                    String type = intent.getStringExtra("type");
+                    i = new Intent(Intent.ACTION_GET_CONTENT)
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType(type == null ? "*/*" : type);
+                    code = PICK;
+                } else if (a.equals("pick")) {
                     String type = intent.getStringExtra("type");
                     i = new Intent(Intent.ACTION_OPEN_DOCUMENT)
                             .addCategory(Intent.CATEGORY_OPENABLE)
@@ -463,6 +486,18 @@ public class Probe extends Activity {
                 int requestCode = code;
                 activity.runOnUiThread(() -> activity.startActivityForResult(request, requestCode));
                 return "asked";
+            }
+            case "alarmclock": {
+                // An alarm as an alarm clock app sets it: shown to the user, exact, waking.
+                int seconds = intent.getIntExtra("seconds", 20);
+                AlarmManager am = c.getSystemService(AlarmManager.class);
+                PendingIntent fire = PendingIntent.getBroadcast(c, 1, new Intent(c, Alarm.class),
+                        PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent show = PendingIntent.getActivity(c, 1, new Intent(c, Probe.class),
+                        PendingIntent.FLAG_IMMUTABLE);
+                am.setAlarmClock(new AlarmManager.AlarmClockInfo(
+                        System.currentTimeMillis() + seconds * 1000L, show), fire);
+                return "in " + seconds + " s";
             }
             case "request": {
                 if (c instanceof Activity) {
