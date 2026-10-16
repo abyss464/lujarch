@@ -142,11 +142,13 @@ int OpenInRoot(int root, const char* rel, int flags) {
     return static_cast<int>(syscall(__NR_openat2, root, rel, &how, sizeof(how)));
 }
 
-// Reads a child's report: success, or its failure as an error.
-Result<void> ReadReport(int fd, const char* what, const std::vector<std::string>& steps) {
+// Reads a child's report: success, or its failure as an error. A child that executes a program
+// reports success by the report pipe closing on its execution (executes).
+Result<void> ReadReport(int fd, const char* what, const std::vector<std::string>& steps,
+                        bool executes = false) {
     ChildError e{};
     ssize_t n = TEMP_FAILURE_RETRY(read(fd, &e, sizeof(e)));
-    if (n == 1) return {};
+    if (n == 1 || (n == 0 && executes)) return {};
     if (n == static_cast<ssize_t>(sizeof(e))) {
         const std::string step = e.step >= 0 && static_cast<size_t>(e.step) < steps.size()
                                          ? steps[e.step]
@@ -406,7 +408,8 @@ Result<Process> System::Start(const Spawn& s) {
     gate_w.reset();
     Result<void> started = ReadReport(report_r.get(), path.c_str(),
                                       {"setsid", "standard streams", "become the root session user",
-                                       "enter the namespace", "execute"});
+                                       "enter the namespace", "execute"},
+                                      true);
     if (!started.ok()) {
         TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
         return started.error();
@@ -457,7 +460,8 @@ Result<Process> StartAndroid(const std::string& path, std::vector<std::string> a
     }
     report_w.reset();
     Result<void> started = ReadReport(report_r.get(), path.c_str(),
-                                      {"setsid", "standard streams", "become its user", "execute"});
+                                      {"setsid", "standard streams", "become its user", "execute"},
+                                      true);
     if (!started.ok()) {
         TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
         return started.error();
