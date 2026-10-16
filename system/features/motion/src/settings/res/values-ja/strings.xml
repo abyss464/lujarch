@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="motion_title">Lujarch モーション</string>
+    <string name="motion_summary">Android のアニメーションの代わりに Lujarch 独自のアニメーションを再生します</string>
+    <string name="motion_color_and_motion">色と動き</string>
+    <string name="motion_intro">Lujarch の各モーションは、Android 独自のアニメーションがある場所で再生されます。オフにすると、そこでは Android のアニメーションが再生されます。「アニメーションを無効化」がオンのときは、各モーションの最後の状態がすぐに表示されます。</string>
+    <string name="motion_lock_screen">ロック画面と指紋</string>
+    <string name="motion_lock_screen_summary">指紋センサー上のマーク、ロックを解除する波、画面のオフとオンのときの水</string>
+    <string name="motion_charging">充電</string>
+    <string name="motion_charging_summary">充電器から広がる波と、電池のように満ちていくマーク</string>
+    <string name="motion_back_gesture">「戻る」ジェスチャー</string>
+    <string name="motion_back_gesture_summary">端から引き出された線がダーツになります</string>
+    <string name="motion_volume">音量</string>
+    <string name="motion_volume_summary">音量スライダーの水と浮かぶ破片</string>
+    <string name="motion_keywords">アニメーション, モーション, エフェクト, ロック画面, 指紋, 充電, 戻る, 音量, animation, motion</string>
+</resources>

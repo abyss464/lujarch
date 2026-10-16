@@ -1,0 +1,10 @@
+// Lujarch motion's page in Settings: the switch of each moment that has one.
+android_library {
+    name: "LujarchMotionSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: ["LujarchSettingsPages"],
+    libs: ["LujarchSettingsContribution"],
+}

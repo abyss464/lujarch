@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="motion_title">Lujarch 动效</string>
+    <string name="motion_summary">以 Lujarch 自己的动画代替 Android 的动画</string>
+    <string name="motion_color_and_motion">颜色和动画</string>
+    <string name="motion_intro">Lujarch 的每个动效都在 Android 原有动画的位置播放。关闭后，该处播放 Android 的动画。开启“移除动画”时，每个动效会立即显示其结束状态。</string>
+    <string name="motion_lock_screen">锁屏和指纹</string>
+    <string name="motion_lock_screen_summary">指纹传感器上的标志、解锁时的波浪，以及熄屏和亮屏时的水</string>
+    <string name="motion_charging">充电</string>
+    <string name="motion_charging_summary">从充电器涌来的波浪，标志像电池一样充满</string>
+    <string name="motion_back_gesture">返回手势</string>
+    <string name="motion_back_gesture_summary">从屏幕边缘拉出的线化作飞镖</string>
+    <string name="motion_volume">音量</string>
+    <string name="motion_volume_summary">音量滑块中的水和漂浮的碎片</string>
+    <string name="motion_keywords">动画, 动效, 特效, 锁屏, 指纹, 充电, 返回, 音量, animation, motion</string>
+</resources>

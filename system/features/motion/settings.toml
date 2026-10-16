@@ -1,0 +1,29 @@
+[lock_screen]
+table = "secure"
+type = "bool"
+default = true
+item = "MOT-2"
+
+[media_open]
+table = "secure"
+type = "bool"
+default = false
+item = "MOT-3"
+
+[charging]
+table = "secure"
+type = "bool"
+default = true
+item = "MOT-4"
+
+[back_gesture]
+table = "secure"
+type = "bool"
+default = true
+item = "MOT-6"
+
+[volume]
+table = "secure"
+type = "bool"
+default = true
+item = "MOT-7"

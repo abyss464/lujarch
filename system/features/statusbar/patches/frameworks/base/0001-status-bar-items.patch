@@ -36,10 +36,10 @@ index 799ac531193ca9aeb6c3fb5164b018c40e82ba2d..c656c90c57e2809677b522f501b8c002
                          android:layout_width="wrap_content"
 diff --git a/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..697b13ee0dde2b76aaa51f7a42d97619dad9ce0a
+index 0000000000000000000000000000000000000000..735cdee468dbe1fe25ec6296f263930e53517d03
 --- /dev/null
 +++ b/packages/SystemUI/res/values-ja/lujarch_statusbar_strings.xml
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,57 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +     Copyright (C) 2026 The Lujarch Project
@@ -87,6 +87,8 @@ index 0000000000000000000000000000000000000000..697b13ee0dde2b76aaa51f7a42d97619
 +    <string name="lujarch_sb_privacy_chip_summary">オフ: このチップが表示されずにアプリがカメラやマイクを使用できます</string>
 +    <string name="lujarch_sb_privacy_location">位置情報インジケーター</string>
 +    <string name="lujarch_sb_privacy_location_summary">オフ: このインジケーターが表示されずにアプリが位置情報を読み取れます</string>
++    <string name="lujarch_sb_privacy_ring">プライバシー リング</string>
++    <string name="lujarch_sb_privacy_ring_summary">オフ: 代わりにプライバシー ドットが表示されます（オンの場合）</string>
 +    <string name="lujarch_sb_privacy_dot">プライバシー ドット</string>
 +    <string name="lujarch_sb_privacy_dot_summary">オフ: このドットが表示されずにアプリがカメラやマイクを使用できます</string>
 +    <string name="lujarch_sb_notification_icons">通知アイコン</string>
@@ -97,10 +99,10 @@ index 0000000000000000000000000000000000000000..697b13ee0dde2b76aaa51f7a42d97619
 +</resources>
 diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..2479c9352895fb9d42afa300316c7895f24c831f
+index 0000000000000000000000000000000000000000..bba411717fccff85b4351a207cf80bd024b9126b
 --- /dev/null
 +++ b/packages/SystemUI/res/values-zh-rCN/lujarch_statusbar_strings.xml
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,63 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +     Copyright (C) 2026 The Lujarch Project
@@ -153,6 +155,8 @@ index 0000000000000000000000000000000000000000..2479c9352895fb9d42afa300316c7895
 +    <string name="lujarch_sb_privacy_chip_summary">关闭后，应用使用相机或麦克风时不会显示此提示</string>
 +    <string name="lujarch_sb_privacy_location">位置信息提示</string>
 +    <string name="lujarch_sb_privacy_location_summary">关闭后，应用读取位置信息时不会显示此提示</string>
++    <string name="lujarch_sb_privacy_ring">隐私环</string>
++    <string name="lujarch_sb_privacy_ring_summary">关闭后，改为显示隐私圆点（如已开启）</string>
 +    <string name="lujarch_sb_privacy_dot">隐私圆点</string>
 +    <string name="lujarch_sb_privacy_dot_summary">关闭后，应用使用相机或麦克风时不会显示此圆点</string>
 +
@@ -164,10 +168,10 @@ index 0000000000000000000000000000000000000000..2479c9352895fb9d42afa300316c7895
 +</resources>
 diff --git a/packages/SystemUI/res/values/lujarch_statusbar_strings.xml b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..8189e0f3f403189039903deeac235f45921ec05e
+index 0000000000000000000000000000000000000000..1af5eda32f780541be6ecdd3686b83ff3afc757c
 --- /dev/null
 +++ b/packages/SystemUI/res/values/lujarch_statusbar_strings.xml
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,75 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +     Copyright (C) 2026 The Lujarch Project
@@ -231,6 +235,8 @@ index 0000000000000000000000000000000000000000..8189e0f3f403189039903deeac235f45
 +    <string name="lujarch_sb_privacy_chip_summary">Off: apps can use the camera or microphone without this chip showing</string>
 +    <string name="lujarch_sb_privacy_location">Location indicator</string>
 +    <string name="lujarch_sb_privacy_location_summary">Off: apps can read your location without this indicator showing</string>
++    <string name="lujarch_sb_privacy_ring">Privacy ring</string>
++    <string name="lujarch_sb_privacy_ring_summary">Off: the privacy dot shows in its place, if it is on</string>
 +    <string name="lujarch_sb_privacy_dot">Privacy dot</string>
 +    <string name="lujarch_sb_privacy_dot_summary">Off: apps can use the camera or microphone without this dot showing</string>
 +
@@ -884,10 +890,10 @@ index 0000000000000000000000000000000000000000..f18dc5ff8e6bcddb83fa8802f71318b6
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..37257e8a3f3bce9a4c236eb5250992260c604392
+index 0000000000000000000000000000000000000000..2a2198d9e50168931df789710a5eea6ff551a987
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/lujarch/StatusBarItems.kt
-@@ -0,0 +1,289 @@
+@@ -0,0 +1,296 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -983,6 +989,7 @@ index 0000000000000000000000000000000000000000..37257e8a3f3bce9a4c236eb525099226
 +    const val CHIP_LIVE = "lujarch_chip_live"
 +    const val PRIVACY_CHIP = "lujarch_privacy_chip"
 +    const val PRIVACY_LOCATION = "lujarch_privacy_location"
++    const val PRIVACY_RING = "lujarch_privacy_ring"
 +    const val PRIVACY_DOT = "lujarch_privacy_dot"
 +
 +    private fun item(
@@ -1113,6 +1120,12 @@ index 0000000000000000000000000000000000000000..37257e8a3f3bce9a4c236eb525099226
 +                StatusBarGroup.PRIVACY,
 +                StatusBarAppears.LOCATION_INDICATORS,
 +                R.string.lujarch_sb_privacy_location_summary,
++            ),
++            item(
++                PRIVACY_RING,
++                R.string.lujarch_sb_privacy_ring,
++                StatusBarGroup.PRIVACY,
++                summary = R.string.lujarch_sb_privacy_ring_summary,
 +            ),
 +            item(
 +                PRIVACY_DOT,

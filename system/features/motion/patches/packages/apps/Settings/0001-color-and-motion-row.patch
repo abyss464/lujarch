@@ -1,0 +1,159 @@
+diff --git a/res/values-ja/lujarch_motion_strings.xml b/res/values-ja/lujarch_motion_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b50f676070ea256d25b1e2d4cc461afa13e5ebc4
+--- /dev/null
++++ b/res/values-ja/lujarch_motion_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_motion_title">Lujarch モーション</string>
++    <string name="lujarch_motion_summary">Android のアニメーションの代わりに Lujarch 独自のアニメーションを再生します</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_motion_strings.xml b/res/values-zh-rCN/lujarch_motion_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b040357d6b617cd80585f275a0c18a51e11fc09d
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_motion_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_motion_title">Lujarch 动效</string>
++    <string name="lujarch_motion_summary">以 Lujarch 自己的动画代替 Android 的动画</string>
++</resources>
+diff --git a/res/values/lujarch_motion_strings.xml b/res/values/lujarch_motion_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..919a0272623d81e664d59b83397b72711cd9e00f
+--- /dev/null
++++ b/res/values/lujarch_motion_strings.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- Lujarch motion's row in Color and motion, opening its page in Lujarch Settings -->
++    <string name="lujarch_motion_title">Lujarch motion</string>
++    <string name="lujarch_motion_summary">Lujarch’s own animations in place of Android’s</string>
++    <string name="lujarch_motion_purpose" translatable="false">Opens the switches of Lujarch’s own animations, each of which plays in place of one of Android’s.</string>
++</resources>
+diff --git a/src/com/android/settings/accessibility/colorandmotion/ui/ColorAndMotionScreen.kt b/src/com/android/settings/accessibility/colorandmotion/ui/ColorAndMotionScreen.kt
+index 1fb233d99a5ac1fb1c2c9f2e81caf0177b3a9727..08aa5eeba4ad8ce55957d811c14c64e3285de9de 100644
+--- a/src/com/android/settings/accessibility/colorandmotion/ui/ColorAndMotionScreen.kt
++++ b/src/com/android/settings/accessibility/colorandmotion/ui/ColorAndMotionScreen.kt
+@@ -75,6 +75,7 @@ open class ColorAndMotionScreen : PreferenceScreenMixin {
+                 +DarkModeScreenOnAccessibility.KEY
+                 +BlurSwitchPreference()
+                 +RemoveAnimationsPreference()
++                +LujarchMotionPreference()
+                 +TextCursorBlinkRatePreference(context)
+             } else {
+                 +ColorInversionScreen.KEY
+@@ -88,6 +89,7 @@ open class ColorAndMotionScreen : PreferenceScreenMixin {
+                     {
+                         +ColorCorrectionScreen.KEY
+                         +RemoveAnimationsPreference()
++                        +LujarchMotionPreference()
+                         +TextCursorBlinkRatePreference(context)
+                     }
+             }
+diff --git a/src/com/android/settings/accessibility/colorandmotion/ui/LujarchMotionPreference.kt b/src/com/android/settings/accessibility/colorandmotion/ui/LujarchMotionPreference.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..68f1899d8fb6f03a4291ddebc26573716f93c40b
+--- /dev/null
++++ b/src/com/android/settings/accessibility/colorandmotion/ui/LujarchMotionPreference.kt
+@@ -0,0 +1,53 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.accessibility.colorandmotion.ui
++
++import android.content.Context
++import android.content.Intent
++import com.android.settings.R
++import com.android.settingslib.metadata.PreferenceMetadata
++import com.android.settingslib.metadata.UI_ONLY_PREFERENCE
++
++/**
++ * Lujarch motion's row (MOT-2, MOT-4, MOT-6, MOT-7): its page in Lujarch Settings, where the
++ * switch of each of Lujarch's moments is. Lujarch Settings indexes the page for search.
++ */
++class LujarchMotionPreference : PreferenceMetadata {
++    override val key: String
++        get() = KEY
++
++    override val purpose: Int
++        get() = R.string.lujarch_motion_purpose
++
++    override val title: Int
++        get() = R.string.lujarch_motion_title
++
++    override val summary: Int
++        get() = R.string.lujarch_motion_summary
++
++    override val indexable
++        get() = false
++
++    override fun tags(context: Context) = arrayOf(UI_ONLY_PREFERENCE)
++
++    override fun intent(context: Context): Intent? = Intent(ACTION_MOTION)
++
++    companion object {
++        const val KEY = "lujarch_motion"
++        private const val ACTION_MOTION = "org.lujarch.motion.action.MOTION"
++    }
++}
