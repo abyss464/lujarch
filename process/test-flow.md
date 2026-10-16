@@ -26,14 +26,26 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
 - Every test that does not depend on the Xiaomi 13's hardware runs here.
 - Test components (probes, harness apps) are installed into the virtual device when a test runs.
   No test code is ever part of an image.
-- `tools/lujarch vm start` boots the `vm` build with empty data and leaves it ready for tests:
-  set up, awake, Developer options and Rooted debugging on, adb as root, on its Wi-Fi network.
+- `tools/lujarch vm start` boots the images of the `vm` build with empty data and leaves it ready
+  for tests: set up, awake, Developer options and Rooted debugging on, adb as root, on its Wi-Fi
+  network. A module build installs files without packing them into the images. While the images
+  lack files installed since the last full build, `vm start` names them and stops:
+  `tools/lujarch build vm` packs them, and `vm start --packed` boots the images as they are.
+  `tools/lujarch vm status` counts those files.
 - `tools/lujarch vm sync <module>...` copies what the named modules install (with the modules
   they require) into the running virtual device after `tools/lujarch build vm <module>...`, and
-  restarts it with its data kept. The boot image (`dex_bootjars`) and the boot classpath jars of
-  `system` are built and copied as one unit: naming one of them brings all. Code compiled ahead
-  of time against an earlier boot image and not copied with the unit runs without that compiled
-  code. The SELinux policy of `system_ext` is the module `selinux_policy_system_ext`.
+  restarts it with its data kept; `tools/lujarch vm sync` alone copies the files the images lack,
+  except those of the boot images' ramdisks, which only a full build packs. The boot image
+  (`dex_bootjars`) and the boot classpath jars of `system` are built and copied as one unit:
+  naming one of them brings all. Code compiled ahead of time against an earlier boot image and
+  not copied with the unit runs without that compiled code. The SELinux policy of `system_ext`
+  is the module `selinux_policy_system_ext`.
+- `tools/lujarch vm screenshot [PATH]` writes what the virtual device's display shows, as the
+  browser view shows it, to PATH (`.png`, `.jpg` or `.webp`; `<out>/vm/screenshots/` by
+  default); `--frames N --interval S` takes N frames S seconds apart, for animations.
+  `adb exec-out screencap` renders the layers itself: it leaves out SystemUI's screen decorations
+  and the boot animation, and shows the dimmed background behind a dialog, which the display
+  shows black.
 
 The virtual device has no Xiaomi hardware, no Qualcomm TEE, no bootloader of its own, no Google
 apps, no arm64-only programs, and no real performance or battery.

@@ -10,6 +10,9 @@
   lujarch build DEVICE [MODULE...]  build a device (fuxi, vm), or some of its modules
   lujarch stock DEVICE [--add GLOB] download and unpack a device's stock release; pin its files
   lujarch vm start|stop|status      the virtual device
+  lujarch vm sync [MODULE...]       copy built modules, or what its images lack, into the running
+                                    virtual device
+  lujarch vm screenshot [PATH]      write what the virtual device's display shows
 """
 
 import argparse
@@ -1879,9 +1882,14 @@ def mem_available_gb():
 
 # The memory a build leaves to the desktop and everything else running.
 DESKTOP_RESERVE_GB = 10
-# The least memory cap a build runs under: the analysis keeps about 30 GB live, and its Go heap
-# limit (GOMEMLIMIT, the cap less 6 GB) needs room above that.
-BUILD_MIN_GB = 44
+# The analysis's Go memory limit (GOMEMLIMIT) is the cap less 6 GB, left to the rest of the build
+# and the file cache, but no less than ANALYSIS_GO_GB while the cap leaves BESIDE_ANALYSIS_GB
+# beside it: the analysis's live heap peaks at about 29 GB, under a 38 GB limit it runs as fast as
+# under more, and the rest of the build holds under 1 GB while it runs.
+ANALYSIS_GO_GB = 38
+BESIDE_ANALYSIS_GB = 2
+# The least memory cap a build runs under.
+BUILD_MIN_GB = ANALYSIS_GO_GB + BESIDE_ANALYSIS_GB
 # How long a build waits for the memory it needs to come free.
 MEMORY_WAIT_MIN = 20
 
@@ -1983,7 +1991,61 @@ def build_environment():
 
 def fitting_jobs(mem_max):
     # siso keeps about 26 GB, and every Java or R8 job, which no job pool limits, up to 4 GB.
-    return max(4, (int(mem_max.rstrip("G")) - 26) // 4)
+    return max(2, (int(mem_max.rstrip("G")) - 26) // 4)
+
+
+def analysis_go_limit(mem_max):
+    cap = int(mem_max.rstrip("G"))
+    return max(cap - 6, min(ANALYSIS_GO_GB, cap - BESIDE_ANALYSIS_GB))
+
+
+def run_scoped(command, logfile, mode, **kwargs):
+    """Runs a build command that systemd-run puts in its own memory scope, its output into the
+    log, and returns its exit status and what the scope used: its peak memory, its anonymous
+    memory at most (sampled every 2 s; the file cache, which the cap reclaims, left out), how
+    often it reached the cap, and how many processes the cap killed."""
+    used = {"peak": 0, "anon": 0, "max": 0, "oom_kill": 0}
+    own = Path("/proc/self/cgroup").read_text()
+    scope = None
+    with open(logfile, mode) as f, \
+            subprocess.Popen(command, stdout=f, stderr=subprocess.STDOUT, **kwargs) as proc:
+        try:
+            while True:
+                try:
+                    if scope is None:
+                        group = Path(f"/proc/{proc.pid}/cgroup").read_text()
+                        if group != own:
+                            scope = Path("/sys/fs/cgroup" + group.split("::", 1)[1].strip())
+                    if scope is not None:
+                        stat = dict(l.split()
+                                    for l in (scope / "memory.stat").read_text().splitlines())
+                        events = dict(l.split()
+                                      for l in (scope / "memory.events").read_text().splitlines())
+                        used["anon"] = max(used["anon"], int(stat["anon"]))
+                        used["peak"] = max(used["peak"], int((scope / "memory.peak").read_text()))
+                        used["max"], used["oom_kill"] = int(events["max"]), int(events["oom_kill"])
+                except (OSError, KeyError, ValueError):
+                    pass
+                try:
+                    return proc.wait(timeout=2), used
+                except subprocess.TimeoutExpired:
+                    pass
+        except BaseException:
+            proc.kill()
+            raise
+
+
+def analysis_seconds(tree, since):
+    """How long the analysis (soong_build) ran, when the build that started at since ran it."""
+    metrics = tree / "out" / "soong" / "siso_metrics.json"
+    try:
+        if metrics.stat().st_mtime >= since:
+            for line in metrics.read_text().split("\n"):
+                if '"g.bootstrap.build.ninja"' in line:
+                    return json.loads(line)["duration"]
+    except (OSError, ValueError, KeyError):
+        pass
+    return None
 
 
 def release_config(tree):
@@ -2066,7 +2128,7 @@ m -j{jobs} {modules}
         "CCACHE_DIR": str(host.path_of("paths", "ccache")),
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
         # The analysis's Go heap stays under the cap (tools/patches/build/soong).
-        "GOMEMLIMIT": f"{int(mem_max.rstrip('G')) - 6}GiB",
+        "GOMEMLIMIT": f"{analysis_go_limit(mem_max)}GiB",
     })
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
     def command(jobs):
@@ -2084,28 +2146,43 @@ m -j{jobs} {modules}
         log("could not raise the build's oom_score_adj")
     log(f"building {args.device} ({lunch}{', ' + modules if modules else ''}): "
         f"{jobs} jobs, memory cap {mem_max}; log {logfile}")
-    start = time.monotonic()
-    with open(logfile, "w") as f:
-        run = subprocess.run(command(jobs), cwd=tree, env=env, stdout=f, stderr=subprocess.STDOUT)
-    if run.returncode < 0 or run.returncode in (137, 143):
+    start, started = time.monotonic(), time.time()
+    status, used = run_scoped(command(jobs), logfile, "w", cwd=tree, env=env)
+    if status < 0 or status in (137, 143):
         # The scope's memory cap killed the build: it goes on from where it stopped with half
         # the jobs.
         fewer = max(2, jobs // 2)
-        log(f"the build hit its memory cap (exit {run.returncode}); continuing with {fewer} jobs")
-        with open(logfile, "a") as f:
-            run = subprocess.run(command(fewer), cwd=tree, env=env, stdout=f,
-                                 stderr=subprocess.STDOUT)
+        log(f"the build hit its memory cap (exit {status}); continuing with {fewer} jobs")
+        status, more = run_scoped(command(fewer), logfile, "a", cwd=tree, env=env)
+        used = {k: max(v, more[k]) if k in ("peak", "anon") else v + more[k]
+                for k, v in used.items()}
     minutes = int((time.monotonic() - start) // 60)
-    if run.returncode:
-        tail = logfile.read_text(errors="replace").split("\n")[-40:]
-        print("\n".join(tail), file=sys.stderr)
-        die(f"build failed after {minutes} min (exit {run.returncode}); log {logfile}")
+    # What the build used, so that its cap and jobs follow from measured builds.
+    analysis = analysis_seconds(tree, started)
+    usage = (f"memory: cap {mem_max}, {jobs} jobs, analysis Go limit "
+             f"{analysis_go_limit(mem_max)}G; peak {used['peak'] / 2**30:.1f}G, anonymous at most "
+             f"{used['anon'] / 2**30:.1f}G; the cap reached {used['max']} times, "
+             f"{used['oom_kill']} processes killed by it; "
+             + (f"analysis {analysis:.0f} s" if analysis is not None else "no analysis"))
+    if status:
+        print("\n".join(logfile.read_text(errors="replace").split("\n")[-40:]), file=sys.stderr)
+    with open(logfile, "a") as f:
+        f.write(f"\n[lujarch] {usage}\n")
+    log(usage)
+    if status:
+        die(f"build failed after {minutes} min (exit {status}); log {logfile}")
     product_out = product_out_file.read_text().strip()
     product_out_file.unlink()
     commit = git("describe", "--always", "--dirty", "--exclude=*").stdout.strip()
+    # When the images were last packed (unpacked_files): a module build installs files and
+    # packs no image.
+    if not args.modules or "droid" in args.modules:
+        packed = time.time()
+    else:
+        packed = json.loads(info.read_text()).get("packed") if info.is_file() else None
     info.write_text(json.dumps({
         "device": args.device, "lunch": lunch, "product_out": str(tree / product_out),
-        "modules": args.modules, "commit": commit, "built": stamp,
+        "modules": args.modules, "commit": commit, "built": stamp, "packed": packed,
     }, indent=2) + "\n")
     log(f"built {args.device} in {minutes} min")
     return 0
@@ -2353,16 +2430,76 @@ def module_files(host, product, modules):
     return named, installs(named), unknown
 
 
-def vm_sync(host, info, host_out, modules):
-    """Copies what the named modules install into the running virtual device, keeping its data,
-    and restarts it."""
+# What the virtual device boots, by product directory, with the list its image is packed with
+# (Name, and SHA256 of the file or of a link's target). launch_cvd rewrites super.img when it
+# first starts from it, so an image's time does not tell what it holds; its list does.
+VM_PARTITIONS = {
+    "system": "installed-files.json", "system_ext": "installed-files-system_ext.json",
+    "product": "installed-files-product.json", "vendor": "installed-files-vendor.json",
+    "odm": "installed-files-odm.json", "system_dlkm": "installed-files-system_dlkm.json",
+    "vendor_dlkm": "installed-files-vendor_dlkm.json",
+    "odm_dlkm": "installed-files-odm_dlkm.json",
+}
+# The ramdisks of the boot images, which only a build packs: vm sync cannot copy into them.
+VM_RAMDISKS = {
+    "ramdisk": "installed-files-ramdisk.json",
+    "vendor_ramdisk": "installed-files-vendor-ramdisk.json",
+}
+
+
+def unpacked_files(info):
+    """The files installed into the directories the virtual device boots from since the images
+    were packed, by module builds, that the images lack or hold with other content (paths
+    relative to the product directory). A file installed before the last full build and left out
+    of its images is none of the product's."""
     product = Path(info["product_out"])
-    synced, files, unknown = module_files(host, product, modules)
-    if unknown:
-        die(f"no module {', '.join(unknown)} in {product / 'module-info.json'}")
-    if not files:
-        die("the modules install nothing into the image")
-    missing = [f for f in files if not (product / f).is_file()]
+    found = []
+    for part, listing in {**VM_PARTITIONS, **VM_RAMDISKS}.items():
+        try:
+            held = {e["Name"]: e["SHA256"] for e in json.loads((product / listing).read_text())}
+            since = info.get("packed") or (product / listing).stat().st_mtime
+        except OSError:
+            continue
+        for top, dirs, names in os.walk(product / part):
+            for name in names + [d for d in dirs if os.path.islink(os.path.join(top, d))]:
+                path = Path(top) / name
+                if path.lstat().st_mtime <= since:
+                    continue
+                if path.is_symlink():
+                    digest = hashlib.sha256(os.readlink(path).encode()).hexdigest()
+                else:
+                    digest = sha256_file(path)
+                rel = path.relative_to(product).as_posix()
+                if held.get("/" + rel) != digest:
+                    found.append(rel)
+    return sorted(found)
+
+
+def listed(files, most=20):
+    return "\n".join([f"  {f}" for f in files[:most]]
+                     + ([f"  and {len(files) - most} more"] if len(files) > most else []))
+
+
+def vm_sync(host, info, host_out, modules):
+    """Copies what the named modules install, or with none the files the images lack, into the
+    running virtual device, keeping its data, and restarts it."""
+    product = Path(info["product_out"])
+    if modules:
+        synced, files, unknown = module_files(host, product, modules)
+        if unknown:
+            die(f"no module {', '.join(unknown)} in {product / 'module-info.json'}")
+        if not files:
+            die("the modules install nothing into the image")
+    else:
+        synced, files = [], unpacked_files(info)
+        if not files:
+            log("the images hold every installed file; nothing to copy")
+            return 0
+        boot = [f for f in files if f.split("/", 1)[0] in VM_RAMDISKS]
+        if boot:
+            die(f"the boot images lack these files, which only a build packs "
+                f"(lujarch build vm):\n{listed(boot)}")
+    missing = [f for f in files if not os.path.lexists(product / f)]
     if missing:
         die(f"not built: {', '.join(missing)} (lujarch build vm {' '.join(modules)})")
     if not adb_root(host_out):
@@ -2416,12 +2553,59 @@ def vm_sync(host, info, host_out, modules):
         if not wait_booted(host_out, 600):
             die("the virtual device did not come back after relabelling")
         provision(host_out)
-    log(f"synced {len(files)} files of {' '.join(synced)}; adb 127.0.0.1:{ADB_PORT}")
+    log(f"synced {len(files)} files{' of ' + ' '.join(synced) if synced else ''}; "
+        f"adb 127.0.0.1:{ADB_PORT}")
+    return 0
+
+
+SCREENSHOT_FORMATS = (".png", ".jpg", ".webp")
+
+
+def vm_screenshot(host, path, frames, interval):
+    """Writes what the virtual device's display shows, composited as the browser view shows it:
+    SystemUI's screen decorations and the boot animation included, which adb's screencap leaves
+    out. Several frames start interval seconds apart and are numbered PATH-01, PATH-02, ..."""
+    if container_state() != "running":
+        die("the virtual device is not running (lujarch vm start)")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    target = Path(path).resolve() if path else host.out / "vm" / "screenshots" / f"{stamp}.png"
+    if target.suffix not in SCREENSHOT_FORMATS:
+        die(f"{target.name}: the display is written as {', '.join(SCREENSHOT_FORMATS)}")
+    if frames > 1:
+        targets = [target.with_name(f"{target.stem}-{i:02}{target.suffix}")
+                   for i in range(1, frames + 1)]
+    else:
+        targets = [target]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # The streamer in the container writes the file; the runtime home is the one directory both
+    # sides see.
+    home = host.out / "vm" / "home"
+    staged = home / f".screenshot-{os.getpid()}{target.suffix}"
+    start = time.monotonic()
+    for i, dest in enumerate(targets):
+        time.sleep(max(0.0, start + i * interval - time.monotonic()))
+        try:
+            run = subprocess.run(
+                ["docker", "exec", "-e", "HOME=/cf/home", VM_CONTAINER,
+                 "/cf/host/bin/cvd_internal_display", "screenshot",
+                 f"--screenshot_path=/cf/home/{staged.name}"],
+                capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            run = None
+        if run is None or run.returncode or not staged.is_file():
+            said = "no answer in 60 s" if run is None else (run.stdout + run.stderr).strip()
+            launcher = home / "cuttlefish" / "instances" / "cvd-1" / "logs" / "launcher.log"
+            die(f"the display was not captured: {said}\nIt is captured by the streamer "
+                f"(/cf/host/bin/webRTC); log {launcher}")
+        shutil.move(staged, dest)
+        print(dest, flush=True)
     return 0
 
 
 def cmd_vm(args):
     host = Host()
+    if args.action == "screenshot":
+        return vm_screenshot(host, args.path, args.frames, args.interval)
     info, host_out, home, common = vm_paths(host)
     state = container_state()
     if args.action == "stop":
@@ -2435,16 +2619,26 @@ def cmd_vm(args):
     if args.action == "sync":
         if state != "running" or not booted(host_out):
             die("the virtual device is not running (lujarch vm start)")
-        if not args.modules:
-            die("name the modules to copy: lujarch vm sync <module>...")
         return vm_sync(host, info, host_out, args.modules)
     if args.action == "status":
         up = "booted" if state == "running" and booted(host_out) else (state or "not running")
+        unpacked = unpacked_files(info)
         print(f"vm: {up}; build {info['commit']} ({info['built']}); adb 127.0.0.1:{ADB_PORT}; "
-              f"screen {WEBRTC_URL}")
+              f"screen {WEBRTC_URL}"
+              + (f"; the images lack {len(unpacked)} files installed since they were packed"
+                 if unpacked else ""))
         return 0 if up == "booted" else 1
     if state == "running":
         die("the virtual device is already running (lujarch vm stop)")
+    unpacked = unpacked_files(info)
+    if unpacked and not args.packed:
+        how = "lujarch build vm packs them; lujarch vm start --packed boots the images as they are"
+        if all(f.split("/", 1)[0] in VM_PARTITIONS for f in unpacked):
+            how += ", and lujarch vm sync then copies the files in"
+        die(f"the images lack {len(unpacked)} files installed since they were packed:\n"
+            f"{listed(unpacked)}\n{how}")
+    if unpacked:
+        log(f"booting images that lack {len(unpacked)} files installed since they were packed")
     if state is not None:
         subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True)
     vm = device_config("vm")
@@ -2475,6 +2669,7 @@ def cmd_vm(args):
         "/cf/host/bin/launch_cvd", "--report_anonymous_usage_stats=n", "--resume=false",
         "--enable_tap_devices=false", "--system_image_dir=/cf/images",
         f"--cpus={host.get('vm', 'cpus', 4)}", f"--memory_mb={host.get('vm', 'memory_mb', 8192)}",
+        "--data_policy=always_create", f"--blank_data_image_mb={host.get('vm', 'data_mb', 16384)}",
     ]
     if display:
         command += [f"--x_res={display['width']}", f"--y_res={display['height']}",
@@ -2533,10 +2728,24 @@ def main():
     build = sub.add_parser("build", help="build a device or some of its modules")
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
-    vm = sub.add_parser("vm", help="the virtual device")
-    vm.add_argument("action", choices=("start", "stop", "status", "sync"))
-    vm.add_argument("modules", nargs="*", help="sync: the modules to copy into the running device")
-    vm.add_argument("--timeout", type=int, default=900, help="seconds to wait for the boot")
+    vm = sub.add_parser("vm", help="the virtual device").add_subparsers(dest="action",
+                                                                       required=True)
+    start = vm.add_parser("start", help="boot the vm build with empty data, ready for tests")
+    start.add_argument("--timeout", type=int, default=900, help="seconds to wait for the boot")
+    start.add_argument("--packed", action="store_true",
+                       help="boot the images even when they lack files installed since they "
+                            "were packed")
+    vm.add_parser("stop", help="stop the virtual device")
+    vm.add_parser("status", help="whether the virtual device is booted, and its build")
+    sync = vm.add_parser("sync", help="copy built modules into the running device and restart it")
+    sync.add_argument("modules", nargs="*",
+                      help="the modules to copy (none: the files the images lack)")
+    shot = vm.add_parser("screenshot", help="write what the display shows, decorations included")
+    shot.add_argument("path", nargs="?",
+                      help=f"{', '.join(SCREENSHOT_FORMATS)} (default: <out>/vm/screenshots/)")
+    shot.add_argument("--frames", type=int, default=1, help="how many frames to take")
+    shot.add_argument("--interval", type=float, default=0.5,
+                      help="seconds from the start of one frame to the next")
     args = parser.parse_args()
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,

@@ -207,6 +207,7 @@ highmem_jobs = 3
 lock = "..."          # one lock for every Android build on the computer
 
 [vm]
-cpus = 4              # the virtual device's CPUs and memory
+cpus = 4              # the virtual device's CPUs, memory and data partition
 memory_mb = 8192
+data_mb = 16384
 ```
