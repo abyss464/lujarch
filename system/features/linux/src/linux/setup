@@ -1,0 +1,81 @@
+#!/usr/bin/bash
+# The initial setup of the Linux development environment (LNX-2). lujarch_linux runs it as root in
+# the installed system at the system's first start and from Settings; it can run again.
+#
+#   setup USER UID
+#
+# USER gets the user ID UID, Lujarch's own for Linux, and the groups Android gives the network
+# and the view of every process; wheel may use sudo. While the fingerprint is lent (LNX-7), sudo
+# and polkit ask for it before the password. The last line of the output says what failed.
+set -euo pipefail
+user=$1
+uid=$2
+
+say() {
+    printf '%s\n' "$*"
+}
+
+# Android's groups: inet and net_raw open sockets of the network, readproc shows every process,
+# usb holds the USB devices while they are lent.
+for entry in aid_inet:3003 aid_net_raw:3004 aid_readproc:3009 aid_usb:1018; do
+    name=${entry%%:*}
+    gid=${entry##*:}
+    if ! getent group "$name" >/dev/null; then
+        groupadd --gid "$gid" "$name"
+        say "group $name ($gid) made"
+    fi
+done
+
+# Arch Linux ARM's own user has user ID 1000, Android's system: it goes. The archive's root
+# password is public: root logs in only through Lujarch's root sessions.
+if getent passwd alarm >/dev/null && [ "$(id -u alarm)" = 1000 ]; then
+    userdel --remove alarm 2>/dev/null || userdel alarm
+    say "user alarm removed"
+fi
+passwd --lock root >/dev/null
+
+if getent passwd "$user" >/dev/null; then
+    existing=$(id -u "$user")
+    if [ "$existing" != "$uid" ]; then
+        say "the user $user exists with user ID $existing; Linux's user ID is $uid"
+        exit 1
+    fi
+else
+    holder=$(getent passwd "$uid" | cut -d: -f1 || true)
+    if [ -n "$holder" ]; then
+        say "user ID $uid belongs to $holder"
+        exit 1
+    fi
+    if ! getent group "$uid" >/dev/null; then
+        groupadd --gid "$uid" "$user"
+    fi
+    useradd --create-home --uid "$uid" --gid "$uid" --shell /usr/bin/bash "$user"
+    say "user $user ($uid) made"
+fi
+usermod --append --groups wheel,aid_inet,aid_net_raw,aid_readproc "$user"
+usermod --append --groups aid_inet,aid_net_raw root
+
+if [ -d /etc/sudoers.d ]; then
+    printf '%%wheel ALL=(ALL:ALL) ALL\n' >/etc/sudoers.d/10-lujarch-wheel
+    chmod 0440 /etc/sudoers.d/10-lujarch-wheel
+fi
+
+if [ ! -s /etc/locale.conf ]; then
+    printf 'LANG=C.UTF-8\n' >/etc/locale.conf
+fi
+
+mkdir -p /etc/lujarch/services /var/log/lujarch
+
+# The fingerprint helper first in the authorization of sudo and polkit; it fails at once while
+# the fingerprint is not lent, and the password follows.
+line='auth       sufficient   pam_exec.so quiet /usr/bin/bash /usr/lib/lujarch/fingerprint'
+for pam in /etc/pam.d/sudo /etc/pam.d/polkit-1; do
+    [ -f "$pam" ] || continue
+    grep -qF '/usr/lib/lujarch/fingerprint' "$pam" && continue
+    awk -v line="$line" '!done && /^auth/ { print line; done = 1 } { print }' "$pam" >"$pam.lujarch-new"
+    chmod --reference="$pam" "$pam.lujarch-new"
+    mv "$pam.lujarch-new" "$pam"
+    say "fingerprint confirmation added to $pam"
+done
+
+say "initial setup done for $user"

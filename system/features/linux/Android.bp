@@ -1,0 +1,105 @@
+// The interface of lujarch_linux, for Lujarch Settings and the Terminal app.
+aidl_interface {
+    name: "lujarch_linux_aidl",
+    srcs: ["src/daemon/aidl/org/lujarch/linux/*.aidl"],
+    local_include_dir: "src/daemon/aidl",
+    unstable: true,
+    system_ext_specific: true,
+    backend: {
+        java: {
+            platform_apis: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+    },
+}
+
+// The Linux development environment's daemon.
+cc_binary {
+    name: "lujarch_linux",
+    srcs: ["src/daemon/*.cpp"],
+    static_libs: [
+        "android.hardware.health-V4-ndk",
+        "android.hardware.ir-V1-ndk",
+        "liblujarch_daemon",
+        "lujarch_linux_aidl-ndk",
+        "lujarch_root_aidl-ndk",
+    ],
+    shared_libs: [
+        "libandroid",
+        "libbase",
+        "libbinder_ndk",
+        "libcutils",
+        "libjsoncpp",
+        "liblog",
+        "libpower",
+        "libz",
+    ],
+    required: [
+        "lujarch_linux_enter",
+        "lujarch_linux_fingerprint",
+        "lujarch_linux_frpc",
+        "lujarch_linux_setup",
+    ],
+    init_rc: ["src/daemon/lujarch_linux.rc"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+}
+
+// The way into the installed system: its execution enters the system's domain.
+cc_binary {
+    name: "lujarch_linux_enter",
+    srcs: ["src/enter/enter.cpp"],
+    cflags: ["-Wall", "-Werror"],
+    cpp_std: "c++20",
+    system_ext_specific: true,
+}
+
+// Lujarch's files for Linux, at /usr/lib/lujarch in the system: the initial setup and the
+// fingerprint helper of PAM.
+prebuilt_etc {
+    name: "lujarch_linux_setup",
+    src: "src/linux/setup",
+    filename: "setup",
+    sub_dir: "lujarch/linux",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_fingerprint",
+    src: "src/linux/fingerprint",
+    filename: "fingerprint",
+    sub_dir: "lujarch/linux",
+    system_ext_specific: true,
+}
+
+license {
+    name: "lujarch_linux_frp_license",
+    license_kinds: ["SPDX-license-identifier-Apache-2.0"],
+    license_text: ["src/frp/NOTICE"],
+}
+
+// frp's client, built outside the tree (feature.toml, components).
+cc_prebuilt_binary {
+    name: "lujarch_linux_frpc",
+    licenses: ["lujarch_linux_frp_license"],
+    compile_multilib: "64",
+    arch: {
+        arm64: {
+            srcs: ["prebuilt/arm64/lujarch_linux_frpc"],
+        },
+        x86_64: {
+            srcs: ["prebuilt/x86_64/lujarch_linux_frpc"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+    check_elf_files: false,
+    system_ext_specific: true,
+}

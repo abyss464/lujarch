@@ -1,0 +1,100 @@
+[enabled]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-1"
+
+# The first session the Terminal app opens: arch, arch-root or android-root.
+[open_kind]
+table = "secure"
+type = "string"
+default = "arch"
+item = "LNX-3"
+
+# The terminal's colors: system, classic or own.
+[colors]
+table = "secure"
+type = "string"
+default = "system"
+item = "LNX-3"
+
+[keys_row]
+table = "secure"
+type = "bool"
+default = true
+item = "LNX-3"
+
+[root_sessions]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-4"
+
+# android, balanced, linux or unlimited.
+[memory]
+table = "global"
+type = "string"
+default = "balanced"
+item = "LNX-5"
+
+[swap]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-5"
+
+# A double tap on an empty space of the home screen: 0 nothing, 1 turn off screen, 2 enter Linux.
+[double_tap]
+table = "secure"
+type = "int"
+default = 0
+item = "LNX-6"
+
+[lend_clipboard]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_notifications]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_sensors]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_usb]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_fingerprint]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_ir]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_nfc]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+# charging, always or off.
+[remote]
+table = "global"
+type = "string"
+default = "off"
+item = "LNX-9"

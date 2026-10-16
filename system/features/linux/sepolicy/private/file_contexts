@@ -1,0 +1,10 @@
+/system_ext/bin/lujarch_linux           u:object_r:lujarch_linux_exec:s0
+/system_ext/bin/lujarch_linux_enter     u:object_r:lujarch_linux_enter_exec:s0
+/system_ext/bin/lujarch_linux_frpc      u:object_r:lujarch_linux_relay_exec:s0
+/data/lujarch/linux(/.*)?               u:object_r:lujarch_linux_data_file:s0
+/data/lujarch/linux/os                  u:object_r:lujarch_linux_os_file:s0
+# The installed systems keep the label their files get when they are made, lujarch_linux_arch_file
+# (lujarch_linux.te); restorecon leaves them as they are.
+/data/lujarch/linux/os/.+               <<none>>
+/data/lujarch/linux/relay(/.*)?         u:object_r:lujarch_linux_relay_data_file:s0
+/data/lujarch/linux/swap                u:object_r:lujarch_linux_swap_file:s0

@@ -1,0 +1,5 @@
+frp
+https://github.com/fatedier/frp
+Copyright 2016 fatedier
+Licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+The image carries its client, frpc, built from the commit lock.toml pins.

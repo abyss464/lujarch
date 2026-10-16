@@ -1,0 +1,65 @@
+# lujarch_linux_arch: the programs of the installed Linux system, root's among them. They enter it
+# by lujarch_linux_enter, executed by lujarch_linux in the system's mount namespace, and keep it
+# for everything they run from the system. They own their system's files, use the network as
+# Android's apps of their groups do, and reach of Android only their terminals, the device
+# nodes bound into their /dev, Lujarch's files for Linux and the USB devices while they are lent.
+type lujarch_linux_arch, domain, coredomain;
+type lujarch_linux_enter_exec, system_file_type, exec_type, file_type;
+
+# The system.
+allow lujarch_linux_arch lujarch_linux_arch_file:dir { create_dir_perms rename reparent watch };
+allow lujarch_linux_arch lujarch_linux_arch_file:file {
+    create_file_perms rename link execute execute_no_trans map watch
+};
+allow lujarch_linux_arch lujarch_linux_arch_file:lnk_file { create_file_perms rename };
+allow lujarch_linux_arch lujarch_linux_arch_file:{ fifo_file sock_file } { create_file_perms rename };
+allow lujarch_linux_arch lujarch_linux_arch_file:filesystem getattr;
+allow lujarch_linux_arch labeledfs:filesystem getattr;
+
+# Its processes: users, groups, signals, scheduling, its own JITs.
+allow lujarch_linux_arch self:global_capability_class_set {
+    chown fowner fsetid kill setgid setuid setpcap net_bind_service net_raw ipc_lock sys_chroot
+    sys_nice sys_resource audit_write
+};
+allow lujarch_linux_arch self:process {
+    execmem fork getattr getcap getpgid getrlimit getsched getsession ptrace setcap setpgid
+    setrlimit setsched sigchld sigkill signal signull sigstop
+};
+allow lujarch_linux_arch self:netlink_audit_socket { create_socket_perms_no_ioctl nlmsg_relay };
+
+# The network, as Android's apps in inet and net_raw have it.
+net_domain(lujarch_linux_arch)
+allow lujarch_linux_arch self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read };
+allow lujarch_linux_arch self:rawip_socket create_socket_perms_no_ioctl;
+allow lujarch_linux_arch self:packet_socket create_socket_perms_no_ioctl;
+allow lujarch_linux_arch self:unix_stream_socket { connectto create_stream_socket_perms };
+
+# What lujarch_linux hands its programs: their streams and terminals.
+allow lujarch_linux_arch lujarch_linux:fd use;
+allow lujarch_linux_arch lujarch_linux:fifo_file { getattr write append };
+allow lujarch_linux_arch devpts:chr_file { rw_file_perms setattr };
+# What a shell's programs ask of their terminal beyond Android's unprivileged set.
+allowxperm lujarch_linux_arch devpts:chr_file ioctl {
+    TCSBRK TCSBRKP TCXONC FIONREAD TIOCNOTTY TIOCGSID TIOCEXCL TIOCNXCL TIOCGETD TIOCMGET
+};
+allow lujarch_linux_arch ptmx_device:chr_file rw_file_perms;
+
+# The device nodes of its /dev, and the USB devices while they are lent.
+allow lujarch_linux_arch { null_device zero_device random_device tty_device }:chr_file rw_file_perms;
+allow lujarch_linux_arch usb_device:dir r_dir_perms;
+allow lujarch_linux_arch usb_device:chr_file rw_file_perms;
+
+# Lujarch's files for Linux (the initial setup, the fingerprint helper).
+allow lujarch_linux_arch system_file:dir r_dir_perms;
+allow lujarch_linux_arch system_file:file r_file_perms;
+
+# What programs read of the kernel.
+r_dir_file(lujarch_linux_arch, proc)
+allow lujarch_linux_arch {
+    proc_cpuinfo proc_filesystems proc_loadavg proc_meminfo proc_net proc_pressure_mem proc_stat
+    proc_swaps proc_uptime proc_version
+}:file r_file_perms;
+r_dir_file(lujarch_linux_arch, sysfs)
+r_dir_file(lujarch_linux_arch, sysfs_devices_system_cpu)
+allow lujarch_linux_arch cgroup_v2:dir r_dir_perms;
+allow lujarch_linux_arch cgroup_v2:file r_file_perms;

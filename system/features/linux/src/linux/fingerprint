@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+# Confirms an authorization with the phone's fingerprint or screen lock (LNX-7), for pam_exec: it
+# exits 0 when the owner confirms on the phone. The request goes to /run/lujarch/auth as
+# "<reply> <text>"; the answer, "allow" or "deny", comes in the FIFO /run/lujarch/auth.d/<reply>.
+# Without the fingerprint lent it fails at once, and the password is asked.
+fifo=/run/lujarch/auth
+[ -p "$fifo" ] || exit 1
+name=$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')
+reply=/run/lujarch/auth.d/$name
+mkfifo -m 600 "$reply" || exit 1
+trap 'rm -f "$reply"' EXIT
+exec 3<>"$reply"
+printf '%s %s: %s\n' "$name" "${PAM_RUSER:-${PAM_USER:-?}}" "${PAM_SERVICE:-?}" >"$fifo" || exit 1
+read -r -t 65 answer <&3 || exit 1
+[ "$answer" = allow ]

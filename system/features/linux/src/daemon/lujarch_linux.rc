@@ -1,0 +1,23 @@
+on post-fs-data
+    mkdir /data/lujarch 0711 root root
+    mkdir /data/lujarch/linux 0711 root root
+    mkdir /data/lujarch/linux/os 0711 root root
+    mkdir /data/lujarch/linux/home 0700 root root
+    # Remote access's relay reads its configuration here as its own user (5202).
+    mkdir /data/lujarch/linux/relay 0750 root 5202
+    # The installed systems run their setuid programs (sudo): their directory is a mount of its
+    # own without the nosuid of /data.
+    mount none /data/lujarch/linux/os /data/lujarch/linux/os bind
+    mount none /data/lujarch/linux/os /data/lujarch/linux/os remount bind nodev
+    # Every program of the environment runs in this cgroup (Memory, LNX-5).
+    mkdir /sys/fs/cgroup/lujarch_linux 0755 root root
+
+service lujarch_linux /system_ext/bin/lujarch_linux
+    class main
+    user root
+    # system: the cgroup root's cgroup.procs, which moving a process into the environment's
+    # cgroup needs; readproc: the sessions' processes in /proc; package_info: the callers'
+    # packages (/data/system/packages.list); wakelock: the sessions' wake locks.
+    group root system readproc package_info wakelock inet
+    # Linux's root gets these at most, and its domain allows fewer (lujarch_linux_arch.te).
+    capabilities CHOWN FOWNER FSETID KILL SETGID SETUID SETPCAP NET_BIND_SERVICE NET_RAW IPC_LOCK SYS_CHROOT SYS_PTRACE SYS_ADMIN SYS_NICE SYS_RESOURCE AUDIT_WRITE BLOCK_SUSPEND

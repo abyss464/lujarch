@@ -1,0 +1,10 @@
+prefix = "LNX"
+
+# frp's client, which carries Remote access to the owner's relay server (LNX-9), built outside the
+# tree for Android (process/layout.md, Components) so that it resolves names through Android's
+# resolver; pinned in lock.toml.
+[components.frp]
+build = "go"
+module = "lujarch_linux_frpc"
+package = "./cmd/frpc"
+tags = ["frpc"]

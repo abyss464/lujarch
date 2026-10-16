@@ -86,6 +86,11 @@ flutter = "9584c6713b324636289d067944a46fd6b49df14b"
 version = "0.1.0"
 commit = "d3d2dc3f04bc8ba3393a90f2d205588991746a10"
 
+[components.frp]
+url = "https://github.com/fatedier/frp.git"
+version = "v0.69.1"
+commit = "8dd26c6961f2f4ca657dcd7fbfb3a4e8c3d48fbb"
+
 [prebuilts.ksud.arm64]
 url = "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/ksud-aarch64-linux-android"
 sha256 = "52ba3da465459bfbac98dd25c53f8d31f93ee5a8ee89d84f67a28fe0d18cdef2"

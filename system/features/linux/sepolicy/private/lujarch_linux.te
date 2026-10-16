@@ -1,0 +1,107 @@
+# lujarch_linux: the Linux development environment's daemon. It makes the installed system's
+# mount namespace of binds, runs Linux's programs through lujarch_linux_enter, holds the terminal
+# sessions, installs systems from archives, runs Remote access's relay, lends Linux the phone's
+# parts, and serves Lujarch Settings and the Terminal app.
+type lujarch_linux, domain, coredomain;
+type lujarch_linux_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_linux)
+
+type lujarch_linux_service, service_manager_type;
+type lujarch_linux_data_file, file_type, data_file_type, core_data_file_type;
+type lujarch_linux_os_file, file_type, data_file_type, core_data_file_type;
+type lujarch_linux_relay_data_file, file_type, data_file_type, core_data_file_type;
+type lujarch_linux_swap_file, file_type, data_file_type, core_data_file_type;
+# The installed systems' files. Not a data file type: Linux's programs execute them, which no
+# domain but apps may do with data files. file_contexts leaves them to restorecon as they are.
+type lujarch_linux_arch_file, file_type;
+
+# Its interface, and the listeners of Lujarch Settings and the Terminal app.
+binder_use(lujarch_linux)
+add_service(lujarch_linux, lujarch_linux_service)
+allow platform_app lujarch_linux_service:service_manager find;
+binder_call(platform_app, lujarch_linux)
+binder_call(lujarch_linux, platform_app)
+allow lujarch_linux system_data_file:dir search;
+allow lujarch_linux packages_list_file:file r_file_perms;
+get_prop(lujarch_linux, lujarch_setting_prop)
+
+# lujarch_linux.rc's capabilities; no domain bypasses permissions, so the daemon acts on a user's
+# files with the user's file system IDs (setuid, setgid).
+allow lujarch_linux self:global_capability_class_set {
+    chown fowner fsetid kill setgid setuid sys_admin sys_chroot sys_ptrace
+};
+
+# Its own files: state, colors, the setup log, Remote access's connection and keys, the relay's
+# configuration, the swap file.
+allow lujarch_linux lujarch_linux_data_file:dir create_dir_perms;
+allow lujarch_linux lujarch_linux_data_file:file { create_file_perms rename };
+allow lujarch_linux lujarch_linux_relay_data_file:dir rw_dir_perms;
+allow lujarch_linux lujarch_linux_relay_data_file:file { create_file_perms rename };
+allow lujarch_linux lujarch_linux_swap_file:file { create_file_perms swapon };
+type_transition lujarch_linux lujarch_linux_data_file:file lujarch_linux_swap_file "swap";
+allowxperm lujarch_linux lujarch_linux_swap_file:file ioctl F2FS_IOC_SET_PIN_FILE;
+allow lujarch_linux labeledfs:filesystem getattr;
+allow lujarch_linux proc_swaps:file r_file_perms;
+allow lujarch_linux proc_meminfo:file r_file_perms;
+
+# The installed systems: unpacked into lujarch_linux_os_file, where every directory the daemon
+# makes is a system's; kept, replaced, read and written as root.
+allow lujarch_linux lujarch_linux_os_file:dir { rw_dir_perms rename reparent rmdir };
+type_transition lujarch_linux lujarch_linux_os_file:dir lujarch_linux_arch_file;
+allow lujarch_linux lujarch_linux_arch_file:dir { create_dir_perms rename reparent mounton watch };
+allow lujarch_linux lujarch_linux_arch_file:file { create_file_perms rename link mounton };
+allow lujarch_linux lujarch_linux_arch_file:lnk_file { create_file_perms rename };
+allow lujarch_linux lujarch_linux_arch_file:fifo_file { create_file_perms rename watch };
+allow lujarch_linux lujarch_linux_arch_file:sock_file { getattr write unlink };
+allow lujarch_linux lujarch_linux_arch:unix_stream_socket connectto;
+allow lujarch_linux self:unix_stream_socket create_stream_socket_perms;
+
+# The system's namespace: binds only, and Android's /dev/bus/usb taken back.
+allow lujarch_linux rootfs:dir mounton;
+allow lujarch_linux tmpfs:filesystem unmount;
+
+# The terminals of the sessions.
+allow lujarch_linux ptmx_device:chr_file rw_file_perms;
+allow lujarch_linux devpts:chr_file { rw_file_perms setattr };
+
+# Linux's programs: started in their domain, signalled, their foreground job read from /proc.
+domain_auto_trans(lujarch_linux, lujarch_linux_enter_exec, lujarch_linux_arch)
+allow lujarch_linux lujarch_linux_arch:process { sigkill signal getpgid };
+allow lujarch_linux lujarch_linux_arch:dir search;
+allow lujarch_linux lujarch_linux_arch:file r_file_perms;
+allow lujarch_linux self:process getpgid;
+
+# Remote access's relay, as aid::kLinuxRelay in its own domain.
+domain_auto_trans(lujarch_linux, lujarch_linux_relay_exec, lujarch_linux_relay)
+allow lujarch_linux lujarch_linux_relay:process { sigkill signal };
+
+# Every program of the environment runs in /sys/fs/cgroup/lujarch_linux: its memory.high is the
+# Memory switch, cgroup.kill ends Linux.
+allow lujarch_linux cgroup_v2:dir r_dir_perms;
+allow lujarch_linux cgroup_v2:file rw_file_perms;
+
+# The sessions' wake locks.
+wakelock_use(lujarch_linux)
+
+# The charger for Remote access: the Health HAL and power-supply uevents.
+hal_client_domain(lujarch_linux, hal_health)
+allow lujarch_linux self:netlink_kobject_uevent_socket create_socket_perms_no_ioctl;
+
+# The lent parts: the sensors, the infrared transmitter.
+allow lujarch_linux sensorservice_service:service_manager find;
+binder_call(lujarch_linux, system_server)
+allow lujarch_linux system_server:unix_stream_socket { read write getattr getopt setopt };
+hal_client_domain(lujarch_linux, hal_ir)
+
+# Root sessions in Android: lujarch_root lets KernelSU grant su to aid::kLinuxRoot.
+allow lujarch_linux lujarch_root_service:service_manager find;
+binder_call(lujarch_linux, lujarch_root)
+
+# An archive chosen in Files comes as an open file of the documents provider.
+allow lujarch_linux platform_app:fd use;
+allow lujarch_linux { media_rw_data_file fuse }:file { read getattr };
+
+# The Terminal app holds one end of a session's socket pair and the desktop's and sound's
+# connections.
+allow platform_app lujarch_linux:fd use;
+allow platform_app lujarch_linux:unix_stream_socket { read write getattr getopt setopt shutdown };

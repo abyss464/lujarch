@@ -1,0 +1,3 @@
+# The installed systems' directory is a mount of its own without the nosuid of /data
+# (lujarch_linux.rc): Linux's setuid programs work.
+allow init lujarch_linux_os_file:dir mounton;

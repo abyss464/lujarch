@@ -1,0 +1,23 @@
+# lujarch_linux_relay: frp's client, which carries Remote access to the owner's relay server as
+# aid::kLinuxRelay: one connection out, and connections to Linux's SSH server on the phone's
+# loopback.
+type lujarch_linux_relay, domain, coredomain;
+type lujarch_linux_relay_exec, system_file_type, exec_type, file_type;
+
+net_domain(lujarch_linux_relay)
+
+# Its configuration, written by lujarch_linux; its output goes to lujarch_linux.
+allow lujarch_linux_relay lujarch_linux_data_file:dir search;
+allow lujarch_linux_relay lujarch_linux_relay_data_file:dir search;
+allow lujarch_linux_relay lujarch_linux_relay_data_file:file r_file_perms;
+allow lujarch_linux_relay lujarch_linux:fd use;
+allow lujarch_linux_relay lujarch_linux:fifo_file { getattr write append };
+
+# Go's runtime: its threads by the CPUs it may use, the network's interfaces.
+allow lujarch_linux_relay proc_stat:file r_file_perms;
+allow lujarch_linux_relay proc_net:file r_file_perms;
+allow lujarch_linux_relay cgroup:dir search;
+allow lujarch_linux_relay cgroup:file r_file_perms;
+allow lujarch_linux_relay cgroup_v2:dir search;
+allow lujarch_linux_relay cgroup_v2:file r_file_perms;
+allow lujarch_linux_relay self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read };
