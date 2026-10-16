@@ -1902,9 +1902,6 @@ ANALYSIS_GO_GB = 38
 BESIDE_ANALYSIS_GB = 2
 # The least memory cap a build runs under.
 BUILD_MIN_GB = ANALYSIS_GO_GB + BESIDE_ANALYSIS_GB
-# The least memory cap of a build that reuses the last analysis: siso and the Java and R8 jobs of
-# two build jobs (fitting_jobs).
-BUILD_NO_ANALYSIS_MIN_GB = 30
 # How long a build waits for the memory it needs to come free.
 MEMORY_WAIT_MIN = 20
 
@@ -1980,34 +1977,14 @@ def wait_for_memory(need):
         f"build.memory_max in host.toml). What holds memory:\n{memory_holders()}")
 
 
-def analysis_pending(tree, product):
-    """Whether the build analyses the tree again: a file Soong read for its build graph changed
-    after the graph was written, or there is no graph."""
-    graph = tree / "out" / "soong" / f"build.{product}.ninja"
-    inputs = graph.with_name(graph.name + ".d")
-    try:
-        written = graph.stat().st_mtime
-        deps = inputs.read_text().split(":", 1)[1].replace("\\\n", " ").split()
-    except (OSError, IndexError):
-        return True
-    for dep in deps:
-        try:
-            if (tree / dep).stat().st_mtime > written:
-                return True
-        except OSError:
-            return True
-    return False
-
-
-def build_budget(host, analysis=True):
+def build_budget(host):
     """The build's memory cap, pressure point and jobs: from host.toml, or from free memory once
-    enough of it is free for the build, with or without an analysis of the tree."""
+    enough of it is free."""
     mem_max = host.get("build", "memory_max") or ""
     if not mem_max:
         # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
         # holds it; squeezed by the cap instead, it stalls for hours.
-        least = BUILD_MIN_GB if analysis else BUILD_NO_ANALYSIS_MIN_GB
-        gb = wait_for_memory(least + DESKTOP_RESERVE_GB)
+        gb = wait_for_memory(BUILD_MIN_GB + DESKTOP_RESERVE_GB)
         mem_max = f"{min(gb - DESKTOP_RESERVE_GB, 60)}G"
     mem_high = host.get("build", "memory_high") or mem_max
     jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
@@ -2143,7 +2120,7 @@ def cmd_build(args):
     pin = lock_file().get("stock", {}).get(args.device)
     if pin and pin.get("files") and not (stock_dump_dir(host, pin) / STOCK_UNPACKED).is_file():
         die(f"{args.device} needs files of its stock release: lujarch stock {args.device}")
-    mem_max, mem_high, jobs = build_budget(host, analysis_pending(tree, device["product"]))
+    mem_max, mem_high, jobs = build_budget(host)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
