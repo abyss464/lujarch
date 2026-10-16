@@ -15,6 +15,8 @@
                                     virtual device
   lujarch vm screenshot [PATH]      write what the virtual device's display shows
   lujarch test [SELECTOR...]        run the tests of the target's items on the virtual device
+  lujarch test --script FILE [ARG...]
+                                    run a Python file on the virtual device as a test runs
 """
 
 import argparse
@@ -72,6 +74,8 @@ ADB_PORT = 6520 + VM_OFFSET
 WEBRTC_URL = f"https://localhost:{8443 + VM_OFFSET}"
 VM_CONTAINER = "lujarch-vm" if VM_INSTANCE == 1 else f"lujarch-vm-{VM_INSTANCE}"
 VM_DIR = "vm" if VM_INSTANCE == 1 else f"vm-{VM_INSTANCE}"
+# Unrecorded test output, one folder per instance: tests of the same name run side by side.
+TEST_WORK = "work" if VM_INSTANCE == 1 else f"work-{VM_INSTANCE}"
 # Cuttlefish numbers the instance too (its vsock CID and ports follow the number), so ports are
 # the same inside the container and out.
 VM_ICE_PORTS = f"{15550 + 50 * VM_OFFSET}-{15599 + 50 * VM_OFFSET}"
@@ -1894,14 +1898,17 @@ def mem_available_gb():
 
 # The memory a build leaves to the desktop and everything else running.
 DESKTOP_RESERVE_GB = 10
-# The analysis's Go memory limit (GOMEMLIMIT) is the cap less 6 GB, left to the rest of the build
-# and the file cache, but no less than ANALYSIS_GO_GB while the cap leaves BESIDE_ANALYSIS_GB
-# beside it: the analysis's live heap peaks at about 29 GB, under a 38 GB limit it runs as fast as
-# under more, and the rest of the build holds under 1 GB while it runs.
+# The analysis's Go memory limit (GOMEMLIMIT): its live heap peaks at about 29 GB, under a 38 GB
+# limit it runs as fast as under more, and the rest of the build holds under 1 GB beside it
+# (BESIDE_ANALYSIS_GB). The limit is part of the analysis's command line, so it stays one value:
+# a limit that followed free memory would make every build run the analysis again.
 ANALYSIS_GO_GB = 38
 BESIDE_ANALYSIS_GB = 2
-# The least memory cap a build runs under.
+# The least memory cap of a build that analyses the tree.
 BUILD_MIN_GB = ANALYSIS_GO_GB + BESIDE_ANALYSIS_GB
+# The least memory cap of a build that reuses the last analysis: Kati holds up to 17 GB, then siso
+# 23 GB and its two jobs.
+NINJA_MIN_GB = 28
 # How long a build waits for the memory it needs to come free.
 MEMORY_WAIT_MIN = 20
 
@@ -1959,12 +1966,12 @@ def memory_holders():
     return "\n".join(f"  {size / 2**30:5.1f} GB  {text}" for size, text in sorted(held)[::-1])
 
 
-def wait_for_memory(need):
+def wait_for_memory(need, what="a build"):
     """Free memory in GB once it reaches need, waited for up to MEMORY_WAIT_MIN minutes."""
     gb = mem_available_gb()
     if gb >= need:
         return gb
-    log(f"only {gb} GB of memory free: a build needs {need}; waiting up to {MEMORY_WAIT_MIN} min "
+    log(f"only {gb} GB of memory free: {what} needs {need}; waiting up to {MEMORY_WAIT_MIN} min "
         f"for it to come free. What holds memory:\n{memory_holders()}")
     start = time.monotonic()
     while time.monotonic() - start < MEMORY_WAIT_MIN * 60:
@@ -1973,22 +1980,36 @@ def wait_for_memory(need):
         if gb >= need:
             log(f"{gb} GB of memory free after {(time.monotonic() - start) / 60:.1f} min")
             return gb
-    die(f"only {gb} GB of memory free after {MEMORY_WAIT_MIN} min: a build needs {need} (or set "
+    die(f"only {gb} GB of memory free after {MEMORY_WAIT_MIN} min: {what} needs {need} (or set "
         f"build.memory_max in host.toml). What holds memory:\n{memory_holders()}")
 
 
-def build_budget(host):
-    """The build's memory cap, pressure point and jobs: from host.toml, or from free memory once
-    enough of it is free."""
+def analysed_before(tree, product):
+    """Whether Soong has analysed the tree for the product: only then does it refuse to analyse
+    it again when the build forbids it (SOONG_ENFORCE_NO_REANALYSIS); a first analysis it runs."""
+    return (tree / "out" / "soong" / f"soong.environment.used.{product}.build").is_file()
+
+
+def build_budget(host, reusable):
+    """The build's memory cap, pressure point and jobs, and whether it may analyse the tree: from
+    host.toml; else from free memory, once enough is free for the analysis, or, while less is free
+    and the last analysis is reusable, for a build that reuses it."""
     mem_max = host.get("build", "memory_max") or ""
+    analyse = True
     if not mem_max:
-        # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
-        # holds it; squeezed by the cap instead, it stalls for hours.
-        gb = wait_for_memory(BUILD_MIN_GB + DESKTOP_RESERVE_GB)
+        # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT holds
+        # it; squeezed by the cap instead, it stalls for hours.
+        full = BUILD_MIN_GB + DESKTOP_RESERVE_GB
+        if reusable and mem_available_gb() < full:
+            gb = wait_for_memory(NINJA_MIN_GB + DESKTOP_RESERVE_GB,
+                                 "a build that reuses the last analysis")
+            analyse = gb >= full
+        else:
+            gb = wait_for_memory(full, "a build that analyses the tree")
         mem_max = f"{min(gb - DESKTOP_RESERVE_GB, 60)}G"
     mem_high = host.get("build", "memory_high") or mem_max
     jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
-    return mem_max, mem_high, jobs
+    return mem_max, mem_high, jobs, analyse
 
 
 # Of the caller's environment a build sees only these: the build writes its whole environment
@@ -2006,45 +2027,64 @@ def fitting_jobs(mem_max):
     return max(2, (int(mem_max.rstrip("G")) - 26) // 4)
 
 
-def analysis_go_limit(mem_max):
-    cap = int(mem_max.rstrip("G"))
-    return max(cap - 6, min(ANALYSIS_GO_GB, cap - BESIDE_ANALYSIS_GB))
-
-
-def run_scoped(command, logfile, mode, **kwargs):
-    """Runs a build command that systemd-run puts in its own memory scope, its output into the
-    log, and returns its exit status and what the scope used: its peak memory, its anonymous
-    memory at most (sampled every 2 s; the file cache, which the cap reclaims, left out), how
-    often it reached the cap, and how many processes the cap killed."""
+def run_scoped(command, script, logfile, mode, **kwargs):
+    """Runs a build script with bash under command, which puts it in its own systemd scope, its
+    output into the log, and returns its exit status and what the scope used: its peak memory,
+    its anonymous memory at most (sampled every 2 s; the file cache, which the cap reclaims, left
+    out), how often it reached the cap, and how many processes the cap killed. The scope ends with
+    this process, however it ends: the script stops its scope once a pipe whose other end only
+    this process holds closes, and an interrupted run waits until the scope is gone."""
     used = {"peak": 0, "anon": 0, "max": 0, "oom_kill": 0}
     own = Path("/proc/self/cgroup").read_text()
     scope = None
-    with open(logfile, mode) as f, \
-            subprocess.Popen(command, stdout=f, stderr=subprocess.STDOUT, **kwargs) as proc:
-        try:
-            while True:
-                try:
-                    if scope is None:
-                        group = Path(f"/proc/{proc.pid}/cgroup").read_text()
-                        if group != own:
-                            scope = Path("/sys/fs/cgroup" + group.split("::", 1)[1].strip())
-                    if scope is not None:
-                        stat = dict(l.split()
-                                    for l in (scope / "memory.stat").read_text().splitlines())
-                        events = dict(l.split()
-                                      for l in (scope / "memory.events").read_text().splitlines())
-                        used["anon"] = max(used["anon"], int(stat["anon"]))
-                        used["peak"] = max(used["peak"], int((scope / "memory.peak").read_text()))
-                        used["max"], used["oom_kill"] = int(events["max"]), int(events["oom_kill"])
-                except (OSError, KeyError, ValueError):
-                    pass
-                try:
-                    return proc.wait(timeout=2), used
-                except subprocess.TimeoutExpired:
-                    pass
-        except BaseException:
-            proc.kill()
-            raise
+    end, held = os.pipe()
+    guard = (f"[ -e /proc/self/fd/{end} ] && (exec >/dev/null 2>&1; trap '' INT HUP TERM; "
+             f"read -r -u {end} _; systemctl --user stop --no-block "
+             f'"$(basename "$(cut -d: -f3- /proc/self/cgroup)")") &\nexec {end}<&-\n')
+    try:
+        with open(logfile, mode) as f, subprocess.Popen(
+                [*command, "bash", "-c", guard + script], stdout=f, stderr=subprocess.STDOUT,
+                pass_fds=(end,), **kwargs) as proc:
+            os.close(end)
+            end = None
+            try:
+                while True:
+                    try:
+                        if scope is None:
+                            group = Path(f"/proc/{proc.pid}/cgroup").read_text()
+                            if group != own:
+                                scope = Path("/sys/fs/cgroup" + group.split("::", 1)[1].strip())
+                        if scope is not None:
+                            stat = dict(l.split()
+                                        for l in (scope / "memory.stat").read_text().splitlines())
+                            events = dict(l.split() for l in
+                                          (scope / "memory.events").read_text().splitlines())
+                            used["anon"] = max(used["anon"], int(stat["anon"]))
+                            used["peak"] = max(used["peak"],
+                                               int((scope / "memory.peak").read_text()))
+                            used["max"] = int(events["max"])
+                            used["oom_kill"] = int(events["oom_kill"])
+                    except (OSError, KeyError, ValueError):
+                        pass
+                    try:
+                        return proc.wait(timeout=2), used
+                    except subprocess.TimeoutExpired:
+                        pass
+            finally:
+                os.close(held)
+                held = None
+                if proc.returncode is None and scope is not None:
+                    log(f"stopping the build ({scope.name})")
+                    deadline = time.monotonic() + 120
+                    while scope.exists() and time.monotonic() < deadline:
+                        time.sleep(0.5)
+                    if scope.exists():
+                        log(f"the build's scope {scope.name} did not stop; killing its script")
+                        proc.kill()
+    finally:
+        for fd in (end, held):
+            if fd is not None:
+                os.close(fd)
 
 
 def analysis_seconds(tree, since):
@@ -2120,7 +2160,7 @@ def cmd_build(args):
     pin = lock_file().get("stock", {}).get(args.device)
     if pin and pin.get("files") and not (stock_dump_dir(host, pin) / STOCK_UNPACKED).is_file():
         die(f"{args.device} needs files of its stock release: lujarch stock {args.device}")
-    mem_max, mem_high, jobs = build_budget(host)
+    mem_max, mem_high, jobs, analyse = build_budget(host, analysed_before(tree, device["product"]))
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -2154,40 +2194,61 @@ m -j{jobs} {modules}
         "CCACHE_DIR": str(host.path_of("paths", "ccache")),
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
         # The analysis's Go heap stays under the cap (tools/patches/build/soong).
-        "GOMEMLIMIT": f"{analysis_go_limit(mem_max)}GiB",
+        "GOMEMLIMIT": f"{ANALYSIS_GO_GB}GiB",
     })
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
-    def command(jobs):
-        cmd = ["bash", "-c", script(jobs)]
-        cpus = host.get("computer", "cpus")
+    cpus = host.get("computer", "cpus")
+
+    def run(jobs, mode):
+        scope = ["systemd-run", "--user", "--scope", "--quiet", "--collect",
+                 "-p", f"MemoryHigh={mem_high}", "-p", f"MemoryMax={mem_max}",
+                 "-p", "MemorySwapMax=0", "-p", "CPUWeight=20", "-p", "IOWeight=20"]
         if cpus:
-            cmd = ["taskset", "-c", cpus, *cmd]
-        return ["systemd-run", "--user", "--scope", "--quiet", "--collect",
-                "-p", f"MemoryHigh={mem_high}", "-p", f"MemoryMax={mem_max}",
-                "-p", "MemorySwapMax=0", "-p", "CPUWeight=20", "-p", "IOWeight=20", *cmd]
+            scope += ["taskset", "-c", cpus]
+        # Under a cap that does not hold the analysis, Soong stops before it analyses the tree.
+        held = {} if analyse else {"SOONG_ENFORCE_NO_REANALYSIS": "true"}
+        return run_scoped(scope, script(jobs), logfile, mode, cwd=tree, env={**env, **held})
+
+    def begin():
+        log(f"building {args.device} ({lunch}{', ' + modules if modules else ''}): "
+            f"{jobs} jobs, memory cap {mem_max}"
+            f"{'' if analyse else ', reusing the last analysis'}; log {logfile}")
+
+    def merged(used, more):
+        return {k: max(v, more[k]) if k in ("peak", "anon") else v + more[k]
+                for k, v in used.items()}
+
     try:
         with open("/proc/self/oom_score_adj", "w") as f:
             f.write("1000")
     except OSError:
         log("could not raise the build's oom_score_adj")
-    log(f"building {args.device} ({lunch}{', ' + modules if modules else ''}): "
-        f"{jobs} jobs, memory cap {mem_max}; log {logfile}")
+    # A build stopped from outside stops its scope before it ends (run_scoped).
+    for stop in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(stop, lambda number, _: sys.exit(128 + number))
+    begin()
     start, started = time.monotonic(), time.time()
-    status, used = run_scoped(command(jobs), logfile, "w", cwd=tree, env=env)
+    status, used = run(jobs, "w")
+    refusal = re.search(r"Reanalysis will run due to ([^\n]*)",
+                        logfile.read_text(errors="replace")) if status and not analyse else None
+    if refusal:
+        log(f"the build analyses the tree again: {refusal.group(1).rstrip('.')}")
+        mem_max, mem_high, jobs, analyse = build_budget(host, False)
+        begin()
+        status, more = run(jobs, "a")
+        used = merged(used, more)
     if status < 0 or status in (137, 143):
         # The scope's memory cap killed the build: it goes on from where it stopped with half
         # the jobs.
-        fewer = max(2, jobs // 2)
-        log(f"the build hit its memory cap (exit {status}); continuing with {fewer} jobs")
-        status, more = run_scoped(command(fewer), logfile, "a", cwd=tree, env=env)
-        used = {k: max(v, more[k]) if k in ("peak", "anon") else v + more[k]
-                for k, v in used.items()}
+        jobs = max(2, jobs // 2)
+        log(f"the build hit its memory cap (exit {status}); continuing with {jobs} jobs")
+        status, more = run(jobs, "a")
+        used = merged(used, more)
     minutes = int((time.monotonic() - start) // 60)
     # What the build used, so that its cap and jobs follow from measured builds.
     analysis = analysis_seconds(tree, started)
-    usage = (f"memory: cap {mem_max}, {jobs} jobs, analysis Go limit "
-             f"{analysis_go_limit(mem_max)}G; peak {used['peak'] / 2**30:.1f}G, anonymous at most "
-             f"{used['anon'] / 2**30:.1f}G; the cap reached {used['max']} times, "
+    usage = (f"memory: cap {mem_max}, {jobs} jobs; peak {used['peak'] / 2**30:.1f}G, anonymous "
+             f"at most {used['anon'] / 2**30:.1f}G; the cap reached {used['max']} times, "
              f"{used['oom_kill']} processes killed by it; "
              + (f"analysis {analysis:.0f} s" if analysis is not None else "no analysis"))
     if status:
@@ -2228,15 +2289,19 @@ def host_package(host, tree):
     target = host.out / "vm" / "host"
     stamp = target / ".package-mtime"
     mtime = str(package.stat().st_mtime_ns)
-    if stamp.is_file() and stamp.read_text() == mtime:
-        return target
-    if target.exists():
-        shutil.rmtree(target)
-    target.mkdir(parents=True)
-    log(f"unpacking the Cuttlefish host tools into {target}")
-    if subprocess.run(["tar", "-xzf", str(package), "-C", str(target)]).returncode:
-        die(f"could not unpack {package}")
-    stamp.write_text(mtime)
+    # Every virtual device starts from these tools: one start unpacks them while the others wait.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target.parent / ".host.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if stamp.is_file() and stamp.read_text() == mtime:
+            return target
+        if target.exists():
+            shutil.rmtree(target)
+        target.mkdir(parents=True)
+        log(f"unpacking the Cuttlefish host tools into {target}")
+        if subprocess.run(["tar", "-xzf", str(package), "-C", str(target)]).returncode:
+            die(f"could not unpack {package}")
+        stamp.write_text(mtime)
     return target
 
 
@@ -2302,8 +2367,56 @@ def wait_booted(host_out, timeout):
             return False
         if booted(host_out):
             return True
+        crash = system_server_crash(host_out)
+        if crash:
+            die(f"the system server keeps dying while the device starts: {crash}")
         time.sleep(5)
     return False
+
+
+# How often the system server starts, from the start of the device or from a restart of the
+# framework, before it is taken to keep dying.
+SYSTEM_SERVER_STARTS = 3
+
+
+def system_server_starts(host_out):
+    """How often the system server has started since the device started, or None."""
+    try:
+        said = adb(host_out, "shell", "getprop", "sys.system_server.start_count", timeout=10)
+    except subprocess.TimeoutExpired:
+        return None
+    count = said.stdout.strip()
+    return int(count) if said.returncode == 0 and count.isdigit() else None
+
+
+def system_server_crash(host_out, before=0):
+    """When the system server has started SYSTEM_SERVER_STARTS times since it had started before
+    times, how often it started and the crash that ended the first of those starts, from the
+    crash log (its last lines when it names no such crash); else None."""
+    count = system_server_starts(host_out)
+    if count is None or count - before < SYSTEM_SERVER_STARTS:
+        return None
+    starts = adb(host_out, "logcat", "-d", "-b", "events", "-s", "system_server_start",
+                 timeout=60).stdout
+    pids = [pid for pid, n in re.findall(
+        r"^\S+ \S+\s+(\d+)\s+\d+ I system_server_start: \[(\d+),", starts, re.M) if int(n) > before]
+    crash = adb(host_out, "logcat", "-d", "-b", "crash", timeout=60).stdout.split("\n")
+
+    def written_by(pid):
+        return [line for line in crash if line.split()[2:3] == [pid]]
+
+    for pid in pids:
+        lines = written_by(pid)
+        # A native crash is written by the crash dumper, which names the process it dumps.
+        dumper = next((line.split()[2] for line in crash if f"pid: {pid}, " in line), None)
+        lines = lines or (written_by(dumper) if dumper else [])
+        # The runtime repeats a crash it could not report.
+        lines = lines[:next((i for i, line in enumerate(lines) if "Couldn't report crash" in line),
+                            len(lines))]
+        if lines:
+            return f"it started {count} times; its crash as process {pid}:\n" + "\n".join(
+                lines[:40])
+    return f"it started {count} times; the crash log ends:\n" + "\n".join(crash[-30:])
 
 
 def screen_nodes(host_out):
@@ -2569,6 +2682,42 @@ def device_differs(host_out, product, files):
     return [f for f, copy in zip(files, held) if copy != built(f)]
 
 
+def moved_resource_ids(host, host_out, product, files):
+    """Of these files, the framework's resource packages (the .apk files of a partition's
+    framework/) whose built copy gives one of the device copy's resource ids to another resource
+    or to none, with how many: the apps and the system server hold those ids as compiled."""
+    packages = [f for f in files
+                if partition_path(f).startswith("framework/") and f.endswith(".apk")]
+    if not packages:
+        return []
+    aapt2 = host.tree / "out" / "host" / "linux-x86" / "bin" / "aapt2"
+    if not aapt2.is_file():
+        die(f"no {aapt2}, which reads resource ids: lujarch build vm aapt2")
+
+    def ids(apk):
+        dump = subprocess.run([str(aapt2), "dump", "resources", str(apk)], capture_output=True,
+                              text=True)
+        if dump.returncode:
+            die(f"aapt2 dump resources {apk}: {dump.stderr.strip()}")
+        return dict(re.findall(r"^\s+resource (0x[0-9a-f]{8}) (\S+)", dump.stdout, re.M))
+
+    moved = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for rel in packages:
+            copy = Path(tmp) / Path(rel).name
+            pull = adb(host_out, "pull", "/" + rel, str(copy), timeout=300)
+            said = (pull.stdout + pull.stderr).strip()
+            if pull.returncode and "No such file" in said:
+                continue
+            if pull.returncode:
+                die(f"adb pull /{rel}: {said}")
+            held, built = ids(copy), ids(product / rel)
+            count = sum(1 for number, name in held.items() if built.get(number) != name)
+            if count:
+                moved.append(f"{rel} ({count} ids)")
+    return moved
+
+
 def stale_code(host_out, files):
     """The processes that run a copy of these programs or libraries other than the one in place,
     which they started with before it was replaced, as 'NAME (PID): PATH'."""
@@ -2629,6 +2778,7 @@ def restart_framework(host_out):
     unlocked the user again."""
     query = "; ".join([f"getprop init.svc.{name}" for name in FRAMEWORK_SERVICES]
                       + ["service check activity"])
+    before = system_server_starts(host_out) or 0
     adb(host_out, "shell", "stop", timeout=120)
     # Init stops them in the background, and servicemanager lets go of the stopped system server's
     # services only once it has ended; a system server started before gets those dead services
@@ -2650,6 +2800,9 @@ def restart_framework(host_out):
         if user.stdout.strip() == "RUNNING_UNLOCKED":
             provision(host_out)
             return
+        crash = system_server_crash(host_out, before)
+        if crash:
+            die(f"the system server keeps dying after the framework's restart: {crash}")
     die("the framework did not come back after its restart")
 
 
@@ -2709,6 +2862,11 @@ def vm_sync(host, info, host_out, modules):
         provision(host_out)
     changed = device_differs(host_out, product, files)
     log(f"the device holds {len(files) - len(changed)} of the {len(files)} files as built")
+    moved = moved_resource_ids(host, host_out, product, changed)
+    if moved:
+        die("the build moves resource ids that the running system's apps and system server hold "
+            f"as compiled, in:\n{listed(moved)}\nthese come only with a full build and a fresh "
+            "start: lujarch build vm, lujarch vm stop, lujarch vm start")
     if changed:
         remount = adb(host_out, "remount", timeout=300)
         said = (remount.stdout + remount.stderr).strip()
@@ -2953,6 +3111,13 @@ def cmd_vm(args):
             }, indent=2) + "\n")
             log(f"booted and ready; adb 127.0.0.1:{ADB_PORT} as root; screen {WEBRTC_URL}")
             return 0
+        crash = system_server_crash(host_out)
+        if crash:
+            save_log()
+            logcat = logfile.with_name(f"{logfile.stem}-logcat.txt")
+            logcat.write_text(adb(host_out, "logcat", "-d", "-b", "all", timeout=120).stdout)
+            die(f"the system server keeps dying while the device starts: {crash}\n"
+                f"log {logfile}, logcat {logcat}")
         time.sleep(10)
     save_log()
     die(f"not booted after {args.timeout} s; log {logfile}")
@@ -3020,8 +3185,59 @@ def merge_results(path, head, runs):
     return items
 
 
+def test_device(host):
+    """The running virtual device's host tools and the environment a test runs in
+    (test/lib/lujarch_test.py), once adb runs as root on the device."""
+    info, host_out, _, _ = vm_paths(host)
+    if container_state() != "running" or not booted(host_out):
+        die("the virtual device is not running (lujarch vm start)")
+    if not adb_root(host_out):
+        die("adb cannot run as root on the virtual device")
+    sdk = host.get("paths", "android_sdk")
+    env = dict(os.environ)
+    env.update({
+        "PYTHONPATH": str(ROOT / "test" / "lib"), "PYTHONDONTWRITEBYTECODE": "1",
+        "LUJARCH_ADB": adb_binary(host_out), "LUJARCH_SERIAL": f"127.0.0.1:{ADB_PORT}",
+        "LUJARCH_TOOL": str(ROOT / "tools" / "lujarch"), "LUJARCH_ROOT": str(ROOT),
+        "LUJARCH_TREE": str(host.tree), "LUJARCH_PROBES": str(host.out / "test" / "probes"),
+        "LUJARCH_PRODUCT_OUT": info["product_out"], "LUJARCH_DEVICES": str(host.out / "devices"),
+    })
+    if sdk:
+        env["LUJARCH_SDK"] = str(Path(os.path.expanduser(sdk)))
+    return host_out, env
+
+
+def test_start(host_out):
+    """Every test starts from the unlocked home screen of an awake device."""
+    adb(host_out, "shell", "svc power stayon true; input keyevent KEYCODE_WAKEUP; "
+        "wm dismiss-keyguard; input keyevent KEYCODE_HOME")
+
+
+def run_script(host, script, args):
+    """Runs a Python file on the virtual device as a test runs, in a test's environment, from the
+    unlocked home screen and in its output folder <out>/test/work/scratch/<name> (work-<n> for
+    instance n), and records nothing; its output goes to the terminal and its exit status is the
+    command's."""
+    path = Path(script).resolve()
+    if not path.is_file():
+        die(f"no file {script}")
+    host_out, env = test_device(host)
+    out = host.out / "test" / TEST_WORK / "scratch" / path.stem
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    env["LUJARCH_TEST_OUT"] = str(out)
+    test_start(host_out)
+    log(f"{path.name} on 127.0.0.1:{ADB_PORT}; output in {out}")
+    return subprocess.run([sys.executable, str(path), *args], cwd=out, env=env).returncode
+
+
 def cmd_test(args):
     host = Host()
+    if args.script:
+        if args.selectors:
+            die("--script runs one file; its arguments follow it")
+        return run_script(host, args.script[0], args.script[1:])
     levels = item_levels()
     tests = discover_tests()
     if args.selectors:
@@ -3045,27 +3261,12 @@ def cmd_test(args):
         log(f"{t}: verifies phone items; runs on a Xiaomi 13, not here")
     if not vm_tests:
         return 0
-    info, host_out, _, _ = vm_paths(host)
-    if container_state() != "running" or not booted(host_out):
-        die("the virtual device is not running (lujarch vm start)")
-    if not adb_root(host_out):
-        die("adb cannot run as root on the virtual device")
+    host_out, env = test_device(host)
     head = git("rev-parse", "HEAD").stdout.strip()
     why = recordable(host, host_out)
-    base = host.out / "test" / (head if why is None else "work")
+    base = host.out / "test" / (head if why is None else TEST_WORK)
     log(f"results for {head[:12]} in {base}" if why is None
         else f"results not recorded for {head[:12]}: {why}; output in {base}")
-    sdk = host.get("paths", "android_sdk")
-    env = dict(os.environ)
-    env.update({
-        "PYTHONPATH": str(ROOT / "test" / "lib"), "PYTHONDONTWRITEBYTECODE": "1",
-        "LUJARCH_ADB": adb_binary(host_out), "LUJARCH_SERIAL": f"127.0.0.1:{ADB_PORT}",
-        "LUJARCH_TOOL": str(ROOT / "tools" / "lujarch"), "LUJARCH_ROOT": str(ROOT),
-        "LUJARCH_TREE": str(host.tree), "LUJARCH_PROBES": str(host.out / "test" / "probes"),
-        "LUJARCH_PRODUCT_OUT": info["product_out"], "LUJARCH_DEVICES": str(host.out / "devices"),
-    })
-    if sdk:
-        env["LUJARCH_SDK"] = str(Path(os.path.expanduser(sdk)))
     runs = {}
     failed = []
     for test_id, path, items in vm_tests:
@@ -3076,9 +3277,7 @@ def cmd_test(args):
         env["LUJARCH_TEST_OUT"] = str(out)
         m = TEST_TIMEOUT_RE.search(read_text(path) or "")
         timeout = int(m.group(1)) if m else TEST_TIMEOUT
-        # Every test starts from the unlocked home screen of an awake device.
-        adb(host_out, "shell", "svc power stayon true; input keyevent KEYCODE_WAKEUP; "
-            "wm dismiss-keyguard; input keyevent KEYCODE_HOME")
+        test_start(host_out)
         log(f"{test_id} ({', '.join(items) or 'no item'})")
         start = time.monotonic()
         with open(out / "log.txt", "w") as logf:
@@ -3324,6 +3523,9 @@ def main():
     test = sub.add_parser("test", help="run the tests of the target's items")
     test.add_argument("selectors", nargs="*",
                       help="items, features or tests to run (default: every test)")
+    test.add_argument("--script", nargs=argparse.REMAINDER, metavar="FILE",
+                      help="FILE [ARG...]: run FILE with the arguments after it as a test runs, in "
+                           "its own output folder, recording nothing")
     status = sub.add_parser("status", help="progress of the target")
     status.add_argument("--list", action="store_true", help="list the items without a test")
     sub.add_parser("pin", help="write upstream.xml from the tree's commits")

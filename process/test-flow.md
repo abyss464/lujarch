@@ -32,7 +32,8 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   network. A module build installs files without packing them into the images. While the images
   lack files installed since the last full build, `vm start` names them and stops:
   `tools/lujarch build vm` packs them, and `vm start --packed` boots the images as they are.
-  `tools/lujarch vm status` counts those files.
+  `tools/lujarch vm status` counts those files. A system server that keeps dying stops `vm start`
+  and every wait for the device to come back, with the crash that ended its first start.
 - `tools/lujarch vm sync <module>...` copies what the named modules install (with the modules
   they require) into the running virtual device after `tools/lujarch build vm <module>...`;
   `tools/lujarch vm sync` alone copies the files the images lack, except those of the boot
@@ -46,7 +47,10 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   (`dex_bootjars`) and the boot classpath jars of `system` are built and copied as one unit:
   naming one of them brings all. Code compiled ahead of time against an earlier boot image and
   not copied with the unit runs without that compiled code. The SELinux policy of `system_ext`
-  is the module `selinux_policy_system_ext`.
+  is the module `selinux_policy_system_ext`. A framework resource package (an `.apk` in a
+  partition's `framework/`) whose build gives one of the device's resource ids to another
+  resource is not copied: the apps and the system server hold those ids as compiled, so it comes
+  only with a full build and a fresh `vm start`.
 - `tools/lujarch vm screenshot [PATH]` writes what the virtual device's display shows, as the
   browser view shows it, to PATH (`.png`, `.jpg` or `.webp`; `<out>/vm/screenshots/` by
   default); `--frames N --interval S` takes N frames S seconds apart, for animations.
@@ -103,8 +107,11 @@ Rules:
   every test that names it passed; `tools/lujarch status` reads them. They are written only for a
   clean worktree, run on a device that `vm start` booted from that commit's packed images and
   into which nothing was copied since; other runs keep their output under `<out>/test/work/`.
+- `tools/lujarch test --script FILE [ARG ...]` runs any Python file on the virtual device as a
+  test runs (its environment, the library, the unlocked home screen), in the folder
+  `<out>/test/work/scratch/<name>/`, its output on the terminal, and records nothing.
 - `LUJARCH_VM=<n>` runs a second (third...) virtual device beside the first: every `vm` and
-  `test` command then addresses instance n, with its own container, ports and runtime
-  directory.
+  `test` command then addresses instance n, with its own container, ports, runtime directory
+  and unrecorded output (`<out>/test/work-<n>/`).
 - A commit has passed the test flow when level 1 passes and the tests of the items it changes
   pass at the level that answers them.
