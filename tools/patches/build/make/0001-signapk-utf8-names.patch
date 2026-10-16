@@ -1,0 +1,14 @@
+diff --git a/tools/signapk/src/com/android/signapk/SignApk.java b/tools/signapk/src/com/android/signapk/SignApk.java
+index 9de65ccf47def2c50a488f15e9c68fcd6eb3a799..f9c700f5ca50bfa5e1fb2aa0286fc37e31b3d2c1 100644
+--- a/tools/signapk/src/com/android/signapk/SignApk.java
++++ b/tools/signapk/src/com/android/signapk/SignApk.java
+@@ -478,7 +478,8 @@ class SignApk {
+ 
+             // 'offset' is the offset into the file at which we expect the entry's data to begin.
+             // This is the value we need to make a multiple of 'alignment'.
+-            offset += JarFile.LOCHDR + outEntry.getName().length();
++            // The Local File Header holds the name in UTF-8, so its length is in bytes
++            offset += JarFile.LOCHDR + outEntry.getName().getBytes(StandardCharsets.UTF_8).length;
+             if (firstEntry) {
+                 // The first entry in a jar file has an extra field of four bytes that you can't get
+                 // rid of; any extra data you specify in the JarEntry is appended to these forced

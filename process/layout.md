@@ -39,7 +39,8 @@ directory, the target file and every identifier (process/conventions.md).
 ```
 system/features/<feature>/
 ├── feature.toml          prefix (the target CODE), devices it applies to, components it builds,
-│                         prebuilts it takes, apps whose texts it renames
+│                         prebuilts it takes, files its scripts generate, apps whose texts it
+│                         renames
 ├── patches/<project>/    NNNN-<what>.patch, changes to the upstream project at that tree path
 ├── components/<name>/    NNNN-<what>.patch, changes to a component's source
 ├── src/                  what the feature adds: apps, daemons, libraries, configs, overlays
@@ -67,12 +68,25 @@ system/features/<feature>/
   architecture, offline (Go modules from the computer's module cache, crates from Cargo's), and
   stage it at `vendor/extra/features/<feature>/prebuilt/<arch>/<module>` for the feature's
   `Android.bp`.
+- An app a feature builds from its source is a component whose `build` is `gradle` (one APK for
+  every architecture, staged under `common`) or `flutter` (one APK for each architecture; its
+  pin also names the Flutter SDK's `flutter` commit), with the `task` or `args` that build it
+  and the `output` APK, staged as `<module>.apk`; `key` names the key in the keys directory a
+  release signs it with, the release key otherwise. Only `tools/lujarch fetch` builds apps,
+  since Gradle and Flutter download what a build needs; every other step stages the APK fetch
+  kept for the pin, patch series and recipe.
 - A prebuilt is a program or data a feature takes as its upstream releases it, where the release
   is the only build of it that matches the pinned source: `feature.toml` names it under
   `[prebuilts.<name>]` with the `module` it becomes; `lock.toml` pins the `url` and `sha256` of
   each architecture it exists for, or of `common` when it has none. `tools/lujarch fetch`
   downloads what the host lacks into the host's `prebuilts` path, and the tools stage it like a
   component.
+- A generated file is `[generated.<name>]` in `feature.toml`: a `script` of the feature's own
+  (Python, run as `script OUT WORKDIR`) and the `output` it makes, a file or a directory, staged at
+  `vendor/extra/features/<feature>/generated/<output>` for the feature's `Android.bp`. The tools
+  run it at every staging; one that needs tools beyond Python names them under `fetch`, and only
+  `tools/lujarch fetch` runs it, once for each state of the script, the modules of its directory
+  it imports and those tools' versions; every other step stages what fetch made.
 - A rename is `[renames.<name>]` in `feature.toml`: an app's `package` and its resource
   directories `res` in the tree. The tools generate a static overlay of the app in which every
   string of those directories whose text names LineageOS says Lujarch in its place, in every
@@ -163,6 +177,10 @@ stock = "..."         # unpacked stock releases
 ndk = "..."           # Android NDK for components built outside the tree
 go = "..."            # Go installation (GOROOT) for components built outside the tree
 prebuilts = "..."     # pinned prebuilts, each named by its sha256
+jdk = "..."           # JDK for apps built from source (JAVA_HOME)
+android_sdk = "..."   # Android SDK for apps built from source
+gradle = "..."        # Gradle's cache for apps built from source (GRADLE_USER_HOME)
+pub = "..."           # Dart's package cache for Flutter apps (PUB_CACHE)
 
 [sources]
 mihomo = "..."          # where each component's repository is; its commit is in lock.toml
@@ -178,7 +196,7 @@ gitconfig = "..."     # git configuration used for repo sync (mirrors)
 [build]
 jobs = 0              # 0: derived from memory
 memory_high = ""      # empty: derived from free memory
-memory_max = ""
+memory_max = ""       # empty: derived from free memory; a build waits until enough is free
 highmem_jobs = 3
 lock = "..."          # one lock for every Android build on the computer
 

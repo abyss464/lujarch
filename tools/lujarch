@@ -16,6 +16,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import modulefinder
 import os
 import re
 import shlex
@@ -388,9 +389,15 @@ def check_lock(findings):
     for feature, name, spec in feature_components():
         if name not in pins:
             findings.add(path, 0, f"component {name} of {feature} is not pinned")
-        if spec.get("build") not in ("go", "cargo") or "module" not in spec:
+        if spec.get("build") not in ("go", "cargo", *APP_BUILDS) or "module" not in spec:
             findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
-                         f"component {name}: build (go or cargo) and module are required")
+                         f"component {name}: build (go, cargo, gradle or flutter) and module "
+                         "are required")
+        elif spec["build"] in APP_BUILDS and not spec.get("output"):
+            findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
+                         f"component {name}: an app names its output APK")
+        elif spec["build"] == "flutter" and not pins.get(name, {}).get("flutter"):
+            findings.add(path, 0, f"components.{name}: a Flutter app pins its flutter commit")
     prebuilt_pins = lock.get("prebuilts", {})
     for name, pin in prebuilt_pins.items():
         arches = {k: v for k, v in pin.items() if isinstance(v, dict)}
@@ -406,6 +413,12 @@ def check_lock(findings):
         if "module" not in spec:
             findings.add(SYSTEM / "features" / feature / "feature.toml", 0,
                          f"prebuilt {name}: module is required")
+    for feature, name, spec in feature_generated():
+        meta = SYSTEM / "features" / feature / "feature.toml"
+        if not spec.get("script") or not spec.get("output"):
+            findings.add(meta, 0, f"generated {name}: script and output are required")
+        elif not (SYSTEM / "features" / feature / spec["script"]).is_file():
+            findings.add(meta, 0, f"generated {name}: {spec['script']} does not exist")
     manifest = ROOT / "upstream.xml"
     if not manifest.exists():
         findings.add("upstream.xml", 0, "missing")
@@ -850,9 +863,10 @@ EXTRA_MANIFEST = ".lujarch-files"
 
 def extra_files(host):
     """vendor/extra as the tools stage it: every feature and device directory without its
-    patches and tests, each device's files from its stock release, what the tools generate
-    from system/ and git (the renames' overlays, the settings mirror, the version's init file),
-    and the two makefiles LineageOS includes from vendor/extra."""
+    patches and tests, each device's files from its stock release, what the features' scripts
+    generate, what the tools generate from system/ and git (the renames' overlays, the settings
+    mirror, the version's init file), and the two makefiles LineageOS includes from
+    vendor/extra."""
     files = {}
     for device, pin in lock_file().get("stock", {}).items():
         dump = stock_dump_dir(host, pin)
@@ -883,6 +897,7 @@ def extra_files(host):
                 found.append(d.name)
     files.update(component_files(host))
     files.update(prebuilt_files(host))
+    files.update(generated_files(host))
     if not files:
         return {}
 
@@ -1124,8 +1139,92 @@ def component_source(host, name, pin):
     return src
 
 
+APP_BUILDS = ("gradle", "flutter")
+FLUTTER_PLATFORM = {"arm64": "android-arm64", "x86_64": "android-x64"}
+
+
+def component_arches(spec):
+    """The architectures a component is built for: an app built by Gradle once for all."""
+    return ["common"] if spec["build"] == "gradle" else device_arches()
+
+
+def flutter_sdk(host, commit):
+    """A checkout of the Flutter SDK at commit, from its repository on this computer."""
+    repo = host.path_of("sources", "flutter")
+    sdk = host.out / "components" / "flutter" / commit[:12]
+    if not (sdk / "bin" / "flutter").is_file():
+        if pgit(repo, "cat-file", "-e", f"{commit}^{{commit}}").returncode:
+            die(f"{repo} has no Flutter commit {commit} (lock.toml); fetch it there")
+        sdk.parent.mkdir(parents=True, exist_ok=True)
+        if subprocess.run(["git", "clone", "-q", str(repo), str(sdk)]).returncode:
+            die(f"could not clone {repo}")
+        pgit(sdk, "checkout", "-q", "--force", "--detach", commit, check=True)
+    return sdk
+
+
+def app_component(host, feature, name, spec, arch, build=False):
+    """The APK of an app component for arch. Only `lujarch fetch` builds apps, since Gradle and
+    Flutter download what a build needs; every other step takes the APK fetch kept, one for
+    each pin, patch series, recipe and toolchain."""
+    pin = lock_file().get("components", {}).get(name)
+    if not pin or "commit" not in pin:
+        die(f"component {name} of {feature} has no commit in lock.toml")
+    jdk = host.path_of("paths", "jdk")
+    patches = component_patches(feature, name)
+    digest = hashlib.sha256()
+    for part in (json.dumps(spec, sort_keys=True), json.dumps(pin, sort_keys=True), arch,
+                 str(jdk.resolve())):
+        digest.update(part.encode() + b"\0")
+    for patch in patches:
+        digest.update(patch.read_bytes())
+    out = host.out / "components" / name / arch / digest.hexdigest()[:16] / spec["module"]
+    if out.is_file() or not build:
+        if not out.is_file():
+            die(f"app {name} ({arch}) is not built for its pin: lujarch fetch")
+        return out
+    src = component_source(host, name, pin)
+    for patch in patches:
+        if subprocess.run(["git", "apply", str(patch)], cwd=src).returncode:
+            die(f"{name}: {rel(patch)} does not apply")
+    sdk = host.path_of("paths", "android_sdk")
+    gradle = host.path_of("paths", "gradle")
+    # No Gradle or Kotlin daemon outlives the build (Flutter starts Gradle itself, so the
+    # setting is Gradle's own, where every build of these apps reads it).
+    gradle.mkdir(parents=True, exist_ok=True)
+    (gradle / "gradle.properties").write_text(
+        "# Written by tools/lujarch.\norg.gradle.daemon=false\n"
+        "kotlin.compiler.execution.strategy=in-process\n")
+    # UTF-8, since apps carry files named in other scripts.
+    env = dict(os.environ, LC_ALL="C.UTF-8", TZ="UTC", JAVA_HOME=str(jdk), ANDROID_HOME=str(sdk),
+               ANDROID_SDK_ROOT=str(sdk), GRADLE_USER_HOME=str(gradle))
+    work = src / spec.get("dir", ".")
+    log(f"building app {name} ({pin.get('version', pin['commit'][:12])}, {arch})")
+    if spec["build"] == "gradle":
+        cmd = ["./gradlew", "--console=plain", spec["task"]]
+        apk = work / spec["output"]
+    else:
+        flutter = flutter_sdk(host, pin["flutter"])
+        env.update({"PUB_CACHE": str(host.path_of("paths", "pub")),
+                    "FLUTTER_ROOT": str(flutter), "FLUTTER_SUPPRESS_ANALYTICS": "true",
+                    "PATH": f"{flutter / 'bin'}:{env.get('PATH', '')}"})
+        cmd = [str(flutter / "bin" / "flutter"), "build", "apk", "--release",
+               "--target-platform", FLUTTER_PLATFORM[arch], *spec.get("args", [])]
+        apk = work / spec["output"].format(abi={"arm64": "arm64-v8a", "x86_64": "x86_64"}[arch])
+    built = subprocess.run(cmd, cwd=work, env=env).returncode == 0 and apk.is_file()
+    if built:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(apk, out)
+    pgit(src, "checkout", "-q", "--force", pin["commit"], check=True)
+    pgit(src, "clean", "-q", "-fdx", check=True)
+    if not built:
+        die(f"app {name} did not build for {arch}")
+    return out
+
+
 def build_component(host, feature, name, spec, arch):
     """The component's binary for arch, built once for each pin, patch series and toolchain."""
+    if spec["build"] in APP_BUILDS:
+        return app_component(host, feature, name, spec, arch)
     tree = host.tree
     pin = lock_file().get("components", {}).get(name)
     if not pin or "commit" not in pin:
@@ -1140,7 +1239,7 @@ def build_component(host, feature, name, spec, arch):
     elif spec["build"] == "cargo":
         toolchain = tree_rust(tree)
     else:
-        die(f"component {name}: build is go or cargo")
+        die(f"component {name}: build is go, cargo, gradle or flutter")
     digest = hashlib.sha256()
     toolchain_version = subprocess.run(
         [str(toolchain / "go"), "version"] if spec["build"] == "go"
@@ -1206,12 +1305,14 @@ def build_component(host, feature, name, spec, arch):
 
 
 def component_files(host):
-    """vendor/extra/features/<feature>/prebuilt/<arch>/<module> of every component."""
+    """vendor/extra/features/<feature>/prebuilt/<arch>/<module> of every component, with `.apk`
+    for an app (the build reads an app's manifest only from a file named so)."""
     files = {}
     for feature, name, spec in feature_components():
-        for arch in device_arches():
+        suffix = ".apk" if spec["build"] in APP_BUILDS else ""
+        for arch in component_arches(spec):
             path = build_component(host, feature, name, spec, arch)
-            files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
+            files[f"features/{feature}/prebuilt/{arch}/{spec['module']}{suffix}"] = path.read_bytes()
     return files
 
 
@@ -1247,7 +1348,8 @@ def prebuilt_files(host):
 
 
 def cmd_fetch(_args):
-    """Downloads the pinned prebuilts the host does not have yet."""
+    """Downloads the pinned prebuilts the host does not have yet, builds the apps, and makes the
+    generated files that need tools beyond Python."""
     host = Host()
     for name, pins in lock_file().get("prebuilts", {}).items():
         for arch, pin in pins.items():
@@ -1267,7 +1369,104 @@ def cmd_fetch(_args):
                 die(f"{pin['url']} does not match its sha256 in lock.toml")
             part.rename(path)
     log("every pinned prebuilt is fetched")
+    for feature, name, spec in feature_components():
+        if spec["build"] in APP_BUILDS:
+            for arch in component_arches(spec):
+                app_component(host, feature, name, spec, arch, build=True)
+    log("every app is built")
+    for feature, name, spec in feature_generated():
+        if not spec.get("fetch"):
+            continue
+        for tool in spec["fetch"]:
+            if not shutil.which(tool):
+                die(f"{name} of {feature} needs {tool}")
+        path = generated_cache(host, feature, name, spec)
+        if path.exists():
+            continue
+        log(f"making {name} of {feature}")
+        work = host.out / "generated" / feature / name / "work"
+        run_generator(feature, name, spec, path, work)
+        shutil.rmtree(work, ignore_errors=True)
+    log("every generated file is made")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Generated files: made by a feature's own scripts from its sources
+
+
+def feature_generated():
+    """Every [generated.<name>] of every feature.toml, as (feature, name, spec)."""
+    out = []
+    for path in sorted((SYSTEM / "features").glob("*/feature.toml")):
+        for name, spec in load_toml(path).get("generated", {}).items():
+            out.append((path.parent.name, name, spec))
+    return out
+
+
+def generated_sources(script):
+    """The script and the modules of its own directory it imports."""
+    finder = modulefinder.ModuleFinder(path=[str(script.parent)])
+    finder.run_script(str(script))
+    found = {Path(m.__file__).resolve() for m in finder.modules.values() if m.__file__}
+    return sorted(p for p in found if p.parent == script.parent.resolve())
+
+
+def generated_digest(feature, spec):
+    """The sources of a generated file and the versions of the tools it runs, as one digest."""
+    script = SYSTEM / "features" / feature / spec["script"]
+    digest = hashlib.sha256()
+    for path in generated_sources(script):
+        digest.update(path.name.encode() + b"\0" + path.read_bytes())
+    for tool in spec.get("fetch", []):
+        run = subprocess.run([tool, "--version"], capture_output=True, text=True)
+        digest.update(f"{tool} {run.stdout.strip().splitlines()[0] if run.stdout.strip() else ''}".encode())
+    return digest.hexdigest()
+
+
+def run_generator(feature, name, spec, out, work):
+    script = SYSTEM / "features" / feature / spec["script"]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    work.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_name(out.name + ".part")
+    shutil.rmtree(tmp, ignore_errors=True)
+    if subprocess.run([sys.executable, str(script), str(tmp), str(work)]).returncode or not tmp.exists():
+        die(f"{feature}: {spec['script']} did not make {name}")
+    shutil.rmtree(out, ignore_errors=True)
+    tmp.replace(out)
+
+
+def generated_output(staged, path):
+    """A generated file, or every file of a generated directory, as staged paths and contents."""
+    if path.is_file():
+        return {staged: path.read_bytes()}
+    return {f"{staged}/{p.relative_to(path).as_posix()}": p.read_bytes()
+            for p in sorted(path.rglob("*")) if p.is_file()}
+
+
+def generated_cache(host, feature, name, spec):
+    return (host.out / "generated" / feature / name / generated_digest(feature, spec)[:16]
+            / spec["output"])
+
+
+def generated_files(host):
+    """vendor/extra/features/<feature>/generated/<output> of every generated file or directory:
+    made now, or for one that needs tools beyond Python (`fetch`), the one `lujarch fetch` made
+    for its sources."""
+    files = {}
+    for feature, name, spec in feature_generated():
+        staged = f"features/{feature}/generated/{spec['output']}"
+        if spec.get("fetch"):
+            path = generated_cache(host, feature, name, spec)
+            if not path.exists():
+                die(f"{name} of {feature} is not made for its sources: lujarch fetch")
+            files.update(generated_output(staged, path))
+            continue
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / spec["output"]
+            run_generator(feature, name, spec, out, Path(tmp) / "work")
+            files.update(generated_output(staged, out))
+    return files
 
 
 def staged_edits(dest):
@@ -1647,23 +1846,106 @@ def mem_available_gb():
 
 # The memory a build leaves to the desktop and everything else running.
 DESKTOP_RESERVE_GB = 10
+# The least memory cap a build runs under: the analysis keeps about 30 GB live, and its Go heap
+# limit (GOMEMLIMIT, the cap less 6 GB) needs room above that.
+BUILD_MIN_GB = 44
+# How long a build waits for the memory it needs to come free.
+MEMORY_WAIT_MIN = 20
+
+
+def clip(text, width):
+    return text if len(text) <= width else f"{text[:width * 2 // 3 - 3]} ... {text[-(width // 3):]}"
+
+
+def memory_holders():
+    """What holds the computer's memory, largest first, one line each: the programs, by the
+    resident anonymous memory of all their processes, and the files of every memory-backed file
+    system, by the deepest directories holding 512 MB or more."""
+    home = str(Path.home())
+    programs = {}
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            argv = (proc / "cmdline").read_bytes().decode(errors="replace").split("\0")
+            anon = re.search(r"^RssAnon:\s+(\d+)", (proc / "status").read_text(), re.M)
+        except OSError:
+            continue
+        if not argv[0] or not anon:
+            continue
+        kb, name = int(anon.group(1)), Path(argv[0]).name
+        cmd = clip(" ".join(a for a in argv if a).replace(home, "~"), 110)
+        total, count, largest = programs.get(name, (0, 0, (0, "")))
+        programs[name] = (total + kb, count + 1, max(largest, (kb, f"pid {proc.name}: {cmd}")))
+    held = []
+    for name, (kb, count, (_, largest)) in sorted(programs.items(), key=lambda p: -p[1][0])[:6]:
+        processes = f" ({count} processes)" if count > 1 else ""
+        held.append((kb << 10, f"{name}{processes}, the largest {largest}"))
+    for line in Path("/proc/mounts").read_text().split("\n"):
+        fields = line.split()
+        if len(fields) < 3 or fields[2] != "tmpfs":
+            continue
+        mount = fields[1].replace("\\040", " ")
+        try:
+            fs = os.statvfs(mount)
+        except OSError:
+            continue
+        used = (fs.f_blocks - fs.f_bfree) * fs.f_frsize
+        if used < 1 << 30:
+            continue
+        du = subprocess.run(["du", "-x", "-k", "-0", mount], capture_output=True, text=True)
+        big = {}
+        for entry in du.stdout.split("\0"):
+            size, _, path = entry.partition("\t")
+            if path and path != mount and int(size) >= 1 << 19:
+                big[path] = int(size) << 10
+        deepest = sorted((p for p in big if not any(q.startswith(p + "/") for q in big)),
+                         key=lambda p: -big[p])[:4]
+        held.append((used, f"files in {mount}" + "".join(
+            f"\n{big[p] / 2**30:17.1f} GB  {clip(p.replace(home, '~'), 100)}" for p in deepest)))
+    return "\n".join(f"  {size / 2**30:5.1f} GB  {text}" for size, text in sorted(held)[::-1])
+
+
+def wait_for_memory(need):
+    """Free memory in GB once it reaches need, waited for up to MEMORY_WAIT_MIN minutes."""
+    gb = mem_available_gb()
+    if gb >= need:
+        return gb
+    log(f"only {gb} GB of memory free: a build needs {need}; waiting up to {MEMORY_WAIT_MIN} min "
+        f"for it to come free. What holds memory:\n{memory_holders()}")
+    start = time.monotonic()
+    while time.monotonic() - start < MEMORY_WAIT_MIN * 60:
+        time.sleep(15)
+        gb = mem_available_gb()
+        if gb >= need:
+            log(f"{gb} GB of memory free after {(time.monotonic() - start) / 60:.1f} min")
+            return gb
+    die(f"only {gb} GB of memory free after {MEMORY_WAIT_MIN} min: a build needs {need} (or set "
+        f"build.memory_max in host.toml). What holds memory:\n{memory_holders()}")
 
 
 def build_budget(host):
-    """The build's memory cap, pressure point and jobs: from host.toml, or from free memory."""
-    gb = mem_available_gb()
+    """The build's memory cap, pressure point and jobs: from host.toml, or from free memory once
+    enough of it is free."""
     mem_max = host.get("build", "memory_max") or ""
     if not mem_max:
         # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
         # holds it; squeezed by the cap instead, it stalls for hours.
-        cap = min(gb - DESKTOP_RESERVE_GB, 60)
-        if cap < 44:
-            die(f"only {gb} GB of memory free: a build needs at least {44 + DESKTOP_RESERVE_GB} "
-                "(or set build.memory_max in host.toml)")
-        mem_max = f"{cap}G"
+        gb = wait_for_memory(BUILD_MIN_GB + DESKTOP_RESERVE_GB)
+        mem_max = f"{min(gb - DESKTOP_RESERVE_GB, 60)}G"
     mem_high = host.get("build", "memory_high") or mem_max
     jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
     return mem_max, mem_high, jobs
+
+
+# Of the caller's environment a build sees only these: the build writes its whole environment
+# into its logs (out/soong*.log), and a session's environment can hold secrets.
+BUILD_ENV_KEEP = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "LANG", "LANGUAGE", "TMPDIR",
+                  "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS")
+
+
+def build_environment():
+    return {k: v for k, v in os.environ.items() if k in BUILD_ENV_KEEP}
 
 
 def fitting_jobs(mem_max):
@@ -1735,7 +2017,7 @@ lunch {shlex.quote(lunch)} >/dev/null || exit 1
 get_build_var PRODUCT_OUT > {shlex.quote(str(product_out_file))} || exit 1
 m -j{jobs} {modules}
 """
-    env = dict(os.environ)
+    env = build_environment()
     built_at = str(int(time.time()))
     env.update({
         # What a build writes names no person, computer or time zone; its build number is the
@@ -2202,7 +2484,7 @@ def main():
     status.add_argument("--list", action="store_true", help="list the items without a test")
     sub.add_parser("pin", help="write upstream.xml from the tree's commits")
     sub.add_parser("sync", help="sync the tree to upstream.xml and apply the patches")
-    sub.add_parser("fetch", help="download the pinned prebuilts the host does not have")
+    sub.add_parser("fetch", help="download the pinned prebuilts the host lacks and build the apps")
     sub.add_parser("patch", help="apply the patches of system/order")
     sub.add_parser("unpatch", help="revert the patches of system/order")
     save = sub.add_parser("save", help="save the tree's changes into an entry's patches")
