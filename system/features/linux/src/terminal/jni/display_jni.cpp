@@ -104,7 +104,7 @@ struct Buffer {
 
 struct Presenter;
 
-// SurfaceFlinger's callbacks can arrive after DisplayActivity destroyed the presenter: they reach
+// SurfaceFlinger's callbacks can arrive after DesktopActivity destroyed the presenter: they reach
 // only presenters that still live.
 std::mutex g_live_mu;
 std::set<Presenter*> g_live;
