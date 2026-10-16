@@ -1,0 +1,175 @@
+diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
+index 756008a2d8d5498f4dea1fc3f93cc9baa841fc2f..9a9a2a05dd780da9a5c14313950e9d09ac13ca90 100644
+--- a/res/values-ja/lujarch_strings.xml
++++ b/res/values-ja/lujarch_strings.xml
+@@ -27,4 +27,8 @@
+     <string name="lujarch_drawer_sort_title">アプリドロワーの並べ替え</string>
+     <string name="lujarch_drawer_sort_name">名前順</string>
+     <string name="lujarch_drawer_sort_color">アイコンの色順</string>
++    <string name="lujarch_double_tap_title">ダブルタップ</string>
++    <string name="lujarch_double_tap_nothing">なし</string>
++    <string name="lujarch_double_tap_sleep">画面をオフにする</string>
++    <string name="lujarch_double_tap_linux">Linux に入る</string>
+ </resources>
+diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
+index b2af0c3a877cca64369429431bc2edbf73979a94..ea9ba7fac599e3095ec5369114c643a861357b11 100644
+--- a/res/values-zh-rCN/lujarch_strings.xml
++++ b/res/values-zh-rCN/lujarch_strings.xml
+@@ -27,4 +27,8 @@
+     <string name="lujarch_drawer_sort_title">应用抽屉排序</string>
+     <string name="lujarch_drawer_sort_name">按名称</string>
+     <string name="lujarch_drawer_sort_color">按图标颜色</string>
++    <string name="lujarch_double_tap_title">点按两次</string>
++    <string name="lujarch_double_tap_nothing">无</string>
++    <string name="lujarch_double_tap_sleep">关闭屏幕</string>
++    <string name="lujarch_double_tap_linux">进入 Linux</string>
+ </resources>
+diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
+index 9e91f3e1bd915eb93c4e31ab43f0e12ea8f23541..52cbdb408938605fd227e5694e90fa36f80027ce 100644
+--- a/res/values/lujarch_strings.xml
++++ b/res/values/lujarch_strings.xml
+@@ -48,4 +48,23 @@
+         <item>0</item>
+         <item>1</item>
+     </string-array>
++    <!-- Launcher setting: what a double tap on an empty space of the home screen does [CHAR LIMIT=40] -->
++    <string name="lujarch_double_tap_title">Double tap</string>
++    <!-- A double tap does nothing [CHAR LIMIT=30] -->
++    <string name="lujarch_double_tap_nothing">Nothing</string>
++    <!-- A double tap turns off the screen [CHAR LIMIT=30] -->
++    <string name="lujarch_double_tap_sleep">Turn off screen</string>
++    <!-- A double tap opens the Linux desktop [CHAR LIMIT=30] -->
++    <string name="lujarch_double_tap_linux">Enter Linux</string>
++    <string-array name="lujarch_double_tap_entries" translatable="false">
++        <item>@string/lujarch_double_tap_nothing</item>
++        <item>@string/lujarch_double_tap_sleep</item>
++        <item>@string/lujarch_double_tap_linux</item>
++    </string-array>
++    <!-- WorkspaceTouchListener.DOUBLE_TAP_NOTHING, DOUBLE_TAP_SLEEP and DOUBLE_TAP_LINUX. -->
++    <string-array name="lujarch_double_tap_values" translatable="false">
++        <item>0</item>
++        <item>1</item>
++        <item>2</item>
++    </string-array>
+ </resources>
+diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
+index e865b28bc517acf6b9341045fa156cdc6b8f1a06..b0eb219376a5297b455c6acafe4d3bd74c0fc1fa 100644
+--- a/res/xml/launcher_preferences.xml
++++ b/res/xml/launcher_preferences.xml
+@@ -26,12 +26,15 @@
+         android:summaryOn="@string/settings_lock_layout_summary_on"
+         android:summaryOff="@string/settings_lock_layout_summary_off" />
+ 
+-    <SwitchPreferenceCompat
+-        android:defaultValue="false"
+-        android:key="pref_sleep_gesture"
+-        android:persistent="true"
+-        android:title="@string/pref_sleep_gesture_title"
+-        android:summary="@string/pref_sleep_gesture_summary" />
++    <!-- Lujarch (LNX-6): a double tap on an empty space, kept in Settings.Secure
++         (WorkspaceTouchListener.SETTING_DOUBLE_TAP). -->
++    <ListPreference
++        android:key="pref_double_tap"
++        android:title="@string/lujarch_double_tap_title"
++        android:entries="@array/lujarch_double_tap_entries"
++        android:entryValues="@array/lujarch_double_tap_values"
++        android:persistent="false"
++        launcher:useSimpleSummaryProvider="true" />
+ 
+     <com.android.launcher3.settings.NotificationDotsPreference
+         android:key="pref_icon_badging"
+diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
+index 050ec199aacb00ace26c96313fb06fc0030b5ee1..488a603cec722bd9710effe4c23df0189c3a0909 100644
+--- a/src/com/android/launcher3/settings/SettingsActivity.java
++++ b/src/com/android/launcher3/settings/SettingsActivity.java
+@@ -64,6 +64,7 @@ import com.android.launcher3.display.DisplayController;
+ import com.android.launcher3.display.LauncherDisplayInfo;
+ import com.android.launcher3.lineage.LineageUtils;
+ import com.android.launcher3.lineage.trust.TrustAppsActivity;
++import com.android.launcher3.touch.WorkspaceTouchListener;
+ import com.android.launcher3.util.SafeCloseable;
+ import com.android.launcher3.util.SettingsCache;
+ import com.android.settingslib.widget.SettingsBasePreferenceFragment;
+@@ -381,6 +382,16 @@ public class SettingsActivity extends FragmentActivity
+                 case SHOW_HOTSEAT_QSB_KEY:
+                     return launcherApps != null &&
+                             launcherApps.isPackageEnabled(SEARCH_PACKAGE, myUserHandle());
++                case WorkspaceTouchListener.DOUBLE_TAP_PREFERENCE_KEY: {
++                    // Lujarch (LNX-6): what a double tap does lives in Settings.Secure.
++                    ListPreference list = (ListPreference) preference;
++                    list.setValue(String.valueOf(WorkspaceTouchListener.doubleTap(getContext())));
++                    list.setOnPreferenceChangeListener((pref, value) -> Settings.Secure.putInt(
++                            getContext().getContentResolver(),
++                            WorkspaceTouchListener.SETTING_DOUBLE_TAP,
++                            Integer.parseInt((String) value)));
++                    return true;
++                }
+                 case AppInfoComparator.SORT_PREFERENCE_KEY: {
+                     // Lujarch (LCH-2): the drawer's order lives in Settings.Secure.
+                     ListPreference list = (ListPreference) preference;
+diff --git a/src/com/android/launcher3/touch/WorkspaceTouchListener.java b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
+index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..b7d416303563d609a68a9007276bfd7225c9d9c3 100644
+--- a/src/com/android/launcher3/touch/WorkspaceTouchListener.java
++++ b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
+@@ -29,8 +29,13 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
+ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED;
+ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_WORKSPACE_LONGPRESS;
+ 
++import android.content.ActivityNotFoundException;
++import android.content.Context;
++import android.content.Intent;
+ import android.graphics.PointF;
+ import android.graphics.Rect;
++import android.provider.Settings;
++import android.util.Log;
+ import android.view.GestureDetector;
+ import android.view.HapticFeedbackConstants;
+ import android.view.InputDevice;
+@@ -44,7 +49,6 @@ import com.android.launcher3.BoxSelectionHelper;
+ import com.android.launcher3.CellLayout;
+ import com.android.launcher3.DeviceProfile;
+ import com.android.launcher3.Launcher;
+-import com.android.launcher3.LauncherPrefs;
+ import com.android.launcher3.Workspace;
+ import com.android.launcher3.dragndrop.DragLayer;
+ import com.android.launcher3.logger.LauncherAtom;
+@@ -234,12 +238,35 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
+         }
+     }
+ 
++    /** Lujarch (LNX-6): what a double tap on an empty space does, in Settings.Secure. */
++    public static final String SETTING_DOUBLE_TAP = "lujarch_linux_double_tap";
++    public static final String DOUBLE_TAP_PREFERENCE_KEY = "pref_double_tap";
++    public static final int DOUBLE_TAP_NOTHING = 0;
++    public static final int DOUBLE_TAP_SLEEP = 1;
++    public static final int DOUBLE_TAP_LINUX = 2;
++    private static final String ACTION_LINUX_DESKTOP = "org.lujarch.linux.action.DESKTOP";
++
++    public static int doubleTap(Context context) {
++        return Settings.Secure.getInt(context.getContentResolver(), SETTING_DOUBLE_TAP,
++                DOUBLE_TAP_NOTHING);
++    }
++
+     @Override
+     public boolean onDoubleTap(MotionEvent event) {
+-        if (LauncherPrefs.SLEEP_GESTURE.get(mWorkspace.getContext())) {
+-            mLauncher.onSleepEvent(event);
+-            return true;
++        switch (doubleTap(mWorkspace.getContext())) {
++            case DOUBLE_TAP_SLEEP:
++                mLauncher.onSleepEvent(event);
++                return true;
++            case DOUBLE_TAP_LINUX:
++                try {
++                    mLauncher.startActivity(new Intent(ACTION_LINUX_DESKTOP)
++                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++                } catch (ActivityNotFoundException e) {
++                    Log.e("WorkspaceTouchListener", "no Linux desktop", e);
++                }
++                return true;
++            default:
++                return false;
+         }
+-        return false;
+     }
+ }
