@@ -56,6 +56,8 @@ abstract class LinuxPage : BasePreferenceFragment() {
         override fun onAuthRequest(id: Int, text: String) {}
 
         override fun onNfcRequest(id: Int, command: ByteArray) {}
+
+        override fun onClipboard(text: String) {}
     }
 
     /** Loads the page's data; failures go to the banner. */

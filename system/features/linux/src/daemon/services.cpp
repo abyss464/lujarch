@@ -95,6 +95,8 @@ struct Services::Service {
     Clock::time_point kill_at;     // epoch: none
     std::chrono::seconds backoff{1};
     bool restart_after_stop = false;
+    // The desktop service keeps its group thawed while it stops.
+    bool held = false;
 };
 
 Services::Services(System& system, std::function<void()> changed)
@@ -178,7 +180,11 @@ bool Services::StartLocked(Service& s) {
     spawn.cwd = Dir(s.name);
     spawn.out = write_end.get();
     spawn.err = write_end.get();
+    // The desktop runs in its own group; a frozen group would hold the start until it thaws.
+    spawn.desktop = s.name == kDesktopService;
+    if (spawn.desktop) cgroup::HoldDesktop(true);
     auto process = system_.Start(spawn);
+    if (spawn.desktop) cgroup::HoldDesktop(false);
     if (!process.ok()) {
         LOG(ERROR) << "service " << s.name << " did not start: " << process.error();
         LogLine(s.name, "lujarch: the service did not start: " + process.error().message());
@@ -199,6 +205,11 @@ bool Services::StartLocked(Service& s) {
 
 void Services::StopLocked(Service& s) {
     if (s.process.pid <= 0 || s.kill_at != Clock::time_point()) return;
+    if (s.name == kDesktopService && !s.held) {
+        // A frozen program keeps SIGTERM pending.
+        cgroup::HoldDesktop(true);
+        s.held = true;
+    }
     kill(-s.process.pid, SIGTERM);
     kill(-s.process.pid, SIGCONT);
     s.kill_at = Clock::now() + kStopTimeout;
@@ -221,6 +232,14 @@ void Services::Finish(Service& s, int status) {
     s.since = time(nullptr);
     const bool stopped = s.kill_at != Clock::time_point();
     s.kill_at = {};
+    if (s.name == kDesktopService) {
+        // What the session started outside its process group (D-Bus activation) ends with it.
+        cgroup::KillDesktop();
+        if (s.held) {
+            cgroup::HoldDesktop(false);
+            s.held = false;
+        }
+    }
     LogLine(s.name, "lujarch: ended with " + std::to_string(s.last_exit));
     LOG(INFO) << "service " << s.name << " ended with " << s.last_exit;
     if (s.restart_after_stop) {

@@ -163,6 +163,19 @@ Result<void> MakeDirsIn(int root, std::string_view path, mode_t mode, uid_t uid,
     return {};
 }
 
+Result<void> MakeFifoIn(int root, std::string_view path, mode_t mode, gid_t gid) {
+    std::string name;
+    auto dir = OpenParentIn(root, path, &name);
+    if (!dir.ok()) return dir.error();
+    unlinkat(dir->get(), name.c_str(), 0);
+    if (mkfifoat(dir->get(), name.c_str(), mode) != 0 ||
+        fchownat(dir->get(), name.c_str(), 0, gid, AT_SYMLINK_NOFOLLOW) != 0 ||
+        fchmodat(dir->get(), name.c_str(), mode, 0) != 0) {
+        return ErrnoError() << path;
+    }
+    return {};
+}
+
 Result<void> RemoveIn(int root, std::string_view path) {
     std::string name;
     auto dir = OpenParentIn(root, path, &name);

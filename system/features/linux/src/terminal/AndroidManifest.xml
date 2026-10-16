@@ -76,7 +76,7 @@
             android:screenOrientation="unspecified"
             android:taskAffinity="org.lujarch.linux.desktop"
             android:theme="@style/Theme.LujarchTerminal.Desktop"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustNothing|stateAlwaysHidden">
             <intent-filter>
                 <action android:name="org.lujarch.linux.action.DESKTOP" />
                 <category android:name="android.intent.category.DEFAULT" />

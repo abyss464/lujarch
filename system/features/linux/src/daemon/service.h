@@ -17,6 +17,7 @@
 // and stops at once when it goes off. The first start of a newly installed system runs the
 // initial setup (LNX-2), which makes the owner's user with aid::kLinux; an install unpacks the
 // archive beside the running system and replaces it, which is kept as root.<its install time>.
+// The desktop's install (LNX-6) runs in Linux like the setup, while Linux goes on running.
 #pragma once
 
 #include <aidl/org/lujarch/linux/BnLinux.h>
@@ -31,6 +32,7 @@
 #include <vector>
 
 #include "bridge.h"
+#include "display.h"
 #include "remote.h"
 #include "services.h"
 #include "sessions.h"
@@ -61,6 +63,7 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     ndk::ScopedAStatus install(const ndk::ScopedFileDescriptor& archive,
                                const std::string& user) override;
     ndk::ScopedAStatus runSetup() override;
+    ndk::ScopedAStatus installDesktop() override;
     ndk::ScopedAStatus listServices(
             std::vector<aidl::org::lujarch::linux::LinuxService>* services) override;
     ndk::ScopedAStatus controlService(const std::string& name, const std::string& action) override;
@@ -74,8 +77,9 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     ndk::ScopedAStatus setRemote(const aidl::org::lujarch::linux::RemoteConfig& config) override;
     ndk::ScopedAStatus getColors(std::string* colors) override;
     ndk::ScopedAStatus setColors(const std::string& colors) override;
-    ndk::ScopedAStatus openDesktop(ndk::ScopedFileDescriptor* connection) override;
-    ndk::ScopedAStatus openSound(ndk::ScopedFileDescriptor* connection) override;
+    ndk::ScopedAStatus attachDisplay(ndk::ScopedFileDescriptor* connection) override;
+    ndk::ScopedAStatus openSound(ndk::ScopedFileDescriptor* sound) override;
+    ndk::ScopedAStatus setClipboard(const std::string& text) override;
     ndk::ScopedAStatus setNotifications(
             const std::vector<aidl::org::lujarch::linux::LinuxNotification>& list) override;
     ndk::ScopedAStatus answerAuth(int32_t id, bool allowed) override;
@@ -108,8 +112,10 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     void Reconcile();
     void StartLinux();
     void StopLinux();
-    void StartSetup();
-    void SetupEnded(int status);
+    // The initial setup (ILinux::ACTION_SETUP) or the desktop's install (ILinux::ACTION_DESKTOP)
+    // in Linux, as root.
+    void StartJob(const std::string& kind);
+    void JobEnded(int status);
     void Replace();
     void InstallThread(android::base::unique_fd archive, std::string user);
     // KernelSU's grant for root sessions in Android, applied by its own thread through lujarch_root.
@@ -122,13 +128,13 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     void PruneListeners();
     static void OnListenerDied(void* cookie);
     void ForTerminal(const std::function<void(aidl::org::lujarch::linux::ILinuxListener&)>& call);
-    ndk::ScopedAStatus Connect(const char* path, int missing, ndk::ScopedFileDescriptor* out);
 
     System system_;
     Sessions sessions_;
     Services services_;
     Remote remote_;
     Bridge bridge_;
+    Display display_;
 
     std::mutex mutex_;
     State persisted_;
@@ -147,12 +153,14 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     bool root_sessions_ = false;
     bool root_sessions_known_ = false;
 
-    Process setup_;
-    android::base::unique_fd setup_output_;
-    android::base::unique_fd setup_log_;
-    std::string setup_partial_;
-    std::string setup_last_line_;
+    Process job_;
+    std::string job_kind_;
+    android::base::unique_fd job_output_;
+    android::base::unique_fd job_log_;
+    std::string job_partial_;
+    std::string job_last_line_;
     bool setup_requested_ = false;
+    bool desktop_requested_ = false;
     // The services, Remote access and the lent parts follow Linux once the setup ended.
     bool linux_ready_ = false;
 

@@ -35,6 +35,7 @@
     <string name="lnx_action">前回の操作</string>
     <string name="lnx_action_install">インストール</string>
     <string name="lnx_action_setup">初期設定</string>
+    <string name="lnx_action_desktop">デスクトップのインストール</string>
     <string name="lnx_action_running">%1$s: 実行中…</string>
     <string name="lnx_action_running_progress">%1$s: %3$s 中 %2$s を読み込み済み</string>
     <string name="lnx_action_ok">%1$s: %2$s に完了</string>
@@ -72,8 +73,14 @@
     <string name="lnx_swap">スワップ</string>
     <string name="lnx_swap_summary">Linux の実行中、その保存領域にスワップ ファイルを使います</string>
     <string name="lnx_swap_on">%1$s のスワップ ファイルを使用中</string>
+    <string name="lnx_desktop">デスクトップ</string>
     <string name="lnx_open_desktop">デスクトップを開く</string>
     <string name="lnx_open_desktop_summary">Arch Linux のデスクトップを全画面で表示</string>
+    <string name="lnx_install_desktop">デスクトップをインストール</string>
+    <string name="lnx_install_desktop_none">Plasma Mobile と、スマートフォンの画面用に Linux でビルドする KWin と Mesa</string>
+    <string name="lnx_install_desktop_done">インストール済み。再度インストールすると更新され、変更された部分がビルドされます。</string>
+    <string name="lnx_install_desktop_message">インストールは Linux の実行中に Linux で root として実行されます。Linux のパッケージを更新し、Plasma Mobile をインストールして Mesa と KWin をビルドするため、時間がかかります。ビルドにはスマートフォンの小さいコアだけを使います。</string>
+    <string name="lnx_install_desktop_run">インストール</string>
     <string name="lnx_lend">Linux に貸し出す機能</string>
     <string name="lnx_lend_clipboard">共有クリップボード</string>
     <string name="lnx_lend_clipboard_summary">ターミナルとデスクトップでクリップボードを双方向に共有</string>
@@ -96,11 +103,12 @@
     <string name="lnx_error_switch">設定を変更できませんでした</string>
     <string name="lnx_error_install">ルート ファイル システムをインストールできませんでした</string>
     <string name="lnx_error_setup">初期設定を実行できませんでした</string>
+    <string name="lnx_error_desktop">デスクトップをインストールできませんでした</string>
     <string name="lnx_error_colors">自分の配色を設定できませんでした</string>
     <string name="lnx_error_invalid">この値は無効です。</string>
     <string name="lnx_error_not_running">Linux が実行されていません。先に [Linux 開発環境を使用] をオンにしてください。</string>
     <string name="lnx_error_root_sessions_off">Root セッションはオフです。</string>
-    <string name="lnx_error_busy">インストールまたは初期設定を実行中です。終了後にもう一度お試しください。</string>
+    <string name="lnx_error_busy">インストール、初期設定、またはデスクトップのインストールを実行中です。終了後にもう一度お試しください。</string>
     <string name="lnx_error_no_service">このサービスはもうありません。</string>
     <string name="lnx_error_load_services">サービスを読み込めませんでした</string>
     <string name="lnx_error_service">サービスを変更できませんでした</string>
@@ -153,7 +161,7 @@
     <string name="lnx_search_terminal_keywords">ターミナル, 色, キー, shell</string>
     <string name="lnx_search_root_keywords">スーパーユーザー, root, su</string>
     <string name="lnx_search_memory_keywords">メモリ, スワップ, RAM, swap</string>
-    <string name="lnx_search_desktop_keywords">デスクトップ, ディスプレイ, VNC, X11, Wayland</string>
+    <string name="lnx_search_desktop_keywords">デスクトップ, ディスプレイ, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">サービス, デーモン</string>
     <string name="lnx_search_remote_keywords">リモート アクセス, 中継, SSH, frp</string>
     <string name="lnx_search_lend_keywords">クリップボード, 通知, センサー, 指紋, 赤外線, USB, NFC</string>

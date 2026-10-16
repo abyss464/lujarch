@@ -1,0 +1,66 @@
+diff --git a/src/gallium/drivers/zink/zink_screen.c b/src/gallium/drivers/zink/zink_screen.c
+--- a/src/gallium/drivers/zink/zink_screen.c
++++ b/src/gallium/drivers/zink/zink_screen.c
+@@ -37,6 +37,7 @@
+ #include "zink_state.h"
+ #include "nir_to_spirv/nir_to_spirv.h" // for SPIRV_VERSION
+ 
++#include "util/u_atomic.h"
+ #include "util/u_debug.h"
+ #include "util/u_dl.h"
+ #include "util/os_file.h"
+@@ -1703,22 +1704,46 @@
+                         const VkPhysicalDevice *pdevs, int64_t dev_major,
+                         int64_t dev_minor)
+ {
+-   VkPhysicalDeviceDrmPropertiesEXT drm_props = {
+-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT,
+-   };
+-   VkPhysicalDeviceProperties2 props = {
+-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+-      .pNext = &drm_props,
+-   };
++   /* The first GPU that reports no DRM render node, taken when no device
++    * matches the node the window system handed over. Turnip on KGSL is such a
++    * GPU: KGSL is a character device, not DRM, so Turnip has no
++    * VK_EXT_physical_device_drm, while EGL and GBM still open a DRM render
++    * node (on Qualcomm phones the display driver's, msm_drm) and pass its
++    * numbers here. No device can match them, and the GPU that renders for
++    * that display is the one without a node. A GPU that has a node of its
++    * own is a different DRM device and is never taken this way.
++    */
++   int nodeless_gpu = -1;
++   VkPhysicalDeviceProperties2 nodeless_props;
+ 
+    for (uint32_t i = 0; i < pdev_count; ++i) {
++      VkPhysicalDeviceDrmPropertiesEXT drm_props = {
++         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT,
++      };
++      VkPhysicalDeviceProperties2 props = {
++         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
++         .pNext = &drm_props,
++      };
++
+       VKSCR(GetPhysicalDeviceProperties2)(pdevs[i], &props);
+       if (drm_props.renderMajor == dev_major &&
+           drm_props.renderMinor == dev_minor)
+          return i;
++      if (nodeless_gpu == -1 && !drm_props.hasRender &&
++          props.properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU) {
++         nodeless_gpu = i;
++         nodeless_props = props;
++      }
+    }
+ 
+-   return -1;
++   if (nodeless_gpu != -1) {
++      static int noted;
++      if (!p_atomic_xchg(&noted, 1))
++         mesa_logi("ZINK: no Vulkan device has the render node %d:%d; using %s, "
++                   "which has no DRM node", (int)dev_major, (int)dev_minor,
++                   nodeless_props.properties.deviceName);
++   }
++   return nodeless_gpu;
+ }
+ 
+ static int

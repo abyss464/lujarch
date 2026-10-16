@@ -1,0 +1,19 @@
+# Mesa from /opt/mesa-kgsl for KWin and every program of the desktop: Turnip on KGSL with Zink on
+# top, ahead of the system's own Mesa, which has no KGSL backend.
+# - LD_LIBRARY_PATH: libgbm, libEGL_mesa and libgallium from the prefix; the system's Mesa has the
+#   same sonames, so the search path decides.
+# - __EGL_VENDOR_LIBRARY_FILENAMES: glvnd loads only the prefix's EGL vendor.
+# - VK_DRIVER_FILES: the Vulkan loader sees only Turnip.
+# - GBM_BACKENDS_PATH: the prefix's GBM backend, which loads Zink.
+# - MESA_LOADER_DRIVER_OVERRIDE=zink: EGL and GBM open /dev/dri/renderD128, which is msm_drm, the
+#   display driver, not the GPU; Zink then takes Turnip, which has no DRM node
+#   (mesa/patches/0002).
+# A program with file capabilities runs in glibc's secure mode, which ignores LD_LIBRARY_PATH:
+# kwin-lujarch's kwin_wayland has none.
+mesa_kgsl=/opt/mesa-kgsl
+export LD_LIBRARY_PATH="$mesa_kgsl/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export __EGL_VENDOR_LIBRARY_FILENAMES="$mesa_kgsl/share/glvnd/egl_vendor.d/50_mesa.json"
+export VK_DRIVER_FILES="$mesa_kgsl/share/vulkan/icd.d/freedreno_icd.aarch64.json"
+export GBM_BACKENDS_PATH="$mesa_kgsl/lib/gbm"
+export MESA_LOADER_DRIVER_OVERRIDE=zink
+unset mesa_kgsl

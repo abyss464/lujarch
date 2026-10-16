@@ -25,8 +25,8 @@ import org.lujarch.linux.Status;
 
 /**
  * The Linux development environment (lujarch_linux): the installed system and its state, the
- * terminal sessions, the system's services, Remote access, and the parts of the phone Linux is
- * lent. Lujarch Settings and the Terminal app call it; a refused or failed call throws a
+ * terminal sessions, the desktop, the system's services, Remote access, and the parts of the
+ * phone Linux is lent. Lujarch Settings and the Terminal app call it; a refused or failed call throws a
  * ServiceSpecificException with one of the ERROR_ constants and the reason.
  */
 interface ILinux {
@@ -50,6 +50,8 @@ interface ILinux {
 
     const String ACTION_INSTALL = "install";
     const String ACTION_SETUP = "setup";
+    /** Installing the desktop in Linux (installDesktop). */
+    const String ACTION_DESKTOP = "desktop";
 
     const String SERVICE_START = "start";
     const String SERVICE_STOP = "stop";
@@ -86,12 +88,12 @@ interface ILinux {
     const int ERROR_ROOT_SESSIONS_OFF = 6;
     const int ERROR_TOO_MANY_SESSIONS = 7;
     const int ERROR_NO_SESSION = 8;
-    /** An install or the initial setup is under way. */
+    /** An install, the initial setup or the desktop's install is under way. */
     const int ERROR_BUSY = 9;
     const int ERROR_NO_SERVICE = 10;
-    /** Linux serves no desktop. */
+    /** Linux has no desktop: the service desktop is not installed. */
     const int ERROR_NO_DESKTOP = 11;
-    /** Linux serves no sound. */
+    /** Linux has no sound for the desktop. */
     const int ERROR_NO_SOUND = 12;
 
     Status getStatus();
@@ -123,6 +125,12 @@ interface ILinux {
     /** Runs the initial setup again. */
     void runSetup();
 
+    /**
+     * Installs the desktop in Linux (LNX-6): Plasma Mobile, Mesa with Turnip and Zink, KWin with
+     * the Lujarch backend, built in Linux, and the service desktop; then (re)starts the service.
+     */
+    void installDesktop();
+
     LinuxService[] listServices();
 
     /** One of SERVICE_START, SERVICE_STOP, SERVICE_RESTART. */
@@ -148,11 +156,22 @@ interface ILinux {
     String getColors();
     void setColors(String colors);
 
-    /** A connection to the desktop Linux serves (RFB). */
-    ParcelFileDescriptor openDesktop();
+    /**
+     * The Terminal app's connection to the desktop: the display protocol
+     * (src/linux/desktop/protocol/lujarch_display.h) to KWin in Linux. A newer one replaces the
+     * older one; the desktop is frozen while none is attached or the last configure says it is
+     * not on screen.
+     */
+    ParcelFileDescriptor attachDisplay();
 
-    /** A connection to the sound Linux plays (PCM, 16-bit little endian, 48 kHz stereo). */
+    /**
+     * The desktop's sound (16-bit little-endian PCM, 48 kHz, stereo) as a non-blocking FIFO; it
+     * reads end of file while nothing in Linux plays into it.
+     */
     ParcelFileDescriptor openSound();
+
+    /** Android's clipboard as the Terminal app sees it, for the desktop while it is lent. */
+    void setClipboard(String text);
 
     /** Android's notifications, while Linux is lent them. */
     void setNotifications(in LinuxNotification[] notifications);

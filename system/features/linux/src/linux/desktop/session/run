@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+# The service desktop (LNX-6): Plasma Mobile on KWin's Lujarch backend, which the Terminal app
+# shows. lujarch_linux runs it as root in the desktop's cgroup, frozen while the desktop is not on
+# screen, and kills what is left in that group when it ends. The session runs as the owner's user
+# (the file user beside this one).
+set -u
+dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+user=$(sed -n 's/^user: //p' "$dir/user" 2>/dev/null)
+[ -n "$user" ] || { echo "no user in $dir/user"; exit 1; }
+# Xwayland's socket directory, with the sticky bit, before KWin starts Xwayland as the user.
+mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+exec setpriv --reuid="$user" --regid="$user" --init-groups --reset-env -- /usr/bin/bash "$dir/session"

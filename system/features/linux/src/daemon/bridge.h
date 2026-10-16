@@ -29,9 +29,13 @@
 //                  through the Terminal app on screen; nfc.d/<reply> gets "<answer in hex>" or
 //                  "error <why>" (after ten seconds at the latest); nfc-card holds the card's
 //                  kind and ID while one is held to the phone
+//   clipboard      file: Android's clipboard text as the Terminal app last saw it
+//   clipboard-set  FIFO: a line, text in base64, becomes Android's clipboard through the
+//                  Terminal app
 //
-// The shared clipboard is the terminal's and the desktop's (the Terminal app). USB devices are
-// /dev/bus/usb in Linux and the owner's user in the group aid_usb (1018) of its /etc/group.
+// The terminal's sessions share the clipboard in the Terminal app itself; the desktop shares it
+// through clipboard and clipboard-set. USB devices are /dev/bus/usb in Linux and the owner's user
+// in the group aid_usb (1018) of its /etc/group.
 #pragma once
 
 #include <aidl/org/lujarch/linux/LinuxNotification.h>
@@ -56,6 +60,7 @@ class Bridge {
         std::function<bool()> answerable;
         std::function<void(int id, const std::string& text)> auth;
         std::function<void(int id, const std::vector<uint8_t>& command)> nfc;
+        std::function<void(const std::string& text)> clipboard;
     };
 
     Bridge(System& system, Asks asks);
@@ -71,6 +76,8 @@ class Bridge {
     void SetNotifications(const std::vector<aidl::org::lujarch::linux::LinuxNotification>& list);
     void AnswerAuth(int id, bool allowed);
     void SetNfcCard(const std::optional<std::string>& card);
+    // Android's clipboard as the Terminal app sees it; false while the clipboard is not lent.
+    bool SetClipboard(const std::string& value);
     void AnswerNfc(int id, const std::vector<uint8_t>& response,
                    const std::optional<std::string>& error);
 
@@ -91,6 +98,7 @@ class Bridge {
     void Ir(const std::string& line);
     void Auth(const std::string& line);
     void Nfc(const std::string& line);
+    void Clipboard(const std::string& line);
     void Reply(const char* dir, const std::string& reply, const std::string& text);
     void WriteNotifications();
     void SensorsReader();
@@ -117,6 +125,11 @@ class Bridge {
     std::string ir_buffer_;
     std::string auth_buffer_;
     std::string nfc_buffer_;
+    android::base::unique_fd clipboard_fifo_;
+    std::string clipboard_buffer_;
+    // The last text each side gave, so that neither gets its own text back.
+    std::string android_clipboard_;
+    std::string linux_clipboard_;
     android::base::unique_fd inotify_;
     int sensors_watch_ = -1;
     android::base::unique_fd sensors_out_;

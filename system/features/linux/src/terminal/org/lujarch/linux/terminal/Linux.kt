@@ -95,6 +95,7 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
         fun onSessionExited(id: String, status: Int)
         fun onAuthRequest(id: Int, text: String)
         fun onNfcRequest(id: Int, command: ByteArray)
+        fun onClipboard(text: String)
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -113,6 +114,10 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
 
     override fun onNfcRequest(id: Int, command: ByteArray) {
         main.post { sink.onNfcRequest(id, command) }
+    }
+
+    override fun onClipboard(text: String) {
+        main.post { sink.onClipboard(text) }
     }
 
     fun register() {

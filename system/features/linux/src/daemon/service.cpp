@@ -151,6 +151,9 @@ Service::Service()
                       },
                       [this](int id, const std::vector<uint8_t>& command) {
                           ForTerminal([&](ILinuxListener& l) { l.onNfcRequest(id, command); });
+                      },
+                      [this](const std::string& copied) {
+                          ForTerminal([&](ILinuxListener& l) { l.onClipboard(copied); });
                       }}),
       death_(AIBinder_DeathRecipient_new(&Service::OnListenerDied)) {
     auto values = files::ReadKeyValues(kStateFile);
@@ -186,6 +189,7 @@ void Service::Start() {
     services_.Start();
     remote_.Start();
     bridge_.Start();
+    display_.Start();
     for (const char* key : kSwitches) {
         std::thread(&Service::WatchProperty, this,
                     std::string("lujarch.setting.") + kFeature + "." + key)
@@ -244,36 +248,36 @@ void Service::Loop() {
     for (;;) {
         Reconcile();
         std::vector<pollfd> fds = {{wake_.get(), POLLIN, 0}};
-        if (setup_.pid > 0) {
-            fds.push_back({setup_.pidfd.get(), POLLIN, 0});
-            if (setup_output_ >= 0) fds.push_back({setup_output_.get(), POLLIN, 0});
+        if (job_.pid > 0) {
+            fds.push_back({job_.pidfd.get(), POLLIN, 0});
+            if (job_output_ >= 0) fds.push_back({job_output_.get(), POLLIN, 0});
         }
         TEMP_FAILURE_RETRY(poll(fds.data(), fds.size(), -1));
         uint64_t count;
         while (read(wake_.get(), &count, sizeof(count)) > 0) {
         }
-        if (setup_output_ >= 0) {
+        if (job_output_ >= 0) {
             char buf[4096];
             ssize_t n;
-            while ((n = read(setup_output_.get(), buf, sizeof(buf))) > 0) {
-                if (setup_log_ >= 0) TEMP_FAILURE_RETRY(write(setup_log_.get(), buf, static_cast<size_t>(n)));
-                setup_partial_.append(buf, static_cast<size_t>(n));
+            while ((n = read(job_output_.get(), buf, sizeof(buf))) > 0) {
+                if (job_log_ >= 0) TEMP_FAILURE_RETRY(write(job_log_.get(), buf, static_cast<size_t>(n)));
+                job_partial_.append(buf, static_cast<size_t>(n));
             }
-            if (n == 0) setup_output_.reset();
+            if (n == 0) job_output_.reset();
             size_t nl;
-            while ((nl = setup_partial_.find('\n')) != std::string::npos) {
-                const std::string line = android::base::Trim(setup_partial_.substr(0, nl));
-                setup_partial_.erase(0, nl + 1);
-                if (!line.empty()) setup_last_line_ = text::SanitizeUtf8(line);
+            while ((nl = job_partial_.find('\n')) != std::string::npos) {
+                const std::string line = android::base::Trim(job_partial_.substr(0, nl));
+                job_partial_.erase(0, nl + 1);
+                if (!line.empty()) job_last_line_ = text::SanitizeUtf8(line);
             }
-            if (setup_partial_.size() > 4096) setup_partial_.clear();
+            if (job_partial_.size() > 4096) job_partial_.clear();
         }
-        if (setup_.pid > 0) {
+        if (job_.pid > 0) {
             int status = 0;
-            if (waitpid(setup_.pid, &status, WNOHANG) == setup_.pid) {
-                setup_.pid = -1;
-                setup_.pidfd.reset();
-                SetupEnded(ExitCode(status));
+            if (waitpid(job_.pid, &status, WNOHANG) == job_.pid) {
+                job_.pid = -1;
+                job_.pidfd.reset();
+                JobEnded(ExitCode(status));
             }
         }
     }
@@ -282,11 +286,14 @@ void Service::Loop() {
 void Service::Reconcile() {
     bool replace;
     bool setup_requested;
+    bool desktop_requested;
     {
         std::lock_guard lock(mutex_);
         replace = replace_pending_;
         setup_requested = setup_requested_;
         setup_requested_ = false;
+        desktop_requested = desktop_requested_;
+        desktop_requested_ = false;
     }
     if (replace) {
         if (system_.Created()) StopLinux();
@@ -304,7 +311,23 @@ void Service::Reconcile() {
     if (!system_.Created() && !held_) {
         SetState(installed ? ILinux::STATE_STOPPED : ILinux::STATE_NOT_INSTALLED);
     }
-    if (setup_requested && system_.Created() && setup_.pid <= 0) StartSetup();
+    if (setup_requested && system_.Created() && job_.pid <= 0) StartJob(ILinux::ACTION_SETUP);
+    if (desktop_requested) {
+        if (system_.Created() && linux_ready_ && job_.pid <= 0) {
+            StartJob(ILinux::ACTION_DESKTOP);
+        } else {
+            {
+                std::lock_guard lock(mutex_);
+                action_running_ = false;
+                persisted_.action = ILinux::ACTION_DESKTOP;
+                persisted_.action_ok = false;
+                persisted_.action_message = "Linux does not run";
+                persisted_.action_time = time(nullptr);
+                SaveState();
+            }
+            Changed();
+        }
+    }
 
     // The switches that apply while Linux runs.
     std::string memory = Setting(kFeature, "memory");
@@ -371,7 +394,7 @@ void Service::StartLinux() {
     }
     linux_ready_ = false;
     if (!setup_done) {
-        StartSetup();
+        StartJob(ILinux::ACTION_SETUP);
         return;
     }
     std::string user;
@@ -380,6 +403,7 @@ void Service::StartLinux() {
         user = persisted_.user;
     }
     linux_ready_ = true;
+    display_.SetLinux(true);
     services_.LinuxStarted();
     remote_.SetLinux(true, user);
     bridge_.SetLinux(true, user);
@@ -388,19 +412,21 @@ void Service::StartLinux() {
 
 void Service::StopLinux() {
     LOG(INFO) << "Linux stops";
-    if (setup_.pid > 0) {
-        kill(-setup_.pid, SIGKILL);
-        Wait(setup_);
-        setup_output_.reset();
-        setup_log_.reset();
+    if (job_.pid > 0) {
+        kill(-job_.pid, SIGKILL);
+        Wait(job_);
+        job_output_.reset();
+        job_log_.reset();
         std::lock_guard lock(mutex_);
         action_running_ = false;
+        persisted_.action = job_kind_;
         persisted_.action_ok = false;
         persisted_.action_message = "Linux stopped";
         persisted_.action_time = time(nullptr);
         SaveState();
     }
     linux_ready_ = false;
+    display_.SetLinux(false);
     remote_.SetLinux(false, "");
     bridge_.SetLinux(false, "");
     services_.StopAll();
@@ -411,72 +437,89 @@ void Service::StopLinux() {
     LOG(INFO) << "Linux stopped";
 }
 
-void Service::StartSetup() {
+void Service::StartJob(const std::string& kind) {
+    const bool setup = kind == ILinux::ACTION_SETUP;
     std::string user;
     {
         std::lock_guard lock(mutex_);
         user = persisted_.user;
         action_running_ = true;
-        persisted_.action = ILinux::ACTION_SETUP;
+        persisted_.action = kind;
         persisted_.action_ok = false;
         persisted_.action_message.clear();
         persisted_.action_time = time(nullptr);
         SaveState();
     }
-    SetState(ILinux::STATE_SETUP);
-    setup_last_line_.clear();
-    setup_partial_.clear();
-    setup_log_.reset(TEMP_FAILURE_RETRY(
-            open(kSetupLog, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600)));
+    job_kind_ = kind;
+    if (setup) SetState(ILinux::STATE_SETUP);
+    Changed();
+    job_last_line_.clear();
+    job_partial_.clear();
+    job_log_.reset(TEMP_FAILURE_RETRY(open(setup ? kSetupLog : kDesktopLog,
+                                           O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC,
+                                           0600)));
     int out[2];
     if (pipe2(out, O_CLOEXEC) != 0) {
-        PLOG(ERROR) << "setup: pipe";
-        SetupEnded(127);
+        PLOG(ERROR) << kind << ": pipe";
+        JobEnded(127);
         return;
     }
     unique_fd read_end(out[0]), write_end(out[1]);
     fcntl(read_end.get(), F_SETFL, O_NONBLOCK);
     Spawn spawn;
     spawn.as = Spawn::As::kRoot;
-    spawn.argv = {kShell, kLinuxSetup, user, std::to_string(aid::kLinux)};
+    spawn.argv = {kShell, setup ? kLinuxSetup : kLinuxDesktopInstall, user,
+                  std::to_string(aid::kLinux)};
     spawn.cwd = "/";
     spawn.out = write_end.get();
     spawn.err = write_end.get();
     auto p = system_.Start(spawn);
     if (!p.ok()) {
-        LOG(ERROR) << "setup did not start: " << p.error();
-        setup_last_line_ = p.error().message();
-        SetupEnded(127);
+        LOG(ERROR) << kind << " did not start: " << p.error();
+        job_last_line_ = p.error().message();
+        JobEnded(127);
         return;
     }
-    setup_ = std::move(*p);
-    setup_output_ = std::move(read_end);
-    LOG(INFO) << "initial setup runs for " << user;
+    job_ = std::move(*p);
+    job_output_ = std::move(read_end);
+    LOG(INFO) << (setup ? "initial setup" : "the desktop's install") << " runs for " << user;
 }
 
-void Service::SetupEnded(int status) {
-    setup_output_.reset();
-    setup_log_.reset();
+void Service::JobEnded(int status) {
+    job_output_.reset();
+    job_log_.reset();
     const bool ok = status == 0;
+    const bool setup = job_kind_ == ILinux::ACTION_SETUP;
     std::string user;
     {
         std::lock_guard lock(mutex_);
         action_running_ = false;
-        persisted_.action = ILinux::ACTION_SETUP;
+        persisted_.action = job_kind_;
         persisted_.action_ok = ok;
-        persisted_.action_message = ok ? "" : setup_last_line_;
+        persisted_.action_message = ok ? "" : job_last_line_;
         persisted_.action_time = time(nullptr);
-        if (ok) persisted_.setup_done = true;
+        if (ok && setup) persisted_.setup_done = true;
         SaveState();
         user = persisted_.user;
     }
     if (ok) {
-        LOG(INFO) << "initial setup done";
+        LOG(INFO) << job_kind_ << " done";
     } else {
-        LOG(ERROR) << "initial setup ended with " << status << ": " << setup_last_line_;
+        LOG(ERROR) << job_kind_ << " ended with " << status << ": " << job_last_line_;
+    }
+    if (!setup) {
+        // The desktop starts again with what was installed.
+        if (ok && system_.Created()) {
+            if (auto r = services_.Control(kDesktopService, ILinux::SERVICE_RESTART); !r.ok()) {
+                LOG(ERROR) << "the desktop's service: " << r.error();
+            }
+        }
+        Changed();
+        return;
     }
     if (system_.Created() && !linux_ready_) {
         linux_ready_ = true;
+        display_.SetLinux(true);
         services_.LinuxStarted();
         remote_.SetLinux(true, user);
         bridge_.SetLinux(true, user);
@@ -667,6 +710,10 @@ ndk::ScopedAStatus Service::getStatus(Status* out) {
         out->actionTotal = action_total_;
     }
     out->sessions = sessions_.List();
+    if (auto root = files::OpenRoot(kRoot); root.ok()) {
+        out->desktopInstalled =
+                files::ExistsIn(root->get(), std::string(kServicesDir) + "/" + kDesktopService + "/run");
+    }
     const bool running = system_.Created();
     out->memoryUsed = running ? cgroup::MemoryUsed() : 0;
     out->memoryTotal = MemoryTotal();
@@ -792,7 +839,7 @@ ndk::ScopedAStatus Service::install(const ndk::ScopedFileDescriptor& archive,
     {
         std::lock_guard lock(mutex_);
         if (action_running_ || replace_pending_) {
-            return Fail(ILinux::ERROR_BUSY, "an install or the initial setup runs");
+            return Fail(ILinux::ERROR_BUSY, "an install, the initial setup or the desktop's install runs");
         }
         action_running_ = true;
         action_done_ = 0;
@@ -815,11 +862,27 @@ ndk::ScopedAStatus Service::runSetup() {
     {
         std::lock_guard lock(mutex_);
         if (action_running_ || replace_pending_) {
-            return Fail(ILinux::ERROR_BUSY, "an install or the initial setup runs");
+            return Fail(ILinux::ERROR_BUSY, "an install, the initial setup or the desktop's install runs");
         }
         setup_requested_ = true;
     }
     Wake();
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Service::installDesktop() {
+    CHECK_CALLER(Caller::kSettings);
+    if (!system_.Created()) return Fail(ILinux::ERROR_NOT_RUNNING, "Linux does not run");
+    {
+        std::lock_guard lock(mutex_);
+        if (action_running_ || replace_pending_) {
+            return Fail(ILinux::ERROR_BUSY, "an install, the initial setup or the desktop's install runs");
+        }
+        action_running_ = true;
+        desktop_requested_ = true;
+    }
+    Wake();
+    Changed();
     return ndk::ScopedAStatus::ok();
 }
 
@@ -917,35 +980,40 @@ ndk::ScopedAStatus Service::setColors(const std::string& colors) {
     return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus Service::Connect(const char* path, int missing, ndk::ScopedFileDescriptor* out) {
+ndk::ScopedAStatus Service::attachDisplay(ndk::ScopedFileDescriptor* connection) {
+    CHECK_CALLER(Caller::kTerminal);
     if (!system_.Created()) return Fail(ILinux::ERROR_NOT_RUNNING, "Linux does not run");
     auto root = files::OpenRoot(kRoot);
     if (!root.ok()) return Fail(ILinux::ERROR_FAILED, root.error().message());
-    auto socket_path = files::OpenIn(root->get(), path, O_PATH);
-    struct stat st;
-    if (!socket_path.ok() || fstat(socket_path->get(), &st) != 0 || !S_ISSOCK(st.st_mode)) {
-        return Fail(missing, std::string("Linux serves nothing at ") + path);
+    if (!files::ExistsIn(root->get(), std::string(kServicesDir) + "/" + kDesktopService + "/run")) {
+        return Fail(ILinux::ERROR_NO_DESKTOP, "Linux has no service desktop");
     }
-    unique_fd fd(socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0));
-    if (fd < 0) return Fail(ILinux::ERROR_FAILED, std::string("socket: ") + strerror(errno));
-    sockaddr_un addr = {};
-    addr.sun_family = AF_UNIX;
-    snprintf(addr.sun_path, sizeof(addr.sun_path), "/proc/self/fd/%d", socket_path->get());
-    if (connect(fd.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        return Fail(missing, std::string(path) + ": " + strerror(errno));
+    auto fd = display_.Attach();
+    if (!fd.ok()) {
+        return Fail(fd.error().code() == ESRCH ? ILinux::ERROR_NOT_RUNNING : ILinux::ERROR_FAILED,
+                    fd.error().message());
     }
-    *out = ndk::ScopedFileDescriptor(fd.release());
+    *connection = ndk::ScopedFileDescriptor(fd->release());
     return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus Service::openDesktop(ndk::ScopedFileDescriptor* connection) {
+ndk::ScopedAStatus Service::openSound(ndk::ScopedFileDescriptor* sound) {
     CHECK_CALLER(Caller::kTerminal);
-    return Connect(kDesktopSocket, ILinux::ERROR_NO_DESKTOP, connection);
+    auto fd = display_.OpenSound();
+    if (!fd.ok()) {
+        return Fail(fd.error().code() == ESRCH ? ILinux::ERROR_NOT_RUNNING : ILinux::ERROR_NO_SOUND,
+                    fd.error().message());
+    }
+    *sound = ndk::ScopedFileDescriptor(fd->release());
+    return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus Service::openSound(ndk::ScopedFileDescriptor* connection) {
+ndk::ScopedAStatus Service::setClipboard(const std::string& text) {
     CHECK_CALLER(Caller::kTerminal);
-    return Connect(kSoundSocket, ILinux::ERROR_NO_SOUND, connection);
+    if (!bridge_.SetClipboard(text)) {
+        return Fail(ILinux::ERROR_REFUSED, "the clipboard is not lent");
+    }
+    return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Service::setNotifications(const std::vector<LinuxNotification>& list) {

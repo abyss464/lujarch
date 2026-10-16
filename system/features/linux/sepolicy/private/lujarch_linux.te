@@ -1,7 +1,8 @@
 # lujarch_linux: the Linux development environment's daemon. It makes the installed system's
 # mount namespace of binds, runs Linux's programs through lujarch_linux_enter, holds the terminal
-# sessions, installs systems from archives, runs Remote access's relay, lends Linux the phone's
-# parts, and serves Lujarch Settings and the Terminal app.
+# sessions, relays the desktop's display between KWin in Linux and the Terminal app, installs
+# systems from archives, runs Remote access's relay, lends Linux the phone's parts, and serves
+# Lujarch Settings and the Terminal app.
 type lujarch_linux, domain, coredomain;
 type lujarch_linux_exec, system_file_type, exec_type, file_type;
 init_daemon_domain(lujarch_linux)
@@ -52,8 +53,8 @@ allow lujarch_linux lujarch_linux_arch_file:dir { create_dir_perms rename repare
 allow lujarch_linux lujarch_linux_arch_file:file { create_file_perms rename link mounton };
 allow lujarch_linux lujarch_linux_arch_file:lnk_file { create_file_perms rename };
 allow lujarch_linux lujarch_linux_arch_file:fifo_file { create_file_perms rename watch };
-allow lujarch_linux lujarch_linux_arch_file:sock_file { getattr write unlink };
-allow lujarch_linux lujarch_linux_arch:unix_stream_socket connectto;
+# The display protocol's socket, which KWin connects to.
+allow lujarch_linux lujarch_linux_arch_file:sock_file { create getattr setattr unlink write };
 allow lujarch_linux self:unix_stream_socket create_stream_socket_perms;
 
 # The system's namespace: binds only, and Android's /dev/bus/usb taken back.
@@ -101,7 +102,14 @@ binder_call(lujarch_linux, lujarch_root)
 allow lujarch_linux platform_app:fd use;
 allow lujarch_linux { media_rw_data_file fuse }:file { read getattr };
 
-# The Terminal app holds one end of a session's socket pair and the desktop's and sound's
-# connections.
+# The Terminal app holds one end of a session's or the desktop's socket pair, and the desktop's
+# sound FIFO, which the daemon opens.
 allow platform_app lujarch_linux:fd use;
 allow platform_app lujarch_linux:unix_stream_socket { read write getattr getopt setopt shutdown };
+allow platform_app lujarch_linux_arch_file:fifo_file { read getattr };
+
+# The desktop's display: dma-bufs of the graphics allocator, the Terminal app's release fences and
+# KWin's acquire fences pass through the daemon, which passes every fence on as a sync_file of
+# its own. dma-buf and sync_file inodes are private; only fd use of their creator applies.
+allow lujarch_linux hal_graphics_allocator:fd use;
+allow lujarch_linux lujarch_linux_arch:fd use;

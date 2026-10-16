@@ -96,6 +96,7 @@ class LinuxContribution : Contribution {
             entry(LinuxFragment.KEY_MEMORY, R.string.lnx_memory, R.string.lnx_search_memory_keywords),
             entry(LinuxFragment.KEY_SWAP, R.string.lnx_swap, R.string.lnx_search_memory_keywords),
             entry(LinuxFragment.KEY_DESKTOP, R.string.lnx_open_desktop, R.string.lnx_search_desktop_keywords),
+            entry(LinuxFragment.KEY_DESKTOP_INSTALL, R.string.lnx_install_desktop, R.string.lnx_search_desktop_keywords),
             entry("lujarch_linux_services_page", R.string.lnx_services, R.string.lnx_search_services_keywords, LinuxPages.ACTION_SERVICES),
             entry("lujarch_linux_remote_page", R.string.lnx_remote, R.string.lnx_search_remote_keywords, LinuxPages.ACTION_REMOTE),
         )

@@ -35,6 +35,7 @@
     <string name="lnx_action">上次操作</string>
     <string name="lnx_action_install">安装</string>
     <string name="lnx_action_setup">初始设置</string>
+    <string name="lnx_action_desktop">桌面安装</string>
     <string name="lnx_action_running">%1$s：正在进行…</string>
     <string name="lnx_action_running_progress">%1$s：已读取 %2$s，共 %3$s</string>
     <string name="lnx_action_ok">%1$s：已于 %2$s 完成</string>
@@ -72,8 +73,14 @@
     <string name="lnx_swap">交换空间</string>
     <string name="lnx_swap_summary">Linux 运行时在其存储空间中使用交换文件</string>
     <string name="lnx_swap_on">正在使用 %1$s 的交换文件</string>
+    <string name="lnx_desktop">桌面</string>
     <string name="lnx_open_desktop">打开桌面</string>
     <string name="lnx_open_desktop_summary">全屏显示 Arch Linux 的桌面</string>
+    <string name="lnx_install_desktop">安装桌面</string>
+    <string name="lnx_install_desktop_none">Plasma Mobile，以及在 Linux 中为手机屏幕构建的 KWin 和 Mesa</string>
+    <string name="lnx_install_desktop_done">已安装。再次安装会更新它，并构建有变化的部分。</string>
+    <string name="lnx_install_desktop_message">安装会在 Linux 运行期间以 root 身份在 Linux 中运行。它会更新 Linux 的软件包、安装 Plasma Mobile，并构建 Mesa 和 KWin，耗时较长；构建只使用手机的小核心。</string>
+    <string name="lnx_install_desktop_run">安装</string>
     <string name="lnx_lend">供 Linux 使用</string>
     <string name="lnx_lend_clipboard">共享剪贴板</string>
     <string name="lnx_lend_clipboard_summary">在终端和桌面中双向共享剪贴板</string>
@@ -96,11 +103,12 @@
     <string name="lnx_error_switch">无法更改设置</string>
     <string name="lnx_error_install">无法安装根文件系统</string>
     <string name="lnx_error_setup">无法运行初始设置</string>
+    <string name="lnx_error_desktop">无法安装桌面</string>
     <string name="lnx_error_colors">无法设置我的配色</string>
     <string name="lnx_error_invalid">该值无效。</string>
     <string name="lnx_error_not_running">Linux 未运行。请先开启“使用 Linux 开发环境”。</string>
     <string name="lnx_error_root_sessions_off">Root 会话已关闭。</string>
-    <string name="lnx_error_busy">正在安装或进行初始设置。请在结束后重试。</string>
+    <string name="lnx_error_busy">正在安装、进行初始设置或安装桌面。请在结束后重试。</string>
     <string name="lnx_error_no_service">此服务已不存在。</string>
     <string name="lnx_error_load_services">无法加载服务</string>
     <string name="lnx_error_service">无法更改服务</string>
@@ -153,7 +161,7 @@
     <string name="lnx_search_terminal_keywords">终端, 颜色, 按键, shell</string>
     <string name="lnx_search_root_keywords">超级用户, root, su</string>
     <string name="lnx_search_memory_keywords">内存, 交换空间, RAM, swap</string>
-    <string name="lnx_search_desktop_keywords">桌面, 显示, VNC, X11, Wayland</string>
+    <string name="lnx_search_desktop_keywords">桌面, 显示, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">服务, 守护进程</string>
     <string name="lnx_search_remote_keywords">远程访问, 中继, SSH, frp</string>
     <string name="lnx_search_lend_keywords">剪贴板, 通知, 传感器, 指纹, 红外, USB, NFC</string>

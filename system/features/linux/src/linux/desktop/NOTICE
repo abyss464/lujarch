@@ -1,0 +1,15 @@
+The desktop's recipe, which Linux builds and installs (install)
+
+kwin/lujarch and kwin/kwin.patch are changes to KWin (https://invent.kde.org/plasma/kwin), licensed
+under the GNU General Public License, version 2 or later
+(https://spdx.org/licenses/GPL-2.0-or-later.html). The backend's structure follows the KWin backend
+of Anland (https://github.com/SuperTurtleDev/anland, branch legacy), whose files carry the same
+license. kwin/PKGBUILD is Arch Linux's kwin PKGBUILD
+(https://gitlab.archlinux.org/archlinux/packaging/packages/kwin) with the package renamed and these
+sources added.
+
+mesa/patches are changes to Mesa (https://mesa3d.org), licensed under the MIT license
+(https://spdx.org/licenses/MIT.html).
+
+The rest is Lujarch's, licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0).

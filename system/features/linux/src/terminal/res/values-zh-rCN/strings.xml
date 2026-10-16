@@ -29,9 +29,9 @@
     <string name="mode_summary">Linux 正在屏幕上显示</string>
     <string name="mode_trigger">Linux 桌面在屏幕上显示时</string>
     <string name="open_terminal">打开终端</string>
-    <string name="desktop_none">Linux 没有在 /run/lujarch/desktop 提供桌面。</string>
+    <string name="desktop_none">Linux 没有桌面。请在“设置”的 Linux 开发环境页面中安装。</string>
     <string name="desktop_failed">与 Linux 桌面的连接已断开。</string>
-    <string name="keyboard">键盘</string>
+    <string name="desktop_silent">Linux 桌面没有绘制画面。它的服务 desktop 及其日志位于“设置”中的“服务”。</string>
     <string name="remote_access">远程访问</string>
     <string name="remote_charging">充电时</string>
     <string name="remote_always">始终</string>

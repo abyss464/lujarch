@@ -31,6 +31,8 @@ parcelable Status {
     @nullable String user;
     /** The initial setup ran to its end for the installed system. */
     boolean setupDone;
+    /** Linux has the desktop's service (installDesktop). */
+    boolean desktopInstalled;
     LinuxSession[] sessions;
     /** The last action, ILinux's ACTION_ constants; null before the first one. */
     @nullable String action;

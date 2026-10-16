@@ -1,0 +1,129 @@
+diff -ruN a/src/backends/CMakeLists.txt b/src/backends/CMakeLists.txt
+--- a/src/backends/CMakeLists.txt	2026-09-08 19:53:35.000000000 +0900
++++ b/src/backends/CMakeLists.txt	2026-10-04 13:44:05.480698248 +0900
+@@ -1,6 +1,7 @@
+ add_subdirectory(drm)
+ add_subdirectory(fakeinput)
+ add_subdirectory(libinput)
++add_subdirectory(lujarch)
+ add_subdirectory(virtual)
+ add_subdirectory(wayland)
+ if (X11_XCB_FOUND)
+diff -ruN a/src/inputpanelv1window.cpp b/src/inputpanelv1window.cpp
+--- a/src/inputpanelv1window.cpp	2026-09-08 19:53:35.000000000 +0900
++++ b/src/inputpanelv1window.cpp	2026-10-04 13:44:05.488931590 +0900
+@@ -108,8 +108,14 @@
+ 
+         RectF geo = m_windowGeometry;
+ 
+-        // if it fits, align within available area
+-        if (geo.width() < availableArea.width()) {
++        // Lujarch: in a landscape area a keyboard narrower than it is a column at its right end, beside
++        // the navigation panel; windows give it their right part (Window::setVirtualKeyboardGeometry).
++        // The phone's keyboard style makes it as tall as the screen there.
++        const bool sideDocked = availableArea.width() > availableArea.height() && geo.width() < availableArea.width();
++
++        if (sideDocked) {
++            geo.moveRight(availableArea.right());
++        } else if (geo.width() < availableArea.width()) { // if it fits, align within available area
+             geo.moveHorizontalCenter(availableArea.horizontalCenter());
+         } else { // otherwise align to be centred within the screen
+             const RectF outputArea = activeOutput->geometry();
+diff -ruN a/src/main_wayland.cpp b/src/main_wayland.cpp
+--- a/src/main_wayland.cpp	2026-09-08 19:53:35.000000000 +0900
++++ b/src/main_wayland.cpp	2026-10-04 13:44:05.483449172 +0900
+@@ -11,6 +11,7 @@
+ #include "config-kwin.h"
+ 
+ #include "backends/drm/drm_backend.h"
++#include "backends/lujarch/lujarch_backend.h"
+ #include "backends/virtual/virtual_backend.h"
+ #include "backends/wayland/wayland_backend.h"
+ #include "compositor.h"
+@@ -378,6 +379,10 @@
+                                      i18n("Exits this instance so it can be restarted by kwin_wayland_wrapper."));
+ 
+     QCommandLineOption drmOption(QStringLiteral("drm"), i18n("Render through drm node."));
++    // Lujarch: render into the Terminal app's buffers over the display protocol (lujarch_display.h).
++    // KWIN_LUJARCH=1 selects it too, for sessions where kwin_wayland_wrapper starts KWin.
++    QCommandLineOption lujarchOption(QStringLiteral("lujarch"), i18n("Render into the Lujarch Terminal app's desktop view."));
++    QCommandLineOption lujarchSocketOption(QStringLiteral("lujarch-socket"), i18n("The display protocol socket (default /run/lujarch/display)."), QStringLiteral("path"));
+     QCommandLineOption locale1Option(QStringLiteral("locale1"), i18n("Extract locale information from locale1 rather than the user's configuration"));
+ 
+     QCommandLineParser parser;
+@@ -401,6 +406,8 @@
+     parser.addOption(scaleOption);
+     parser.addOption(outputCountOption);
+     parser.addOption(drmOption);
++    parser.addOption(lujarchOption);
++    parser.addOption(lujarchSocketOption);
+     parser.addOption(locale1Option);
+     parser.addOption(fullscreenOption);
+ 
+@@ -467,6 +474,7 @@
+ #endif
+         Wayland,
+         Virtual,
++        Lujarch,
+     };
+ 
+     BackendType backendType;
+@@ -475,7 +483,9 @@
+     qreal outputScale = 1;
+ 
+     // Decide what backend to use.
+-    if (parser.isSet(drmOption)) {
++    if (parser.isSet(lujarchOption) || qEnvironmentVariableIntValue("KWIN_LUJARCH") == 1) {
++        backendType = BackendType::Lujarch;
++    } else if (parser.isSet(drmOption)) {
+         backendType = BackendType::Kms;
+ #if KWIN_BUILD_X11
+     } else if (parser.isSet(x11DisplayOption)) {
+@@ -533,6 +543,15 @@
+     }
+ 
+     switch (backendType) {
++    case BackendType::Lujarch: {
++        QString socket = parser.value(lujarchSocketOption);
++        if (socket.isEmpty()) {
++            socket = qEnvironmentVariable("KWIN_LUJARCH_SOCKET");
++        }
++        a.setSession(KWin::Session::create(KWin::Session::Type::Noop));
++        a.setOutputBackend(std::make_unique<KWin::LujarchBackend>(socket));
++        break;
++    }
+     case BackendType::Kms:
+         a.setSession(KWin::Session::create());
+         if (!a.session()) {
+diff -ruN a/src/tabletmodemanager.cpp b/src/tabletmodemanager.cpp
+--- a/src/tabletmodemanager.cpp	2026-09-08 19:53:35.000000000 +0900
++++ b/src/tabletmodemanager.cpp	2026-10-04 13:44:05.486248077 +0900
+@@ -31,7 +31,9 @@
+         return !ignore;
+     }
+ 
+-    return false;
++    // Lujarch: the phone's touchscreen comes from the Lujarch backend, not libinput, and says
++    // so with this property (lujarch_input.cpp).
++    return device->property("kwinBlocksTabletMode").toBool();
+ }
+ 
+ class TabletModeSwitchEventSpy : public QObject, public InputEventSpy
+diff -ruN a/src/window.cpp b/src/window.cpp
+--- a/src/window.cpp	2026-09-08 19:53:35.000000000 +0900
++++ b/src/window.cpp	2026-10-04 13:44:05.491618683 +0900
+@@ -2940,6 +2940,14 @@
+ 
+     const RectF availableArea = workspace()->clientArea(MaximizeArea, this);
+     RectF newWindowGeometry = (requestedMaximizeMode() & MaximizeHorizontal) ? availableArea : m_keyboardGeometryRestore;
++    // Lujarch: a keyboard docked as a column at the right end of a landscape area
++    // (InputPanelV1Window::resetPosition) takes the window's right part, not its bottom.
++    if (availableArea.width() > availableArea.height() && geo.height() > availableArea.height() / 2
++        && geo.right() >= availableArea.right() - 1) {
++        newWindowGeometry.setRight(std::min(newWindowGeometry.right(), geo.left()));
++        moveResize(newWindowGeometry.intersected(availableArea));
++        return;
++    }
+     newWindowGeometry.setHeight(std::min(newWindowGeometry.height(), geo.top() - availableArea.top()));
+     newWindowGeometry.moveTop(std::max(geo.top() - newWindowGeometry.height(), availableArea.top()));
+     newWindowGeometry = newWindowGeometry.intersected(availableArea);

@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <iterator>
 #include <thread>
 
 #include "files.h"
@@ -53,6 +54,17 @@ using android::base::Error;
 
 // Android's device nodes Linux sees, each bound onto an empty file of the system's /dev.
 constexpr const char* kDeviceNodes[] = {"null", "zero", "random", "urandom", "tty", "ptmx"};
+// The GPU's nodes the desktop draws with, bound the same way when Android has them: KGSL, the
+// display driver's render node (EGL and GBM), the system DMA heap.
+constexpr const char* kGpuNodes[] = {"kgsl-3d0", "dri/renderD128", "dma_heap/system"};
+
+std::vector<std::string> DeviceNodes() {
+    std::vector<std::string> nodes(std::begin(kDeviceNodes), std::end(kDeviceNodes));
+    for (const char* node : kGpuNodes) {
+        if (access((std::string("/dev/") + node).c_str(), F_OK) == 0) nodes.push_back(node);
+    }
+    return nodes;
+}
 
 struct Bind {
     std::string source;
@@ -60,21 +72,19 @@ struct Bind {
     bool recursive;
 };
 
-std::vector<Bind> Binds(bool usb) {
+std::vector<Bind> Binds(const std::vector<std::string>& nodes, bool usb) {
     std::vector<Bind> binds = {
             {"/proc", "proc", true},
             {"/sys", "sys", true},
             {"/dev/pts", "dev/pts", false},
             {kFiles, std::string(kLinuxFiles).substr(1), false},
     };
-    for (const char* node : kDeviceNodes) {
-        binds.push_back({std::string("/dev/") + node, std::string("dev/") + node, false});
-    }
+    for (const std::string& node : nodes) binds.push_back({"/dev/" + node, "dev/" + node, false});
     if (usb) binds.push_back({"/dev/bus/usb", "dev/bus/usb", true});
     return binds;
 }
 
-Result<void> PrepareMountPoints(int root, bool usb) {
+Result<void> PrepareMountPoints(int root, const std::vector<std::string>& nodes, bool usb) {
     struct Dir {
         const char* path;
         mode_t mode;
@@ -89,9 +99,14 @@ Result<void> PrepareMountPoints(int root, bool usb) {
             return made.error();
         }
     }
-    for (const char* node : kDeviceNodes) {
-        const std::string path = std::string("/dev/") + node;
+    for (const std::string& node : nodes) {
+        const std::string path = "/dev/" + node;
         if (files::ExistsIn(root, path)) continue;
+        if (const size_t slash = path.rfind('/'); slash > 4) {
+            if (auto made = files::MakeDirsIn(root, path.substr(0, slash), 0755); !made.ok()) {
+                return made.error();
+            }
+        }
         auto made = files::OpenIn(root, path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0644);
         if (!made.ok()) return made.error();
     }
@@ -168,8 +183,9 @@ std::string CgroupFile(const char* name) {
     return std::string(kCgroup) + "/" + name;
 }
 
-Result<void> Join(pid_t pid) {
-    const std::string path = CgroupFile("cgroup.procs");
+Result<void> Join(pid_t pid, bool desktop) {
+    const std::string path =
+            desktop ? std::string(kDesktopCgroup) + "/cgroup.procs" : CgroupFile("cgroup.procs");
     if (!android::base::WriteStringToFile(std::to_string(pid), path)) {
         return ErrnoError() << path;
     }
@@ -183,10 +199,11 @@ Result<void> System::Create(bool usb) {
     if (anchor_.pid > 0) return {};
     auto root = files::OpenRoot(kRoot);
     if (!root.ok()) return root.error();
-    if (auto prepared = PrepareMountPoints(root->get(), usb); !prepared.ok()) {
+    const std::vector<std::string> nodes = DeviceNodes();
+    if (auto prepared = PrepareMountPoints(root->get(), nodes, usb); !prepared.ok()) {
         return Error() << "mount points: " << prepared.error().message();
     }
-    const std::vector<Bind> binds = Binds(usb);
+    const std::vector<Bind> binds = Binds(nodes, usb);
     std::vector<std::string> steps = {"unshare", "mount propagation", "the system's root",
                                       "open the root"};
     for (const Bind& b : binds) steps.push_back(b.source + " -> /" + b.target);
@@ -402,7 +419,7 @@ Result<Process> System::Start(const Spawn& s) {
     }
     gate_r.reset();
     report_w.reset();
-    if (auto joined = Join(pid); !joined.ok()) {
+    if (auto joined = Join(pid, s.desktop); !joined.ok()) {
         LOG(ERROR) << "cgroup of " << path << ": " << joined.error();
     }
     gate_w.reset();
@@ -552,6 +569,44 @@ int64_t MemoryLimit() {
         android::base::ParseInt(android::base::Trim(text), &value);
     }
     return value;
+}
+
+namespace {
+
+std::mutex desktop_mutex;
+bool desktop_wish = true;
+int desktop_holds = 0;
+int desktop_applied = -1;
+
+void ApplyDesktop() {
+    const bool frozen = desktop_wish && desktop_holds == 0;
+    if (static_cast<int>(frozen) == desktop_applied) return;
+    const std::string path = std::string(kDesktopCgroup) + "/cgroup.freeze";
+    if (!android::base::WriteStringToFile(frozen ? "1" : "0", path)) {
+        PLOG(ERROR) << path;
+        return;
+    }
+    desktop_applied = frozen;
+    LOG(INFO) << "the desktop " << (frozen ? "is frozen" : "runs");
+}
+
+}  // namespace
+
+void SetDesktopFrozen(bool frozen) {
+    std::lock_guard lock(desktop_mutex);
+    desktop_wish = frozen;
+    ApplyDesktop();
+}
+
+void HoldDesktop(bool hold) {
+    std::lock_guard lock(desktop_mutex);
+    desktop_holds += hold ? 1 : -1;
+    ApplyDesktop();
+}
+
+void KillDesktop() {
+    const std::string path = std::string(kDesktopCgroup) + "/cgroup.kill";
+    if (!android::base::WriteStringToFile("1", path)) PLOG(ERROR) << path;
 }
 
 }  // namespace cgroup

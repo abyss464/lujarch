@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+# The desktop's share of the clipboard while it is lent (LNX-7): Linux's copies go to Android as
+# one line of base64 into the FIFO /run/lujarch/clipboard-set, and Android's clipboard, which
+# lujarch_linux keeps in /run/lujarch/clipboard, becomes Linux's when it changes. Text only, at
+# most 64 KiB. The session starts it again when it ends.
+run=/run/lujarch
+for tool in wl-paste wl-copy inotifywait base64; do
+    command -v "$tool" >/dev/null || { echo "$tool is missing: the desktop does not share the clipboard"; exec sleep infinity; }
+done
+export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+until [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; do
+    sleep 1
+done
+
+android_to_linux() {
+    [ -f "$run/clipboard" ] && wl-copy --type 'text/plain;charset=utf-8' <"$run/clipboard"
+    return 0
+}
+android_to_linux
+inotifywait -m -q -e close_write,moved_to --format %f "$run" | while IFS= read -r name; do
+    [ "$name" = clipboard ] && android_to_linux
+done &
+
+# Each new selection with text, unless it is Android's own.
+exec wl-paste --type text --watch bash -c '
+    run=/run/lujarch
+    [ -p "$run/clipboard-set" ] || exit 0
+    copied=$(head -c 65536 | base64 -w0)
+    if [ -f "$run/clipboard" ] && [ "$copied" = "$(head -c 65536 "$run/clipboard" | base64 -w0)" ]; then
+        exit 0
+    fi
+    printf "%s\n" "$copied" >"$run/clipboard-set"'

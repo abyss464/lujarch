@@ -1,0 +1,151 @@
+#!/usr/bin/bash
+# Installs the desktop of the Linux development environment (LNX-6) in Linux: Plasma Mobile and
+# PipeWire from Arch Linux ARM, Mesa with Turnip on KGSL and Zink at /opt/mesa-kgsl (mesa/), KWin
+# with the Lujarch backend as the package kwin-lujarch (kwin/, protocol/), and the service desktop
+# (session/). lujarch_linux runs it as root from Settings > System > Linux development
+# environment > Install the desktop, and starts the service again when it ends well:
+#
+#   install USER UID
+#
+# It can run again: Mesa and KWin are built again only when their recipe or their pin in
+# lock.toml (the file downloads) changed, or what is installed lacks them. The builds run at the
+# lowest priority on the little cores (0-2), three jobs, so that the phone stays usable; their
+# logs are in /var/log/lujarch/desktop-install. The last line of the output says what failed.
+set -euo pipefail
+export HOME=/root LANG=C.UTF-8 PATH=/usr/local/sbin:/usr/local/bin:/usr/bin
+
+user=$1
+uid=$2
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+state=/var/lib/lujarch/desktop
+work=/var/tmp/lujarch
+service=/etc/lujarch/services/desktop
+
+say() { printf '%s\n' "$*"; }
+fail() { say "$*"; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || fail "the desktop's install runs as root"
+[ "$(id -u "$user" 2>/dev/null)" = "$uid" ] || fail "the user $user does not have the user ID $uid"
+home=$(getent passwd "$user" | cut -d: -f6)
+
+# A pin of lock.toml: name.url, name.version, name.sha256.
+pin() {
+    sed -n "s|^$1: ||p" "$here/downloads"
+}
+for key in kwin.url kwin.version kwin.sha256 mesa.url mesa.version mesa.sha256; do
+    grep -q "^$key: ." "$here/downloads" 2>/dev/null || fail "no $key in $here/downloads"
+done
+
+# What a recipe is: its files and its pin.
+fingerprint() {
+    local name=$1
+    shift
+    {
+        (cd "$here" && find "$@" -type f -print0 | sort -z | xargs -0 sha256sum)
+        pin "$name.url"
+        pin "$name.sha256"
+    } | sha256sum | cut -d' ' -f1
+}
+
+as_user() {
+    setpriv --reuid="$user" --regid="$user" --init-groups -- \
+        env HOME="$home" USER="$user" LOGNAME="$user" PATH=/usr/local/bin:/usr/bin "$@"
+}
+
+# The lowest priority on the little cores.
+low=(taskset -c 0-2 nice -n 19)
+
+mkdir -p "$state" "$work" /var/log/lujarch/desktop-install
+
+# The packages: the desktop's, and what Mesa and KWin are built with. KWin's come from its
+# PKGBUILD.
+mapfile -t kwin_packages < <(bash -c 'source "$1" && printf "%s\n" "${depends[@]}" "${makedepends[@]}"' \
+    _ "$here/kwin/PKGBUILD")
+packages=(
+    plasma-mobile plasma-keyboard breeze breeze-icons xorg-xwayland qt6-wayland konsole dolphin
+    systemsettings pipewire wireplumber pipewire-pulse pipewire-alsa wl-clipboard inotify-tools
+    base-devel meson ninja python-mako python-yaml python-packaging glslang spirv-tools
+    vulkan-headers vulkan-icd-loader libdrm libglvnd wayland wayland-protocols libelf libxml2 curl
+    "${kwin_packages[@]}"
+)
+say "installing the packages"
+pacman -Syu --needed --noconfirm "${packages[@]}" >/var/log/lujarch/desktop-install/pacman.log 2>&1 ||
+    { tail -n 20 /var/log/lujarch/desktop-install/pacman.log; fail "pacman could not install the packages (/var/log/lujarch/desktop-install/pacman.log)"; }
+
+# Mesa.
+mesa_print=$(fingerprint mesa mesa)
+if [ ! -f /opt/mesa-kgsl/share/vulkan/icd.d/freedreno_icd.aarch64.json ] ||
+    [ "$(cat "$state/mesa" 2>/dev/null)" != "$mesa_print" ]; then
+    say "building Mesa $(pin mesa.version)"
+    env MESA_WORK="$work/mesa-kgsl" JOBS=3 "${low[@]}" bash "$here/mesa/build.sh" \
+        "$(pin mesa.version)" "$(pin mesa.url)" "$(pin mesa.sha256)"
+    printf '%s\n' "$mesa_print" >"$state/mesa"
+fi
+
+# KWin. makepkg builds as the user and packages as root: its usual packaging runs in fakeroot,
+# which needs System V IPC, and the phone's kernel has none. The user's makepkg gets a fakeroot
+# that does nothing, and the package is made by makepkg's own packaging stage (-F) as root.
+kwin_version=$(pin kwin.version)
+kwin_print=$(fingerprint kwin kwin protocol)
+kwin_installed() {
+    pacman -Q kwin-lujarch >/dev/null 2>&1 &&
+        grep -aq 'kwin_backend_lujarch' /usr/lib/libkwin.so."${kwin_version%%.*}"* 2>/dev/null
+}
+if ! kwin_installed || [ "$(cat "$state/kwin" 2>/dev/null)" != "$kwin_print" ]; then
+    say "building KWin $kwin_version with the Lujarch backend"
+    kw=$work/kwin-lujarch
+    stage=$kw/recipe
+    shim=$kw/shim
+    rm -rf "$stage" "$shim" "$kw/packages" "$kw/user-packages"
+    mkdir -p "$stage" "$shim" "$kw/build" "$kw/sources" "$kw/packages" "$kw/user-packages"
+    cp "$here/kwin/kwin.patch" "$here"/kwin/lujarch/* "$here/protocol/lujarch_display.h" "$stage/"
+    sed -e "s|@KWIN_VERSION@|$kwin_version|g" -e "s|@KWIN_URL@|$(pin kwin.url)|g" \
+        -e "s|@KWIN_SHA256@|$(pin kwin.sha256)|g" "$here/kwin/PKGBUILD" >"$stage/PKGBUILD"
+    printf '#!/bin/sh\nexit 0\n' >"$shim/fakeroot"
+    chmod 755 "$shim/fakeroot"
+    chown -R "$user:" "$stage" "$shim" "$kw/build" "$kw/sources" "$kw/user-packages"
+
+    args=(-f --noconfirm --nocheck)
+    tree=$kw/build/kwin-lujarch/src/kwin-$kwin_version
+    if [ -d "$tree/build" ]; then
+        # Again on the built tree; makepkg -e skips prepare(), which this does instead.
+        if as_user bash -c '
+            set -e
+            mkdir -p "$1/src/backends/lujarch"
+            for f in "$2"/CMakeLists.txt "$2"/lujarch_*; do
+                cmp -s "$f" "$1/src/backends/lujarch/${f##*/}" || cp "$f" "$1/src/backends/lujarch/"
+            done
+            patch -d "$1" -p1 -R --dry-run -s -f <"$2/kwin.patch" >/dev/null 2>&1 ||
+                patch -d "$1" -p1 -N -s <"$2/kwin.patch"' _ "$tree" "$stage"; then
+            args+=(-e)
+        else
+            say "the built tree does not take this recipe; building from the start"
+            rm -rf "$kw/build/kwin-lujarch"
+        fi
+    fi
+    build_log=/var/log/lujarch/desktop-install/$(date +%Y%m%d-%H%M%S)-kwin.log
+    (cd "$stage" && as_user env PATH="$shim:/usr/local/bin:/usr/bin" BUILDDIR="$kw/build" \
+        SRCDEST="$kw/sources" PKGDEST="$kw/user-packages" JOBS=3 "${low[@]}" makepkg "${args[@]}") \
+        >"$build_log" 2>&1 || { tail -n 30 "$build_log"; fail "KWin did not build ($build_log)"; }
+    chown -R root:root "$kw/build"
+    (cd "$stage" && env FAKEROOTKEY=lujarch BUILDDIR="$kw/build" SRCDEST="$kw/sources" \
+        PKGDEST="$kw/packages" "${low[@]}" makepkg -F "${args[@]}") >>"$build_log" 2>&1 ||
+        { chown -R "$user:" "$kw/build"; tail -n 30 "$build_log"; fail "KWin was not packaged ($build_log)"; }
+    chown -R "$user:" "$kw/build"
+    package=$(ls -t "$kw"/packages/kwin-lujarch-"$kwin_version"-*.pkg.tar.* 2>/dev/null | head -n 1)
+    [ -n "$package" ] || fail "makepkg left no package in $kw/packages"
+    # --ask 4: yes to removing the conflicting kwin.
+    pacman -U --noconfirm --ask 4 "$package" >>"$build_log" 2>&1 ||
+        { tail -n 20 "$build_log"; fail "pacman could not install $package"; }
+    kwin_installed || fail "the installed KWin has no Lujarch backend"
+    printf '%s\n' "$kwin_print" >"$state/kwin"
+fi
+
+# The service desktop, and the sound's way to Android.
+mkdir -p "$service"
+install -m 755 "$here/session/run" "$service/run"
+install -m 644 "$here/session/session" "$here/session/environment" "$here/session/clipboard" "$service/"
+printf 'user: %s\n' "$user" >"$service/user"
+install -D -m 644 "$here/session/pipewire.conf" /etc/pipewire/pipewire.conf.d/50-lujarch-android.conf
+install -D -m 644 "$here/session/wireplumber.conf" /etc/wireplumber/wireplumber.conf.d/50-lujarch-android.conf
+say "the desktop is installed"

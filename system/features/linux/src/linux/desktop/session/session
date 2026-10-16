@@ -1,0 +1,44 @@
+#!/usr/bin/bash
+# The desktop's session as the owner's user (run starts it): PipeWire, the shared clipboard and
+# Plasma Mobile, whose KWin draws into the Terminal app's buffers through lujarch_linux.
+dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+cd "$HOME" || exit 1
+# Plasma's own lock screen stays off: Android's lock guards the phone, and the user has no
+# password to unlock it with. Set once; System Settings changes it afterwards.
+mkdir -p "$HOME/.config/lujarch"
+if [ ! -e "$HOME/.config/lujarch/desktop-lock-off" ]; then
+    kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
+    kwriteconfig6 --file kscreenlockerrc --group Daemon --key LockOnResume false
+    kwriteconfig6 --file kscreenlockerrc --group Daemon --key Timeout 0
+    touch "$HOME/.config/lujarch/desktop-lock-off"
+fi
+[ -f /etc/locale.conf ] && . /etc/locale.conf
+export LANG=${LANG:-C.UTF-8}
+export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u)
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+unset DISPLAY WAYLAND_DISPLAY
+. "$dir/environment"
+# KWin's Lujarch backend, through Plasma's own start of KWin (kwin_wayland_wrapper).
+export KWIN_LUJARCH=1 KWIN_LUJARCH_SOCKET=/run/lujarch/display XDG_SESSION_TYPE=wayland
+# Qt writes to the journal when stderr is no terminal, and Linux has none: to stderr, the
+# service's log.
+export QT_FORCE_STDERR_LOGGING=1
+export LUJARCH_DESKTOP=$dir
+# D-Bus-activated services (kded, the portals) start with the session's environment, or the shell
+# draws nothing. PipeWire and the clipboard run again when they end.
+exec dbus-run-session -- bash -c '
+    dbus-update-activation-environment --all || exit 1
+    supervise() {
+        pause=$1
+        shift
+        (while :; do
+            "$@"
+            echo "$1 ended (status $?), starting it again" >&2
+            sleep "$pause"
+        done) &
+    }
+    for program in pipewire wireplumber pipewire-pulse; do
+        supervise 1 "$program"
+    done
+    supervise 3 bash "$LUJARCH_DESKTOP/clipboard"
+    exec startplasmamobile'

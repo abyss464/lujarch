@@ -29,9 +29,10 @@ import kotlinx.coroutines.cancel
 import java.util.concurrent.Executors
 
 /**
- * What the Terminal app's windows share: while one is started it hears lujarch_linux; while one
- * is in front it answers what Linux asks of the owner (an authorization, LNX-7) and reads NFC
- * cards for Linux while NFC card reading is lent.
+ * What the Terminal app's windows share: while one is started it hears lujarch_linux and takes
+ * what Linux's desktop copies onto Android's clipboard while the clipboard is lent; while one is
+ * in front it answers what Linux asks of the owner (an authorization, LNX-7) and reads NFC cards
+ * for Linux while NFC card reading is lent.
  */
 abstract class LinuxActivity : Activity(), LinuxEvents.Sink {
     protected val scope = MainScope()
@@ -106,6 +107,10 @@ abstract class LinuxActivity : Activity(), LinuxEvents.Sink {
         } else {
             reader.transceive(id, command)
         }
+    }
+
+    override fun onClipboard(text: String) {
+        copyToClipboard(text, fromLinux = true)
     }
 
     private fun answerAuth(id: Int, allowed: Boolean) {

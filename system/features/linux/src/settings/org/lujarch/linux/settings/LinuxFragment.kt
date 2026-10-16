@@ -61,6 +61,7 @@ class LinuxFragment : LinuxPage() {
     private lateinit var memoryPref: Preference
     private lateinit var swapPref: SwitchPreferenceCompat
     private lateinit var desktopPref: Preference
+    private lateinit var desktopInstallPref: Preference
     private lateinit var servicesPref: Preference
     private lateinit var remotePref: Preference
     private val lendPrefs = LinkedHashMap<String, SwitchPreferenceCompat>()
@@ -250,7 +251,11 @@ class LinuxFragment : LinuxPage() {
             }
         }
 
-        desktopPref = screen.add(Preference(prefContext)) {
+        val desktop = screen.add(PreferenceCategory(prefContext)) {
+            key = "desktop"
+            setTitle(R.string.lnx_desktop)
+        }
+        desktopPref = desktop.add(Preference(prefContext)) {
             key = KEY_DESKTOP
             setTitle(R.string.lnx_open_desktop)
             setSummary(R.string.lnx_open_desktop_summary)
@@ -261,6 +266,15 @@ class LinuxFragment : LinuxPage() {
                 } catch (e: ActivityNotFoundException) {
                     toastError(R.string.lnx_open_desktop, e)
                 }
+                true
+            }
+        }
+        desktopInstallPref = desktop.add(Preference(prefContext)) {
+            key = KEY_DESKTOP_INSTALL
+            setTitle(R.string.lnx_install_desktop)
+            setOnPreferenceClickListener {
+                confirm("lnx-desktop", R.string.lnx_install_desktop, { getString(R.string.lnx_install_desktop_message) },
+                    R.string.lnx_install_desktop_run) { installDesktop() }
                 true
             }
         }
@@ -367,7 +381,13 @@ class LinuxFragment : LinuxPage() {
         }
         actionPref.isVisible = s?.action != null
         if (s?.action != null) {
-            val what = getString(if (s.action == ILinux.ACTION_INSTALL) R.string.lnx_action_install else R.string.lnx_action_setup)
+            val what = getString(
+                when (s.action) {
+                    ILinux.ACTION_INSTALL -> R.string.lnx_action_install
+                    ILinux.ACTION_DESKTOP -> R.string.lnx_action_desktop
+                    else -> R.string.lnx_action_setup
+                },
+            )
             actionPref.summary = when {
                 s.actionRunning && s.action == ILinux.ACTION_INSTALL && s.actionTotal > 0 ->
                     getString(R.string.lnx_action_running_progress, what, size(context, s.actionDone), size(context, s.actionTotal))
@@ -405,6 +425,10 @@ class LinuxFragment : LinuxPage() {
             else -> getString(R.string.lnx_swap_summary)
         }
         desktopPref.isEnabled = s?.state == ILinux.STATE_RUNNING
+        desktopInstallPref.isEnabled = s?.state == ILinux.STATE_RUNNING && !s.actionRunning
+        desktopInstallPref.summary = getString(
+            if (s?.desktopInstalled == true) R.string.lnx_install_desktop_done else R.string.lnx_install_desktop_none,
+        )
 
         for ((part, pref) in lendPrefs) {
             pref.isChecked = LinuxClient.on(context, "lend_$part")
@@ -477,6 +501,13 @@ class LinuxFragment : LinuxPage() {
     private fun runSetup() {
         launchUi {
             act(R.string.lnx_error_setup) { LinuxClient.call("runSetup") { it.runSetup() } }
+            refresh()
+        }
+    }
+
+    private fun installDesktop() {
+        launchUi {
+            act(R.string.lnx_error_desktop) { LinuxClient.call("installDesktop") { it.installDesktop() } }
             refresh()
         }
     }
@@ -554,6 +585,7 @@ class LinuxFragment : LinuxPage() {
         const val KEY_MEMORY = "lujarch_linux_memory"
         const val KEY_SWAP = "lujarch_linux_swap"
         const val KEY_DESKTOP = "lujarch_linux_desktop"
+        const val KEY_DESKTOP_INSTALL = "lujarch_linux_desktop_install"
         const val KEY_SERVICES = "lujarch_linux_services"
         const val KEY_REMOTE = "lujarch_linux_remote"
         const val KEY_LEND_PREFIX = "lujarch_linux_lend_"

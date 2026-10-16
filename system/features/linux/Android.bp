@@ -40,12 +40,14 @@ cc_binary {
         "libz",
     ],
     required: [
+        "lujarch_linux_desktop",
         "lujarch_linux_enter",
         "lujarch_linux_fingerprint",
         "lujarch_linux_frpc",
         "lujarch_linux_setup",
     ],
     init_rc: ["src/daemon/lujarch_linux.rc"],
+    local_include_dirs: ["src/linux/desktop/protocol"],
     cflags: ["-Wall", "-Werror"],
     cpp_std: "c++20",
     system_ext_specific: true,
@@ -60,8 +62,8 @@ cc_binary {
     system_ext_specific: true,
 }
 
-// Lujarch's files for Linux, at /usr/lib/lujarch in the system: the initial setup and the
-// fingerprint helper of PAM.
+// Lujarch's files for Linux, at /usr/lib/lujarch in the system: the initial setup, the
+// fingerprint helper of PAM, and the desktop's recipe.
 prebuilt_etc {
     name: "lujarch_linux_setup",
     src: "src/linux/setup",
@@ -74,6 +76,86 @@ prebuilt_etc {
     name: "lujarch_linux_fingerprint",
     src: "src/linux/fingerprint",
     filename: "fingerprint",
+    sub_dir: "lujarch/linux",
+    system_ext_specific: true,
+}
+
+license {
+    name: "lujarch_linux_desktop_license",
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+        "SPDX-license-identifier-GPL-2.0-or-later",
+        "SPDX-license-identifier-MIT",
+    ],
+    license_text: ["src/linux/desktop/NOTICE"],
+}
+
+// The desktop's recipe (LNX-6), which Linux builds and installs: its install script, the display
+// protocol, KWin's Lujarch backend, Mesa's patches and the desktop's session; downloads holds the
+// pins of lock.toml it builds from, staged by the tools.
+prebuilt_etc {
+    name: "lujarch_linux_desktop",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/install",
+        "src/linux/desktop/NOTICE",
+        "src/linux/desktop/protocol/lujarch_display.h",
+        "src/linux/desktop/kwin/PKGBUILD",
+        "src/linux/desktop/kwin/kwin.patch",
+        "src/linux/desktop/kwin/lujarch/CMakeLists.txt",
+        "src/linux/desktop/kwin/lujarch/lujarch_backend.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_backend.h",
+        "src/linux/desktop/kwin/lujarch/lujarch_connection.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_connection.h",
+        "src/linux/desktop/kwin/lujarch/lujarch_egl_backend.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_egl_backend.h",
+        "src/linux/desktop/kwin/lujarch/lujarch_input.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_input.h",
+        "src/linux/desktop/kwin/lujarch/lujarch_logging.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_logging.h",
+        "src/linux/desktop/kwin/lujarch/lujarch_output.cpp",
+        "src/linux/desktop/kwin/lujarch/lujarch_output.h",
+        "src/linux/desktop/mesa/build.sh",
+        "src/linux/desktop/mesa/patches/0001-tu-kgsl-accept-khr-display-with-no-displays.patch",
+        "src/linux/desktop/mesa/patches/0002-zink-take-the-nodeless-gpu-when-no-drm-node-matches.patch",
+        "src/linux/desktop/session/run",
+        "src/linux/desktop/session/session",
+        "src/linux/desktop/session/environment",
+        "src/linux/desktop/session/clipboard",
+        "src/linux/desktop/session/pipewire.conf",
+        "src/linux/desktop/session/wireplumber.conf",
+        "downloads",
+    ],
+    dsts: [
+        "desktop/install",
+        "desktop/NOTICE",
+        "desktop/protocol/lujarch_display.h",
+        "desktop/kwin/PKGBUILD",
+        "desktop/kwin/kwin.patch",
+        "desktop/kwin/lujarch/CMakeLists.txt",
+        "desktop/kwin/lujarch/lujarch_backend.cpp",
+        "desktop/kwin/lujarch/lujarch_backend.h",
+        "desktop/kwin/lujarch/lujarch_connection.cpp",
+        "desktop/kwin/lujarch/lujarch_connection.h",
+        "desktop/kwin/lujarch/lujarch_egl_backend.cpp",
+        "desktop/kwin/lujarch/lujarch_egl_backend.h",
+        "desktop/kwin/lujarch/lujarch_input.cpp",
+        "desktop/kwin/lujarch/lujarch_input.h",
+        "desktop/kwin/lujarch/lujarch_logging.cpp",
+        "desktop/kwin/lujarch/lujarch_logging.h",
+        "desktop/kwin/lujarch/lujarch_output.cpp",
+        "desktop/kwin/lujarch/lujarch_output.h",
+        "desktop/mesa/build.sh",
+        "desktop/mesa/patches/0001-tu-kgsl-accept-khr-display-with-no-displays.patch",
+        "desktop/mesa/patches/0002-zink-take-the-nodeless-gpu-when-no-drm-node-matches.patch",
+        "desktop/session/run",
+        "desktop/session/session",
+        "desktop/session/environment",
+        "desktop/session/clipboard",
+        "desktop/session/pipewire.conf",
+        "desktop/session/wireplumber.conf",
+        "desktop/downloads",
+    ],
     sub_dir: "lujarch/linux",
     system_ext_specific: true,
 }
@@ -158,6 +240,31 @@ android_library {
     },
 }
 
+// The desktop's presenter in the Terminal app (src/terminal/jni): the display protocol's app side,
+// the AHardwareBuffer pool, SurfaceControl transactions paced by Choreographer. NDK only, so the
+// APK's copy loads in the app's own linker namespace; AHardwareBuffer_getNativeHandle is looked
+// up at run time.
+cc_library_shared {
+    name: "liblujarch_linux_display_jni",
+    srcs: ["src/terminal/jni/display_jni.cpp"],
+    local_include_dirs: ["src/linux/desktop/protocol"],
+    sdk_version: "current",
+    stl: "c++_static",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wno-zero-length-array",
+    ],
+    shared_libs: [
+        "libandroid",
+        "libdl",
+        "liblog",
+        "libnativewindow",
+    ],
+    system_ext_specific: true,
+}
+
 // The Terminal app: the sessions, the desktop, the Mode Linux, and the parts of the phone Linux
 // is lent that need an app.
 android_app {
@@ -168,6 +275,8 @@ android_app {
     platform_apis: true,
     certificate: "platform",
     system_ext_specific: true,
+    jni_libs: ["liblujarch_linux_display_jni"],
+    use_embedded_native_libs: true,
     static_libs: [
         "LujarchLinuxTermuxView",
         "androidx.core_core",

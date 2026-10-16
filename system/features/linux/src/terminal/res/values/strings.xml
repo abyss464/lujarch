@@ -31,9 +31,9 @@
     <string name="mode_summary">Linux is on screen</string>
     <string name="mode_trigger">While the Linux desktop is on screen</string>
     <string name="open_terminal">Open terminal</string>
-    <string name="desktop_none">Linux serves no desktop at /run/lujarch/desktop.</string>
+    <string name="desktop_none">Linux has no desktop. Install it in Settings, on the page of the Linux development environment.</string>
     <string name="desktop_failed">The connection to the Linux desktop ended.</string>
-    <string name="keyboard">Keyboard</string>
+    <string name="desktop_silent">The Linux desktop does not draw. Its service, desktop, and its log are under Services in Settings.</string>
     <!-- The keys row above the keyboard -->
     <string name="key_esc" translatable="false">ESC</string>
     <string name="key_tab" translatable="false">TAB</string>

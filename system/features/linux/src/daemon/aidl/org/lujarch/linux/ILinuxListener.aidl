@@ -29,4 +29,7 @@ oneway interface ILinuxListener {
 
     /** A program in Linux sends a command to the NFC card (ILinux.answerNfc). */
     void onNfcRequest(int id, in byte[] command);
+
+    /** Linux's desktop copied text, for Android's clipboard while it is lent. */
+    void onClipboard(String text);
 }

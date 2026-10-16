@@ -9,8 +9,10 @@ on post-fs-data
     # own without the nosuid of /data.
     mount none /data/lujarch/linux/os /data/lujarch/linux/os bind
     mount none /data/lujarch/linux/os /data/lujarch/linux/os remount bind nodev
-    # Every program of the environment runs in this cgroup (Memory, LNX-5).
+    # Every program of the environment runs in this cgroup (Memory, LNX-5); the desktop's service
+    # in its group desktop, frozen while the desktop is not on screen (LNX-6).
     mkdir /sys/fs/cgroup/lujarch_linux 0755 root root
+    mkdir /sys/fs/cgroup/lujarch_linux/desktop 0755 root root
 
 service lujarch_linux /system_ext/bin/lujarch_linux
     class main

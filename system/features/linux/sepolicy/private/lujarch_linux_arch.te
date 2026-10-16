@@ -2,7 +2,8 @@
 # by lujarch_linux_enter, executed by lujarch_linux in the system's mount namespace, and keep it
 # for everything they run from the system. They own their system's files, use the network as
 # Android's apps of their groups do, and reach of Android only their terminals, the device
-# nodes bound into their /dev, Lujarch's files for Linux and the USB devices while they are lent.
+# nodes bound into their /dev (the GPU's among them), lujarch_linux's display socket, Lujarch's
+# files for Linux and the USB devices while they are lent.
 type lujarch_linux_arch, domain, coredomain;
 type lujarch_linux_enter_exec, system_file_type, exec_type, file_type;
 
@@ -34,8 +35,11 @@ allow lujarch_linux_arch self:rawip_socket create_socket_perms_no_ioctl;
 allow lujarch_linux_arch self:packet_socket create_socket_perms_no_ioctl;
 allow lujarch_linux_arch self:unix_stream_socket { connectto create_stream_socket_perms };
 
-# What lujarch_linux hands its programs: their streams and terminals.
+# What lujarch_linux hands its programs: their streams and terminals, and the desktop's display
+# (its socket, the Terminal app's buffers from the graphics allocator, the daemon's fences).
 allow lujarch_linux_arch lujarch_linux:fd use;
+allow lujarch_linux_arch lujarch_linux:unix_stream_socket connectto;
+allow lujarch_linux_arch hal_graphics_allocator:fd use;
 allow lujarch_linux_arch lujarch_linux:fifo_file { getattr write append };
 allow lujarch_linux_arch devpts:chr_file { rw_file_perms setattr };
 # What a shell's programs ask of their terminal beyond Android's unprivileged set.
@@ -46,6 +50,10 @@ allow lujarch_linux_arch ptmx_device:chr_file rw_file_perms;
 
 # The device nodes of its /dev, and the USB devices while they are lent.
 allow lujarch_linux_arch { null_device zero_device random_device tty_device }:chr_file rw_file_perms;
+# The desktop draws with the GPU (KGSL), EGL and GBM on the display driver's render node, and
+# buffers of the system DMA heap.
+allow lujarch_linux_arch { gpu_device graphics_device }:chr_file rw_file_perms;
+allow lujarch_linux_arch dmabuf_system_heap_device:chr_file r_file_perms;
 allow lujarch_linux_arch usb_device:dir r_dir_perms;
 allow lujarch_linux_arch usb_device:chr_file rw_file_perms;
 

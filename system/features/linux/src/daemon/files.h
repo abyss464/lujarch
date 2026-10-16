@@ -48,6 +48,9 @@ Result<void> MakeDirsIn(int root, std::string_view path, mode_t mode, uid_t uid 
 
 Result<void> RemoveIn(int root, std::string_view path);
 
+// Makes a FIFO at path in place of what is there, owned by root and gid, with mode.
+Result<void> MakeFifoIn(int root, std::string_view path, mode_t mode, gid_t gid);
+
 bool ExistsIn(int root, std::string_view path);
 
 // The parent directory of path in the system, and path's last name.

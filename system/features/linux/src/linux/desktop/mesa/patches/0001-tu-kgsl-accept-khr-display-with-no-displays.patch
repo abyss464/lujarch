@@ -1,0 +1,32 @@
+diff --git a/src/freedreno/vulkan/tu_knl_kgsl.cc b/src/freedreno/vulkan/tu_knl_kgsl.cc
+--- a/src/freedreno/vulkan/tu_knl_kgsl.cc
++++ b/src/freedreno/vulkan/tu_knl_kgsl.cc
+@@ -19,6 +19,7 @@
+ #include "util/libsync.h"
+ #include "util/os_file.h"
+ #include "util/timespec.h"
++#include "util/u_atomic.h"
+ #include "util/u_debug.h"
+ #include "util/u_vector.h"
+ #include "vk_util.h"
+@@ -1788,9 +1789,18 @@
+ VkResult
+ tu_knl_kgsl_load(struct tu_instance *instance, int fd)
+ {
++   /* KGSL has no KMS device, so the WSI device is created without a display
++    * fd (master_fd = -1 below). wsi_common_display.c treats that as "no
++    * displays": the display queries return empty lists, VkDisplayKHR-taking
++    * entrypoints have no handle to receive, and surface support is reported as
++    * false. lavapipe, venus and gfxstream run the same way. Refusing to load
++    * would hide the GPU from every program that enables all instance
++    * extensions (vulkaninfo, some loaders and layers).
++    */
+    if (instance->vk.enabled_extensions.KHR_display) {
+-      return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED,
+-                       "I can't KHR_display");
++      static int display_noted;
++      if (!p_atomic_xchg(&display_noted, 1))
++         mesa_logi("KGSL has no display device: VK_KHR_display lists no displays");
+    }
+ 
+    struct tu_physical_device *device = (struct tu_physical_device *)

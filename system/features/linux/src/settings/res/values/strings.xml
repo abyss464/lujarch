@@ -39,6 +39,7 @@
     <string name="lnx_action">Last action</string>
     <string name="lnx_action_install">Install</string>
     <string name="lnx_action_setup">Initial setup</string>
+    <string name="lnx_action_desktop">Desktop install</string>
     <!-- %1$s is the action -->
     <string name="lnx_action_running">%1$s: in progress…</string>
     <!-- %1$s is the action, %2$s and %3$s sizes -->
@@ -85,8 +86,14 @@
     <string name="lnx_swap_summary">A swap file in Linux\'s storage while Linux runs</string>
     <!-- %1$s is a size -->
     <string name="lnx_swap_on">A swap file of %1$s in use</string>
+    <string name="lnx_desktop">Desktop</string>
     <string name="lnx_open_desktop">Open desktop</string>
     <string name="lnx_open_desktop_summary">The desktop of Arch Linux full screen</string>
+    <string name="lnx_install_desktop">Install the desktop</string>
+    <string name="lnx_install_desktop_none">Plasma Mobile, with KWin and Mesa built in Linux for the phone\'s screen</string>
+    <string name="lnx_install_desktop_done">Installed. Installing again updates it and builds what changed.</string>
+    <string name="lnx_install_desktop_message">The install runs as root in Linux while Linux runs. It updates Linux\'s packages, installs Plasma Mobile and builds Mesa and KWin, which takes long; the builds use only the phone\'s small cores.</string>
+    <string name="lnx_install_desktop_run">Install</string>
     <string name="lnx_lend">Lent to Linux</string>
     <string name="lnx_lend_clipboard">Shared clipboard</string>
     <string name="lnx_lend_clipboard_summary">The clipboard both ways, in the terminal and on the desktop</string>
@@ -109,11 +116,12 @@
     <string name="lnx_error_switch">Couldn\'t change the setting</string>
     <string name="lnx_error_install">Couldn\'t install the root file system</string>
     <string name="lnx_error_setup">Couldn\'t run the initial setup</string>
+    <string name="lnx_error_desktop">Couldn\'t install the desktop</string>
     <string name="lnx_error_colors">Couldn\'t set your own colors</string>
     <string name="lnx_error_invalid">The value is not valid.</string>
     <string name="lnx_error_not_running">Linux is not running. Turn on Use Linux development environment first.</string>
     <string name="lnx_error_root_sessions_off">Root sessions is off.</string>
-    <string name="lnx_error_busy">An install or the initial setup is in progress. Try again when it ends.</string>
+    <string name="lnx_error_busy">An install, the initial setup or the desktop\'s install is in progress. Try again when it ends.</string>
     <string name="lnx_error_no_service">This service no longer exists.</string>
     <string name="lnx_error_load_services">Couldn\'t load the services</string>
     <string name="lnx_error_service">Couldn\'t change the service</string>
@@ -169,7 +177,7 @@
     <string name="lnx_search_terminal_keywords">terminal, colors, keys, shell</string>
     <string name="lnx_search_root_keywords">root, superuser, su</string>
     <string name="lnx_search_memory_keywords">memory, swap, RAM</string>
-    <string name="lnx_search_desktop_keywords">desktop, display, VNC, X11, Wayland</string>
+    <string name="lnx_search_desktop_keywords">desktop, display, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">services, daemons</string>
     <string name="lnx_search_remote_keywords">remote access, relay, SSH, frp</string>
     <string name="lnx_search_lend_keywords">clipboard, notifications, sensors, fingerprint, infrared, USB, NFC</string>

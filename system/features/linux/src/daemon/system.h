@@ -16,8 +16,9 @@
 //
 // Linux runs beside Android on the same kernel, network and process IDs, in a mount namespace of
 // its own whose root is the installed system. The namespace holds only binds (no domain of the
-// system may mount a file system): Android's /proc, /sys and /dev/pts, single device nodes,
-// Lujarch's files for Linux, and /dev/bus/usb while USB devices are lent. A child of the daemon
+// system may mount a file system): Android's /proc, /sys and /dev/pts, single device nodes (the
+// GPU's among them, for the desktop), Lujarch's files for Linux, and /dev/bus/usb while USB
+// devices are lent. A child of the daemon
 // that made it holds the namespace and dies with the daemon; every program of Linux enters it
 // through that child's pidfd and starts through
 // lujarch_linux_enter, which enters the system's domain, changes its root to the system and
@@ -66,6 +67,8 @@ struct Spawn {
     int in = -1;
     int out = -1;
     int err = -1;
+    // It runs in kDesktopCgroup instead of kCgroup.
+    bool desktop = false;
 };
 
 class System {
@@ -110,6 +113,13 @@ Result<void> SetMemory(const std::string& choice);
 // Bytes in use, and the limit (0: unlimited).
 int64_t MemoryUsed();
 int64_t MemoryLimit();
+
+// The desktop's group is frozen while SetDesktopFrozen says so and no hold keeps it thawed: a
+// program starting in it, or the desktop service while it stops.
+void SetDesktopFrozen(bool frozen);
+void HoldDesktop(bool hold);
+// Kills every program of the desktop's group.
+void KillDesktop();
 
 }  // namespace cgroup
 

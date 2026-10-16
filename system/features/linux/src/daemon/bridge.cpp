@@ -54,10 +54,12 @@ constexpr int kAuthIdent = 3;
 constexpr int kNfcIdent = 4;
 constexpr int kInotifyIdent = 5;
 constexpr int kSensorsIdent = 6;
+constexpr int kClipboardIdent = 7;
 
 constexpr auto kAuthTimeout = std::chrono::seconds(60);
 constexpr auto kNfcTimeout = std::chrono::seconds(10);
-constexpr size_t kMaxLine = 64 << 10;
+constexpr size_t kMaxLine = 128 << 10;
+constexpr size_t kMaxClipboard = 64 << 10;
 constexpr size_t kMaxText = 200;
 constexpr gid_t kUsbGroup = 1018;  // AID_USB
 constexpr char kUsbGroupName[] = "aid_usb";
@@ -88,19 +90,6 @@ constexpr SensorKind kSensors[] = {
         {ASENSOR_TYPE_AMBIENT_TEMPERATURE, "ambient_temperature", 1},
 };
 
-Result<void> MakeFifo(int root, const std::string& path, mode_t mode, gid_t gid) {
-    std::string name;
-    auto dir = files::OpenParentIn(root, path, &name);
-    if (!dir.ok()) return dir.error();
-    unlinkat(dir->get(), name.c_str(), 0);
-    if (mkfifoat(dir->get(), name.c_str(), mode) != 0 ||
-        fchownat(dir->get(), name.c_str(), 0, gid, AT_SYMLINK_NOFOLLOW) != 0 ||
-        fchmodat(dir->get(), name.c_str(), mode, 0) != 0) {
-        return ErrnoError() << path;
-    }
-    return {};
-}
-
 std::optional<std::vector<uint8_t>> Hex(const std::string& text) {
     if (text.empty() || text.size() % 2 != 0) return std::nullopt;
     std::vector<uint8_t> out;
@@ -110,6 +99,26 @@ std::optional<std::vector<uint8_t>> Hex(const std::string& text) {
             return std::nullopt;
         }
         out.push_back(static_cast<uint8_t>(v));
+    }
+    return out;
+}
+
+std::optional<std::string> FromBase64(const std::string& text) {
+    static const std::string kDigits =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    uint32_t bits = 0;
+    int count = 0;
+    for (char c : text) {
+        if (c == '=') break;
+        const size_t v = kDigits.find(c);
+        if (v == std::string::npos) return std::nullopt;
+        bits = (bits << 6) | static_cast<uint32_t>(v);
+        count += 6;
+        if (count >= 8) {
+            count -= 8;
+            out.push_back(static_cast<char>((bits >> count) & 0xff));
+        }
     }
     return out;
 }
@@ -226,7 +235,7 @@ void Bridge::Arrange() {
     auto fifo = [&](const char* name, bool want, unique_fd& fd, int ident, mode_t mode,
                     const char* reply_dir) {
         if (want && ready && fd < 0) {
-            if (auto r = MakeFifo(root->get(), Run(name), mode, aid::kLinux); !r.ok()) {
+            if (auto r = files::MakeFifoIn(root->get(), Run(name), mode, aid::kLinux); !r.ok()) {
                 LOG(ERROR) << "bridge: " << r.error();
                 return;
             }
@@ -254,6 +263,13 @@ void Bridge::Arrange() {
     fifo("ir", lent("ir"), ir_, kIrIdent, 0620, nullptr);
     fifo("auth", lent("fingerprint"), auth_fifo_, kAuthIdent, 0620, "auth.d");
     fifo("nfc", lent("nfc"), nfc_fifo_, kNfcIdent, 0620, "nfc.d");
+    const bool clipboard_was_lent = clipboard_fifo_ >= 0;
+    fifo("clipboard-set", lent("clipboard"), clipboard_fifo_, kClipboardIdent, 0620, nullptr);
+    if (clipboard_was_lent && clipboard_fifo_ < 0) {
+        if (root.ok() && linux_) files::RemoveIn(root->get(), Run("clipboard"));
+        android_clipboard_.clear();
+        linux_clipboard_.clear();
+    }
     if (auth_fifo_ < 0) {
         for (auto& [id, p] : auth_) Reply("auth.d", p.reply, "deny");
         auth_.clear();
@@ -266,7 +282,7 @@ void Bridge::Arrange() {
     // Sensors: a FIFO the daemon writes while a program reads it.
     const bool sensors = lent("sensors");
     if (sensors && ready && sensors_watch_ < 0) {
-        if (auto r = MakeFifo(root->get(), Run("sensors"), 0640, aid::kLinux); !r.ok()) {
+        if (auto r = files::MakeFifoIn(root->get(), Run("sensors"), 0640, aid::kLinux); !r.ok()) {
             LOG(ERROR) << "bridge: " << r.error();
         } else if (auto path = files::OpenIn(root->get(), Run("sensors"), O_PATH | O_NOFOLLOW);
                    path.ok()) {
@@ -393,6 +409,34 @@ void Bridge::Nfc(const std::string& line) {
     const int id = next_id_++;
     nfc_[id] = {reply, Clock::now() + kNfcTimeout};
     asks_.nfc(id, *command);
+}
+
+void Bridge::Clipboard(const std::string& line) {
+    auto decoded = FromBase64(android::base::Trim(line));
+    if (!decoded) {
+        LOG(WARNING) << "bridge: clipboard-set: not base64";
+        return;
+    }
+    std::string copied = text::SanitizeUtf8(decoded->substr(0, kMaxClipboard));
+    if (copied == android_clipboard_ || copied == linux_clipboard_) return;
+    linux_clipboard_ = copied;
+    asks_.clipboard(copied);
+}
+
+bool Bridge::SetClipboard(const std::string& value) {
+    std::lock_guard lock(mutex_);
+    if (clipboard_fifo_ < 0) return false;
+    std::string clean = text::SanitizeUtf8(value.substr(0, kMaxClipboard));
+    if (clean == android_clipboard_) return true;
+    android_clipboard_ = clean;
+    // Linux's own copy, back from Android: Linux has it already.
+    if (clean == linux_clipboard_) return true;
+    auto root = files::OpenRoot(kRoot);
+    if (!root.ok()) return true;
+    if (auto w = files::WriteIn(root->get(), Run("clipboard"), clean, 0640, 0, aid::kLinux); !w.ok()) {
+        LOG(ERROR) << "bridge: clipboard: " << w.error();
+    }
+    return true;
 }
 
 void Bridge::Reply(const char* dir, const std::string& reply, const std::string& text) {
@@ -572,6 +616,9 @@ void Bridge::Loop() {
                 break;
             case kNfcIdent:
                 Lines(nfc_fifo_, nfc_buffer_, [this](const std::string& l) { Nfc(l); });
+                break;
+            case kClipboardIdent:
+                Lines(clipboard_fifo_, clipboard_buffer_, [this](const std::string& l) { Clipboard(l); });
                 break;
             case kInotifyIdent: {
                 char buf[4096];

@@ -29,9 +29,9 @@
     <string name="mode_summary">Linux を表示中</string>
     <string name="mode_trigger">Linux のデスクトップを表示しているとき</string>
     <string name="open_terminal">ターミナルを開く</string>
-    <string name="desktop_none">Linux は /run/lujarch/desktop でデスクトップを提供していません。</string>
+    <string name="desktop_none">Linux にデスクトップがありません。設定の Linux 開発環境のページでインストールしてください。</string>
     <string name="desktop_failed">Linux のデスクトップとの接続が切れました。</string>
-    <string name="keyboard">キーボード</string>
+    <string name="desktop_silent">Linux のデスクトップが描画していません。サービス desktop とそのログは設定の「サービス」にあります。</string>
     <string name="remote_access">リモート アクセス</string>
     <string name="remote_charging">充電中</string>
     <string name="remote_always">常時</string>

@@ -1,0 +1,74 @@
+# KWin with the Lujarch output backend: KWin renders the desktop into buffers that the Terminal
+# app allocates and shows with SurfaceControl (lujarch_display.h). Arch Linux's kwin PKGBUILD
+# (gitlab.archlinux.org/archlinux/packaging/packages/kwin, 6.7.5-2), plus kwin.patch and the
+# backend sources in lujarch/. The desktop's install script stages every file flat next to this
+# PKGBUILD (makepkg finds local sources by name there), fills in KWin's pin from lock.toml
+# (@KWIN_VERSION@, @KWIN_URL@, @KWIN_SHA256@), builds it as the owner's user and installs the
+# package with pacman -U.
+
+pkgname=kwin-lujarch
+pkgver=@KWIN_VERSION@
+pkgrel=1
+pkgdesc='KWin with the Lujarch output backend (the desktop in the Terminal app)'
+arch=(aarch64)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL-2.0-or-later GPL-2.0-or-later)
+depends=(aurorae breeze glibc iio-sensor-proxy plasma-activities kauth kcmutils kcolorscheme
+         kconfig kcoreaddons kcrash kdbusaddons kdeclarative kdecoration kglobalaccel
+         kglobalacceld kguiaddons ki18n kidletime kirigami kitemmodels knewstuff knighttime
+         knotifications kpackage kquickcharts kscreenlocker kservice ksvg kwayland
+         kwidgetsaddons kwindowsystem kxmlgui lcms2 libcanberra libdisplay-info libdrm libei
+         libepoxy libevdev libgcc libinput libpipewire libqaccessibilityclient-qt6 libstdc++
+         libxcb libxcvt libxkbcommon mesa milou pipewire-session-manager libplasma qt6-5compat
+         qt6-base qt6-declarative qt6-svg qt6-tools systemd-libs vulkan-icd-loader wayland
+         xcb-util-keysyms xcb-util-wm)
+makedepends=(cmake ninja extra-cmake-modules kdoctools krunner plasma-wayland-protocols python
+             vulkan-headers wayland-protocols xorg-xwayland)
+optdepends=('plasma-keyboard: virtual keyboard')
+provides=("kwin=$pkgver")
+conflicts=(kwin)
+# The phone builds this: no LTO (hours on the little cores) and no debug package.
+options=(!lto !debug)
+_backend=(CMakeLists.txt lujarch_display.h
+          lujarch_backend.cpp lujarch_backend.h lujarch_connection.cpp lujarch_connection.h
+          lujarch_egl_backend.cpp lujarch_egl_backend.h lujarch_input.cpp lujarch_input.h
+          lujarch_logging.cpp lujarch_logging.h lujarch_output.cpp lujarch_output.h)
+source=("kwin-$pkgver.tar.xz::@KWIN_URL@"
+        kwin.patch
+        "${_backend[@]}")
+sha256sums=('@KWIN_SHA256@'
+            SKIP
+            "${_backend[@]/*/SKIP}")
+
+# Copies the backend into the tree and applies the patch unless it is applied already, so the
+# install script can run it again before an incremental `makepkg -e`.
+_sync_backend() {
+  local tree="$srcdir/kwin-$pkgver"
+  mkdir -p "$tree/src/backends/lujarch"
+  local f
+  for f in "${_backend[@]}"; do
+    cmp -s "$srcdir/$f" "$tree/src/backends/lujarch/$f" || cp "$srcdir/$f" "$tree/src/backends/lujarch/$f"
+  done
+  if ! patch -d "$tree" -p1 -R --dry-run -s -f < "$srcdir/kwin.patch" >/dev/null 2>&1; then
+    patch -d "$tree" -p1 -N < "$srcdir/kwin.patch"
+  fi
+}
+
+prepare() {
+  _sync_backend
+}
+
+build() {
+  cmake -B build -S kwin-$pkgver -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build --parallel "${JOBS:-3}"
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  # Arch sets cap_sys_nice on kwin_wayland. A binary with a file capability runs in secure-exec
+  # mode: glibc drops LD_LIBRARY_PATH, so KWin would load the rootfs' Mesa (no KGSL) instead of
+  # /opt/mesa-kgsl and fall back to QPainter. No capability here.
+}
