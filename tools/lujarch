@@ -419,6 +419,14 @@ def check_lock(findings):
             findings.add(meta, 0, f"generated {name}: script and output are required")
         elif not (SYSTEM / "features" / feature / spec["script"]).is_file():
             findings.add(meta, 0, f"generated {name}: {spec['script']} does not exist")
+    download_pins = lock.get("downloads", {})
+    for name, pin in download_pins.items():
+        if not isinstance(pin, dict) or not str(pin.get("url", "")).startswith("https://") or not \
+                pin.get("version") or not re.fullmatch(r"[0-9a-f]{64}", str(pin.get("sha256", ""))):
+            findings.add(path, 0, f"downloads.{name}: url (https), version and sha256 are required")
+    for feature, name, _spec in feature_downloads():
+        if name not in download_pins:
+            findings.add(path, 0, f"download {name} of {feature} is not pinned")
     manifest = ROOT / "upstream.xml"
     if not manifest.exists():
         findings.add("upstream.xml", 0, "missing")
@@ -898,6 +906,7 @@ def extra_files(host):
     files.update(component_files(host))
     files.update(prebuilt_files(host))
     files.update(generated_files(host))
+    files.update(download_files())
     if not files:
         return {}
 
@@ -1345,6 +1354,30 @@ def prebuilt_files(host):
                 die(f"{path} does not match the sha256 of prebuilt {name} for {arch}")
             files[f"features/{feature}/prebuilt/{arch}/{spec['module']}"] = path.read_bytes()
     return files
+
+
+def feature_downloads():
+    """Every download of every feature.toml, as (feature, name, spec)."""
+    out = []
+    for path in sorted((SYSTEM / "features").glob("*/feature.toml")):
+        for name, spec in load_toml(path).get("downloads", {}).items():
+            out.append((path.parent.name, name, spec))
+    return out
+
+
+def download_files():
+    """vendor/extra/features/<feature>/downloads: the lock.toml pins of what the feature's
+    programs download on the device, as "<name>.<key>: <value>" lines."""
+    pins = lock_file().get("downloads", {})
+    lines = {}
+    for feature, name, _spec in feature_downloads():
+        pin = pins.get(name)
+        if not isinstance(pin, dict):
+            die(f"download {name} of {feature} is not pinned in lock.toml")
+        out = lines.setdefault(feature, [])
+        for key in ("url", "version", "sha256"):
+            out.append(f"{name}.{key}: {pin[key]}\n")
+    return {f"features/{feature}/downloads": "".join(out).encode() for feature, out in lines.items()}
 
 
 def cmd_fetch(_args):

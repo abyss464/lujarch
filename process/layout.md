@@ -39,8 +39,8 @@ directory, the target file and every identifier (process/conventions.md).
 ```
 system/features/<feature>/
 ├── feature.toml          prefix (the target CODE), devices it applies to, components it builds,
-│                         prebuilts it takes, files its scripts generate, apps whose texts it
-│                         renames
+│                         prebuilts it takes, files its scripts generate, sources its programs
+│                         download, apps whose texts it renames
 ├── patches/<project>/    NNNN-<what>.patch, changes to the upstream project at that tree path
 ├── components/<name>/    NNNN-<what>.patch, changes to a component's source
 ├── src/                  what the feature adds: apps, daemons, libraries, configs, overlays
@@ -87,6 +87,11 @@ system/features/<feature>/
   run it at every staging; one that needs tools beyond Python names them under `fetch`, and only
   `tools/lujarch fetch` runs it, once for each state of the script, the modules of its directory
   it imports and those tools' versions; every other step stages what fetch made.
+- A download is a source a feature's programs fetch on the device, such as a release tarball
+  Linux builds from: `feature.toml` names it under `[downloads.<name>]`; `lock.toml` pins its
+  `url`, `version` and `sha256`. The tools stage the pins of a feature's downloads as
+  `vendor/extra/features/<feature>/downloads`, `<name>.<key>: <value>` lines, for the feature's
+  `Android.bp`.
 - A rename is `[renames.<name>]` in `feature.toml`: an app's `package` and its resource
   directories `res` in the tree. The tools generate a static overlay of the app in which every
   string of those directories whose text names LineageOS says Lujarch in its place, in every
@@ -152,7 +157,8 @@ blob ids.
 - `lock.toml`: the upstream branch and AOSP tag, the build variant, each device's stock
   release, and every source or prebuilt a feature fetches (version, commit or URL, and hash):
   a component is `[components.<name>]` with its `commit` (and `version` and `url` where it has
-  them); a prebuilt is `[prebuilts.<name>.<arch>]` with its `url` and `sha256`.
+  them); a prebuilt is `[prebuilts.<name>.<arch>]` with its `url` and `sha256`; a download is
+  `[downloads.<name>]` with its `url`, `version` and `sha256`.
   A stock release is `[stock.<device>]` with `release`, `urls` (mirrors of one package) and
   `sha256`; `[stock.<device>.files]` holds the sha256 of every file the device takes from it.
   `tools/lujarch stock <device>` downloads, checks and unpacks the package under the host's
