@@ -195,7 +195,8 @@ std::string Remote::Wanted(bool* run) {
     const std::string mode = Mode();
     if (mode == ILinux::REMOTE_OFF) return ILinux::RELAY_OFF;
     if (!config_.configured()) return ILinux::RELAY_NOT_SET_UP;
-    if (!linux_) return ILinux::RELAY_NO_LINUX;
+    // Linux runs with the owner's user, whom the SSH server lets in.
+    if (!linux_ || user_.empty()) return ILinux::RELAY_NO_LINUX;
     auto root = files::OpenRoot(kRoot);
     if (!root.ok() || !files::ExistsIn(root->get(), kSshd)) return ILinux::RELAY_NO_OPENSSH;
     if (mode == ILinux::REMOTE_CHARGING && charging_ == false) return ILinux::RELAY_WAITING;
