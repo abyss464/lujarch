@@ -44,6 +44,7 @@ import org.lujarch.settings.pages.BasePreferenceFragment
 class AppIconFragment : BasePreferenceFragment() {
     private lateinit var packageName: String
     private var userId = 0
+    private lateinit var appPref: Preference
     private lateinit var offPref: Preference
     private val choices = LinkedHashMap<Int, SelectorWithWidgetPreference>()
     private var busy = false
@@ -52,7 +53,7 @@ class AppIconFragment : BasePreferenceFragment() {
         packageName = requireArguments().getString(ARG_PACKAGE) ?: ""
         userId = requireArguments().getInt(ARG_USER)
         val app = Icons.appInfo(requireContext(), packageName, userId)
-        screen.add(Preference(prefContext)) {
+        appPref = screen.add(Preference(prefContext)) {
             key = "app"
             title = app?.loadLabel(requireContext().packageManager) ?: packageName
             summary = packageName
@@ -106,6 +107,8 @@ class AppIconFragment : BasePreferenceFragment() {
             val size = (PREVIEW_DP * resources.displayMetrics.density).roundToInt()
             val previews = orNull("previews") { withContext(Dispatchers.IO) { previews(context, app, size) } }
             previews?.forEach { (m, d) -> choices[m]?.icon = d }
+            // The header shows the icon the app has now, as the launcher draws it.
+            previews?.get(if (on && mode != null) mode else LujarchIcons.MODE_ORIGINAL)?.let { appPref.icon = it }
         }
     }
 

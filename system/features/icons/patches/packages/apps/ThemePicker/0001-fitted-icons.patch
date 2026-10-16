@@ -1,49 +1,78 @@
 diff --git a/res/layout/floating_sheet_app_icon.xml b/res/layout/floating_sheet_app_icon.xml
-index 07d4a3469844b8461ea4ae87b2456b68d86cb7e2..76670b221d378c1c70e8e6b8825fb6375790f265 100644
+index 07d4a3469844b8461ea4ae87b2456b68d86cb7e2..915835b83006d8f725d7fc957f917f4e9e0932e5 100644
 --- a/res/layout/floating_sheet_app_icon.xml
 +++ b/res/layout/floating_sheet_app_icon.xml
-@@ -145,6 +145,44 @@
+@@ -30,10 +30,20 @@
+         android:clipToPadding="false"
+         android:clipChildren="false">
+ 
+-        <FrameLayout
++        <!-- Lujarch (ICON-1): the style tab holds its options and Fit app icons, which decides with
++             the styles how every app icon looks. -->
++        <LinearLayout
+             android:id="@+id/app_icon_style_container"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
++            android:orientation="vertical"
++            android:clipToPadding="false"
++            android:clipChildren="false">
++
++        <FrameLayout
++            android:id="@+id/lujarch_icon_style_options_frame"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
+             android:clipToPadding="false"
+             android:clipChildren="false">
+ 
+@@ -60,6 +70,43 @@
+                 android:clipChildren="false" />
+         </FrameLayout>
+ 
++        <androidx.constraintlayout.widget.ConstraintLayout
++            android:id="@+id/lujarch_fit_icon_toggle_entry"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:paddingVertical="@dimen/floating_sheet_content_vertical_padding"
++            android:clipToPadding="false"
++            android:clipChildren="false">
++
++            <TextView
++                style="@style/CustomizationOptionEntryTitleTextStyle"
++                android:id="@+id/lujarch_fit_icon_toggle_title"
++                android:layout_width="0dp"
++                android:layout_height="wrap_content"
++                android:text="@string/lujarch_fit_icon_title"
++                android:layout_marginStart="@dimen/floating_sheet_content_horizontal_padding"
++                android:layout_marginEnd="@dimen/floating_sheet_clock_style_clock_size_text_margin_end"
++                android:importantForAccessibility="no"
++                app:layout_constraintStart_toStartOf="parent"
++                app:layout_constraintEnd_toStartOf="@+id/lujarch_fit_icon_toggle"
++                app:layout_constraintTop_toTopOf="parent"
++                app:layout_constraintBottom_toBottomOf="parent" />
++
++            <com.google.android.material.materialswitch.MaterialSwitch
++                style="@style/SettingslibSwitchStyle.Expressive"
++                android:id="@+id/lujarch_fit_icon_toggle"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginEnd="@dimen/floating_sheet_content_horizontal_padding"
++                android:contentDescription="@string/lujarch_fit_icon_title"
++                android:clickable="true"
++                app:layout_constraintTop_toTopOf="parent"
++                app:layout_constraintBottom_toBottomOf="parent"
++                app:layout_constraintEnd_toEndOf="parent"
++                android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
++        </androidx.constraintlayout.widget.ConstraintLayout>
++        </LinearLayout>
++
+         <LinearLayout
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+@@ -145,6 +192,7 @@
                      app:layout_constraintEnd_toEndOf="parent"
                      android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
              </androidx.constraintlayout.widget.ConstraintLayout>
 +
-+            <!-- Lujarch (ICON-1): fitted icons, next to themed icons: both decide how every
-+                 app icon in the system looks. -->
-+            <androidx.constraintlayout.widget.ConstraintLayout
-+                android:id="@+id/lujarch_fit_icon_toggle_entry"
-+                android:layout_width="match_parent"
-+                android:layout_height="wrap_content"
-+                android:paddingVertical="@dimen/floating_sheet_content_vertical_padding"
-+                android:clipToPadding="false"
-+                android:clipChildren="false">
-+
-+                <TextView
-+                    style="@style/CustomizationOptionEntryTitleTextStyle"
-+                    android:id="@+id/lujarch_fit_icon_toggle_title"
-+                    android:layout_width="0dp"
-+                    android:layout_height="wrap_content"
-+                    android:text="@string/lujarch_fit_icon_title"
-+                    android:layout_marginStart="@dimen/floating_sheet_content_horizontal_padding"
-+                    android:layout_marginEnd="@dimen/floating_sheet_clock_style_clock_size_text_margin_end"
-+                    android:importantForAccessibility="no"
-+                    app:layout_constraintStart_toStartOf="parent"
-+                    app:layout_constraintEnd_toStartOf="@+id/lujarch_fit_icon_toggle"
-+                    app:layout_constraintTop_toTopOf="parent"
-+                    app:layout_constraintBottom_toBottomOf="parent" />
-+
-+                <com.google.android.material.materialswitch.MaterialSwitch
-+                    style="@style/SettingslibSwitchStyle.Expressive"
-+                    android:id="@+id/lujarch_fit_icon_toggle"
-+                    android:layout_width="wrap_content"
-+                    android:layout_height="wrap_content"
-+                    android:layout_marginEnd="@dimen/floating_sheet_content_horizontal_padding"
-+                    android:contentDescription="@string/lujarch_fit_icon_title"
-+                    android:clickable="true"
-+                    app:layout_constraintTop_toTopOf="parent"
-+                    app:layout_constraintBottom_toBottomOf="parent"
-+                    app:layout_constraintEnd_toEndOf="parent"
-+                    android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
-+            </androidx.constraintlayout.widget.ConstraintLayout>
          </LinearLayout>
  
          <LinearLayout
@@ -81,8 +110,20 @@ index 0000000000000000000000000000000000000000..d24b2fe1cf1ff251a21d0e3fbf6ffebf
 +    <!-- Switch in the app icon sheet, beside Themed icons: legacy app icons get the shape of all others [CHAR LIMIT=40] -->
 +    <string name="lujarch_fit_icon_title">Fit app icons</string>
 +</resources>
+diff --git a/res_override/values/override.xml b/res_override/values/override.xml
+index 42959c114dc1071b1205864727a4140050859814..b2d0749acb5306860981bef193a8d77ea20c61c6 100644
+--- a/res_override/values/override.xml
++++ b/res_override/values/override.xml
+@@ -43,5 +43,6 @@
+     </array>
+ 
+     <!-- Package name of the Camera app to be used when previewing icon shape and theme -->
+-    <string name="camera_package" translatable="false">com.android.camera2</string>
++    <!-- Lujarch (ICON-1): the previews draw Settings' icon, the one app every image has. -->
++    <string name="camera_package" translatable="false">com.android.settings</string>
+ </resources>
 diff --git a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
-index 67c38ce722bb636f3e7ee92330d31beb7ef165df..32055ad4df0f0d5f6606ee3182c70d03007958c1 100644
+index 67c38ce722bb636f3e7ee92330d31beb7ef165df..ad3a6f6f95ebf8358c5f94f1a60e8f3981752ac8 100644
 --- a/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
 +++ b/src/com/android/customization/picker/icon/ui/binder/AppIconFloatingSheetBinder.kt
 @@ -18,6 +18,7 @@ package com.android.customization.picker.icon.ui.binder
@@ -182,3 +223,14 @@ index 67c38ce722bb636f3e7ee92330d31beb7ef165df..32055ad4df0f0d5f6606ee3182c70d03
                  launch {
                      viewModel.shapeOptions.collect { options ->
                          shapeOptionListAdapter.setItems(options) {
+@@ -341,7 +392,9 @@ object AppIconFloatingSheetBinder {
+                         }
+                     }
+                 } else {
+-                    styleContent.isVisible = false
++                    // Lujarch (ICON-1): without tabs the style container keeps Fit app icons.
++                    styleContent.requireViewById<View>(R.id.lujarch_icon_style_options_frame)
++                        .isVisible = false
+ 
+                     launch {
+                         viewModel.isShapeOptionsAvailable.collect { shapeAvailable ->
