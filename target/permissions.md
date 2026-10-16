@@ -190,7 +190,7 @@ Every app that can install or update apps is listed, app stores included.
 
 ### PERM-13 Every other access has a page
 
-- Home: Settings > Apps > Special app access > See more
+- Home: Settings > Apps > Special app access > See more > Other access
 - Switch: per access and app, the choices of PERM-1 that act differently for it
 - Default: Android's
 - Verify: vm

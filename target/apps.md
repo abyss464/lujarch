@@ -11,7 +11,7 @@ version; every one but Google's is built from source and signed with the owner's
 - Home: Settings > Google
 - Switch: none
 - Default: none
-- Verify: vm
+- Verify: phone
 
 Google Play services, Google Services Framework and the Play Store come from MindTheGapps for
 Android 17 at its pinned release, with Google's signatures, and nothing else of Google's. The Play

@@ -87,8 +87,8 @@ says what failed and what the user can do, and keeps the rest of the page usable
 
 ### CORE-8 English, Simplified Chinese and Japanese
 
-- Home: Settings > System > Languages
-- Switch: Settings > System > Languages (Android's own)
+- Home: Settings > System > Language & region
+- Switch: Settings > System > Language & region (Android's own)
 - Default: the language chosen in setup
 - Verify: vm
 

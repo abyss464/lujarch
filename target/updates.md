@@ -8,7 +8,7 @@ System updates can return to the previous build.
 
 ### UPD-1 Updates are installed from a local package
 
-- Home: Settings > System > System updates > menu > Install local update
+- Home: Settings > System > System updates > Install local update
 - Switch: none
 - Default: none
 - Verify: vm

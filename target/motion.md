@@ -22,7 +22,7 @@ done, and fades out as it keeps turning.
 
 ### MOT-2 The lock screen's fingerprint is the mark
 
-- Home: Settings > Accessibility > Color and motion > Lujarch motion
+- Home: Settings > Accessibility > Color & motion > Lujarch motion
 - Switch: Lock screen and fingerprint: on, off
 - Default: on
 - Verify: phone
@@ -49,7 +49,7 @@ it. With several players the circle shows the app of the card that would open.
 
 ### MOT-4 Plugging in fills the mark like a battery
 
-- Home: Settings > Accessibility > Color and motion > Lujarch motion
+- Home: Settings > Accessibility > Color & motion > Lujarch motion
 - Switch: Charging: on, off
 - Default: on
 - Verify: phone
@@ -76,7 +76,7 @@ answered with empty data opens the mark in its own ochre and bites shut into the
 
 ### MOT-6 The back gesture draws a line that becomes a dart
 
-- Home: Settings > Accessibility > Color and motion > Lujarch motion
+- Home: Settings > Accessibility > Color & motion > Lujarch motion
 - Switch: Back gesture: on, off
 - Default: on
 - Verify: vm
@@ -88,7 +88,7 @@ through the edge. Android's thresholds, springs and states drive it.
 
 ### MOT-7 The volume slider holds water and a float
 
-- Home: Settings > Accessibility > Color and motion > Lujarch motion
+- Home: Settings > Accessibility > Color & motion > Lujarch motion
 - Switch: Volume: on, off
 - Default: on
 - Verify: vm
