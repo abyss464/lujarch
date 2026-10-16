@@ -12,6 +12,10 @@ from lujarch_test import ROOT, check, device, note, run, step
 ITEM = re.compile(r"^### ([A-Z]+-\d+) ")
 # Path segments after which a home is no page of its own: one app's, one entry's, a menu.
 PLACEHOLDER = re.compile(r"^\(.*\)$|^menu$")
+# Entries that exist only in the state they act on (homes.py): nothing to find otherwise.
+SHOWN_IN_STATE = {"Return to the previous build"}
+# Switches a page keeps in its menu: a result opens the page, whose menu shows them.
+IN_MENU = set()
 
 
 def targets():
@@ -44,9 +48,13 @@ def queries():
                 kept.append(p)
             if kept and kept[-1] != "Search":
                 found.setdefault(kept[-1], set()).add(item)
-        for names in re.findall(r"(?:^|;|>)\s*([A-Z][^:;>]*?): (?:on, off|off, on)", switch):
+        for path, names in re.findall(r"((?:^|;)[^;:]*?>)?\s*([A-Z][^:;>]*?): (?:on, off|off, on)", switch):
             for name in names.split(", "):
                 found.setdefault(name.strip(), set()).add(item)
+                if "> menu >" in path:
+                    IN_MENU.add(name.strip())
+    for name in SHOWN_IN_STATE:
+        found.pop(name, None)
     return found
 
 
@@ -72,6 +80,9 @@ def main():
             note(f"results: {[n.text for n in results][:8]}")
             continue
         d.tap(hit, wait=3)
+        if query in IN_MENU and not d.find(text=query):
+            d.tap(d.wait(desc="More options", timeout=10))
+            time.sleep(1)
         if not (d.find(text=query) or d.find(contains=query)):
             unopened.append(query)
         d.home()

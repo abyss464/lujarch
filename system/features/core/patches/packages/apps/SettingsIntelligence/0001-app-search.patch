@@ -1,0 +1,14 @@
+diff --git a/src/com/android/settings/intelligence/search/query/InstalledAppResultTask.java b/src/com/android/settings/intelligence/search/query/InstalledAppResultTask.java
+index 2f85bcf4df4597b61ca465ed10a0fda999ace6fc..ab960d082d46e770487e69728ad5b8a50b61ca08 100644
+--- a/src/com/android/settings/intelligence/search/query/InstalledAppResultTask.java
++++ b/src/com/android/settings/intelligence/search/query/InstalledAppResultTask.java
+@@ -90,8 +90,7 @@ public class InstalledAppResultTask extends SearchQueryTask.QueryWorker {
+                     continue;
+                 }
+             } catch (PackageManager.NameNotFoundException e) {
+-                // this should not happen here
+-                continue;
++                // Not a module: an ordinary app, found by its name.
+             }
+ 
+             final CharSequence label = info.loadLabel(mPackageManager);

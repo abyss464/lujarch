@@ -1,0 +1,160 @@
+diff --git a/res/values-ja/lujarch_core_strings.xml b/res/values-ja/lujarch_core_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb4b94be63bb807fe26e8af8c8cdfd23dd44afab
+--- /dev/null
++++ b/res/values-ja/lujarch_core_strings.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_selinux_status">SELinux ステータス</string>
++    <string name="lujarch_selinux_enforcing">強制</string>
++    <string name="lujarch_selinux_permissive">許容</string>
++    <string name="lujarch_selinux_disabled">無効</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_core_strings.xml b/res/values-zh-rCN/lujarch_core_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..fc466fdf6a5d5e566cd30b70dd5a9211f2b925f5
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_core_strings.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_selinux_status">SELinux 状态</string>
++    <string name="lujarch_selinux_enforcing">强制</string>
++    <string name="lujarch_selinux_permissive">宽容</string>
++    <string name="lujarch_selinux_disabled">已停用</string>
++</resources>
+diff --git a/res/values/lujarch_core_strings.xml b/res/values/lujarch_core_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..36499a73645835ffbb177cde6263729bc7992d10
+--- /dev/null
++++ b/res/values/lujarch_core_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- About phone > Android version (CORE-9) -->
++    <string name="lujarch_selinux_status">SELinux status</string>
++    <string name="lujarch_selinux_status_purpose" translatable="false">Whether SELinux enforces its policy on the device</string>
++    <string name="lujarch_selinux_enforcing">Enforcing</string>
++    <string name="lujarch_selinux_permissive">Permissive</string>
++    <string name="lujarch_selinux_disabled">Disabled</string>
++</resources>
+diff --git a/src/com/android/settings/deviceinfo/firmwareversion/FirmwareVersionScreen.kt b/src/com/android/settings/deviceinfo/firmwareversion/FirmwareVersionScreen.kt
+index 005827ab15aa24f93963cd79c544661a31f821e3..97f46ae4b4d930bddf6a31923598c21b79461b54 100644
+--- a/src/com/android/settings/deviceinfo/firmwareversion/FirmwareVersionScreen.kt
++++ b/src/com/android/settings/deviceinfo/firmwareversion/FirmwareVersionScreen.kt
+@@ -77,6 +77,7 @@ open class FirmwareVersionScreen : PreferenceScreenMixin, PreferenceSummaryProvi
+             +MainlineModuleVersionPreference()
+             +BasebandVersionPreference()
+             +KernelVersionPreference()
++            +SelinuxStatusPreference()
+             +LineageBuildDatePreference()
+             +SimpleBuildNumberPreference()
+         }
+diff --git a/src/com/android/settings/deviceinfo/firmwareversion/SelinuxStatusPreference.kt b/src/com/android/settings/deviceinfo/firmwareversion/SelinuxStatusPreference.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..728f522ac80e2c3790ff1cd0e146c738068b1227
+--- /dev/null
++++ b/src/com/android/settings/deviceinfo/firmwareversion/SelinuxStatusPreference.kt
+@@ -0,0 +1,56 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.deviceinfo.firmwareversion
++
++import android.content.Context
++import android.os.SELinux
++import androidx.preference.Preference
++import com.android.settings.R
++import com.android.settingslib.metadata.PreferenceMetadata
++import com.android.settingslib.metadata.PreferenceSummaryProvider
++import com.android.settingslib.preference.PreferenceBinding
++
++/** Lujarch (CORE-9): Android version shows whether SELinux is enforcing. */
++class SelinuxStatusPreference : PreferenceMetadata, PreferenceSummaryProvider, PreferenceBinding {
++
++    override val key: String
++        get() = "lujarch_selinux_status"
++
++    override val purpose: Int
++        get() = R.string.lujarch_selinux_status_purpose
++
++    override val title: Int
++        get() = R.string.lujarch_selinux_status
++
++    override val indexable
++        get() = false
++
++    override fun bind(preference: Preference, metadata: PreferenceMetadata) {
++        super.bind(preference, metadata)
++        preference.isCopyingEnabled = true
++        preference.isSelectable = false
++    }
++
++    override fun getSummary(context: Context): CharSequence =
++        context.getString(
++            when {
++                !SELinux.isSELinuxEnabled() -> R.string.lujarch_selinux_disabled
++                SELinux.isSELinuxEnforced() -> R.string.lujarch_selinux_enforcing
++                else -> R.string.lujarch_selinux_permissive
++            }
++        )
++}

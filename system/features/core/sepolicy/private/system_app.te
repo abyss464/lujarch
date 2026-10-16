@@ -1,0 +1,2 @@
+# Settings' Android version page reads whether SELinux is enforcing (/sys/fs/selinux/enforce).
+allow system_app selinuxfs:file r_file_perms;

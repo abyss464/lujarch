@@ -29,7 +29,7 @@ class SearchProvider : SearchIndexablesProvider() {
                         .add(RawData.COLUMN_KEYWORDS, entry.keywords)
                         .add(RawData.COLUMN_SCREEN_TITLE, entry.screenTitle)
                         .add(RawData.COLUMN_INTENT_ACTION, entry.action)
-                        .add(RawData.COLUMN_INTENT_TARGET_PACKAGE, context.packageName)
+                        .add(RawData.COLUMN_INTENT_TARGET_PACKAGE, entry.targetPackage.ifEmpty { context.packageName })
                 }
             } catch (e: RuntimeException) {
                 Log.e(TAG, "${contribution.javaClass.name} failed to list search entries", e)
