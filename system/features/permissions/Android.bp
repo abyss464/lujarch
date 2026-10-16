@@ -5,12 +5,8 @@ android_library {
     manifest: "src/settings/AndroidManifest.xml",
     resource_dirs: ["src/settings/res"],
     platform_apis: true,
-    static_libs: [
-        "androidx.preference_preference",
-        "SettingsLibCollapsingToolbarBaseActivity",
-        "SettingsLibFooterPreference",
-        "SettingsLibSettingsTheme",
-    ],
+    static_libs: ["LujarchSettingsPages"],
+    libs: ["LujarchSettingsContribution"],
 }
 
 prebuilt_etc {

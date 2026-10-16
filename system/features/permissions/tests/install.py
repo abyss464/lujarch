@@ -26,6 +26,12 @@ def install(d, p):
     return p.do("install", f"--es apk {APK}", timeout=8, restart=False)
 
 
+def confirm_android(d):
+    """Android's own confirmation of an install, which comes before Lujarch's question."""
+    d.wait(text="Install this app?", timeout=15)
+    d.tap(d.find(text="Install"))
+
+
 def choose(d, choice):
     d.start(f"-f 0x10008000 -a android.settings.MANAGE_UNKNOWN_APP_SOURCES "
             f"-d package:{AppProbe.PACKAGE}")
@@ -83,14 +89,13 @@ def listed(d):
 
 
 def refused(d, p):
-    step("Don't allow: the install is refused and a notification says so")
-    since = now(d)
+    step("Don't allow: the install is refused, and Android's dialog says so")
     install(d, p)
-    deadline = time.monotonic() + 20
-    while not notice(d, "Probe target was not installed", since) and time.monotonic() < deadline:
-        time.sleep(1)
-    n = notice(d, "Probe target was not installed", since)
-    check(n and "does not allow Probe to install apps" in n, "a notification names the app and why")
+    check(d.wait(contains="allowed to install unknown apps from this source", timeout=15),
+          "the dialog says the app may not install and where to change it")
+    d.shot("install-refused")
+    d.tap(d.find(text="Cancel"))
+    time.sleep(2)
     check(not installed(d), "not installed")
 
 
@@ -111,6 +116,7 @@ def asked(d, p):
     step("Ask every time: the install waits for the answer, which names app, version, signature")
     choose(d, "Ask every time")
     install(d, p)
+    confirm_android(d)
     d.wait(contains="Let Probe install Probe target", timeout=20)
     texts = " ".join(d.texts())
     note(texts)
@@ -143,6 +149,7 @@ def unanswered(d, p):
     step("without an answer the install is refused, and a notification says so")
     since = now(d)
     install(d, p)
+    confirm_android(d)
     d.wait(contains="Let Probe install Probe target", timeout=20)
     d.home()
     deadline = time.monotonic() + 100

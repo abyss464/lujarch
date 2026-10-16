@@ -8,7 +8,7 @@ timeout: 1500
 import re
 import time
 
-from lujarch_test import AppProbe, check, device, note, run, step
+from lujarch_test import AppProbe, Failure, check, device, note, run, step
 
 SETTING = "lujarch_permissions_history_days"
 USED = {"Motion and environment sensors": "sensors", "Clipboard": "copy,clipboard",
@@ -58,11 +58,16 @@ def uses(d, p):
     d.sh(f"cmd appops set {p.PACKAGE} LUJARCH_SENSORS default")
     d.home()
     p.do("sensors", foreground=False, timeout=8)
-    d.sh(f"cmd notification cancel_all {p.PACKAGE}", check=False)
 
     step("the dashboard lists every permission the probe used")
     dashboard(d)
-    d.tap(text="See other permissions")
+    for _ in range(3):
+        d.tap(text="See other permissions")
+        try:
+            d.scroll_to(text="Clipboard", limit=4, quiet=True)
+            break
+        except Failure:
+            d.swipe(540, 700, 540, 1800)
     unused = {}
     for title in USED:
         s = summary_of(d, title)

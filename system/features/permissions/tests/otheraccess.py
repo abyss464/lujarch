@@ -5,7 +5,6 @@ for it. Accesses with a page of their own are not listed.
 verifies: PERM-13
 timeout: 900
 """
-import re
 import time
 
 from lujarch_test import AppProbe, check, device, note, run, step
@@ -14,6 +13,12 @@ from lujarch_test import AppProbe, check, device, note, run, step
 OWN_PAGES = ["Display over other apps", "Modify system settings", "Install unknown apps",
              "Alarms & reminders", "Picture-in-picture", "Full-screen notifications",
              "Camera", "Location", "Microphone", "Notifications"]
+
+
+def ignored(d, p):
+    """The vibrations of the probe that Android ignored for its access."""
+    return [line for line in d.sh("dumpsys vibrator_manager").splitlines()
+            if "ignored_app_ops" in line and p.PACKAGE in line]
 
 
 def titles(d):
@@ -61,10 +66,10 @@ def main():
         time.sleep(1)
         check(d.appop(p.PACKAGE, "VIBRATE") == "ignore", "Control vibration: Don't allow")
         d.shot("vibration-dont-allow")
+        before = set(ignored(d, p))
         got = p.do("vibrate")["vibrate"]
         check(got == "vibrated", f"the app is not told ({got})")
-        out = d.sh(f"cmd appops get {p.PACKAGE} VIBRATE")
-        check(re.search(r"rejectTime=|Reject", out), f"its request was ignored ({out.strip()})")
+        check(set(ignored(d, p)) - before, "Android ignored its vibration")
     finally:
         d.sh(f"cmd appops set {p.PACKAGE} VIBRATE allow", check=False)
         d.home()

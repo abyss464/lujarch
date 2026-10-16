@@ -22,26 +22,22 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import androidx.fragment.app.Fragment
 import androidx.preference.ListPreference
 import androidx.preference.MultiSelectListPreference
-import androidx.preference.PreferenceFragmentCompat
-import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity
+import androidx.preference.PreferenceScreen
 import com.android.settingslib.widget.FooterPreference
+import org.lujarch.settings.pages.BaseActivity
+import org.lujarch.settings.pages.BasePreferenceFragment
 
 /** Settings > Apps > Defaults for new apps: the choices an app the user installs starts with. */
-class NewAppDefaultsActivity : CollapsingToolbarBaseActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) {
-            supportFragmentManager
-                .beginTransaction()
-                .replace(com.android.settingslib.collapsingtoolbar.R.id.content_frame, NewAppDefaultsFragment())
-                .commit()
-        }
-    }
+class NewAppDefaultsActivity : BaseActivity() {
+    override fun pageTitle(): CharSequence = getText(R.string.lujarch_new_app_defaults)
+
+    override fun createFragment(): Fragment = NewAppDefaultsFragment()
 }
 
-class NewAppDefaultsFragment : PreferenceFragmentCompat() {
+class NewAppDefaultsFragment : BasePreferenceFragment() {
     /** One row: its settings key, its title, the choices it offers and its value while unset. */
     private data class Row(
         val key: String,
@@ -50,11 +46,8 @@ class NewAppDefaultsFragment : PreferenceFragmentCompat() {
         val default: Int = AppOpsManager.MODE_DEFAULT,
     )
 
-    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        val ctx = requireContext()
-        val screen = preferenceManager.createPreferenceScreen(ctx)
-        preferenceScreen = screen
-        requireActivity().title = getString(R.string.lujarch_new_app_defaults)
+    override fun buildScreen(screen: PreferenceScreen, savedInstanceState: Bundle?) {
+        val ctx = prefContext
         for (row in rows(ctx)) {
             val labels =
                 row.choices.map {

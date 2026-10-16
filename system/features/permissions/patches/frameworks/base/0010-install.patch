@@ -586,6 +586,20 @@ index cd3ac358f3a55c52f17731cd4e2015c453a5886b..7b1bfb1dfc19bf895a0400116aea4af7
          val allowed = listModel.isAllowed(record)
          val restrictions =
              listModel.getRestrictions(
+diff --git a/services/core/java/com/android/server/pm/VerificationUtils.java b/services/core/java/com/android/server/pm/VerificationUtils.java
+index f0610180040c4ea9174db69037579d7849e758d1..249248922e0ddbf64ce5965cc2fc2eda2351a2a1 100644
+--- a/services/core/java/com/android/server/pm/VerificationUtils.java
++++ b/services/core/java/com/android/server/pm/VerificationUtils.java
+@@ -95,6 +95,9 @@ final class VerificationUtils {
+             intent.putExtra(PackageManager.EXTRA_VERIFICATION_ROOT_HASH, rootHashString);
+         }
+         intent.putExtra(PackageInstaller.EXTRA_DATA_LOADER_TYPE, dataLoaderType);
++        // Lujarch (PERM-12): the verifier's manifest receiver reports an install refused for want
++        // of an answer; only verification agents may receive it.
++        intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
+ 
+         context.sendBroadcastAsUser(intent, user,
+                 android.Manifest.permission.PACKAGE_VERIFICATION_AGENT);
 diff --git a/services/core/java/com/android/server/pm/VerifyingSession.java b/services/core/java/com/android/server/pm/VerifyingSession.java
 index 4c63493439e274e7df270bd63fa3c1f2c31d7290..c2bd60abb16562beebb76e6c7a0b65cda2aadfaa 100644
 --- a/services/core/java/com/android/server/pm/VerifyingSession.java

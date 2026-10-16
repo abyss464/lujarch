@@ -20,11 +20,15 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application>
+        <meta-data
+            android:name="org.lujarch.settings.contribution.permissions"
+            android:value="org.lujarch.permissions.settings.PermissionsContribution" />
+
         <activity
             android:name="org.lujarch.permissions.settings.NewAppDefaultsActivity"
             android:exported="true"
             android:label="@string/lujarch_new_app_defaults"
-            android:theme="@style/Theme.SubSettingsBase">
+            android:theme="@style/Theme.LujarchSettings">
             <intent-filter>
                 <action android:name="org.lujarch.permissions.action.NEW_APP_DEFAULTS" />
                 <category android:name="android.intent.category.DEFAULT" />

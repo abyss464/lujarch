@@ -120,10 +120,10 @@ index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175
 +</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..1c1b0c311ec7ba1a597f420c0fd0c8c9f1c49a0d
+index 0000000000000000000000000000000000000000..60941f37ab1e82ef47a3e990d3962ae5c0742913
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,63 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -154,7 +154,11 @@ index 0000000000000000000000000000000000000000..1c1b0c311ec7ba1a597f420c0fd0c8c9
 +    <string name="lujarch_footer_phone">"電話の基本情報とは、通信事業者とその国とコード、SIM の状態、信号強度、ネットワークの種類、データと通話の状態、サブスクリプション番号のことで、Android が電話の権限のないすべてのアプリに提供する情報です。通信事業者のコードはシステムがシステム プロパティとして公開しているため、アプリ自身のネイティブ コードは引き続き読み取れます。"</string>
 +    <string name="lujarch_ask_channel">"アクセスの確認"</string>
 +    <string name="lujarch_ask_until_answered">"回答するまで、アプリには空のデータが返されます。"</string>
++    <string name="lujarch_ask_until_started">"回答するまで、アプリは閉じているときに起動されません。"</string>
++    <string name="lujarch_ask_until_both">"回答するまで、アプリには空のデータが返され、閉じているときには起動されません。"</string>
 +    <string name="lujarch_ask_phone_info">"通信事業者、信号、ネットワークの種類の読み取り"</string>
++    <string name="lujarch_ask_autostart">"閉じているときの起動"</string>
++    <string name="lujarch_autostart">"自動起動"</string>
 +    <string name="lujarch_keep_history">"履歴の保持期間"</string>
 +    <string name="lujarch_history_days">"{count,plural, =1{1 日}other{# 日}}"</string>
 +    <string name="lujarch_history_shorter_title">"古い履歴を削除しますか？"</string>
@@ -185,10 +189,10 @@ index 0000000000000000000000000000000000000000..1c1b0c311ec7ba1a597f420c0fd0c8c9
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..43e1704b4f04ff35aba00e79a8beb44ada807e87
+index 0000000000000000000000000000000000000000..d92a0fe3e73032107d01e2df5ade10a0f61234d2
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,63 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -219,7 +223,11 @@ index 0000000000000000000000000000000000000000..43e1704b4f04ff35aba00e79a8beb44a
 +    <string name="lujarch_footer_phone">"基本电话信息包括运营商及其国家和代码、SIM 卡状态、信号强度、网络类型、数据和通话状态，以及订阅编号，即 Android 向每个没有“电话”权限的应用提供的信息。运营商代码由系统作为系统属性公开，应用自己的原生代码仍可读到。"</string>
 +    <string name="lujarch_ask_channel">"访问询问"</string>
 +    <string name="lujarch_ask_until_answered">"在您回答之前，该应用得到的是空数据。"</string>
++    <string name="lujarch_ask_until_started">"在您回答之前，该应用在关闭时不会被启动。"</string>
++    <string name="lujarch_ask_until_both">"在您回答之前，该应用得到的是空数据，且在关闭时不会被启动。"</string>
 +    <string name="lujarch_ask_phone_info">"读取运营商、信号和网络类型"</string>
++    <string name="lujarch_ask_autostart">"在关闭时启动"</string>
++    <string name="lujarch_autostart">"自启动"</string>
 +    <string name="lujarch_keep_history">"记录保留时长"</string>
 +    <string name="lujarch_history_days">"{count,plural, =1{1 天}other{# 天}}"</string>
 +    <string name="lujarch_history_shorter_title">"要删除较早的记录吗？"</string>
@@ -250,10 +258,10 @@ index 0000000000000000000000000000000000000000..43e1704b4f04ff35aba00e79a8beb44a
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..e877b0062687aaba5d57b1355d8b215fbda81056
+index 0000000000000000000000000000000000000000..8041324e0cb6957c76439bcde3ac791b2518f9b9
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,82 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -284,7 +292,11 @@ index 0000000000000000000000000000000000000000..e877b0062687aaba5d57b1355d8b215f
 +    <string name="lujarch_footer_phone">Basic phone info is the carrier and its country and code, the SIM\'s state, signal strength, the network type, the data and call state, and the subscription numbers: what Android gives every app without the Phone permission. The carrier\'s code, which the system publishes as a system property, stays readable to the app\'s own native code.</string>
 +    <string name="lujarch_ask_channel">Questions about access</string>
 +    <string name="lujarch_ask_until_answered">Until you answer, the app gets empty data.</string>
++    <string name="lujarch_ask_until_started">Until you answer, the app is not started while it is closed.</string>
++    <string name="lujarch_ask_until_both">Until you answer, the app gets empty data and is not started while it is closed.</string>
 +    <string name="lujarch_ask_phone_info">read the carrier, signal and network type</string>
++    <string name="lujarch_ask_autostart">start while it is closed</string>
++    <string name="lujarch_autostart">Autostart</string>
 +    <string name="lujarch_keep_history">Keep history</string>
 +    <string name="lujarch_history_days">{count, plural,
 +        =1      {1 day}
@@ -1175,10 +1187,10 @@ index 0000000000000000000000000000000000000000..d9ba7c6be1ae3f0a33f0a32a900e6e6a
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d1312d85fbe
+index 0000000000000000000000000000000000000000..f27c0807bbf72b371284c6e37777e37718c17f6a
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAsk.kt
-@@ -0,0 +1,248 @@
+@@ -0,0 +1,260 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1205,6 +1217,7 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 +import android.app.PendingIntent
 +import android.content.BroadcastReceiver
 +import android.content.Context
++import android.icu.text.ListFormatter
 +import android.content.Intent
 +import android.os.Bundle
 +import android.os.PowerManager
@@ -1227,7 +1240,8 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 + * question is a dialog in the look of Android's permission dialog when the app is on screen and
 + * the phone is unlocked, otherwise a notification that is never shown on the lock screen and opens
 + * the dialog. Several permissions of one app asked about together are one question, one page per
-+ * permission. The answer becomes the app's choice.
++ * permission, the latest first; the notification names them all. The answer becomes the app's
++ * choice.
 + */
 +object LujarchAsks {
 +    const val ACTION_ASK = "org.lujarch.permissions.action.ASK"
@@ -1237,28 +1251,29 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 +
 +    private const val CHANNEL = "lujarch_ask"
 +
-+    /** The ops each app is being asked about, until answered. */
-+    private val pending = HashMap<String, LinkedHashSet<String>>()
++    /** The ops each app is being asked about, until answered, the latest first. */
++    private val pending = HashMap<String, List<String>>()
 +
 +    /** The permission whose page answers a question about [op]. */
 +    fun permissionOf(op: String): LujarchPermission? =
 +        LujarchPermissions.ALL.firstOrNull { it.op == op }
-+            ?: LujarchPermissions.PHONE_BASIC.takeIf { it.op == op }
++            ?: listOf(LujarchPermissions.PHONE_BASIC, LujarchPermissions.AUTOSTART).firstOrNull { it.op == op }
 +
 +    @Synchronized
 +    fun add(packageName: String, op: String): List<String> {
-+        val ops = pending.getOrPut(packageName) { LinkedHashSet() }
-+        ops.add(op)
-+        return ops.toList()
++        val ops = listOf(op) + pending[packageName].orEmpty().filter { it != op }
++        pending[packageName] = ops
++        return ops
 +    }
 +
 +    @Synchronized
 +    fun answered(context: Context, packageName: String, op: String) {
-+        val ops = pending[packageName] ?: return
-+        ops.remove(op)
++        val ops = (pending[packageName] ?: return).filter { it != op }
 +        if (ops.isEmpty()) {
 +            pending.remove(packageName)
 +            context.getSystemService(NotificationManager::class.java)!!.cancel(packageName, 0)
++        } else {
++            pending[packageName] = ops
 +        }
 +    }
 +
@@ -1293,11 +1308,20 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 +            )
 +        )
 +        val app = KotlinUtils.getPackageLabel(context.applicationContext as android.app.Application, packageName, UserHandle.getUserHandleForUid(uid))
-+        val first = permissionOf(ops.first()) ?: return
++        val waiting = ops.mapNotNull { permissionOf(it) }
++        if (waiting.isEmpty()) return
++        val requests = ListFormatter.getInstance().format(waiting.map { request(context, it) })
 +        val title =
-+            Html.fromHtml(
-+                context.getString(R.string.permission_warning_template, app, request(context, first)),
-+                0,
++            Html.fromHtml(context.getString(R.string.permission_warning_template, app, requests), 0)
++        val notStarted = waiting.any { it == LujarchPermissions.AUTOSTART }
++        val emptyData = waiting.any { it != LujarchPermissions.AUTOSTART }
++        val until =
++            context.getString(
++                when {
++                    notStarted && emptyData -> R.string.lujarch_ask_until_both
++                    notStarted -> R.string.lujarch_ask_until_started
++                    else -> R.string.lujarch_ask_until_answered
++                }
 +            )
 +        val open =
 +            PendingIntent.getActivity(
@@ -1310,7 +1334,7 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 +            Notification.Builder(context, CHANNEL)
 +                .setSmallIcon(R.drawable.ic_info_outline)
 +                .setContentTitle(title)
-+                .setContentText(context.getString(R.string.lujarch_ask_until_answered))
++                .setContentText(until)
 +                .setContentIntent(open)
 +                .setVisibility(Notification.VISIBILITY_SECRET)
 +                .setAutoCancel(true)
@@ -1320,7 +1344,7 @@ index 0000000000000000000000000000000000000000..5223390d28633f70fa0622240c591d13
 +
 +    /** What the app asks to do with [p], for "Allow <app> to <request>?". */
 +    fun request(context: Context, p: LujarchPermission): CharSequence =
-+        if (p === LujarchPermissions.PHONE_BASIC) context.getString(R.string.lujarch_ask_phone_info)
++        if (p.request != 0) context.getString(p.request)
 +        else LujarchPermissions.description(context, p.group) ?: LujarchPermissions.label(context, p.group)
 +}
 +
@@ -1525,10 +1549,10 @@ index 0000000000000000000000000000000000000000..f0e52a6cbac86aab9940a5362d66fb43
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd0443194bda
+index 0000000000000000000000000000000000000000..5a6ca1d67c162da600251b4566cf5e7428a3e7b7
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,105 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1554,6 +1578,7 @@ index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd04
 +import android.util.Log
 +import androidx.preference.Preference
 +import androidx.preference.PreferenceCategory
++import androidx.preference.PreferenceFragmentCompat
 +import androidx.preference.PreferenceScreen
 +import com.android.permissioncontroller.R
 +import com.android.permissioncontroller.permission.utils.StringUtils
@@ -1565,6 +1590,7 @@ index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd04
 + */
 +object LujarchOtherAccess {
 +    private const val KEY = "lujarch_other_access"
++    private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
 +
 +    /** The packages of [user] that used each access, or have a choice of it, by op. */
 +    @JvmStatic
@@ -1584,9 +1610,12 @@ index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd04
 +            emptyMap()
 +        }
 +
-+    /** Adds the section of the other accesses at the end of the See more page. */
++    /**
++     * Adds the section of the other accesses at the end of the See more page, in view when a
++     * Settings search result opened the page for it.
++     */
 +    @JvmStatic
-+    fun addTo(screen: PreferenceScreen, context: Context) {
++    fun addTo(fragment: PreferenceFragmentCompat, screen: PreferenceScreen, context: Context) {
 +        val users = users(context)
 +        val category =
 +            PreferenceCategory(context).apply {
@@ -1594,6 +1623,12 @@ index 0000000000000000000000000000000000000000..a845d899aab54e991184ec38b0d9dd04
 +                setTitle(R.string.lujarch_other_access)
 +            }
 +        screen.addPreference(category)
++        val intent = fragment.activity?.intent
++        if (intent?.getStringExtra(EXTRA_FRAGMENT_ARG_KEY) == KEY) {
++            // Once: the page rebuilds the section whenever its list of accesses changes.
++            intent.removeExtra(EXTRA_FRAGMENT_ARG_KEY)
++            fragment.scrollToPreference(category)
++        }
 +        val collator = Collator.getInstance(context.resources.configuration.locales.get(0))
 +        LujarchPermissions.OTHER.map { it to context.getString(it.title) }
 +            .sortedWith { l, r -> collator.compare(l.second, r.second) }
@@ -1907,10 +1942,10 @@ index 0000000000000000000000000000000000000000..e890ba3ecb25b98e3c8bb80219f3a918
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1d345f02372aed1db6836739e9765a3bf81385dd
+index 0000000000000000000000000000000000000000..1af259574a752c98703caab8ce0aee6bca463c7d
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,196 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2049,7 +2084,15 @@ index 0000000000000000000000000000000000000000..1d345f02372aed1db6836739e9765a3b
 +        explain.isChecked = Settings.Global.getInt(ctx.contentResolver, SETTING_EXPLAIN, 1) != 0
 +        if (screen.findPreference<Preference>(KEY_EXPLAIN) == null) screen.addPreference(explain)
 +        order(ctx, screen, groups)
++        // A Settings search result for the switch opens the page with it in view.
++        val highlight = fragment.activity?.intent?.getStringExtra(EXTRA_FRAGMENT_ARG_KEY)
++        if (highlight == KEY_EXPLAIN && !highlighted) {
++            highlighted = true
++            fragment.scrollToPreference(KEY_EXPLAIN)
++        }
 +    }
++
++    private var highlighted = false
 +
 +    /** Groups and permissions by name; then Android's other rows; the switch; the footers. */
 +    private fun order(ctx: Context, screen: PreferenceScreen, groups: Collection<String>) {
@@ -2068,6 +2111,7 @@ index 0000000000000000000000000000000000000000..1d345f02372aed1db6836739e9765a3b
 +
 +    companion object {
 +        private const val KEY_EXPLAIN = "lujarch_explain_crashes"
++        private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
 +        const val SETTING_EXPLAIN = "lujarch_permissions_explain_crashes"
 +    }
 +}
@@ -2100,10 +2144,10 @@ index 0000000000000000000000000000000000000000..1d345f02372aed1db6836739e9765a3b
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..fc14a255f4bf91c64cc1d1d4498569390ec30d44
+index 0000000000000000000000000000000000000000..07ac39bf94b6f5c5e24bf81c1717cd78b2deba51
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
-@@ -0,0 +1,347 @@
+@@ -0,0 +1,365 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2175,6 +2219,8 @@ index 0000000000000000000000000000000000000000..fc14a255f4bf91c64cc1d1d449856939
 +     * Don't allow stores MODE_IGNORED, which the system's checks answer by doing nothing.
 +     */
 +    @StringRes val title: Int = 0,
++    /** What the app asks to do, for "Allow <app> to <request>?"; 0: the group's description. */
++    @StringRes val request: Int = 0,
 +) {
 +    @StringRes fun label(choice: LujarchChoice): Int = labels[choice] ?: choice.label
 +
@@ -2251,6 +2297,21 @@ index 0000000000000000000000000000000000000000..fc14a255f4bf91c64cc1d1d449856939
 +            listOf(LujarchChoice.ALLOW, LujarchChoice.ASK, LujarchChoice.DENY),
 +            R.string.lujarch_footer_phone,
 +            mapOf(LujarchChoice.ALLOW to R.string.lujarch_choice_basic_phone_info),
++            request = R.string.lujarch_ask_phone_info,
++        )
++
++    /**
++     * Autostart, the system starting an app that is not running, for a broadcast; its page is in
++     * the app's battery usage, and Ask every time asks here.
++     */
++    val AUTOSTART =
++        LujarchPermission(
++            "lujarch:autostart",
++            "android:lujarch_autostart",
++            listOf(LujarchChoice.ALLOW, LujarchChoice.ASK, LujarchChoice.DENY),
++            0,
++            title = R.string.lujarch_autostart,
++            request = R.string.lujarch_ask_autostart,
 +        )
 +
 +    /**
@@ -2287,6 +2348,7 @@ index 0000000000000000000000000000000000000000..fc14a255f4bf91c64cc1d1d449856939
 +    @JvmStatic
 +    fun of(group: String?): LujarchPermission? =
 +        ALL.firstOrNull { it.group == group } ?: OTHER.firstOrNull { it.group == group }
++            ?: AUTOSTART.takeIf { it.group == group }
 +
 +    @JvmStatic fun groups(): List<String> = ALL.map { it.group }
 +
@@ -3431,7 +3493,7 @@ index f17ecf618621c2a2526838cab462f691968d2a03..7dc0541c097dbc0ab781c45e6e913062
              return Manifest.permission_group.LOCATION
          }
 diff --git a/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java b/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
-index 22169abf2fe26baaf8c26ae998a18c69b5220e11..2979d0b4de228bde120aa8ee4404aad9693fb541 100644
+index 22169abf2fe26baaf8c26ae998a18c69b5220e11..6c8dac56df14adc7ce78c9f061c609d0424d65c1 100644
 --- a/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
 +++ b/PermissionController/src/com/android/permissioncontroller/role/ui/specialappaccess/SpecialAppAccessListChildFragment.java
 @@ -32,6 +32,7 @@ import androidx.preference.PreferenceFragmentCompat;
@@ -3446,7 +3508,7 @@ index 22169abf2fe26baaf8c26ae998a18c69b5220e11..2979d0b4de228bde120aa8ee4404aad9
                      rolePreference, Process.myUserHandle(), context);
              preferenceScreen.addPreference(preference);
          }
-+        LujarchOtherAccess.addTo(preferenceScreen, context);
++        LujarchOtherAccess.addTo(preferenceFragment, preferenceScreen, context);
  
          preferenceFragment.onPreferenceScreenChanged();
      }
