@@ -178,7 +178,7 @@ gitconfig = "..."     # git configuration used for repo sync (mirrors)
 [build]
 jobs = 0              # 0: derived from memory
 memory_high = ""      # empty: derived from free memory
-memory_max = ""
+memory_max = ""       # empty: derived from free memory; a build waits until enough is free
 highmem_jobs = 3
 lock = "..."          # one lock for every Android build on the computer
 
