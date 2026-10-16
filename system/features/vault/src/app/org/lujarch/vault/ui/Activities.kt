@@ -162,8 +162,10 @@ class SearchResultActivity : android.app.Activity() {
             SearchKeys.CODES -> Pages.intent(this, CodesFragment::class.java, R.string.codes_title)
             SearchKeys.PASSWORDS -> Pages.intent(this, PasswordsFragment::class.java, R.string.passwords_title)
             SearchKeys.SOURCES -> Pages.intent(this, SourcesFragment::class.java, R.string.sources_title)
-            SearchKeys.SETTINGS, SearchKeys.CLIPBOARD, SearchKeys.FORGET_POLICY ->
-                Pages.intent(this, SettingsFragment::class.java, R.string.settings_title)
+            SearchKeys.SETTINGS, SearchKeys.CLIPBOARD, SearchKeys.FORGET_POLICY, SearchKeys.REVEAL,
+            SearchKeys.COPY, SearchKeys.SEARCH_ITEM, SearchKeys.MATCH_HOST ->
+                Pages.intent(this, SettingsFragment::class.java, R.string.settings_title,
+                    arguments = Bundle().apply { putString(BasePreferenceFragment.ARG_HIGHLIGHT, key) })
             SearchKeys.EXCLUDED -> Pages.intent(this, ExclusionsFragment::class.java, R.string.settings_excluded)
             else -> Intent(this, VaultActivity::class.java)
         }
@@ -188,7 +190,12 @@ object SearchKeys {
     const val PASSWORDS = "lujarch_vault_passwords"
     const val SOURCES = "lujarch_vault_sources"
     const val SETTINGS = "lujarch_vault_settings"
-    const val CLIPBOARD = "lujarch_vault_clipboard"
-    const val FORGET_POLICY = "lujarch_vault_forget_policy"
+    // Rows of the settings page: their preferences' keys, which the page brings into view.
+    const val CLIPBOARD = "clear_clipboard"
+    const val FORGET_POLICY = "forget_policy"
     const val EXCLUDED = "lujarch_vault_excluded"
+    const val REVEAL = "reveal_needs_auth"
+    const val COPY = "copy_needs_auth"
+    const val SEARCH_ITEM = "autofill_search_item"
+    const val MATCH_HOST = SettingsFragment.KEY_MATCH_HOST
 }

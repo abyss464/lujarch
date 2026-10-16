@@ -178,9 +178,9 @@
     <string name="settings_title">设置</string>
     <string name="settings_summary">显示、剪贴板、自动填充、密钥</string>
     <string name="settings_security">安全</string>
-    <string name="settings_reveal_auth">显示密码前需要验证</string>
+    <string name="settings_reveal_auth">显示前验证</string>
     <string name="settings_reveal_auth_summary">显示密码前先验证指纹或屏幕锁</string>
-    <string name="settings_copy_auth">复制密码前需要验证</string>
+    <string name="settings_copy_auth">复制前验证</string>
     <string name="settings_copy_auth_summary">复制密码或其他受保护字段前先验证指纹或屏幕锁。验证码和自动填充不需要验证。</string>
     <string name="settings_clear_clipboard">清除剪贴板</string>
     <string name="settings_clear_clipboard_summary">%1$s · 复制的内容会标记为敏感内容</string>
@@ -204,11 +204,9 @@
     <string name="settings_autofill_off">未使用。点按即可选择 Lujarch 保险库作为自动填充服务。</string>
     <string name="settings_credential_providers">密码、通行密钥和账号</string>
     <string name="settings_credential_providers_summary">在系统设置中选择首选服务和其他提供方</string>
-    <string name="settings_autofill_search">显示“搜索保险库”</string>
+    <string name="settings_autofill_search">“搜索保险库”建议</string>
     <string name="settings_autofill_search_summary">在匹配的条目之后显示，点按即可从全部条目中选择</string>
-    <string name="settings_autofill_match">网站匹配方式</string>
-    <string name="match_subdomains">主机名及其子域名</string>
-    <string name="match_host">仅相同主机名</string>
+    <string name="settings_match_host">仅相同主机名</string>
     <string name="match_subdomains_summary">用于 example.com 的条目也会在 login.example.com 上提供</string>
     <string name="match_host_summary">用于 example.com 的条目只在 example.com 和 www.example.com 上提供</string>
     <string name="settings_excluded">不自动填充的应用和网站</string>
@@ -275,7 +273,6 @@
     <string name="excluded_choose_app">选择应用</string>
 
     <!-- Settings search -->
-    <string name="search_settings_title">保险库设置</string>
     <string name="search_keywords_vault">保险库,密码,密码管理,密码管理器,KeePass,自动填充,自动填写,账号,Vault,password</string>
     <string name="search_keywords_codes">验证码,两步验证,两步验证码,双重验证,二次验证,动态口令,动态密码,一次性密码,身份验证器,2FA,OTP,TOTP,Aegis</string>
     <string name="search_keywords_passwords">密码,登录,账号,KeePass,password</string>

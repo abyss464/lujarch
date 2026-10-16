@@ -59,13 +59,12 @@ class CodesTileService : TileService() {
         val pending = PendingIntent.getActivity(
             this, 0, target, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        fun open() {
-            try {
-                startActivityAndCollapse(pending)
-            } catch (e: RuntimeException) {
-                Log.e(TAG, "the codes tile cannot open its page", e)
-            }
+        // On a locked phone SystemUI asks for the PIN and then starts the page: an unlockAndRun
+        // around it would start it while the lock screen is still leaving, and SystemUI drops it.
+        try {
+            startActivityAndCollapse(pending)
+        } catch (e: RuntimeException) {
+            Log.e(TAG, "the codes tile cannot open its page", e)
         }
-        if (isLocked) unlockAndRun { open() } else open()
     }
 }

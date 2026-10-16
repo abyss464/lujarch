@@ -46,7 +46,7 @@ class SettingsFragment : BasePreferenceFragment() {
     private lateinit var clipboardPref: ListPreference
     private lateinit var forgetPolicyPref: ListPreference
     private lateinit var autofillPref: Preference
-    private lateinit var matchPref: ListPreference
+    private lateinit var matchPref: SwitchPreferenceCompat
     private lateinit var excludedPref: Preference
     private lateinit var keyFilePref: Preference
     private lateinit var forgetPref: Preference
@@ -144,17 +144,14 @@ class SettingsFragment : BasePreferenceFragment() {
                 true
             }
         }
-        matchPref = autofill.add(ListPreference(prefContext)) {
-            key = "autofill_match"
-            setTitle(R.string.settings_autofill_match)
-            setDialogTitle(R.string.settings_autofill_match)
+        matchPref = autofill.add(SwitchPreferenceCompat(prefContext)) {
+            key = KEY_MATCH_HOST
+            setTitle(R.string.settings_match_host)
             isPersistent = false
-            entries = arrayOf(getString(R.string.match_subdomains), getString(R.string.match_host))
-            entryValues = arrayOf(MATCH_SUBDOMAINS, MATCH_HOST)
-            value = if (prefs.autofillSubdomains) MATCH_SUBDOMAINS else MATCH_HOST
+            isChecked = !prefs.autofillSubdomains
             setOnPreferenceChangeListener { _, v ->
-                prefs.autofillSubdomains = v == MATCH_SUBDOMAINS
-                renderMatch(v as String)
+                prefs.autofillSubdomains = !(v as Boolean)
+                renderMatch(v)
                 true
             }
         }
@@ -202,7 +199,7 @@ class SettingsFragment : BasePreferenceFragment() {
 
         renderClipboard(clipboardPref.value)
         renderForgetPolicy(forgetPolicyPref.value)
-        renderMatch(matchPref.value)
+        renderMatch(matchPref.isChecked)
     }
 
     private fun confirmDeleteKeyFile() = confirm(
@@ -242,8 +239,8 @@ class SettingsFragment : BasePreferenceFragment() {
         }
     }
 
-    private fun renderMatch(value: String) {
-        matchPref.setSummary(if (value == MATCH_SUBDOMAINS) R.string.match_subdomains_summary else R.string.match_host_summary)
+    private fun renderMatch(hostOnly: Boolean) {
+        matchPref.setSummary(if (hostOnly) R.string.match_host_summary else R.string.match_subdomains_summary)
     }
 
     private fun renderKeyFile() {
@@ -277,8 +274,7 @@ class SettingsFragment : BasePreferenceFragment() {
 
         /** Settings.ACTION_CREDENTIAL_PROVIDER, a flagged API; Settings' Passwords & passkeys page. */
         private const val ACTION_CREDENTIAL_PROVIDER = "android.settings.CREDENTIAL_PROVIDER"
-        private const val MATCH_SUBDOMAINS = "subdomains"
-        private const val MATCH_HOST = "host"
+        const val KEY_MATCH_HOST = "autofill_match_host"
 
         /** Labels of Clipboard.DELAYS_S, in the same order. */
         private val CLIPBOARD_LABELS = intArrayOf(

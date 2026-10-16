@@ -48,9 +48,8 @@ enum class ExclusionScope(val key: String) {
  * A site the autofill service never fills, with the scope the user gave it.
  *
  * Stored as `<scope key>:<host>`, or as the bare host while the site follows
- * the scope of the list, which is what earlier versions stored: a host holds
- * no ":" (a port is cut off when it is read), so the two forms never collide
- * and an exclusion from before this choice keeps the reach it had.
+ * the scope of the list: a host holds no ":" (a port is cut off when it is
+ * read), so the two forms never collide.
  */
 data class SiteExclusion(val host: String, val scope: ExclusionScope = ExclusionScope.DEFAULT) {
 

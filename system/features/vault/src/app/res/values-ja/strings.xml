@@ -137,9 +137,9 @@
     <string name="settings_title">設定</string>
     <string name="settings_summary">表示、クリップボード、自動入力、鍵</string>
     <string name="settings_security">セキュリティ</string>
-    <string name="settings_reveal_auth">パスワードの表示時に確認</string>
+    <string name="settings_reveal_auth">表示前に確認</string>
     <string name="settings_reveal_auth_summary">パスワードを表示する前に指紋または画面ロックで確認します</string>
-    <string name="settings_copy_auth">パスワードのコピー時に確認</string>
+    <string name="settings_copy_auth">コピー前に確認</string>
     <string name="settings_copy_auth_summary">パスワードや他の保護されたフィールドをコピーする前に、指紋または画面ロックで確認します。コードと自動入力では確認しません。</string>
     <string name="settings_clear_clipboard">クリップボードを消去</string>
     <string name="settings_clear_clipboard_summary">%1$s · コピーした値は機密情報としてマークされます</string>
@@ -163,11 +163,9 @@
     <string name="settings_autofill_off">使用していません。タップすると、Lujarch 保管庫を自動入力サービスに選択できます。</string>
     <string name="settings_credential_providers">パスワードとアカウント</string>
     <string name="settings_credential_providers_summary">優先するサービスと他のプロバイダ（システム設定）</string>
-    <string name="settings_autofill_search">「保管庫を検索」を表示</string>
+    <string name="settings_autofill_search">「保管庫を検索」の候補</string>
     <string name="settings_autofill_search_summary">一致するエントリの後に、すべてのエントリの一覧を開く候補を表示します</string>
-    <string name="settings_autofill_match">ウェブサイトの照合</string>
-    <string name="match_subdomains">ホストとそのサブドメイン</string>
-    <string name="match_host">同じホストのみ</string>
+    <string name="settings_match_host">同じホストのみ</string>
     <string name="match_subdomains_summary">example.com のエントリを login.example.com でも候補に表示します</string>
     <string name="match_host_summary">example.com のエントリを example.com と www.example.com でのみ候補に表示します</string>
     <string name="settings_excluded">入力しないアプリとサイト</string>
@@ -231,7 +229,6 @@
     <string name="excluded_not_installed">インストールされていません</string>
     <string name="excluded_choose_app">アプリを選択</string>
     <!-- Settings search -->
-    <string name="search_settings_title">保管庫の設定</string>
     <string name="search_keywords_vault">パスワード, パスワード マネージャー, 自動入力, 保管庫, KeePass, password, autofill</string>
     <string name="search_keywords_codes">2FA, 2 段階認証, 確認コード, ワンタイム パスワード, OTP, TOTP, 認証システム, Aegis</string>
     <string name="search_keywords_passwords">パスワード, ログイン, アカウント, KeePass</string>

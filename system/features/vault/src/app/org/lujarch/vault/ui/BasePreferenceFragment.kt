@@ -89,6 +89,8 @@ abstract class BasePreferenceFragment : SettingsBasePreferenceFragment(), PageDi
         screen.addPreference(banner!!)
         preferenceScreen = screen
         buildScreen(screen, savedInstanceState)
+        // A search result names the row to bring into view.
+        if (savedInstanceState == null) arguments?.getString(ARG_HIGHLIGHT)?.let { scrollToPreference(it) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -262,6 +264,9 @@ abstract class BasePreferenceFragment : SettingsBasePreferenceFragment(), PageDi
     }
 
     companion object {
+        /** The key of the row a search result opens the page at. */
+        const val ARG_HIGHLIGHT = "org.lujarch.vault.arg.HIGHLIGHT"
+
         private const val KEY_BANNER = "error_banner"
     }
 }

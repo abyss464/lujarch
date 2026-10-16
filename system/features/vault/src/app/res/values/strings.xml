@@ -191,11 +191,11 @@
     <string name="settings_title">Settings</string>
     <string name="settings_summary">Reveal, clipboard, autofill, keys</string>
     <string name="settings_security">Security</string>
-    <string name="settings_reveal_auth">Showing a password needs verification</string>
+    <string name="settings_reveal_auth">Verify to reveal</string>
     <string name="settings_reveal_auth_summary">Fingerprint or screen lock before a password is shown</string>
-    <string name="settings_copy_auth">Copying a password needs verification</string>
+    <string name="settings_copy_auth">Verify to copy</string>
     <string name="settings_copy_auth_summary">Fingerprint or screen lock before a password or another protected field is copied. Codes and autofill do not ask.</string>
-    <string name="settings_clear_clipboard">Clear clipboard</string>
+    <string name="settings_clear_clipboard">Clear the clipboard</string>
     <string name="settings_clear_clipboard_summary">%1$s · copied values are marked sensitive</string>
     <string name="clipboard_never">Never</string>
     <string name="clipboard_after_15s">After 15 seconds</string>
@@ -217,11 +217,9 @@
     <string name="settings_autofill_off">Not in use. Tap to choose Lujarch Vault as the autofill service.</string>
     <string name="settings_credential_providers">Passwords, passkeys &amp; accounts</string>
     <string name="settings_credential_providers_summary">Preferred service and other providers, in system settings</string>
-    <string name="settings_autofill_search">Offer \"Search the vault\"</string>
+    <string name="settings_autofill_search">Search the vault suggestion</string>
     <string name="settings_autofill_search_summary">After the matching entries, a suggestion that opens the list of all entries</string>
-    <string name="settings_autofill_match">Website matching</string>
-    <string name="match_subdomains">Host and its subdomains</string>
-    <string name="match_host">Same host only</string>
+    <string name="settings_match_host">Same host only</string>
     <string name="match_subdomains_summary">An entry for example.com is also offered on login.example.com</string>
     <string name="match_host_summary">An entry for example.com is offered on example.com and www.example.com only</string>
     <string name="settings_excluded">Apps and sites not filled</string>
@@ -288,7 +286,6 @@
     <string name="excluded_choose_app">Choose an app</string>
 
     <!-- Settings search -->
-    <string name="search_settings_title">Vault settings</string>
     <string name="search_keywords_vault">password, passwords, password manager, KeePass, autofill, vault</string>
     <string name="search_keywords_codes">2FA, two-factor, verification code, one-time password, OTP, TOTP, authenticator, Aegis</string>
     <string name="search_keywords_passwords">password, login, account, KeePass</string>

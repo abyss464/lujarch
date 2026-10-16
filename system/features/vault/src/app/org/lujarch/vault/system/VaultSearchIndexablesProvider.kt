@@ -56,7 +56,7 @@ class VaultSearchIndexablesProvider : SearchIndexablesProvider() {
         val ctx = context ?: return MatrixCursor(SearchIndexablesContract.INDEXABLES_RAW_COLUMNS)
         val cursor = MatrixCursor(SearchIndexablesContract.INDEXABLES_RAW_COLUMNS)
         val app = ctx.getString(R.string.app_name)
-        val settings = ctx.getString(R.string.search_settings_title)
+        val settings = ctx.getString(R.string.settings_title)
         val home = Screen(HOME_CLASS, app)
         val settingsPage = Screen(SETTINGS_CLASS, settings)
         fun row(key: String, title: Int, summary: Int, keywords: Int, screen: Screen, icon: Int) {
@@ -79,9 +79,13 @@ class VaultSearchIndexablesProvider : SearchIndexablesProvider() {
         row(SearchKeys.CODES, R.string.codes_title, 0, R.string.search_keywords_codes, home, R.drawable.ic_codes)
         row(SearchKeys.PASSWORDS, R.string.passwords_title, 0, R.string.search_keywords_passwords, home, R.drawable.ic_key)
         row(SearchKeys.SOURCES, R.string.sources_title, 0, R.string.search_keywords_sources, home, R.drawable.ic_setup)
-        row(SearchKeys.SETTINGS, R.string.search_settings_title, R.string.settings_summary, R.string.search_keywords_settings, home, R.drawable.ic_settings)
+        row(SearchKeys.SETTINGS, R.string.settings_title, R.string.settings_summary, R.string.search_keywords_settings, home, R.drawable.ic_settings)
+        row(SearchKeys.REVEAL, R.string.settings_reveal_auth, R.string.settings_reveal_auth_summary, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
+        row(SearchKeys.COPY, R.string.settings_copy_auth, R.string.settings_copy_auth_summary, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
         row(SearchKeys.CLIPBOARD, R.string.settings_clear_clipboard, 0, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
         row(SearchKeys.FORGET_POLICY, R.string.settings_forget_policy, 0, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
+        row(SearchKeys.SEARCH_ITEM, R.string.settings_autofill_search, R.string.settings_autofill_search_summary, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
+        row(SearchKeys.MATCH_HOST, R.string.settings_match_host, R.string.match_host_summary, R.string.search_keywords_settings, settingsPage, R.drawable.ic_settings)
         row(SearchKeys.EXCLUDED, R.string.settings_excluded, 0, R.string.search_keywords_excluded, settingsPage, R.drawable.ic_settings)
         return cursor
     }

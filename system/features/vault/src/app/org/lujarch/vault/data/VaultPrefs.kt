@@ -98,9 +98,7 @@ class VaultPrefs(context: Context) {
 
     /** Seconds after the last copy until the clipboard is cleared; 0: never. */
     var clipboardClearSeconds: Int
-        get() = prefs.getInt(KEY_CLIPBOARD_SECONDS, -1).takeIf { it >= 0 }
-            // The on/off setting of earlier versions: on meant 30 s.
-            ?: if (prefs.getBoolean(KEY_CLEAR_CLIPBOARD_LEGACY, true)) 30 else 0
+        get() = prefs.getInt(KEY_CLIPBOARD_SECONDS, 30)
         set(v) = prefs.edit().putInt(KEY_CLIPBOARD_SECONDS, v).apply()
 
     var forgetPolicy: ForgetPolicy
@@ -139,14 +137,10 @@ class VaultPrefs(context: Context) {
             .mapNotNull { SiteExclusion.parse(it) }.sortedBy { it.host }
         set(v) = prefs.edit().putStringSet(KEY_EXCLUDED_DOMAINS, v.map { it.stored() }.toSet()).apply()
 
-    /**
-     * How far a site without a scope of its own reaches: the whole site by
-     * default, which is the reach the sites of earlier versions had (they are
-     * stored without a scope, so they follow this setting).
-     */
+    /** How far a site without a scope of its own reaches: this host only by default. */
     var autofillExclusionScope: ExclusionScope
-        get() = ExclusionScope.fromKey(prefs.getString(KEY_EXCLUDED_SCOPE, null)).resolve(ExclusionScope.SITE)
-        set(v) = prefs.edit().putString(KEY_EXCLUDED_SCOPE, v.resolve(ExclusionScope.SITE).key).apply()
+        get() = ExclusionScope.fromKey(prefs.getString(KEY_EXCLUDED_SCOPE, null)).resolve(ExclusionScope.HOST)
+        set(v) = prefs.edit().putString(KEY_EXCLUDED_SCOPE, v.resolve(ExclusionScope.HOST).key).apply()
 
     // ---- last load facts ----
 
@@ -231,7 +225,6 @@ class VaultPrefs(context: Context) {
         private const val KEY_AEGIS_ENABLED = "aegis_enabled"
         private const val KEY_REVEAL_AUTH = "reveal_needs_auth"
         private const val KEY_COPY_AUTH = "copy_needs_auth"
-        private const val KEY_CLEAR_CLIPBOARD_LEGACY = "clear_clipboard"
         private const val KEY_CLIPBOARD_SECONDS = "clipboard_clear_seconds"
         private const val KEY_FORGET_POLICY = "forget_policy"
         private const val KEY_KEYS_BOOT = "keys_boot"
