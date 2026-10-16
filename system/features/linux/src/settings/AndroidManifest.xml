@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.linux.settings">
+
+    <!-- Root sessions asks for the fingerprint or the screen lock when it goes on (LNX-4). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Android notifications for Linux: the Terminal app's listener gets its access with the
+         switch (LNX-7). -->
+    <uses-permission android:name="android.permission.MANAGE_NOTIFICATION_LISTENERS" />
+
+    <application>
+        <meta-data
+            android:name="org.lujarch.settings.contribution.linux"
+            android:value="org.lujarch.linux.settings.LinuxContribution" />
+
+        <!-- The pages (LinuxPages), and the Linux development environment row in System with its
+             state (LinuxSummaryProvider). -->
+        <activity
+            android:name="org.lujarch.linux.settings.LinuxActivity"
+            android:exported="true"
+            android:label="@string/lnx_title"
+            android:theme="@style/Theme.LujarchSettings">
+            <intent-filter>
+                <action android:name="org.lujarch.linux.action.LINUX" />
+                <action android:name="org.lujarch.linux.action.SERVICES" />
+                <action android:name="org.lujarch.linux.action.REMOTE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.android.settings.action.EXTRA_SETTINGS" />
+            </intent-filter>
+            <meta-data
+                android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.system" />
+            <meta-data
+                android:name="com.android.settings.keyhint"
+                android:value="lujarch_linux" />
+            <meta-data
+                android:name="com.android.settings.title"
+                android:resource="@string/lnx_title" />
+            <meta-data
+                android:name="com.android.settings.summary_uri"
+                android:value="content://org.lujarch.linux.tile" />
+            <meta-data
+                android:name="com.android.settings.icon"
+                android:resource="@drawable/ic_lnx_terminal" />
+            <meta-data
+                android:name="com.android.settings.profile"
+                android:value="primary_profile_only" />
+        </activity>
+
+        <provider
+            android:name="org.lujarch.linux.settings.LinuxSummaryProvider"
+            android:authorities="org.lujarch.linux.tile"
+            android:exported="true" />
+    </application>
+</manifest>

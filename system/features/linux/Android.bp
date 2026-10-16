@@ -104,6 +104,21 @@ cc_prebuilt_binary {
     system_ext_specific: true,
 }
 
+// The Linux development environment's pages in Lujarch Settings: System > Linux development
+// environment and its search entries, the Quick Settings tile Remote access.
+android_library {
+    name: "LujarchLinuxSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "lujarch_linux_aidl-java",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}
+
 license {
     name: "lujarch_linux_termux_license",
     license_kinds: ["SPDX-license-identifier-GPL-3.0"],

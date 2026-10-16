@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lnx_title">Linux development environment</string>
+    <string name="lnx_use">Use Linux development environment</string>
+    <string name="lnx_state_title">Status</string>
+    <string name="lnx_status_unknown">Unknown</string>
+    <string name="lnx_state_not_installed">Not installed</string>
+    <string name="lnx_state_stopped">Stopped</string>
+    <string name="lnx_state_starting">Starting…</string>
+    <string name="lnx_state_setup">Initial setup in progress…</string>
+    <string name="lnx_state_running">Running</string>
+    <!-- Linux runs; %1$s is the owner's user in Linux -->
+    <string name="lnx_state_running_user">Running for %1$s</string>
+    <string name="lnx_state_failed">Could not start</string>
+    <string name="lnx_state_failed_summary">Linux could not start. Tap for details.</string>
+    <string name="lnx_sessions">Sessions</string>
+    <!-- A command runs in a session; %1$s is its name -->
+    <string name="lnx_session_busy">Running %1$s</string>
+    <string name="lnx_session_awake">Keeps the phone awake</string>
+    <string name="lnx_separator">" · "</string>
+    <string name="lnx_open_terminal">Open terminal</string>
+    <string name="lnx_kind_arch">Arch Linux</string>
+    <string name="lnx_kind_arch_root">Arch Linux as root</string>
+    <string name="lnx_kind_android_root">Android as root</string>
+    <string name="lnx_rootfs">Root file system</string>
+    <string name="lnx_install">Install the root file system</string>
+    <string name="lnx_install_none">No system is installed. Choose an Arch Linux ARM archive in Files.</string>
+    <!-- %1$s is the date of the install, %2$s the owner's user in Linux -->
+    <string name="lnx_install_done">Installed %1$s for %2$s</string>
+    <plurals name="lnx_install_kept">
+        <item quantity="one">%d earlier system kept beside it</item>
+        <item quantity="other">%d earlier systems kept beside it</item>
+    </plurals>
+    <string name="lnx_install_user">User name</string>
+    <string name="lnx_install_user_message">The first start of the new system creates this user, with Linux\'s own user ID.</string>
+    <string name="lnx_install_user_invalid">Lowercase letters, digits, - and _, starting with a letter; not root</string>
+    <string name="lnx_install_replace">Replace</string>
+    <string name="lnx_install_replace_message">The new system replaces the installed one, which is kept beside it under its date. Linux stops while the new system is put in place.</string>
+    <string name="lnx_action">Last action</string>
+    <string name="lnx_action_install">Install</string>
+    <string name="lnx_action_setup">Initial setup</string>
+    <!-- %1$s is the action -->
+    <string name="lnx_action_running">%1$s: in progress…</string>
+    <!-- %1$s is the action, %2$s and %3$s sizes -->
+    <string name="lnx_action_running_progress">%1$s: %2$s of %3$s read</string>
+    <!-- %1$s is the action, %2$s its time -->
+    <string name="lnx_action_ok">%1$s: done %2$s</string>
+    <!-- %1$s is the action, %2$s its time -->
+    <string name="lnx_action_failed">%1$s: failed %2$s. Tap for details.</string>
+    <!-- %1$s is the action, %2$s its time -->
+    <string name="lnx_action_interrupted">%1$s: did not finish (%2$s)</string>
+    <string name="lnx_setup_again">Run the initial setup again</string>
+    <string name="lnx_setup_again_summary">Creates the user again if needed and sets up Android\'s groups and sudo</string>
+    <string name="lnx_setup_again_message">The initial setup runs as root in Linux while Linux runs.</string>
+    <string name="lnx_setup_run">Run</string>
+    <string name="lnx_terminal">Terminal</string>
+    <string name="lnx_open_kind">When the terminal opens</string>
+    <string name="lnx_colors">Colors</string>
+    <string name="lnx_colors_system">Follow the system</string>
+    <string name="lnx_colors_classic">Classic</string>
+    <string name="lnx_colors_own">Your own colors</string>
+    <string name="lnx_keys_row">Keys row above the keyboard</string>
+    <string name="lnx_keys_row_summary">ESC, TAB, CTRL, ALT, arrows and more</string>
+    <string name="lnx_root_sessions">Root sessions</string>
+    <string name="lnx_root_sessions_summary">Sessions as root in Arch Linux or in Android. Turning it off ends them.</string>
+    <string name="lnx_root_sessions_auth">Allow Root sessions</string>
+    <string name="lnx_auth_unavailable_title">Can\'t confirm it\'s you</string>
+    <string name="lnx_auth_no_lock">This phone has no screen lock. Set one to protect Root sessions, or go on without it.</string>
+    <string name="lnx_auth_unavailable">The fingerprint or the screen lock can\'t be used now.</string>
+    <string name="lnx_auth_set_lock">Set screen lock</string>
+    <string name="lnx_auth_continue">Continue</string>
+    <string name="lnx_memory_category">Memory</string>
+    <string name="lnx_memory">Memory</string>
+    <string name="lnx_memory_android">For Android</string>
+    <string name="lnx_memory_balanced">Balanced</string>
+    <string name="lnx_memory_linux">For Linux</string>
+    <string name="lnx_memory_unlimited">Unlimited</string>
+    <!-- %1$s is the choice, %2$s and %3$s sizes -->
+    <string name="lnx_memory_used">%1$s · %2$s of %3$s in use</string>
+    <!-- %1$s is the choice, %2$s a size -->
+    <string name="lnx_memory_used_unlimited">%1$s · %2$s in use</string>
+    <!-- %1$s is the choice, %2$s a size -->
+    <string name="lnx_memory_limit">%1$s · up to %2$s before Android\'s apps are favored</string>
+    <string name="lnx_swap">Swap</string>
+    <string name="lnx_swap_summary">A swap file in Linux\'s storage while Linux runs</string>
+    <!-- %1$s is a size -->
+    <string name="lnx_swap_on">A swap file of %1$s in use</string>
+    <string name="lnx_open_desktop">Open desktop</string>
+    <string name="lnx_open_desktop_summary">The desktop of Arch Linux full screen</string>
+    <string name="lnx_lend">Lent to Linux</string>
+    <string name="lnx_lend_clipboard">Shared clipboard</string>
+    <string name="lnx_lend_clipboard_summary">The clipboard both ways, in the terminal and on the desktop</string>
+    <string name="lnx_lend_notifications">Android notifications</string>
+    <string name="lnx_lend_notifications_summary">Their count and list at /run/lujarch/notifications</string>
+    <string name="lnx_lend_sensors">Sensors</string>
+    <string name="lnx_lend_sensors_summary">The motion and environment sensors at /run/lujarch/sensors</string>
+    <string name="lnx_lend_usb">USB devices</string>
+    <string name="lnx_lend_usb_summary">Devices connected to the phone\'s USB port</string>
+    <string name="lnx_lend_fingerprint">Confirm authorization with fingerprint</string>
+    <string name="lnx_lend_fingerprint_summary">sudo and polkit in Linux ask for the fingerprint or the screen lock while the terminal or the desktop is on screen</string>
+    <string name="lnx_lend_ir">Infrared transmitter</string>
+    <string name="lnx_lend_ir_summary">Transmitting through /run/lujarch/ir</string>
+    <string name="lnx_lend_nfc">NFC card reading</string>
+    <string name="lnx_lend_nfc_summary">Cards held to the phone while the terminal or the desktop is on screen</string>
+    <string name="lnx_services">Services</string>
+    <string name="lnx_remote">Remote access</string>
+    <string name="lnx_footer">Arch Linux ARM runs beside Android on the same kernel and network, as a user of its own. Its sessions open in the Terminal app.</string>
+    <string name="lnx_error_load">Couldn\'t load the Linux development environment</string>
+    <string name="lnx_error_switch">Couldn\'t change the setting</string>
+    <string name="lnx_error_install">Couldn\'t install the root file system</string>
+    <string name="lnx_error_setup">Couldn\'t run the initial setup</string>
+    <string name="lnx_error_colors">Couldn\'t set your own colors</string>
+    <string name="lnx_error_invalid">The value is not valid.</string>
+    <string name="lnx_error_not_running">Linux is not running. Turn on Use Linux development environment first.</string>
+    <string name="lnx_error_root_sessions_off">Root sessions is off.</string>
+    <string name="lnx_error_busy">An install or the initial setup is in progress. Try again when it ends.</string>
+    <string name="lnx_error_no_service">This service no longer exists.</string>
+    <string name="lnx_error_load_services">Couldn\'t load the services</string>
+    <string name="lnx_error_service">Couldn\'t change the service</string>
+    <string name="lnx_error_remote">Couldn\'t change Remote access</string>
+    <string name="lnx_services_none">No services</string>
+    <string name="lnx_services_footer">A service is a directory of /etc/lujarch/services in Linux that holds an executable file run, which runs the service as root in the foreground. A file named down keeps it from starting with Linux. Its log is /var/log/lujarch/&lt;name&gt;.log.</string>
+    <string name="lnx_service_run">Run</string>
+    <string name="lnx_service_starts_title">Starts with Linux</string>
+    <string name="lnx_service_restart">Restart</string>
+    <string name="lnx_service_log">Log</string>
+    <string name="lnx_service_log_empty">The log is empty.</string>
+    <string name="lnx_service_files">Files</string>
+    <!-- %1$s is a time -->
+    <string name="lnx_service_running">Running since %1$s</string>
+    <string name="lnx_service_restarting">Starting again…</string>
+    <!-- %1$d is the exit status -->
+    <string name="lnx_service_ended">Ended with %1$d</string>
+    <string name="lnx_service_stopped">Stopped</string>
+    <string name="lnx_service_starts">Starts with Linux</string>
+    <string name="lnx_service_not_starts">Doesn\'t start with Linux</string>
+    <string name="lnx_remote_mode">When it runs</string>
+    <string name="lnx_remote_charging">While charging</string>
+    <string name="lnx_remote_always">Always</string>
+    <string name="lnx_remote_off">Off</string>
+    <string name="lnx_remote_server_category">Relay server</string>
+    <string name="lnx_remote_server">Server address</string>
+    <string name="lnx_remote_port">Port</string>
+    <string name="lnx_remote_token">Token</string>
+    <string name="lnx_remote_name">Entry name</string>
+    <string name="lnx_remote_secret">Entry secret</string>
+    <string name="lnx_remote_set">Set</string>
+    <string name="lnx_remote_not_set">Not set</string>
+    <string name="lnx_remote_keys">Public keys allowed to log in</string>
+    <string name="lnx_remote_add_key">Add a public key</string>
+    <string name="lnx_remote_remove_key">Remove the public key</string>
+    <string name="lnx_remote_remove_key_message">Computers with this key can no longer log in.</string>
+    <string name="lnx_remote_remove">Remove</string>
+    <string name="lnx_remote_invalid_server">A host name or an address</string>
+    <string name="lnx_remote_invalid_port">A port from 1 to 65535</string>
+    <string name="lnx_remote_invalid_name">Letters, digits, ., _ and -</string>
+    <string name="lnx_remote_invalid_secret">Printable characters without spaces</string>
+    <string name="lnx_remote_invalid_key">One OpenSSH public key, such as ssh-ed25519 AAAA… name</string>
+    <string name="lnx_remote_running">Running</string>
+    <string name="lnx_remote_waiting">Waiting for a charger</string>
+    <string name="lnx_remote_not_set_up">Not set up</string>
+    <string name="lnx_remote_no_linux">Linux is not running</string>
+    <string name="lnx_remote_no_openssh">Linux has no OpenSSH server (pacman -S openssh)</string>
+    <string name="lnx_remote_failed">Stopped after repeated failures</string>
+    <string name="lnx_remote_footer">Your computers log in to Linux by SSH through your own relay server (frp, an stcp entry). Only the public keys above and only your user may log in; passwords and root are refused. Nothing on the phone\'s networks is opened.</string>
+    <!-- Settings search keywords -->
+    <string name="lnx_search_keywords">Linux, Arch Linux, development, terminal, chroot</string>
+    <string name="lnx_search_install_keywords">root file system, archive, install, initial setup, rootfs</string>
+    <string name="lnx_search_terminal_keywords">terminal, colors, keys, shell</string>
+    <string name="lnx_search_root_keywords">root, superuser, su</string>
+    <string name="lnx_search_memory_keywords">memory, swap, RAM</string>
+    <string name="lnx_search_desktop_keywords">desktop, display, VNC, X11, Wayland</string>
+    <string name="lnx_search_services_keywords">services, daemons</string>
+    <string name="lnx_search_remote_keywords">remote access, relay, SSH, frp</string>
+    <string name="lnx_search_lend_keywords">clipboard, notifications, sensors, fingerprint, infrared, USB, NFC</string>
+</resources>
