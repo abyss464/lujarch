@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">终端</string>
+    <string name="notifications_listener">Linux 开发环境</string>
+    <string name="kind_arch">Arch Linux</string>
+    <string name="kind_arch_root">Arch Linux（root）</string>
+    <string name="kind_android_root">Android（root）</string>
+    <string name="new_session">新建会话</string>
+    <string name="more">更多选项</string>
+    <string name="rename">重命名</string>
+    <string name="keep_awake">保持唤醒</string>
+    <string name="end_session">结束会话</string>
+    <string name="display">显示</string>
+    <string name="settings">设置</string>
+    <string name="session_ended">已结束</string>
+    <string name="tab_busy">正在运行 %1$s</string>
+    <string name="no_sessions">没有会话。点按 + 即可新建。</string>
+    <string name="service_missing">Linux 开发环境没有响应。</string>
+    <string name="state_not_installed">尚未安装 Linux。请在设置中安装根文件系统。</string>
+    <string name="state_stopped">Linux 已关闭。</string>
+    <string name="state_starting">Linux 正在启动…</string>
+    <string name="state_setup">正在进行初始设置…</string>
+    <string name="state_failed">Linux 无法启动。</string>
+    <string name="open_settings">打开设置</string>
+    <string name="error_root_sessions_off">Root 会话已关闭。</string>
+    <string name="error_too_many_sessions">最多只能打开 16 个会话。</string>
+    <string name="error_session">无法打开会话。</string>
+    <string name="auth_title">在 Linux 中确认授权</string>
+    <string name="mode_summary">Linux 正在屏幕上显示</string>
+    <string name="mode_trigger">Linux 桌面在屏幕上显示时</string>
+    <string name="open_terminal">打开终端</string>
+    <string name="desktop_none">Linux 没有在 /run/lujarch/desktop 提供桌面。</string>
+    <string name="desktop_failed">与 Linux 桌面的连接已断开。</string>
+    <string name="keyboard">键盘</string>
+    <string name="remote_access">远程访问</string>
+    <string name="remote_charging">充电时</string>
+    <string name="remote_always">始终</string>
+    <string name="remote_off">关闭</string>
+    <string name="remote_running">%1$s · 运行中</string>
+    <string name="remote_waiting">%1$s · 等待充电</string>
+    <string name="remote_failed">%1$s · 多次失败后已停止</string>
+</resources>

@@ -1,0 +1,13 @@
+Termux's terminal-emulator and terminal-view
+https://github.com/termux/termux-app, tag v0.118.3, commit 5b657c6adf4304e5198951ce815fe0205dcac29c
+The termux-app repository is GPLv3 only (LICENSE.md in this directory); these two libraries carry
+Apache-2.0 code of Terminal Emulator for Android (https://github.com/jackpal/Android-Terminal-Emulator).
+
+emulator/java is terminal-emulator/src/main/java and view/java and view/res are
+terminal-view/src/main, without the JNI part (lujarch_linux holds the terminals) and with these
+changes:
+- TerminalSession sends its input and size to a HostTransport and is fed the session's output,
+  instead of starting a process.
+- TerminalView is not final, so that the Terminal app subclasses it.
+- TerminalRenderer gives its font metrics, text size and typeface.
+- view/res has Simplified Chinese and Japanese strings.

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!--
+    The Terminal app: the Linux development environment's sessions (LNX-3), its desktop (LNX-6)
+    and the parts of the phone Linux is lent that need an app on screen (LNX-7). Platform-signed:
+    it reaches lujarch_linux, owns the Mode Linux and locks the status bar while the desktop is
+    on screen.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.linux.terminal">
+
+    <!-- The Mode Linux (an automatic Do Not Disturb rule of this app). -->
+    <uses-permission android:name="android.permission.MANAGE_NOTIFICATIONS" />
+    <!-- The status bar stays locked while the desktop is on screen. -->
+    <uses-permission android:name="android.permission.STATUS_BAR" />
+    <!-- Confirming authorizations in Linux with the fingerprint or the screen lock. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- NFC card reading for Linux. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The Quick Settings tile Remote access switches When it runs. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- The names of the apps whose notifications Linux is lent. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LujarchTerminal">
+
+        <activity
+            android:name=".TerminalActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="org.lujarch.linux.action.TERMINAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- The desktop full screen: the Terminal app's Display, Settings' Open desktop and the
+             home screen's double tap (Enter Linux). -->
+        <activity
+            android:name=".DesktopActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="false"
+            android:screenOrientation="unspecified"
+            android:taskAffinity="org.lujarch.linux.desktop"
+            android:theme="@style/Theme.LujarchTerminal.Desktop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="org.lujarch.linux.action.DESKTOP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- The Mode Linux's page in Settings > Modes opens Linux's own page in Settings, the
+             tile's long press the page of Remote access. -->
+        <activity
+            android:name=".ModesActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.app.action.AUTOMATIC_ZEN_RULE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".RemoteAccessTile"
+            android:exported="true"
+            android:icon="@drawable/ic_remote"
+            android:label="@string/remote_access"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <!-- Android's notifications for Linux, while they are lent (Lujarch Settings grants the
+             access with the switch). -->
+        <service
+            android:name=".NotificationsListener"
+            android:exported="true"
+            android:label="@string/notifications_listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

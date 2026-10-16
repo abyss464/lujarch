@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Terminal</string>
+    <string name="notifications_listener">Linux development environment</string>
+    <string name="kind_arch">Arch Linux</string>
+    <string name="kind_arch_root">Arch Linux as root</string>
+    <string name="kind_android_root">Android as root</string>
+    <string name="new_session">New session</string>
+    <string name="more">More options</string>
+    <string name="rename">Rename</string>
+    <string name="keep_awake">Keep awake</string>
+    <string name="end_session">End session</string>
+    <string name="display">Display</string>
+    <string name="settings">Settings</string>
+    <string name="session_ended">Ended</string>
+    <!-- A command runs in a session; %1$s is its name -->
+    <string name="tab_busy">Running %1$s</string>
+    <string name="no_sessions">No sessions. Tap + to open one.</string>
+    <string name="service_missing">The Linux development environment does not answer.</string>
+    <string name="state_not_installed">Linux is not installed. Install a root file system in Settings.</string>
+    <string name="state_stopped">Linux is off.</string>
+    <string name="state_starting">Linux is starting…</string>
+    <string name="state_setup">The initial setup runs…</string>
+    <string name="state_failed">Linux could not start.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="error_root_sessions_off">Root sessions is off.</string>
+    <string name="error_too_many_sessions">At most 16 sessions can be open.</string>
+    <string name="error_session">The session could not open.</string>
+    <string name="auth_title">Confirm authorization in Linux</string>
+    <string name="mode_name" translatable="false">Linux</string>
+    <string name="mode_summary">Linux is on screen</string>
+    <string name="mode_trigger">While the Linux desktop is on screen</string>
+    <string name="open_terminal">Open terminal</string>
+    <string name="desktop_none">Linux serves no desktop at /run/lujarch/desktop.</string>
+    <string name="desktop_failed">The connection to the Linux desktop ended.</string>
+    <string name="keyboard">Keyboard</string>
+    <!-- The keys row above the keyboard -->
+    <string name="key_esc" translatable="false">ESC</string>
+    <string name="key_tab" translatable="false">TAB</string>
+    <string name="key_ctrl" translatable="false">CTRL</string>
+    <string name="key_alt" translatable="false">ALT</string>
+    <string name="key_left" translatable="false">←</string>
+    <string name="key_down" translatable="false">↓</string>
+    <string name="key_up" translatable="false">↑</string>
+    <string name="key_right" translatable="false">→</string>
+    <string name="key_home" translatable="false">HOME</string>
+    <string name="key_end" translatable="false">END</string>
+    <string name="key_page_up" translatable="false">PGUP</string>
+    <string name="key_page_down" translatable="false">PGDN</string>
+    <string name="key_dash" translatable="false">-</string>
+    <string name="key_slash" translatable="false">/</string>
+    <string name="key_pipe" translatable="false">|</string>
+    <string name="key_tilde" translatable="false">~</string>
+    <string name="remote_access">Remote access</string>
+    <string name="remote_charging">While charging</string>
+    <string name="remote_always">Always</string>
+    <string name="remote_off">Off</string>
+    <!-- Remote access runs; %1$s is when it runs -->
+    <string name="remote_running">%1$s · running</string>
+    <!-- Remote access waits for a charger; %1$s is when it runs -->
+    <string name="remote_waiting">%1$s · waiting for a charger</string>
+    <!-- Remote access stopped after failures; %1$s is when it runs -->
+    <string name="remote_failed">%1$s · stopped after failures</string>
+</resources>

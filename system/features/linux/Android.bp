@@ -103,3 +103,63 @@ cc_prebuilt_binary {
     check_elf_files: false,
     system_ext_specific: true,
 }
+
+license {
+    name: "lujarch_linux_termux_license",
+    license_kinds: ["SPDX-license-identifier-GPL-3.0"],
+    license_text: [
+        "src/termux/NOTICE",
+        "src/termux/LICENSE.md",
+    ],
+}
+
+// Termux's terminal emulator and terminal view, the Terminal app's terminal (src/termux/NOTICE).
+android_library {
+    name: "LujarchLinuxTermuxEmulator",
+    licenses: ["lujarch_linux_termux_license"],
+    srcs: ["src/termux/emulator/java/**/*.java"],
+    manifest: "src/termux/emulator/AndroidManifest.xml",
+    sdk_version: "current",
+    min_sdk_version: "36",
+    errorprone: {
+        enabled: false,
+    },
+}
+
+android_library {
+    name: "LujarchLinuxTermuxView",
+    licenses: ["lujarch_linux_termux_license"],
+    srcs: ["src/termux/view/java/**/*.java"],
+    manifest: "src/termux/view/AndroidManifest.xml",
+    resource_dirs: ["src/termux/view/res"],
+    sdk_version: "current",
+    min_sdk_version: "36",
+    static_libs: [
+        "androidx.annotation_annotation",
+        "LujarchLinuxTermuxEmulator",
+    ],
+    errorprone: {
+        enabled: false,
+    },
+}
+
+// The Terminal app: the sessions, the desktop, the Mode Linux, and the parts of the phone Linux
+// is lent that need an app.
+android_app {
+    name: "LujarchLinuxTerminal",
+    srcs: ["src/terminal/org/**/*.kt"],
+    resource_dirs: ["src/terminal/res"],
+    manifest: "src/terminal/AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    system_ext_specific: true,
+    static_libs: [
+        "LujarchLinuxTermuxView",
+        "androidx.core_core",
+        "kotlinx_coroutines_android",
+        "lujarch_linux_aidl-java",
+    ],
+    optimize: {
+        proguard_flags_files: ["src/terminal/proguard.flags"],
+    },
+}

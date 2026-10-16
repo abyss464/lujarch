@@ -1,0 +1,9 @@
+# The Mode Linux's settings and the notification listener are started by the system by name.
+-keep class org.lujarch.linux.terminal.ModesActivity
+-keep class org.lujarch.linux.terminal.NotificationsListener
+-keep class org.lujarch.linux.terminal.RemoteAccessTile
+
+# Dispatchers.Main is looked up through ServiceLoader.
+-keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

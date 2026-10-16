@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ターミナル</string>
+    <string name="notifications_listener">Linux 開発環境</string>
+    <string name="kind_arch">Arch Linux</string>
+    <string name="kind_arch_root">Arch Linux（root）</string>
+    <string name="kind_android_root">Android（root）</string>
+    <string name="new_session">新しいセッション</string>
+    <string name="more">その他のオプション</string>
+    <string name="rename">名前を変更</string>
+    <string name="keep_awake">スリープしない</string>
+    <string name="end_session">セッションを終了</string>
+    <string name="display">ディスプレイ</string>
+    <string name="settings">設定</string>
+    <string name="session_ended">終了しました</string>
+    <string name="tab_busy">%1$s を実行中</string>
+    <string name="no_sessions">セッションはありません。+ をタップして開きます。</string>
+    <string name="service_missing">Linux 開発環境が応答しません。</string>
+    <string name="state_not_installed">Linux がインストールされていません。設定でルート ファイル システムをインストールしてください。</string>
+    <string name="state_stopped">Linux はオフです。</string>
+    <string name="state_starting">Linux を起動しています…</string>
+    <string name="state_setup">初期設定を実行しています…</string>
+    <string name="state_failed">Linux を起動できませんでした。</string>
+    <string name="open_settings">設定を開く</string>
+    <string name="error_root_sessions_off">Root セッションはオフです。</string>
+    <string name="error_too_many_sessions">開けるセッションは 16 個までです。</string>
+    <string name="error_session">セッションを開けませんでした。</string>
+    <string name="auth_title">Linux での認証を確認</string>
+    <string name="mode_summary">Linux を表示中</string>
+    <string name="mode_trigger">Linux のデスクトップを表示しているとき</string>
+    <string name="open_terminal">ターミナルを開く</string>
+    <string name="desktop_none">Linux は /run/lujarch/desktop でデスクトップを提供していません。</string>
+    <string name="desktop_failed">Linux のデスクトップとの接続が切れました。</string>
+    <string name="keyboard">キーボード</string>
+    <string name="remote_access">リモート アクセス</string>
+    <string name="remote_charging">充電中</string>
+    <string name="remote_always">常時</string>
+    <string name="remote_off">オフ</string>
+    <string name="remote_running">%1$s · 実行中</string>
+    <string name="remote_waiting">%1$s · 充電を待機中</string>
+    <string name="remote_failed">%1$s · 失敗が続いたため停止</string>
+</resources>
