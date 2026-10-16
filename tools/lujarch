@@ -2085,7 +2085,7 @@ def cmd_build(args):
         if last.is_file():
             product = Path(json.loads(last.read_text())["product_out"])
             if all((product / f).is_file() for f in ("module-info.json", BOOT_CLASSPATH)):
-                brought += module_files(host, product, args.modules)[0]
+                brought += module_files(Modules(host, product), args.modules)[0]
         args.modules += [m for m in brought if m not in args.modules]
     modules = " ".join(shlex.quote(m) for m in args.modules)
 
@@ -2252,9 +2252,9 @@ def adb_binary(host_out):
     return str(built) if built.is_file() else "adb"
 
 
-def adb(host_out, *args, timeout=30):
+def adb(host_out, *args, timeout=30, input=None):
     return subprocess.run([adb_binary(host_out), "-s", f"127.0.0.1:{ADB_PORT}", *args],
-                          capture_output=True, text=True, timeout=timeout)
+                          capture_output=True, text=True, timeout=timeout, input=input)
 
 
 def booted(host_out):
@@ -2293,7 +2293,9 @@ def screen_nodes(host_out):
 
 
 def adb_root(host_out):
-    """Restarts adbd as root; true when it is."""
+    """Restarts adbd as root unless it runs as root; true when it does."""
+    if adb(host_out, "shell", "id", "-u").stdout.strip() == "0":
+        return True
     adb(host_out, "root")
     for _ in range(12):
         time.sleep(2)
@@ -2391,43 +2393,71 @@ def boot_classpath(product):
             for field, path in proto_fields(jar) if field == 1}
 
 
-def module_files(host, product, modules):
-    """The modules to build and copy for the named ones, the files they install into the image
-    with the modules they require (paths relative to the product directory), and the names
-    module-info.json does not know. The runtime uses the boot image only with the jars it was
-    compiled from, so a module of the boot image unit (the boot image and the boot classpath jars
-    of the system partition) brings the whole unit."""
-    module_info = json.loads((product / "module-info.json").read_text())
-    tree_product = os.path.relpath(product, host.tree)
-    named = [m for m in dict.fromkeys(modules) if m in module_info]
-    unknown = [m for m in dict.fromkeys(modules) if m not in module_info]
+INIT_RC = re.compile(r"/etc/init/[^/]+\.rc$")
 
-    def own(name):
-        rels = (os.path.relpath(path, tree_product)
-                for path in module_info.get(name, {}).get("installed") or [])
+
+class Modules:
+    """A product's modules, from its module-info.json, and the files each installs into the image
+    (paths relative to the product directory)."""
+
+    def __init__(self, host, product):
+        self.dir = product
+        self.info = json.loads((product / "module-info.json").read_text())
+        self.tree_product = os.path.relpath(product, host.tree)
+
+    def own(self, name):
+        rels = (os.path.relpath(path, self.tree_product)
+                for path in self.info.get(name, {}).get("installed") or [])
         return [rel for rel in rels if not rel.startswith("..") and rel.split("/", 1)[0] not in (
             "system_other", "fake_packages", "obj", "testcases", "data", "symbols")]
 
-    def installs(names):
+    def installs(self, names):
+        """What these modules and the modules they require install."""
         files, seen, queue = [], set(), list(names)
         while queue:
             name = queue.pop()
-            if name in seen or name not in module_info:
+            if name in seen or name not in self.info:
                 continue
             seen.add(name)
-            queue += module_info[name].get("required") or []
-            for rel in own(name):
+            queue += self.info[name].get("required") or []
+            for rel in self.own(name):
                 if rel not in files:
                     files.append(rel)
         return files
 
-    jars = {os.path.join(tree_product, p.lstrip("/")) for p in boot_classpath(product)
+    def services(self, files):
+        """The init services of the modules that install or require one of these files, each
+        with those files."""
+        wanted, found = set(files), {}
+        for name, entry in self.info.items():
+            if not any(INIT_RC.search(path) for path in entry.get("installed") or []):
+                continue
+            needs = wanted.intersection(self.installs([name]))
+            if not needs:
+                continue
+            # A module the image does not hold has no service in the device.
+            for rc in (r for r in self.own(name) if INIT_RC.search(r) and (self.dir / r).is_file()):
+                for line in (self.dir / rc).read_text().split("\n"):
+                    words = line.split()
+                    if len(words) > 2 and words[0] == "service":
+                        found.setdefault(words[1], set()).update(needs)
+        return found
+
+
+def module_files(mods, modules):
+    """The modules to build and copy for the named ones, the files they install into the image
+    with the modules they require, and the names module-info.json does not know. The runtime uses
+    the boot image only with the jars it was compiled from, so a module of the boot image unit
+    (the boot image and the boot classpath jars of the system partition) brings the whole unit."""
+    named = [m for m in dict.fromkeys(modules) if m in mods.info]
+    unknown = [m for m in dict.fromkeys(modules) if m not in mods.info]
+    jars = {os.path.join(mods.tree_product, p.lstrip("/")) for p in boot_classpath(mods.dir)
             if p.startswith("/system/")}
-    unit = [BOOT_IMAGE, *sorted(name for name, entry in module_info.items()
+    unit = [BOOT_IMAGE, *sorted(name for name, entry in mods.info.items()
                                 if jars.intersection(entry.get("installed") or []))]
-    if set(installs(named)).intersection(rel for name in unit for rel in own(name)):
+    if set(mods.installs(named)).intersection(rel for name in unit for rel in mods.own(name)):
         named += [m for m in unit if m not in named]
-    return named, installs(named), unknown
+    return named, mods.installs(named), unknown
 
 
 # What the virtual device boots, by product directory, with the list its image is packed with
@@ -2480,58 +2510,124 @@ def listed(files, most=20):
                      + ([f"  and {len(files) - most} more"] if len(files) > most else []))
 
 
-def vm_sync(host, info, host_out, modules):
-    """Copies what the named modules install, or with none the files the images lack, into the
-    running virtual device, keeping its data, and restarts it."""
-    product = Path(info["product_out"])
-    if modules:
-        synced, files, unknown = module_files(host, product, modules)
-        if unknown:
-            die(f"no module {', '.join(unknown)} in {product / 'module-info.json'}")
-        if not files:
-            die("the modules install nothing into the image")
-    else:
-        synced, files = [], unpacked_files(info)
-        if not files:
-            log("the images hold every installed file; nothing to copy")
-            return 0
-        boot = [f for f in files if f.split("/", 1)[0] in VM_RAMDISKS]
-        if boot:
-            die(f"the boot images lack these files, which only a build packs "
-                f"(lujarch build vm):\n{listed(boot)}")
-    missing = [f for f in files if not os.path.lexists(product / f)]
-    if missing:
-        die(f"not built: {', '.join(missing)} (lujarch build vm {' '.join(modules)})")
-    if not adb_root(host_out):
-        provision(host_out)
-    remount = adb(host_out, "remount", timeout=300)
-    said = (remount.stdout + remount.stderr).strip()
-    if remount.returncode and "reboot" not in said.lower():
-        die(f"adb remount: {said}")
-    if "reboot" in said.lower():
-        # The first remount turns verification off, which takes effect at the next start.
-        log("making the system partitions writable; restarting the virtual device once")
-        adb(host_out, "reboot", timeout=60)
-        time.sleep(10)
-        if not wait_booted(host_out, 600) or not adb_root(host_out):
-            die("the virtual device did not come back after making its partitions writable")
-        remount = adb(host_out, "remount", timeout=300)
-        if remount.returncode:
-            die(f"adb remount: {(remount.stdout + remount.stderr).strip()}")
-    for rel in files:
-        if (product / rel).is_symlink():
-            target = os.readlink(product / rel)
-            link = adb(host_out, "shell", "ln", "-sfn", target, "/" + rel)
-            if link.returncode:
-                die(f"ln -s {target} /{rel}: {(link.stdout + link.stderr).strip()}")
-            log(f"linked /{rel} to {target}")
-            continue
-        push = adb(host_out, "push", str(product / rel), "/" + rel, timeout=600)
-        if push.returncode:
-            die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
-        log(f"copied /{rel}")
-    # Packages, init scripts, the SELinux policy and file labels are read when the system starts.
-    log("restarting the virtual device; its data stays")
+# What reads a file of the image, by its path in its partition, and so what makes the running
+# device use a new copy. Init and the kernel read these only when the device starts:
+READ_AT_START = ("etc/init/", "etc/selinux/", "etc/vintf/", "etc/classpaths/",
+                 "etc/linker.config.pb", "framework/", "apex/", "lib/modules/")
+# The framework reads its packages and the system configuration when it starts:
+READ_BY_FRAMEWORK = ("app/", "priv-app/", "overlay/", "etc/permissions/", "etc/sysconfig/",
+                     "etc/default-permissions/")
+# A process keeps the programs and libraries it started with:
+CODE = ("bin/", "xbin/", "lib/", "lib64/")
+
+
+def partition_path(rel):
+    return rel.split("/", 1)[-1]
+
+
+def device_differs(host_out, product, files):
+    """The files the running device lacks or holds with other content than the built ones."""
+    script = ('while read -r f; do if [ -L "$f" ]; then echo "L $(readlink "$f")"; '
+              'elif [ -f "$f" ]; then sha256sum "$f" | cut -d " " -f 1; else echo -; fi; done')
+    read = adb(host_out, "shell", script, input="".join(f"/{f}\n" for f in files), timeout=600)
+    held = read.stdout.split("\n")[:len(files)]
+    if read.returncode or len(held) != len(files):
+        die(f"could not read the device's copies: {read.stderr.strip()}")
+
+    def built(rel):
+        path = product / rel
+        return f"L {os.readlink(path)}" if path.is_symlink() else sha256_file(path)
+
+    return [f for f, copy in zip(files, held) if copy != built(f)]
+
+
+def stale_code(host_out, files):
+    """The processes that run a copy of these programs or libraries other than the one in place,
+    which they started with before it was replaced, as 'NAME (PID): PATH'."""
+    paths = {"/" + f for f in files if partition_path(f).startswith(CODE)}
+    if not paths:
+        return []
+    patterns = [arg for path in sorted(paths) for arg in ("-e", f" {path} (deleted)")]
+    maps = adb(host_out, "shell", shlex.join(["grep", "-H", "-F", *patterns])
+               + " /proc/[0-9]*/maps 2>/dev/null").stdout
+    found = {}
+    for line in maps.split("\n"):
+        where, _, entry = line.partition(":")
+        path = entry.split(None, 5)[-1].removesuffix(" (deleted)") if entry else ""
+        if path in paths:
+            found[where.split("/")[2]] = path
+    names = dict(line.split(None, 1) for line in adb(
+        host_out, "shell", "ps", "-A", "-o", "PID,NAME").stdout.split("\n")[1:] if line.strip())
+    return [f"{names.get(pid, '?')} ({pid}): {path}" for pid, path in sorted(found.items())]
+
+
+def restart_services(host_out, names):
+    """Restarts those of these init services that run, as init restarts a service, and waits for
+    each to run again; the names of those it restarted."""
+    names = sorted(names)
+    if not names:
+        return []
+    query = "; ".join(f"getprop init.svc.{n}; getprop init.svc_debug_pid.{n}" for n in names)
+
+    def states():
+        props = adb(host_out, "shell", query).stdout.split("\n") + [""] * 2 * len(names)
+        return {n: (props[2 * i], props[2 * i + 1]) for i, n in enumerate(names)}
+
+    before = states()
+    running = [n for n in names if before[n][0] == "running"]
+    for name in running:
+        adb(host_out, "shell", "setprop", "ctl.restart", name)
+    deadline = time.monotonic() + 30
+    while True:
+        now = states()
+        waiting = [n for n in running if now[n][0] != "running" or now[n][1] in ("", before[n][1])]
+        if not waiting:
+            return running
+        if time.monotonic() > deadline:
+            die("not running again after its restart: "
+                + ", ".join(f"{n} ({now[n][0] or 'gone'})" for n in waiting) + "; adb logcat")
+        time.sleep(0.5)
+
+
+# What toolbox's stop and start, with no service named, stop and start: the framework and the
+# services it draws, plays and routes with.
+FRAMEWORK_SERVICES = ("netd", "surfaceflinger", "audioserver", "zygote", "zygote_next",
+                      "zygote_secondary")
+
+
+def restart_framework(host_out):
+    """Restarts the framework (zygote, system_server and every app, with FRAMEWORK_SERVICES),
+    which then reads its packages and the system configuration again, and waits until it has
+    unlocked the user again."""
+    query = "; ".join([f"getprop init.svc.{name}" for name in FRAMEWORK_SERVICES]
+                      + ["service check activity"])
+    adb(host_out, "shell", "stop", timeout=120)
+    # Init stops them in the background, and servicemanager lets go of the stopped system server's
+    # services only once it has ended; a system server started before gets those dead services
+    # and dies with them.
+    deadline = time.monotonic() + 120
+    while True:
+        said = adb(host_out, "shell", query).stdout.split("\n") + [""] * len(FRAMEWORK_SERVICES)
+        if (all(state in ("", "stopped") for state in said[:len(FRAMEWORK_SERVICES)])
+                and "not found" in said[len(FRAMEWORK_SERVICES)]):
+            break
+        if time.monotonic() > deadline:
+            die("the framework did not stop")
+        time.sleep(0.2)
+    adb(host_out, "shell", "start", timeout=120)
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline:
+        time.sleep(2)
+        user = adb(host_out, "shell", "cmd", "activity", "get-started-user-state", "0")
+        if user.stdout.strip() == "RUNNING_UNLOCKED":
+            provision(host_out)
+            return
+    die("the framework did not come back after its restart")
+
+
+def restart_device(host_out, files):
+    """Restarts the virtual device with its data kept, then labels the files with the file
+    contexts that start loaded, and restarts it once more when that changed a label."""
     adb(host_out, "reboot", timeout=60)
     time.sleep(10)
     if not wait_booted(host_out, 600):
@@ -2553,7 +2649,101 @@ def vm_sync(host, info, host_out, modules):
         if not wait_booted(host_out, 600):
             die("the virtual device did not come back after relabelling")
         provision(host_out)
-    log(f"synced {len(files)} files{' of ' + ' '.join(synced) if synced else ''}; "
+
+
+def vm_sync(host, info, host_out, modules):
+    """Copies what the named modules install, or with none the files the images lack, into the
+    running virtual device where it holds other content, keeping its data, and restarts what reads
+    the copied files: the init services whose modules install or require them, the framework for
+    its packages and the system configuration, and the whole device for what it reads only when
+    it starts, for files no known reader reads, and when a replaced program still runs."""
+    product = Path(info["product_out"])
+    mods = Modules(host, product)
+    if modules:
+        synced, files, unknown = module_files(mods, modules)
+        if unknown:
+            die(f"no module {', '.join(unknown)} in {product / 'module-info.json'}")
+        if not files:
+            die("the modules install nothing into the image")
+    else:
+        synced, files = [], unpacked_files(info)
+        if not files:
+            log("the images hold every installed file; nothing to copy")
+            return 0
+        boot = [f for f in files if f.split("/", 1)[0] in VM_RAMDISKS]
+        if boot:
+            die(f"the boot images lack these files, which only a build packs "
+                f"(lujarch build vm):\n{listed(boot)}")
+    missing = [f for f in files if not os.path.lexists(product / f)]
+    if missing:
+        die(f"not built: {', '.join(missing)} (lujarch build vm {' '.join(modules)})")
+    if not adb_root(host_out):
+        provision(host_out)
+    changed = device_differs(host_out, product, files)
+    log(f"the device holds {len(files) - len(changed)} of the {len(files)} files as built")
+    if changed:
+        remount = adb(host_out, "remount", timeout=300)
+        said = (remount.stdout + remount.stderr).strip()
+        if remount.returncode and "reboot" not in said.lower():
+            die(f"adb remount: {said}")
+        if "reboot" in said.lower():
+            # The first remount turns verification off, which takes effect at the next start.
+            log("making the system partitions writable; restarting the virtual device once")
+            adb(host_out, "reboot", timeout=60)
+            time.sleep(10)
+            if not wait_booted(host_out, 600) or not adb_root(host_out):
+                die("the virtual device did not come back after making its partitions writable")
+            remount = adb(host_out, "remount", timeout=300)
+            if remount.returncode:
+                die(f"adb remount: {(remount.stdout + remount.stderr).strip()}")
+    for rel in changed:
+        if (product / rel).is_symlink():
+            target = os.readlink(product / rel)
+            link = adb(host_out, "shell", "ln", "-sfn", target, "/" + rel)
+            if link.returncode:
+                die(f"ln -s {target} /{rel}: {(link.stdout + link.stderr).strip()}")
+            log(f"linked /{rel} to {target}")
+            continue
+        push = adb(host_out, "push", str(product / rel), "/" + rel, timeout=600)
+        if push.returncode:
+            die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
+        log(f"copied /{rel}")
+    services = mods.services(changed) if changed else {}
+    needed = set().union(*services.values())
+    framework = [f for f in changed if partition_path(f).startswith(READ_BY_FRAMEWORK)]
+    at_start = [f for f in changed if partition_path(f).startswith(READ_AT_START)
+                or f.endswith(".prop")
+                or not (f in framework or f in needed or partition_path(f).startswith(CODE))]
+    restarted = []
+    if at_start:
+        log(f"restarting the virtual device, its data kept, for files read only when it starts "
+            f"or by no known reader:\n{listed(at_start)}")
+        restart_device(host_out, files)
+        restarted.append("the device")
+    else:
+        if changed:
+            relabel = adb(host_out, "shell", "restorecon", *["/" + f for f in changed])
+            if relabel.returncode:
+                die(f"restorecon: {(relabel.stdout + relabel.stderr).strip()}")
+        if framework:
+            log(f"restarting the framework, which reads {', '.join('/' + f for f in framework[:3])}"
+                f"{' and more' if len(framework) > 3 else ''} when it starts")
+            restart_framework(host_out)
+            restarted.append("the framework")
+        for name in restart_services(host_out, services):
+            log(f"restarted the init service {name}")
+            restarted.append(name)
+        # Programs an earlier run of a restarted service left can take a moment to end.
+        deadline = time.monotonic() + 10
+        while (stale := stale_code(host_out, files)) and time.monotonic() < deadline:
+            time.sleep(1)
+        if stale:
+            log(f"restarting the virtual device, its data kept, for processes that run replaced "
+                f"programs:\n{listed(stale)}")
+            restart_device(host_out, files)
+            restarted.append("the device")
+    log(f"synced {len(files)} files{' of ' + ' '.join(synced) if synced else ''}, "
+        f"copied {len(changed)}; restarted {', '.join(restarted) or 'nothing'}; "
         f"adb 127.0.0.1:{ADB_PORT}")
     return 0
 
@@ -2737,7 +2927,8 @@ def main():
                             "were packed")
     vm.add_parser("stop", help="stop the virtual device")
     vm.add_parser("status", help="whether the virtual device is booted, and its build")
-    sync = vm.add_parser("sync", help="copy built modules into the running device and restart it")
+    sync = vm.add_parser("sync", help="copy built modules into the running device and restart "
+                                      "what reads them")
     sync.add_argument("modules", nargs="*",
                       help="the modules to copy (none: the files the images lack)")
     shot = vm.add_parser("screenshot", help="write what the display shows, decorations included")

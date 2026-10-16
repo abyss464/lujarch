@@ -33,9 +33,15 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   `tools/lujarch build vm` packs them, and `vm start --packed` boots the images as they are.
   `tools/lujarch vm status` counts those files.
 - `tools/lujarch vm sync <module>...` copies what the named modules install (with the modules
-  they require) into the running virtual device after `tools/lujarch build vm <module>...`, and
-  restarts it with its data kept; `tools/lujarch vm sync` alone copies the files the images lack,
-  except those of the boot images' ramdisks, which only a full build packs. The boot image
+  they require) into the running virtual device after `tools/lujarch build vm <module>...`;
+  `tools/lujarch vm sync` alone copies the files the images lack, except those of the boot
+  images' ramdisks, which only a full build packs. It copies only the files the device lacks or
+  holds with other content, keeps the device's data, and restarts what reads the copied files,
+  naming each restart: the init services whose modules install or require them; the framework
+  (zygote, system_server and the apps) for apps, overlays, permissions and the system
+  configuration; the whole device for what init and the kernel read only when it starts (init
+  scripts, the SELinux policy and file contexts, VINTF, the framework's jars, properties), for
+  files no known reader reads, and when a process still runs a replaced program. The boot image
   (`dex_bootjars`) and the boot classpath jars of `system` are built and copied as one unit:
   naming one of them brings all. Code compiled ahead of time against an earlier boot image and
   not copied with the unit runs without that compiled code. The SELinux policy of `system_ext`
