@@ -50,7 +50,8 @@ def main():
         check(launcher.startswith(package + "/"), f"{label} is in the launcher ({launcher})")
         apk = work / f"{package}.apk"
         d.pull(path, str(apk))
-        certs = subprocess.run([sdk_tool("apksigner"), "verify", "--print-certs", str(apk)],
+        certs = subprocess.run([sdk_tool("apksigner"), "verify", "--min-sdk-version", "34",
+                                "--print-certs", str(apk)],
                                capture_output=True, text=True).stdout
         digest = re.search(r"certificate SHA-256 digest: ([0-9a-f]+)", certs)
         if label == "Reader":

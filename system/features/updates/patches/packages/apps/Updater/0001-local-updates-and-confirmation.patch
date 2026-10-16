@@ -144,7 +144,7 @@ index 126a7a4c7aebb20dad33a1bec26063ff0eee36d0..8d8f05f819324b2e4efa1a50f0e74578
 +        updaterUri.isNotBlank() || context.getString(R.string.updater_server_url).isNotBlank()
  }
 diff --git a/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt b/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
-index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..bf6d1700a39bf03c4c51bad62818617428a4e310 100644
+index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..808d456c627865d2a9c7018739064fa160b61170 100644
 --- a/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
 +++ b/app/src/main/java/org/lineageos/updater/deviceinfo/actions/DeviceInfoActionButtons.kt
 @@ -50,7 +50,7 @@ fun DeviceInfoActionButtons(modifier: Modifier = Modifier) {
@@ -155,6 +155,15 @@ index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..bf6d1700a39bf03c4c51bad628186174
 +        if (context.getString(R.string.menu_changelog_url).isNotBlank()) TextButton(
              onClick = {
                  val url = context.getString(R.string.menu_changelog_url, DeviceInfoUtils.device)
+                 val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+@@ -60,7 +60,7 @@ fun DeviceInfoActionButtons(modifier: Modifier = Modifier) {
+         ) {
+             Text(text = stringResource(R.string.show_changelog))
+         }
+-        TextButton(
++        if (context.getString(R.string.report_issue_url).isNotBlank()) TextButton(
+             onClick = {
+                 val url = context.getString(R.string.report_issue_url)
                  val intent = Intent(Intent.ACTION_VIEW, url.toUri())
 diff --git a/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
 new file mode 100644

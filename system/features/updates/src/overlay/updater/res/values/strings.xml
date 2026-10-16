@@ -15,7 +15,8 @@
     limitations under the License.
 -->
 <resources>
-    <!-- No update server: System updates installs local updates only. -->
+    <!-- No update server: System updates installs local updates only, and links to no site. -->
     <string name="updater_server_url" translatable="false"></string>
     <string name="menu_changelog_url" translatable="false"></string>
+    <string name="report_issue_url" translatable="false"></string>
 </resources>

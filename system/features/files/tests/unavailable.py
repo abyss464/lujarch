@@ -11,7 +11,7 @@ from lujarch_test import AppProbe, check, device, note, run, step
 
 FILES = "me.zhanghai.android.files"
 MUSIC = "org.feeluown.mobile"
-GALLERY = "com.android.gallery3d"
+GALLERY = "org.lineageos.glimpse"
 
 
 def main():
@@ -37,13 +37,14 @@ def main():
 
     step("Settings > Storage opens each kind of file in its app")
     opened = {}
-    for category, want in (("Documents & other", FILES), ("Images", GALLERY), ("Audio", MUSIC)):
+    for category, want in (("Documents", FILES), ("Other", FILES), ("Images", GALLERY),
+                           ("Videos", GALLERY), ("Audio", MUSIC)):
         d.unlock()
         d.start("-f 0x10008000 -a android.settings.INTERNAL_STORAGE_SETTINGS", wait=3)
         d.tap(d.scroll_to(text=category))
         time.sleep(3)
         opened[category] = d.top()[0]
-        if category == "Documents & other":
+        if category == "Documents":
             d.shot("storage-documents")
         check(opened[category] == want, f"{category} opens in {want} ({opened[category]})")
         d.home()

@@ -47,8 +47,7 @@ def updates(d):
 
 def install_local(d):
     updates(d)
-    d.tap(desc="More options")
-    d.tap(d.wait(text="Install local update"))
+    d.tap(d.scroll_to(text="Install local update"))
 
 
 def slot(d):
@@ -74,6 +73,8 @@ def main():
     step("Check for updates asks no server")
     d.logcat_clear()
     updates(d)
+    for link in ("Show changelog", "Report issues"):
+        check(not d.find(text=link), f"no link to a site: {link}")
     d.tap(desc="Check for updates")
     time.sleep(5)
     log = d.logcat("UpdaterController", "UpdatesCheckReceiver", "Updater")

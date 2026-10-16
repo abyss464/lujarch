@@ -95,7 +95,7 @@ internal abstract class FileAccessActivity : Activity() {
             p.kind == Kind.NO_HOME -> b.setPositiveButton(android.R.string.ok) { _, _ -> end() }
             pkg != null -> {
                 b.setPositiveButton(R.string.app_info) { _, _ -> appInfo(pkg) }
-                b.setNegativeButton(android.R.string.cancel) { _, _ -> end() }
+                b.setNegativeButton(android.R.string.ok) { _, _ -> end() }
             }
             else -> b.setPositiveButton(android.R.string.ok) { _, _ -> end() }
         }
