@@ -69,13 +69,16 @@ page shows the current use. Swap gives Linux a swap file in its own storage whil
 
 ### LNX-6 The desktop on the phone's screen
 
-- Home: the Terminal app > Display; Settings > System > Linux development environment > Open desktop
+- Home: the Terminal app > Display; Settings > System > Linux development environment > Open desktop; Install the desktop
 - Switch: none
 - Default: none
 - Verify: phone
 
 The desktop of Arch Linux shows full screen on the phone through the Terminal app, with touch, the
-keyboard and the phone's sound, and stops drawing while it is not on screen. While Linux is on
+keyboard and the phone's sound, and stops drawing while it is not on screen. Install the desktop
+installs Plasma Mobile in Linux and builds KWin with Lujarch's display and Mesa for the phone's
+GPU, as root in Linux while it runs and on the small cores only; installing again updates it. The
+page shows the last install with its outcome. While Linux is on
 screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and media through and
 holds other notifications; the status bar stays locked and a swipe from the bottom returns to
 Android. A double tap on an empty space of the home screen opens Linux when the owner chooses so

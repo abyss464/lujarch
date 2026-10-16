@@ -138,6 +138,9 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Use Linux development environment | 使用 Linux 开发环境 | Linux 開発環境を使用 |
 | Root sessions | Root 会话 | Root セッション |
 | Remote access | 远程访问 | リモート アクセス |
+| Desktop | 桌面 | デスクトップ |
+| Open desktop | 打开桌面 | デスクトップを開く |
+| Install the desktop | 安装桌面 | デスクトップをインストール |
 | Services | 服务 | サービス |
 | System | 系统 | システム |
 | Modes | 模式 | モード |
