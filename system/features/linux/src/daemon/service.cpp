@@ -729,7 +729,7 @@ ndk::ScopedAStatus Service::createSession(const std::string& kind, const std::st
     if (kind != ILinux::KIND_ARCH && !SettingIsOn(kFeature, "root_sessions")) {
         return Fail(ILinux::ERROR_ROOT_SESSIONS_OFF, "Root sessions is off");
     }
-    if (sessions_.Count() >= ILinux::MAX_SESSIONS) {
+    if (sessions_.Count() >= static_cast<size_t>(ILinux::MAX_SESSIONS)) {
         return Fail(ILinux::ERROR_TOO_MANY_SESSIONS, "the sessions are at their maximum");
     }
     auto created = sessions_.Create(kind, name, columns, rows, std::move(spawn));

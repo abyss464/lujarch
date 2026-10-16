@@ -220,7 +220,7 @@ Result<std::string> Sessions::Create(const std::string& kind, const std::string&
     std::string id;
     {
         std::lock_guard lock(mutex_);
-        if (sessions_.size() >= ILinux::MAX_SESSIONS) {
+        if (sessions_.size() >= static_cast<size_t>(ILinux::MAX_SESSIONS)) {
             return Error() << "already " << ILinux::MAX_SESSIONS << " sessions";
         }
         id = "s" + std::to_string(next_id_++);
@@ -244,10 +244,11 @@ Result<std::string> Sessions::Create(const std::string& kind, const std::string&
     LOG(INFO) << "session " << id << " (" << kind << ") started, pid " << s->leader.pid;
     {
         std::lock_guard lock(mutex_);
-        s->serial = next_serial_++;
-        Interest(epoll_.get(), s->master.get(), Key(s->serial, kMaster), EPOLLIN, true);
-        Interest(epoll_.get(), s->leader.pidfd.get(), Key(s->serial, kLeader), EPOLLIN, true);
-        sessions_[s->serial] = std::move(s);
+        const uint64_t serial = next_serial_++;
+        s->serial = serial;
+        Interest(epoll_.get(), s->master.get(), Key(serial, kMaster), EPOLLIN, true);
+        Interest(epoll_.get(), s->leader.pidfd.get(), Key(serial, kLeader), EPOLLIN, true);
+        sessions_[serial] = std::move(s);
     }
     changed_();
     return id;
