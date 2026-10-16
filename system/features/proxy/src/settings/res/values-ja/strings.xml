@@ -551,6 +551,7 @@
     <string name="px_include_intro">デフォルトでは、すべてのアプリがプロキシを使用します。ここでアプリをオンにすると、それらのアプリのみがプロキシを使用し、他のアプリはすべて直接接続します。すべてオフにすると、すべてのアプリが再びプロキシを使用します。</string>
     <string name="px_include_only_summary">リストにないアプリはすべて、プロキシを使わずに直接接続します</string>
     <string name="px_include_show_system_summary">リスト内のアプリは常に表示されます</string>
+    <string name="px_include_summary">すべてのアプリ、または選んだアプリのみ</string>
     <string name="px_include_title">プロキシを使うアプリ</string>
     <string name="px_ipv6_apply_later">保存のみ</string>
     <string name="px_ipv6_apply_restart">保存してプロキシを再起動</string>
@@ -1238,9 +1239,12 @@
     <string name="px_status_restart_at">%1$s · %2$s</string>
     <string name="px_restart_repair">ネットワーク変更後の経路の修復</string>
     <string name="px_restart_unhealthy">コアが応答しなくなりました</string>
+    <string name="px_restart_interface">仮想ネットワーク インターフェースが消えました</string>
     <string name="px_restart_exited">コアが終了しました</string>
     <string name="px_restart_network_stack">ネットワーク スタックが再起動しました</string>
     <string name="px_error_setting">設定を保存できませんでした。</string>
     <string name="search_proxy_repair_keywords">修復, 再起動, ネットワーク, ウォッチドッグ, repair, restart, network, watchdog</string>
     <string name="search_proxy_ipv6_keywords">IPv6, ブロック, 漏洩, block, leak</string>
+    <string name="search_proxy_mode_keywords">プロキシ モード, ルール, グローバル, 直接接続, rule, global, direct</string>
+    <string name="search_proxy_secret_keywords">制御キー, シークレット, コントローラー, secret, controller</string>
 </resources>

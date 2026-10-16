@@ -159,10 +159,10 @@ index 76f78409e49e0dd4aa5780fde50264d78184cc9b..c8e983b781d2f266980f025ac47005ef
          android:key="battery"
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..535df587c239385e095014fbc954531569e942ab
+index 0000000000000000000000000000000000000000..e56f925c516810e9b0fc3ca2bdd29db5f9e41ea2
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/LujarchProxyIcon.java
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,95 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -185,6 +185,7 @@ index 0000000000000000000000000000000000000000..535df587c239385e095014fbc9545315
 +import android.os.IBinder;
 +import android.os.RemoteException;
 +import android.os.ServiceManager;
++import android.os.SystemClock;
 +import android.util.Log;
 +
 +import org.lujarch.proxy.IProxy;
@@ -197,6 +198,13 @@ index 0000000000000000000000000000000000000000..535df587c239385e095014fbc9545315
 +    private static final String TAG = "lujarch_proxy";
 +    private static final String SERVICE = "lujarch_proxy";
 +
++    private static final long RETRY_MS = 1000;
++
++    // The binder the icon follows. Held, and read by its death notice, so that the notice, which
++    // starts the next watch when the service starts again, stays registered: a binder no one
++    // holds is collected with it, and a field that is only written is optimized away.
++    private static volatile IBinder sService;
++
 +    private LujarchProxyIcon() {}
 +
 +    /** Tells listener, on handler, every state of the proxy; "" while the service is gone. */
@@ -207,24 +215,37 @@ index 0000000000000000000000000000000000000000..535df587c239385e095014fbc9545315
 +    }
 +
 +    private static void connect(Handler handler, Consumer<String> listener) {
-+        IBinder binder = ServiceManager.waitForService(SERVICE);
-+        if (binder == null) {
-+            Log.e(TAG, SERVICE + " is not there; the status bar shows no proxy icon");
++        while (true) {
++            IBinder binder = ServiceManager.waitForService(SERVICE);
++            if (binder == null) {
++                Log.e(TAG, SERVICE + " is not there; the status bar shows no proxy icon");
++                return;
++            }
++            sService = binder;
++            try {
++                binder.linkToDeath(() -> {
++                    if (sService != binder) return;
++                    sService = null;
++                    handler.post(() -> listener.accept(""));
++                    watch(handler, listener);
++                }, 0);
++            } catch (RemoteException e) {
++                // The service ended after it was looked up: its next start is waited for.
++                SystemClock.sleep(RETRY_MS);
++                continue;
++            }
++            try {
++                IProxy.Stub.asInterface(binder).watch(new IProxyListener.Stub() {
++                    @Override
++                    public void onState(String state) {
++                        handler.post(() -> listener.accept(state));
++                    }
++                });
++            } catch (RemoteException e) {
++                // Its death notice starts the next watch.
++                Log.w(TAG, "cannot follow the proxy's state", e);
++            }
 +            return;
-+        }
-+        try {
-+            binder.linkToDeath(() -> {
-+                handler.post(() -> listener.accept(""));
-+                watch(handler, listener);
-+            }, 0);
-+            IProxy.Stub.asInterface(binder).watch(new IProxyListener.Stub() {
-+                @Override
-+                public void onState(String state) {
-+                    handler.post(() -> listener.accept(state));
-+                }
-+            });
-+        } catch (RemoteException e) {
-+            Log.e(TAG, "cannot follow the proxy's state", e);
 +        }
 +    }
 +

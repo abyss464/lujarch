@@ -314,13 +314,14 @@ class SubscriptionFragment : BasePreferenceFragment(), ManualNodesPage {
         launchUi {
             try {
                 act(R.string.error_delay) {
+                    val url = testUrl()
                     // A few at a time: every test opens a connection through the node.
                     val permits = Semaphore(PARALLEL_TESTS)
                     coroutineScope {
                         nodes.map { node ->
                             async {
                                 permits.withPermit {
-                                    delays[node] = Mihomo.proxyDelay(node)
+                                    delays[node] = Mihomo.proxyDelay(node, url)
                                     renderNodes()
                                 }
                             }
@@ -335,12 +336,16 @@ class SubscriptionFragment : BasePreferenceFragment(), ManualNodesPage {
         }
     }
 
+    /** The address Group testing tests the groups that choose by delay with; null when it cannot be read. */
+    private suspend fun testUrl(): String? =
+        orNull("group test address") { ProxyCommands.coreConfig().url("group-test.auto.url") }
+
     private fun testOne(node: String) {
         if (!testingNodes.add(node)) return
         renderNodes()
         launchUi {
             try {
-                act(R.string.error_delay) { delays[node] = Mihomo.proxyDelay(node) }
+                act(R.string.error_delay) { delays[node] = Mihomo.proxyDelay(node, testUrl()) }
             } finally {
                 testingNodes.remove(node)
                 ifPageAlive { renderNodes() }

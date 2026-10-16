@@ -32,6 +32,8 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <cstring>
+#include <deque>
 
 #include "core.h"
 #include "rules.h"
@@ -150,12 +152,27 @@ std::string CheckMessages(const std::string& output) {
     return android::base::Join(messages, "\n");
 }
 
+// The IPv6 addresses of the nodes of the configurations the core may run: the current one, which
+// the manager installs while the core runs, and the last working one.
+std::vector<in6_addr> NodeIpv6s() {
+    std::vector<in6_addr> all = core::NodeIpv6(kConfig);
+    for (const in6_addr& address : core::NodeIpv6(kLastGood)) {
+        bool seen = false;
+        for (const in6_addr& known : all) seen |= memcmp(&known, &address, sizeof(address)) == 0;
+        if (!seen) all.push_back(address);
+    }
+    return all;
+}
+
 }  // namespace
 
 struct Supervisor::Run {
     pid_t pid = -1;
     unique_fd pidfd;
     std::string config;
+    // The configuration as the core read it at its start, and when that was.
+    std::string content;
+    int64_t started = 0;
     bool repair = false;
     std::atomic<bool> done = false;
     // How the run ends when the supervisor or the watchdog stops the core.
@@ -229,9 +246,14 @@ void Supervisor::DrainEvents() {
     }
     alignas(inotify_event) char buf[4096];
     ssize_t n;
+    bool configs_changed = false;
     while ((n = read(inotify_.get(), buf, sizeof(buf))) > 0) {
         for (char* p = buf; p < buf + n;) {
             auto* event = reinterpret_cast<inotify_event*>(p);
+            if (event->len > 0 && (std::string(kDir) + "/" + event->name == kConfig ||
+                                   std::string(kDir) + "/" + event->name == kLastGood)) {
+                configs_changed = true;
+            }
             if (event->len > 0 && strcmp(event->name, kRestartRequest) == 0) {
                 std::string path = std::string(kDir) + "/" + kRestartRequest;
                 if (unlink(path.c_str()) == 0) {
@@ -241,6 +263,11 @@ void Supervisor::DrainEvents() {
             }
             p += sizeof(inotify_event) + event->len;
         }
+    }
+    // A configuration installed while the core runs may bring nodes with IPv6 addresses.
+    if (configs_changed) {
+        std::lock_guard lock(mutex_);
+        if (ipv6_blocked_) rules::SetIpv6Exceptions(NodeIpv6s());
     }
 }
 
@@ -319,10 +346,27 @@ void Supervisor::NoteRestart(const std::string& reason) {
     status_.lastRestartAt = Now();
 }
 
-void Supervisor::SetIpv6Block(bool on, const std::string& config) {
+void Supervisor::KeepAsLastGood(Run* run) {
+    if (run->config != kConfig || run->content.empty()) return;
+    // A configuration installed since the start is the manager's to judge.
+    std::string current, previous;
+    if (!android::base::ReadFileToString(kConfig, &current) || current != run->content) return;
+    if (android::base::ReadFileToString(kLastGood, &previous) && previous == run->content) return;
+    std::string temp = std::string(kLastGood) + ".tmp";
+    unique_fd fd(open(temp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    if (fd < 0 || !android::base::WriteStringToFd(run->content, fd.get()) || fsync(fd.get()) != 0 ||
+        rename(temp.c_str(), kLastGood) != 0) {
+        PLOG(ERROR) << "cannot keep the running configuration as the last working one";
+        unlink(temp.c_str());
+        return;
+    }
+    LOG(INFO) << "the running configuration works; it is the last working one now";
+}
+
+void Supervisor::SetIpv6Block(bool on) {
     std::lock_guard lock(mutex_);
     if (on) {
-        rules::BlockIpv6(core::NodeIpv6(config));
+        rules::BlockIpv6(NodeIpv6s());
         if (!ipv6_blocked_) LOG(INFO) << "IPv6 blocked while the proxy runs";
     } else if (ipv6_blocked_) {
         rules::UnblockIpv6();
@@ -332,20 +376,20 @@ void Supervisor::SetIpv6Block(bool on, const std::string& config) {
 }
 
 void Supervisor::Loop() {
-    int exits = 0;
-    int64_t window_start = Monotonic();
+    // When the core exited in the last kExitWindow seconds.
+    std::deque<int64_t> exits;
     int backoff = 2;
     bool repair = false;
     bool given_up = false;
     for (;;) {
         DrainEvents();
         if (!SettingIsOn(kFeature, "enabled")) {
-            exits = 0;
+            exits.clear();
             backoff = 2;
             given_up = false;
             repair = false;
             restart_requested_ = false;
-            SetIpv6Block(false, "");
+            SetIpv6Block(false);
             SetState(IProxy::STATE_OFF);
             WaitEvent(-1);
             continue;
@@ -357,14 +401,13 @@ void Supervisor::Loop() {
             continue;
         }
         if (restart_requested_.exchange(false)) {
-            exits = 0;
-            window_start = Monotonic();
+            exits.clear();
             backoff = 2;
             given_up = false;
             repair = false;
         }
         if (given_up) {
-            SetIpv6Block(false, "");
+            SetIpv6Block(false);
             SetState(IProxy::STATE_CRASH_LOOP);
             WaitEvent(-1);
             continue;
@@ -375,7 +418,7 @@ void Supervisor::Loop() {
             if (!Valid(kLastGood, &ignored)) {
                 LOG(ERROR) << "no configuration passes the check; the phone connects directly: "
                            << error;
-                SetIpv6Block(false, "");
+                SetIpv6Block(false);
                 SetState(IProxy::STATE_NO_CONFIG, error);
                 // A configuration the manager installs is tried at once.
                 WaitEvent(-1);
@@ -386,8 +429,7 @@ void Supervisor::Loop() {
             use = kLastGood;
         }
         SetIpv6Block(SettingIsOn(kFeature, "ipv6_block") && core::TunEnabled(kConfig) &&
-                             core::TunEnabled(use),
-                     use);
+                     core::TunEnabled(use));
         netd_restarted_ = false;
         std::shared_ptr<Run> run = StartCore(use, repair);
         End end = End::kExited;
@@ -413,28 +455,31 @@ void Supervisor::Loop() {
                 NoteRestart(IProxy::RESTART_NETWORK_STACK);
                 continue;
             case End::kUnhealthy:
+            case End::kInterfaceLost:
             case End::kExited:
                 break;
         }
-        if (Monotonic() - window_start > kExitWindow) {
-            exits = 0;
-            window_start = Monotonic();
-            backoff = 2;
-        }
-        ++exits;
-        NoteRestart(end == End::kUnhealthy ? IProxy::RESTART_UNHEALTHY : IProxy::RESTART_EXITED);
+        const int64_t now = Monotonic();
+        // A core that ran through a whole window has recovered: its next pause is short again.
+        if (run && now - run->started >= kExitWindow) backoff = 2;
+        exits.push_back(now);
+        while (now - exits.front() > kExitWindow) exits.pop_front();
+        NoteRestart(end == End::kUnhealthy        ? IProxy::RESTART_UNHEALTHY
+                    : end == End::kInterfaceLost ? IProxy::RESTART_INTERFACE
+                                                 : IProxy::RESTART_EXITED);
         {
             std::lock_guard lock(mutex_);
-            status_.exits = exits;
+            status_.exits = static_cast<int>(exits.size());
         }
-        if (exits >= kMaxExits) {
-            LOG(ERROR) << "the core exited " << exits << " times within " << kExitWindow
+        if (static_cast<int>(exits.size()) >= kMaxExits) {
+            LOG(ERROR) << "the core exited " << exits.size() << " times within " << kExitWindow
                        << " s; it stays stopped and the phone connects directly";
             given_up = true;
             continue;
         }
-        SetIpv6Block(false, "");
+        SetIpv6Block(false);
         SetState(IProxy::STATE_STARTING);
+        LOG(INFO) << "the core starts again in " << backoff << " s";
         // The pause ends early only for the switch or a restart asked for.
         const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(backoff);
         for (;;) {
@@ -462,6 +507,11 @@ std::shared_ptr<Supervisor::Run> Supervisor::StartCore(const std::string& config
     }
     unique_fd read_end(fds[0]), write_end(fds[1]);
     unique_fd null_fd(open("/dev/null", O_RDONLY | O_CLOEXEC));
+    // What the core reads, kept to become the last working configuration once it works.
+    std::string content;
+    if (!android::base::ReadFileToString(config, &content)) {
+        PLOG(WARNING) << "cannot read " << config << "; it does not become the last working one";
+    }
     std::vector<std::string> argv = {kCoreBinary, "-d", kDir, "-f", config};
     std::vector<char*> args;
     for (std::string& arg : argv) args.push_back(arg.data());
@@ -495,6 +545,8 @@ std::shared_ptr<Supervisor::Run> Supervisor::StartCore(const std::string& config
     run->pid = pid;
     run->pidfd.reset(pidfd_open(pid, 0));
     run->config = config;
+    run->started = Monotonic();
+    run->content = std::move(content);
     run->repair = repair;
     if (run->pidfd < 0) {
         PLOG(ERROR) << "pidfd_open of the core";
@@ -615,6 +667,8 @@ struct WatchdogState {
     int ctl_port = 0;
     int proxy_port = 0;
     bool ctl_due = false;
+    bool ctl_answered = false;
+    bool kept = false;
     bool tun = false;
     bool tun_seen = false;
     int misses = 0;
@@ -697,7 +751,7 @@ void Supervisor::Watchdog(Run* run) {
                 LOG(INFO) << "the interface " << core::kTunDevice
                           << " is up; the watchdog checks it and probes the path";
                 w.tun = true;
-                if (!run->done && SettingIsOn(kFeature, "ipv6_block")) SetIpv6Block(true, use);
+                if (!run->done && SettingIsOn(kFeature, "ipv6_block")) SetIpv6Block(true);
             }
             w.tun_seen = true;
         } else if (!tun_wanted()) {
@@ -705,7 +759,7 @@ void Supervisor::Watchdog(Run* run) {
                 LOG(INFO) << "the interface " << core::kTunDevice
                           << " is off by the configuration; not a failure";
                 w.tun = false;
-                if (!run->done) SetIpv6Block(false, "");
+                if (!run->done) SetIpv6Block(false);
             }
             w.tun_seen = false;
         } else if (w.tun_seen) {
@@ -718,6 +772,7 @@ void Supervisor::Watchdog(Run* run) {
             if (!w.ctl_due && (w.tun_seen || core::Listening(w.ctl_port))) w.ctl_due = true;
             if (core::ControllerAnswers(w.ctl_host, w.ctl_port)) {
                 w.ctl_due = true;
+                w.ctl_answered = true;
             } else if (w.ctl_due) {
                 lost_ctl = "the controller does not answer";
             }
@@ -727,6 +782,12 @@ void Supervisor::Watchdog(Run* run) {
         if (lost.empty()) {
             w.misses = 0;
             w.next_health = t + kHealth;
+            // Its controller answers and its interface is up as configured: it works.
+            if (!w.kept && (w.ctl_port == 0 || w.ctl_answered) && (!w.tun || w.tun_seen) &&
+                !run->done) {
+                w.kept = true;
+                KeepAsLastGood(run);
+            }
             return true;
         }
         ++w.misses;
@@ -734,7 +795,7 @@ void Supervisor::Watchdog(Run* run) {
         if (w.misses < kHealthMisses) return true;
         LOG(WARNING) << "core unhealthy: " << lost << " (" << w.misses
                      << " checks in a row); stopping it";
-        stop(End::kUnhealthy);
+        stop(lost_ctl.empty() ? End::kInterfaceLost : End::kUnhealthy);
         return false;
     };
 

@@ -25,6 +25,9 @@ namespace lujarch::proxy::rules {
 // core's own connections (root) to the given addresses. Replaces the rules a previous call set.
 void BlockIpv6(const std::vector<in6_addr>& exceptions);
 
+// Replaces the exceptions of the block in place.
+void SetIpv6Exceptions(const std::vector<in6_addr>& exceptions);
+
 // Removes the block and its exceptions.
 void UnblockIpv6();
 

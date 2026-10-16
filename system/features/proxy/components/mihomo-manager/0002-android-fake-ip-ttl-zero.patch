@@ -1,0 +1,16 @@
+diff --git a/src/build.rs b/src/build.rs
+index 6f6b0100c12eec15369e614200c9b297fc6bbbb3..adfecd986e227e588b04edd686d5e2a00a5ac9fc 100644
+--- a/src/build.rs
++++ b/src/build.rs
+@@ -395,6 +395,11 @@ pub(crate) fn apply_android_profile(out: &mut Mapping, cfg: &Config) {
+     if !dns.contains_key(k("fake-ip-range")) {
+         dns.insert(k("fake-ip-range"), s("198.18.0.1/16"));
+     }
++    // Android's resolver caches answers per network for every app: a placeholder address it
++    // kept would reach an app that bypasses the proxy, which cannot connect to it.
++    if !dns.contains_key(k("fake-ip-ttl")) {
++        dns.insert(k("fake-ip-ttl"), Value::Number(0.into()));
++    }
+     if !dns.contains_key(k("nameserver")) {
+         dns.insert(
+             k("nameserver"),

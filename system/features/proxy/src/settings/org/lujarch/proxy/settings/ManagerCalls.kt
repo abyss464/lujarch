@@ -45,4 +45,7 @@ object ManagerCalls {
         } else {
             queue.run(args, input)
         }
+
+    /** A request of the manager that is not a plain command (an export), in the same line. */
+    suspend fun <T> inLine(what: String, call: suspend () -> T): T = queue.inLine(what, call)
 }

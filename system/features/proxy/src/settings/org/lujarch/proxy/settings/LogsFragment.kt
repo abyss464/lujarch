@@ -65,6 +65,8 @@ class LogsFragment : BasePreferenceFragment(), MenuProvider {
             entryValues = Mihomo.LOG_LEVELS.toTypedArray()
             setDefaultValue(DEFAULT_LEVEL)
             setOnPreferenceChangeListener { _, value ->
+                // The lines shown so far may be below the new level.
+                clearLines()
                 streamKey.value = streamKey.value.copy(level = value as String)
                 showLevel(value)
                 true

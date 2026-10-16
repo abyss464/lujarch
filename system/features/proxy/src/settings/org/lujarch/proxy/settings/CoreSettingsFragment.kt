@@ -113,7 +113,7 @@ class CoreSettingsFragment : KeysFragment() {
             // Not "ipv6", the key of its switch: a page keeps each preference's
             // state under its key, and the category restored with the switch's
             // state throws when the activity is recreated.
-            key = "ipv6_category"
+            key = KEY_IPV6
             setTitle(R.string.px_ipv6_category)
         }
         switchRow(ipv6, "ipv6", R.string.px_ipv6_core, R.string.px_ipv6_core_summary, default = false)
@@ -283,6 +283,7 @@ class CoreSettingsFragment : KeysFragment() {
     companion object {
         /** The IPv6 block's row, which Settings search scrolls into view. */
         const val KEY_IPV6_BLOCK = "lujarch_proxy_ipv6_block"
+        const val KEY_IPV6 = "ipv6_category"
         const val KEY = "core-settings"
         private val STACKS = arrayOf("mixed", "gvisor", "system")
         private val FINGERPRINTS = listOf("chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random")

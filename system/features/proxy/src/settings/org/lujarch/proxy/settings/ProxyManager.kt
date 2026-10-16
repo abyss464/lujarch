@@ -534,7 +534,9 @@ object ProxyManager {
     /** The manager's files as one JSON bundle; subscriptions and node lists only with [secrets]. */
     suspend fun export(secrets: Boolean): ByteArray {
         val out = java.io.ByteArrayOutputStream()
-        val code = ProxyClient.exportTo(secrets, out)
+        val what = if (secrets) "mihomo.manager export --secrets" else "mihomo.manager export"
+        // A refused ("busy") export wrote nothing, so asking again starts on an empty stream.
+        val code = ManagerCalls.inLine(what) { ProxyClient.exportTo(secrets, out) }
         val text = out.toString(Charsets.UTF_8.name()).trim()
         if (code != 0) throw ManagerException(if (secrets) listOf("export", "--secrets") else listOf("export"), code, "")
         // Refuse anything but a bundle, so a warning never ends up in the file.

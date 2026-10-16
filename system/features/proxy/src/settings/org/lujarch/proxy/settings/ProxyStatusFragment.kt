@@ -202,6 +202,7 @@ class ProxyStatusFragment : BasePreferenceFragment() {
             null -> null
             org.lujarch.proxy.IProxy.RESTART_REPAIR -> R.string.px_restart_repair
             org.lujarch.proxy.IProxy.RESTART_UNHEALTHY -> R.string.px_restart_unhealthy
+            org.lujarch.proxy.IProxy.RESTART_INTERFACE -> R.string.px_restart_interface
             org.lujarch.proxy.IProxy.RESTART_EXITED -> R.string.px_restart_exited
             org.lujarch.proxy.IProxy.RESTART_NETWORK_STACK -> R.string.px_restart_network_stack
             else -> 0

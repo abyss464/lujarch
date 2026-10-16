@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A second app with network access, beside the probe: what another app's connections do. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.probe.peer"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application android:label="Probe peer" android:debuggable="true" android:allowBackup="false">
+        <receiver android:name=".Peer" android:exported="true">
+            <intent-filter>
+                <action android:name="org.lujarch.probe.peer.DO" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

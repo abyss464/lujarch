@@ -54,7 +54,15 @@ class Supervisor {
     void RequestRestart();
 
   private:
-    enum class End { kSwitchedOff, kRequested, kRepair, kUnhealthy, kExited, kNetworkStack };
+    enum class End {
+        kSwitchedOff,
+        kRequested,
+        kRepair,
+        kUnhealthy,
+        kInterfaceLost,
+        kExited,
+        kNetworkStack
+    };
 
     struct Run;
     void Loop();
@@ -69,9 +77,11 @@ class Supervisor {
     void StopCore(Run* run);
     void ReadCoreOutput(Run* run, android::base::unique_fd output);
     void Watchdog(Run* run);
-    void SetIpv6Block(bool on, const std::string& config);
+    void SetIpv6Block(bool on);
     void SetState(const std::string& state, const std::string& check_error = "");
     void SetTun(bool tun);
+    // The configuration a run started with works: it becomes the last working one.
+    void KeepAsLastGood(Run* run);
     void NoteRestart(const std::string& reason);
     bool ShouldStop(Run* run, std::chrono::seconds wait);
 

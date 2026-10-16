@@ -171,7 +171,7 @@
     <string name="error_proxy_on">Couldn\'t turn on the proxy</string>
     <string name="error_select">Couldn\'t select the node</string>
     <string name="error_traffic">Couldn\'t read live traffic</string>
-    <string name="error_unfix">Couldn\'t restore automatic selection</string>
+    <string name="error_unfix">Couldn\'t restore the automatic choice</string>
     <string name="group_type_adaptive">Adaptive</string>
     <string name="group_type_fallback">Fallback</string>
     <string name="group_type_loadbalance">Load balance</string>
@@ -284,7 +284,7 @@
     <string name="px_ad_reason_learning">Nothing measured on this network yet: in configuration order</string>
     <string name="px_ad_record">On this network</string>
     <string name="px_ad_record_on">On %1$s</string>
-    <string name="px_ad_test">Measure every member</string>
+    <string name="px_ad_test">Measure all members</string>
     <string name="px_ad_test_summary">Time to the first byte of each member on this network, counted in the statistics</string>
     <string name="px_advanced_category">Advanced</string>
     <string name="px_apply_confirm">The configuration is built from the current settings, checked, and loaded by the running proxy. If the proxy does not accept it, the previous configuration stays in use.</string>
@@ -646,7 +646,7 @@
     <string name="px_group_test_summary">Test every node in this group</string>
     <string name="px_group_tested_at">Tested at %1$s</string>
     <string name="px_group_testing">Testing…</string>
-    <string name="px_group_unfix">Automatic selection</string>
+    <string name="px_group_unfix">Automatic choice</string>
     <string name="px_group_unfix_summary">Fixed to %1$s. Tap to let the group choose again.</string>
     <string name="px_groups_empty">No proxy groups</string>
     <string name="px_groups_no_match">No matching groups</string>
@@ -692,6 +692,7 @@
     <string name="px_include_intro">By default every app uses the proxy. When you turn on apps here, only those apps use it, and every other app connects directly. Turn all of them off to let every app use the proxy again.</string>
     <string name="px_include_only_summary">Every app that is not on the list connects directly, outside the proxy</string>
     <string name="px_include_show_system_summary">Apps on the list are always shown</string>
+    <string name="px_include_summary">Every app, or only the apps you choose</string>
     <string name="px_include_title">Apps that use the proxy</string>
     <string name="px_ipv6_apply_later">Save only</string>
     <string name="px_ipv6_apply_restart">Save and restart the proxy</string>
@@ -1286,9 +1287,12 @@
     <string name="px_status_restart_at">%1$s · %2$s</string>
     <string name="px_restart_repair">Repaired the path after a network change</string>
     <string name="px_restart_unhealthy">The core stopped answering</string>
+    <string name="px_restart_interface">The virtual network interface disappeared</string>
     <string name="px_restart_exited">The core exited</string>
     <string name="px_restart_network_stack">The network stack started again</string>
     <string name="px_error_setting">The setting could not be saved.</string>
     <string name="search_proxy_repair_keywords">repair, restart, network change, watchdog</string>
     <string name="search_proxy_ipv6_keywords">ipv6, block, leak</string>
+    <string name="search_proxy_mode_keywords">proxy mode, rule, global, direct</string>
+    <string name="search_proxy_secret_keywords">control key, secret, controller</string>
 </resources>

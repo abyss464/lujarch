@@ -245,15 +245,25 @@ class ProxyContribution : Contribution {
                 action = page.action,
             )
         }
+        val core = ProxyPages.all.first { it.key == "lujarch_proxy_core" }
         val switches = listOf(
             SearchEntry(ProxyFragment.KEY_ENABLED, context.getString(R.string.px_main_switch), "",
                 context.getString(R.string.search_proxy_keywords), screen, ProxyActivity.ACTION_PROXY),
+            SearchEntry(ProxyFragment.KEY_STATUS, context.getString(R.string.px_status_title), "",
+                context.getString(R.string.search_proxy_status_keywords), screen, ProxyActivity.ACTION_PROXY),
+            SearchEntry(ProxyFragment.KEY_MODE, context.getString(R.string.px_mode_category), "",
+                context.getString(R.string.search_proxy_mode_keywords), screen, ProxyActivity.ACTION_PROXY),
+            SearchEntry(ProxyFragment.KEY_SECRET, context.getString(R.string.px_secret_title),
+                context.getString(R.string.px_secret_summary), context.getString(R.string.search_proxy_secret_keywords),
+                screen, ProxyActivity.ACTION_PROXY),
+            SearchEntry(CoreSettingsFragment.KEY_IPV6, context.getString(R.string.px_ipv6_category), "",
+                context.getString(R.string.search_proxy_ipv6_keywords), context.getString(R.string.px_core_title), core.action),
             SearchEntry(ProxyFragment.KEY_REPAIR, context.getString(R.string.px_repair_title),
                 context.getString(R.string.px_repair_summary), context.getString(R.string.search_proxy_repair_keywords),
                 screen, ProxyActivity.ACTION_PROXY),
             SearchEntry(CoreSettingsFragment.KEY_IPV6_BLOCK, context.getString(R.string.px_ipv6_block),
                 context.getString(R.string.px_ipv6_block_summary), context.getString(R.string.search_proxy_ipv6_keywords),
-                context.getString(R.string.px_core_title), ProxyPages.all.first { it.key == "lujarch_proxy_core" }.action),
+                context.getString(R.string.px_core_title), core.action),
         )
         return pages + switches
     }

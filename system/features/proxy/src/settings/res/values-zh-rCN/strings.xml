@@ -644,6 +644,7 @@
     <string name="px_include_intro">默认情况下所有应用都使用代理。在此开启某些应用后，只有这些应用使用代理，其他应用都直接连接。将它们全部关闭即可让所有应用重新使用代理。</string>
     <string name="px_include_only_summary">不在列表中的应用都直接连接，不经过代理</string>
     <string name="px_include_show_system_summary">列表中的应用始终显示</string>
+    <string name="px_include_summary">所有应用，或仅限您选择的应用</string>
     <string name="px_include_title">使用代理的应用</string>
     <string name="px_ipv6_apply_later">仅保存</string>
     <string name="px_ipv6_apply_restart">保存并重启代理</string>
@@ -1231,9 +1232,12 @@
     <string name="px_status_restart_at">%1$s · %2$s</string>
     <string name="px_restart_repair">网络变化后修复通路</string>
     <string name="px_restart_unhealthy">内核停止响应</string>
+    <string name="px_restart_interface">虚拟网络接口消失了</string>
     <string name="px_restart_exited">内核已退出</string>
     <string name="px_restart_network_stack">网络栈已重新启动</string>
     <string name="px_error_setting">无法保存此设置。</string>
     <string name="search_proxy_repair_keywords">修复, 重启, 网络变化, 看门狗, repair, restart, watchdog</string>
     <string name="search_proxy_ipv6_keywords">IPv6, 阻止, 泄漏, block, leak</string>
+    <string name="search_proxy_mode_keywords">代理模式, 规则, 全局, 直连, rule, global, direct</string>
+    <string name="search_proxy_secret_keywords">控制密钥, 密钥, 控制接口, secret, controller</string>
 </resources>

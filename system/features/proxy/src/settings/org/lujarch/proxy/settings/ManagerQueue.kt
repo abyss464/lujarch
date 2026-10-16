@@ -50,12 +50,19 @@ class ManagerQueue(
 ) {
     private val turn = Mutex()
 
-    suspend fun run(args: List<String>, input: ByteArray? = null): ManagerResult {
+    suspend fun run(args: List<String>, input: ByteArray? = null): ManagerResult =
+        inLine(describe(args)) { send(args, input) }
+
+    /**
+     * [call], a request of the proxy daemon's manager that is not a plain command (an
+     * export), in the same line, asked again while the proxy daemon answers "busy".
+     */
+    suspend fun <T> inLine(what: String, call: suspend () -> T): T {
         val started = now()
         val deadline = started + boundMs
         withTimeoutOrNull(boundMs) { turn.lock() }
             ?: throw ProxyException(
-                ProxyException.Kind.BUSY, describe(args),
+                ProxyException.Kind.BUSY, what,
                 "waited ${boundMs / 1000} s behind this app's other proxy commands",
             )
         try {
@@ -63,15 +70,15 @@ class ManagerQueue(
             var refused = 0
             while (true) {
                 try {
-                    val result = send(args, input)
-                    if (refused > 0) log("${describe(args)}: through after $refused busy answer(s), ${now() - started} ms")
+                    val result = call()
+                    if (refused > 0) log("$what: through after $refused busy answer(s), ${now() - started} ms")
                     return result
                 } catch (e: ProxyException) {
                     if (e.kind != ProxyException.Kind.BUSY) throw e
                     refused++
                     val left = deadline - now()
                     if (left <= 0) {
-                        log("${describe(args)}: the proxy daemon still busy after $refused answer(s), ${now() - started} ms; giving up")
+                        log("$what: the proxy daemon still busy after $refused answer(s), ${now() - started} ms; giving up")
                         throw e
                     }
                     // A little jitter, so that two processes (or a restarted page and

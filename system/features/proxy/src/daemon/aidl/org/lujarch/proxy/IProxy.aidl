@@ -42,6 +42,7 @@ interface IProxy {
     /** Why the proxy restarted its core on its own (Status.lastRestart). */
     const String RESTART_REPAIR = "repair";
     const String RESTART_UNHEALTHY = "unhealthy";
+    const String RESTART_INTERFACE = "interface";
     const String RESTART_EXITED = "exited";
     const String RESTART_NETWORK_STACK = "network-stack";
 

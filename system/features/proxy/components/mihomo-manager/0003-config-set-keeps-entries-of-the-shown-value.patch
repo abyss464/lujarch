@@ -1,0 +1,39 @@
+diff --git a/src/main.rs b/src/main.rs
+index 24afac38c41786827a545e792b56cef94b7da328..2661fcd006a25ed544feb55f334f019d02264783 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -2829,7 +2829,7 @@ fn cmd_config(layout: &Layout, action: ConfigAction) -> Result<()> {
+                         "the value on stdin is larger than {} KiB",
+                         settings::MAX_JSON_INPUT >> 10
+                     );
+-                    settings::set_json(&mut cfg, &key, &text)?;
++                    settings::set_json_for(&mut cfg, layout.profile, &key, &text)?;
+                     cfg.save(&layout.data_dir.join("config.yaml"))?;
+                     println!("Set {key}");
+                 }
+diff --git a/src/settings.rs b/src/settings.rs
+index 0d335d0a3489d4e72ed191024eb72098fd23bd75..5262fd9515f2df704f7550953c76e7aa38b96afa 100644
+--- a/src/settings.rs
++++ b/src/settings.rs
+@@ -487,10 +487,20 @@ fn check_adaptive(cfg: &Config) -> Result<()> {
+ 
+ /// Sets one key from a JSON value (stdin): lists, maps and URLs; null removes the key.
+ pub fn set_json(cfg: &mut Config, name: &str, input: &str) -> Result<()> {
++    set_json_for(cfg, Profile::Desktop, name, input)
++}
++
++/// [`set_json`] for `profile`: a `{"keep": i}` entry names an entry of the value [`get`]
++/// shows for that profile, which is the profile's default while the config sets none.
++pub fn set_json_for(cfg: &mut Config, profile: Profile, name: &str, input: &str) -> Result<()> {
+     let k = find(name)?;
+     ensure!(k.class.stdin(), "{name} takes its value on the command line: config set {name} <value>");
+     let json: Json = serde_json::from_str(input.trim()).context("the value on stdin is not JSON")?;
+-    let current = get_value(&cfg.to_mapping()?, k.path).cloned();
++    let mut effective = cfg.to_mapping()?;
++    if profile == Profile::Android {
++        crate::build::apply_android_profile(&mut effective, cfg);
++    }
++    let current = get_value(&effective, k.path).cloned();
+     let v = if json.is_null() {
+         ensure!(k.optional, "{name} cannot be removed");
+         None

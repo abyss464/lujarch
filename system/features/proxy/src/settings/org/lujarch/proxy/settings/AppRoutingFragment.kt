@@ -31,8 +31,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.lujarch.settings.pages.AppListFragment
 import org.lujarch.settings.pages.Errors
-import org.lujarch.settings.pages.Pages
-import org.lujarch.settings.pages.R as PagesR
 
 /** Short description of an app's route, for lists and summaries. */
 fun appRouteLabel(context: Context, route: AppRoute): String = when (route) {
@@ -87,7 +85,6 @@ fun appRouteRunStatus(context: Context, run: AppRouteTasks.Run?, pending: Boolea
  */
 class AppRoutingFragment : AppListFragment<AppPreference>() {
     private lateinit var statusPref: Preference
-    private lateinit var includePref: Preference
 
     private var routing: AppRouting? = null
 
@@ -110,17 +107,6 @@ class AppRoutingFragment : AppListFragment<AppPreference>() {
                 true
             }
         }
-        // Which apps use the proxy at all: every app, or only those on the list.
-        includePref = status.add(Preference(prefContext)) {
-            key = "tun_include"
-            setIcon(PagesR.drawable.ic_apps)
-            setTitle(R.string.px_include_title)
-            setSummary(PagesR.string.loading)
-            setOnPreferenceClickListener {
-                Pages.open(requireContext(), TunIncludeFragment::class.java, R.string.px_include_title)
-                true
-            }
-        }
         return status
     }
 
@@ -137,7 +123,6 @@ class AppRoutingFragment : AppListFragment<AppPreference>() {
                     AppRouteTasks.routing.collect { state ->
                         if (state != null) {
                             routing = state
-                            showInclude()
                             rebindApps()
                         }
                     }
@@ -149,7 +134,6 @@ class AppRoutingFragment : AppListFragment<AppPreference>() {
     override suspend fun loadState() {
         attempt("routes", R.string.error_load_routes) { AppRouteTasks.load() }?.let {
             routing = it
-            showInclude()
         }
     }
 
@@ -194,15 +178,6 @@ class AppRoutingFragment : AppListFragment<AppPreference>() {
         if (app.info == null) parts.add(getString(R.string.routing_not_installed))
         pref.summary = parts.joinToString(getString(R.string.separator))
         if (app.icon != null) pref.icon = app.icon
-    }
-
-    private fun showInclude() {
-        val include = routing?.tunInclude.orEmpty()
-        includePref.summary = if (include.isEmpty()) {
-            getString(R.string.px_include_all)
-        } else {
-            resources.getQuantityString(R.plurals.px_include_only, include.size, include.size)
-        }
     }
 
     private fun showRun(run: AppRouteTasks.Run?, pending: Boolean) {

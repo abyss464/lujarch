@@ -1,0 +1,38 @@
+diff --git a/vendor/github.com/metacubex/sing-tun/tun_linux.go b/vendor/github.com/metacubex/sing-tun/tun_linux.go
+index dac98e5a765a6b6906cd9277ba729f0eaabb9fbe..47264f261edabe2dc202082c158552ac57c97209 100644
+--- a/vendor/github.com/metacubex/sing-tun/tun_linux.go
++++ b/vendor/github.com/metacubex/sing-tun/tun_linux.go
+@@ -598,6 +598,33 @@ func (t *NativeTun) rules() []*netlink.Rule {
+ 	}
+ 
+ 	nopPriority := ruleStart + 10
++	// The system stack's forwarder answers the interface's connections from the interface's own
++	// address, as the user the core runs as. A list of included or excluded users that leaves
++	// that user out would send these answers past the interface, so they go into it first.
++	if len(excludeRanges) > 0 {
++		if p4 {
++			for _, address := range t.options.Inet4Address {
++				it = netlink.NewRule()
++				it.Priority = priority
++				it.IifName = "lo"
++				it.Src = address.Masked()
++				it.Table = t.options.IPRoute2TableIndex
++				it.Family = unix.AF_INET
++				rules = append(rules, it)
++			}
++		}
++		if p6 {
++			for _, address := range t.options.Inet6Address {
++				it = netlink.NewRule()
++				it.Priority = priority6
++				it.IifName = "lo"
++				it.Src = address.Masked()
++				it.Table = t.options.IPRoute2TableIndex
++				it.Family = unix.AF_INET6
++				rules = append(rules, it)
++			}
++		}
++	}
+ 	for _, excludePort := range t.options.ExcludeSrcPort {
+ 		if p4 {
+ 			it = netlink.NewRule()

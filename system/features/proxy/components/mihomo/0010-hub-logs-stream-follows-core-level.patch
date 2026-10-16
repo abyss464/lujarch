@@ -1,0 +1,14 @@
+diff --git a/hub/route/server.go b/hub/route/server.go
+index 6d37d4802bfe4e5caef8fc224479a1225c38ab8e..7e66c274baa52d5639a774543fb57f0ce65fda98 100644
+--- a/hub/route/server.go
++++ b/hub/route/server.go
+@@ -528,7 +528,8 @@ func getLogs(w http.ResponseWriter, r *http.Request) {
+ 	}()
+ 
+ 	for logM := range ch {
+-		if logM.LogLevel < level {
++		// The stream carries what the core records: nothing below its own log level.
++		if logM.LogLevel < level || logM.LogLevel < log.Level() {
+ 			continue
+ 		}
+ 		buf.Reset()

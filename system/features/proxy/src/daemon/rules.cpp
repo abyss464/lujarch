@@ -36,8 +36,10 @@ using android::base::unique_fd;
 // Before netd's first rule (Android's rules start at 9000 with the local table's).
 constexpr uint32_t kBlockPriority = 8999;
 constexpr uint32_t kExceptionPriority = 8998;
-// Where an exception continues: Android's rule of the default network.
-constexpr uint32_t kContinueAt = 10000;
+// Where an exception continues: a rule of the block's own just before Android's (from 10000).
+// A goto whose target priority holds no rule is skipped, and Android has a rule at 10000 only
+// while a VPN runs.
+constexpr uint32_t kContinueAt = 9999;
 constexpr size_t kMaxExceptions = 32;
 
 std::atomic<uint32_t> sequence{1};
@@ -114,6 +116,16 @@ void BlockIpv6(const std::vector<in6_addr>& exceptions) {
     if (int error = Send(&block); error != 0) {
         LOG(ERROR) << "cannot block IPv6: " << strerror(error);
     }
+    DeleteAll(kContinueAt);
+    Request landing = NewRequest(RTM_NEWRULE, kContinueAt);
+    landing.rule.action = FR_ACT_NOP;
+    if (int error = Send(&landing); error != 0) {
+        LOG(ERROR) << "IPv6 block: no rule for the exceptions to continue at: " << strerror(error);
+    }
+    SetIpv6Exceptions(exceptions);
+}
+
+void SetIpv6Exceptions(const std::vector<in6_addr>& exceptions) {
     DeleteAll(kExceptionPriority);
     size_t count = 0;
     for (const in6_addr& address : exceptions) {
@@ -138,6 +150,7 @@ void BlockIpv6(const std::vector<in6_addr>& exceptions) {
 void UnblockIpv6() {
     DeleteAll(kExceptionPriority);
     DeleteAll(kBlockPriority);
+    DeleteAll(kContinueAt);
 }
 
 }  // namespace lujarch::proxy::rules

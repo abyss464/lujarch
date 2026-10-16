@@ -89,7 +89,7 @@ class ProxyFragment : BasePreferenceFragment() {
         }
         val status = screen.add(PreferenceCategory(prefContext)) { key = "status" }
         statusPref = status.add(Preference(prefContext)) {
-            key = "state"
+            key = KEY_STATUS
             setTitle(R.string.px_status_title)
             setSummary(PagesR.string.loading)
             setOnPreferenceClickListener {
@@ -109,7 +109,7 @@ class ProxyFragment : BasePreferenceFragment() {
         }
 
         val mode = screen.add(PreferenceCategory(prefContext)) {
-            key = "mode"
+            key = KEY_MODE
             setTitle(R.string.px_mode_category)
         }
         addMode(mode, Mihomo.MODE_RULE, R.string.px_mode_rule, R.string.px_mode_rule_summary)
@@ -141,6 +141,9 @@ class ProxyFragment : BasePreferenceFragment() {
         }
         addEntry(apps, "app_routing", R.string.routing_title, R.string.px_routing_summary, PagesR.drawable.ic_apps) {
             Pages.open(requireContext(), AppRoutingFragment::class.java, R.string.routing_title)
+        }
+        addEntry(apps, "tun_include", R.string.px_include_title, R.string.px_include_summary, R.drawable.ic_px_filter) {
+            Pages.open(requireContext(), TunIncludeFragment::class.java, R.string.px_include_title)
         }
 
         val nodes = screen.add(PreferenceCategory(prefContext)) {
@@ -233,7 +236,7 @@ class ProxyFragment : BasePreferenceFragment() {
             }
         }
         // The key the pages use for the proxy's own interface; it is never shown here.
-        addEntry(advanced, "secret", R.string.px_secret_title, R.string.px_secret_summary, R.drawable.ic_key) {
+        addEntry(advanced, KEY_SECRET, R.string.px_secret_title, R.string.px_secret_summary, R.drawable.ic_key) {
             confirm("px-secret", R.string.px_secret_title, { getString(R.string.px_secret_confirm) }, R.string.px_secret_action) {
                 startConfigTask(KEY_SECRET, R.string.px_secret_title) {
                     step(context.getString(R.string.px_secret_step))
@@ -556,11 +559,14 @@ class ProxyFragment : BasePreferenceFragment() {
     }
 
     companion object {
-        /** Rows that Settings search scrolls into view: Use proxy and Repair after network changes. */
+        /**
+         * Rows that Settings search scrolls into view: Use proxy, Status, Mode, Repair after
+         * network changes and Change the control key (also the task key of the change).
+         */
         const val KEY_ENABLED = "lujarch_proxy_enabled"
+        const val KEY_STATUS = "state"
+        const val KEY_MODE = "mode"
         const val KEY_REPAIR = "lujarch_proxy_repair"
-
-        /** Task key of the controller key change. */
         const val KEY_SECRET = "secret"
 
         private const val POLL_MS = 3000L

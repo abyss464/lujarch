@@ -1,0 +1,55 @@
+diff --git a/src/apps.rs b/src/apps.rs
+index 34a0eccc46b07cf6dd2267d668bb9476ec045380..1f1551e60c1beb7da7a775a03546718509920f78 100644
+--- a/src/apps.rs
++++ b/src/apps.rs
+@@ -265,7 +265,7 @@ pub fn targets(groups: &[ProxyGroup], custom_keys: &[String]) -> Targets {
+ }
+ 
+ /// The manager target that selects `g`: the class key, prefixed for non-url-test groups.
+-fn target_for(g: &ProxyGroup) -> String {
++pub(crate) fn target_for(g: &ProxyGroup) -> String {
+     match g.group_type {
+         // An adaptive group answers to every variant of its key; the plain key names it.
+         GroupType::UrlTest | GroupType::Adaptive => g.class_key.clone(),
+diff --git a/src/build.rs b/src/build.rs
+index adfecd986e227e588b04edd686d5e2a00a5ac9fc..4e614ebe86a6c2a30a9a59991c4814200b8f505e 100644
+--- a/src/build.rs
++++ b/src/build.rs
+@@ -106,6 +106,10 @@ pub fn resolve_target(target: &str, groups: &[ProxyGroup]) -> Option<String> {
+     if matches!(target, "DIRECT" | "REJECT" | "REJECT-DROP" | "PASS" | "COMPATIBLE") {
+         return Some(target.to_string());
+     }
++    // A rule may name a group as the core knows it (an imported list, a rule written by hand).
++    if let Some(g) = groups.iter().find(|g| g.name == target) {
++        return Some(g.name.clone());
++    }
+     let (key, preferred) = if let Some(k) = target.strip_prefix("fallback:") {
+         (k, GroupType::Fallback)
+     } else if let Some(k) = target.strip_prefix("balance:") {
+diff --git a/src/main.rs b/src/main.rs
+index 2661fcd006a25ed544feb55f334f019d02264783..be2472926af2ac64a616d9a1ffac3b6c2a3a48ee 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1769,6 +1769,22 @@ fn cmd_rule(dir: &Path, profile: Profile, action: RuleAction) -> Result<()> {
+             for (i, l) in lines.iter().enumerate() {
+                 parse_checked_rule(l).with_context(|| format!("rule {} of the list", i + 1))?;
+             }
++            // A line may name a group as the core knows it ("US - Auto", the name a page shows):
++            // it is kept with the group's routing target, as a rule added on a page is.
++            let groups = pool_groups(dir, profile).unwrap_or_default();
++            let lines: Vec<String> = lines
++                .into_iter()
++                .map(|l| match routing::Rule::parse(&l) {
++                    Ok(mut rule) => match groups.iter().find(|g| g.name == rule.target) {
++                        Some(g) => {
++                            rule.target = apps::target_for(g);
++                            rule.to_string()
++                        }
++                        None => l,
++                    },
++                    Err(_) => l,
++                })
++                .collect();
+             let count = cfg.import_to_set(&set, &lines)?;
+             cfg.save(&routing_path)?;
+             println!("Imported {count} rules to [{set}]");
