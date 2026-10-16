@@ -27,7 +27,7 @@ system's own UI, and is never a default in this repository.
 | `lock.toml` | Every pinned input of a build |
 | `upstream.xml` | Every upstream project pinned to a commit (a repo manifest) |
 | `test/` | The test flow: host checks, virtual-device tests, phone tests (process/test-flow.md) |
-| `release/` | The release flow (process/release-flow.md) |
+| `release/` | The release flow (process/release-flow.md): its signing step, `sign.py`, and its verification, `verify.py` |
 | `tools/lujarch` | The command line for everything above |
 | `tools/patches/<project>/` | Patches to the build system itself, which reach no image; applied before all others |
 
