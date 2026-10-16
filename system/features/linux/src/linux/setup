@@ -64,6 +64,14 @@ if [ ! -s /etc/locale.conf ]; then
     printf 'LANG=C.UTF-8\n' >/etc/locale.conf
 fi
 
+# Linux shares Android's network, which has no resolver configuration to share: a system that
+# names no name server gets a public one, whose queries the proxy answers while it hijacks DNS.
+if ! grep -qs '^nameserver' /etc/resolv.conf; then
+    rm -f /etc/resolv.conf
+    printf 'nameserver 1.1.1.1\noptions edns0\n' >/etc/resolv.conf
+    say "name server 1.1.1.1 set"
+fi
+
 mkdir -p /etc/lujarch/services /var/log/lujarch
 
 # The fingerprint helper first in the authorization of sudo and polkit; it fails at once while

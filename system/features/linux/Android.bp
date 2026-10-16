@@ -11,6 +11,8 @@ aidl_interface {
         },
         ndk: {
             enabled: true,
+            // The package's last part is GNU C++'s predefined macro linux.
+            cflags: ["-Ulinux"],
         },
         cpp: {
             enabled: false,
@@ -248,6 +250,7 @@ cc_library_shared {
     name: "liblujarch_linux_display_jni",
     srcs: ["src/terminal/jni/display_jni.cpp"],
     local_include_dirs: ["src/linux/desktop/protocol"],
+    header_libs: ["jni_headers"],
     sdk_version: "current",
     stl: "c++_static",
     cflags: [

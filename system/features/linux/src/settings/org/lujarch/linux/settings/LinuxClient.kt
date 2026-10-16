@@ -95,7 +95,22 @@ object LinuxClient {
 
     suspend fun <T> call(command: String, block: (ILinux) -> T): T =
         try {
-            withTimeout(TIMEOUT_MS) { withContext(Dispatchers.IO) { block(service(command)) } }
+            withTimeout(TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    val service = service(command)
+                    try {
+                        block(service)
+                    } catch (e: DeadObjectException) {
+                        // A call the binder driver refuses (a file SELinux keeps from the service)
+                        // ends the same way as a stopped service; a running one still answers.
+                        if (!service.asBinder().pingBinder()) throw e
+                        throw LinuxException(
+                            LinuxException.Kind.UNAVAILABLE, command, "$SERVICE could not take the call",
+                            cause = e,
+                        )
+                    }
+                }
+            }
         } catch (e: TimeoutCancellationException) {
             throw LinuxException(LinuxException.Kind.TIMEOUT, command, "no answer within ${TIMEOUT_MS / 1000} s", cause = e)
         } catch (e: CancellationException) {

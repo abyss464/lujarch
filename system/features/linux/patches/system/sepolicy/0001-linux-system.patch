@@ -1,0 +1,52 @@
+diff --git a/private/attributes b/private/attributes
+index e8e004c476ef3bcbc58bade2ad5a1e4ee4cdfc1f..067aabc7640330f976267be17fa732eecd4ef3b9 100644
+--- a/private/attributes
++++ b/private/attributes
+@@ -30,3 +30,7 @@ expandattribute update_provider false;
+ # of the OMAPI services. Remove once the RELEASE_NATIVE_OMAPI flag is cleaned
+ # up and the app-based implementation is removed.
+ attribute omapi_server;
++
++# Lujarch (LNX-1): the domains of an installed Linux system, whose programs are files of /data it
++# installs and which use the kernel's interfaces as a Linux system does.
++attribute lujarch_linux_system;
+diff --git a/private/coredomain.te b/private/coredomain.te
+index 7defa00632a74b6f3bfd9468c8166eb9758a1f37..2b54bcc6d3c90b6829dab714f3d6a441339e5c95 100644
+--- a/private/coredomain.te
++++ b/private/coredomain.te
+@@ -148,6 +148,7 @@ full_treble_only(`
+     coredomain
+     -init
+     -vold
++    -lujarch_linux_system # Lujarch (LNX-1): the tools of a Linux system read the kernel state
+   } proc:file no_rw_file_perms;
+ 
+   # /sys
+@@ -158,6 +159,7 @@ full_treble_only(`
+     -ueventd
+     is_flag_enabled(RELEASE_AVF_ENABLE_DEVICE_ASSIGNMENT, `-vfio_handler')
+     -vold
++    -lujarch_linux_system # Lujarch (LNX-1): the tools of a Linux system read the kernel state
+   } sysfs:file no_rw_file_perms;
+ 
+   # /dev
+diff --git a/private/domain.te b/private/domain.te
+index 7d5869e163a20568d45033b659f520d7ed9aa0fd..755c703f6d3c0ee84a6672c57f82c42abba51cfd 100644
+--- a/private/domain.te
++++ b/private/domain.te
+@@ -1962,6 +1962,7 @@ neverallow {
+     -appdomain
+     with_asan(`-asan_extract')
+     -shell
++    -lujarch_linux_system # Lujarch (LNX-1): the programs of an installed Linux system
+     userdebug_or_eng(`-su')
+     -system_server_startup # for memfd backed executable regions
+     -app_zygote
+@@ -2042,6 +2043,7 @@ neverallow {
+ neverallow {
+   domain
+   -appdomain
++  -lujarch_linux_system # Lujarch (LNX-1): the programs of an installed Linux system
+   userdebug_or_eng(`-overlay_remounter')
+ } {
+   data_file_type

@@ -156,6 +156,8 @@ Service::Service()
                           ForTerminal([&](ILinuxListener& l) { l.onClipboard(copied); });
                       }}),
       death_(AIBinder_DeathRecipient_new(&Service::OnListenerDied)) {
+    // The cookie is the service, which outlives every link: nothing to release when one ends.
+    AIBinder_DeathRecipient_setOnUnlinked(death_.get(), [](void*) {});
     auto values = files::ReadKeyValues(kStateFile);
     android::base::ParseInt(values["installed"], &persisted_.installed_at);
     persisted_.user = values["user"];

@@ -93,6 +93,12 @@ Result<void> PrepareMountPoints(int root, const std::vector<std::string>& nodes,
                          Dir{"/dev/pts", 0755}, Dir{"/dev/shm", 01777}, Dir{kLinuxFiles, 0755},
                          Dir{"/run", 0755}, Dir{"/tmp", 01777}}) {
         if (auto made = files::MakeDirsIn(root, d.path, d.mode); !made.ok()) return made.error();
+        // A system's own directory keeps the mode it came with otherwise (Arch's /dev is 0555),
+        // and the daemon writes into one only as its owner.
+        std::string name;
+        auto parent = files::OpenParentIn(root, d.path, &name);
+        if (!parent.ok()) return parent.error();
+        if (fchmodat(parent->get(), name.c_str(), d.mode, 0) != 0) return ErrnoError() << d.path;
     }
     if (usb) {
         if (auto made = files::MakeDirsIn(root, "/dev/bus/usb", 0755); !made.ok()) {
@@ -220,6 +226,10 @@ Result<void> System::Create(bool usb) {
         // The anchor ends with the daemon, and the namespace with the last program in it.
         prctl(PR_SET_PDEATHSIG, SIGKILL);
         if (getppid() != parent) _exit(1);
+        // Programs enter the namespace by setns on the anchor, which the kernel allows into a
+        // dumpable process only (without sys_ptrace); the daemon stops being dumpable once it
+        // acts with a user's file system IDs, and the anchor inherits that.
+        prctl(PR_SET_DUMPABLE, 1);
         if (unshare(CLONE_NEWNS) != 0) ChildFail(out, 0);
         if (mount(nullptr, "/", nullptr, MS_REC | MS_SLAVE, nullptr) != 0) ChildFail(out, 1);
         // The root as a mount point: programs that look for "/" in mountinfo find it.
@@ -367,7 +377,7 @@ Result<Process> System::Start(const Spawn& s) {
     std::vector<char*> envp;
     for (std::string& e : env) envp.push_back(e.data());
     envp.push_back(nullptr);
-    const char* tty = s.tty.empty() ? nullptr : s.tty.c_str();
+    const int tty = s.tty;
     const uid_t root_uid = aid::kLinuxRoot;
 
     int gate[2];
@@ -388,11 +398,10 @@ Result<Process> System::Start(const Spawn& s) {
         dfl.sa_handler = SIG_DFL;
         sigaction(SIGPIPE, &dfl, nullptr);
         if (setsid() < 0) ChildFail(out, 0);
-        if (tty != nullptr) {
-            const int fd = open(tty, O_RDWR);
-            if (fd < 0 || ioctl(fd, TIOCSCTTY, 0) != 0) ChildFail(out, 1);
-            if (dup2(fd, 0) < 0 || dup2(fd, 1) < 0 || dup2(fd, 2) < 0) ChildFail(out, 1);
-            if (fd > 2) close(fd);
+        if (tty >= 0) {
+            if (ioctl(tty, TIOCSCTTY, 0) != 0) ChildFail(out, 1);
+            if (dup2(tty, 0) < 0 || dup2(tty, 1) < 0 || dup2(tty, 2) < 0) ChildFail(out, 1);
+            if (tty > 2) close(tty);
         } else {
             const int null = open("/dev/null", O_RDWR);
             if (null < 0) ChildFail(out, 1);
@@ -402,7 +411,9 @@ Result<Process> System::Start(const Spawn& s) {
             }
             if (null > 2) close(null);
         }
-        // The daemon puts the child in the environment's cgroup before it goes on.
+        // The daemon puts the child in the environment's cgroup before it goes on: the gate ends
+        // when the daemon closes its end, so the child's own copy of that end goes first.
+        close(gate_w.release());
         char c;
         TEMP_FAILURE_RETRY(read(gate_r.get(), &c, 1));
         if (android_root) {

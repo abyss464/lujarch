@@ -4,10 +4,11 @@
 # Android's apps of their groups do, and reach of Android only their terminals, the device
 # nodes bound into their /dev (the GPU's among them), lujarch_linux's display socket, Lujarch's
 # files for Linux and the USB devices while they are lent.
-type lujarch_linux_arch, domain, coredomain;
+type lujarch_linux_arch, domain, coredomain, lujarch_linux_system;
 type lujarch_linux_enter_exec, system_file_type, exec_type, file_type;
 
-# The system.
+# The system, and the way to its root (lujarch_linux_enter changes the root to it).
+allow lujarch_linux_arch { lujarch_linux_data_file lujarch_linux_os_file }:dir search;
 allow lujarch_linux_arch lujarch_linux_arch_file:dir { create_dir_perms rename reparent watch };
 allow lujarch_linux_arch lujarch_linux_arch_file:file {
     create_file_perms rename link execute execute_no_trans map watch
@@ -38,13 +39,19 @@ allow lujarch_linux_arch self:unix_stream_socket { connectto create_stream_socke
 # What lujarch_linux hands its programs: their streams and terminals, and the desktop's display
 # (its socket, the Terminal app's buffers from the graphics allocator, the daemon's fences).
 allow lujarch_linux_arch lujarch_linux:fd use;
+# Their programs ask the kernel whether a stream they were given (a pipe of the daemon's, a
+# script of Lujarch's files) is a terminal.
+allow lujarch_linux_arch { lujarch_linux self }:fifo_file ioctl;
+allow lujarch_linux_arch system_file:file ioctl;
 allow lujarch_linux_arch lujarch_linux:unix_stream_socket connectto;
 allow lujarch_linux_arch hal_graphics_allocator:fd use;
 allow lujarch_linux_arch lujarch_linux:fifo_file { getattr write append };
 allow lujarch_linux_arch devpts:chr_file { rw_file_perms setattr };
-# What a shell's programs ask of their terminal beyond Android's unprivileged set.
+# What a shell's programs ask of their terminal beyond Android's unprivileged set (glibc reads
+# and sets a terminal's attributes with the termios2 calls).
 allowxperm lujarch_linux_arch devpts:chr_file ioctl {
     TCSBRK TCSBRKP TCXONC FIONREAD TIOCNOTTY TIOCGSID TIOCEXCL TIOCNXCL TIOCGETD TIOCMGET
+    TCGETS2 TCSETS2 TCSETSW2 TCSETSF2
 };
 allow lujarch_linux_arch ptmx_device:chr_file rw_file_perms;
 

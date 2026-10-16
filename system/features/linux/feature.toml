@@ -9,6 +9,8 @@ module = "lujarch_linux_frpc"
 package = "./cmd/frpc"
 # noweb: the admin dashboard's assets are built by npm and are not in the repository.
 tags = ["frpc", "noweb"]
+# -checklinkname=0: the interface listing for Android (wlynxg/anet) links to internals of net.
+ldflags = ["-checklinkname=0"]
 
 # The sources Linux downloads to build the desktop (src/linux/desktop/install); lock.toml pins
 # them, and the tools stage their pins as the file downloads beside this one.

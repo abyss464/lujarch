@@ -12,9 +12,8 @@ type lujarch_linux_data_file, file_type, data_file_type, core_data_file_type;
 type lujarch_linux_os_file, file_type, data_file_type, core_data_file_type;
 type lujarch_linux_relay_data_file, file_type, data_file_type, core_data_file_type;
 type lujarch_linux_swap_file, file_type, data_file_type, core_data_file_type;
-# The installed systems' files. Not a data file type: Linux's programs execute them, which no
-# domain but apps may do with data files. file_contexts leaves them to restorecon as they are.
-type lujarch_linux_arch_file, file_type;
+# The installed systems' files, which Linux's programs execute (lujarch_linux_system).
+type lujarch_linux_arch_file, file_type, data_file_type, core_data_file_type;
 
 # Its interface, and the listeners of Lujarch Settings and the Terminal app.
 binder_use(lujarch_linux)
@@ -29,7 +28,7 @@ get_prop(lujarch_linux, lujarch_setting_prop)
 # lujarch_linux.rc's capabilities; no domain bypasses permissions, so the daemon acts on a user's
 # files with the user's file system IDs (setuid, setgid).
 allow lujarch_linux self:global_capability_class_set {
-    chown fowner fsetid kill setgid setuid sys_admin sys_chroot sys_ptrace
+    chown fowner fsetid kill setgid setuid sys_admin sys_chroot
 };
 
 # Its own files: state, colors, the setup log, Remote access's connection and keys, the relay's
@@ -38,7 +37,7 @@ allow lujarch_linux lujarch_linux_data_file:dir create_dir_perms;
 allow lujarch_linux lujarch_linux_data_file:file { create_file_perms rename };
 allow lujarch_linux lujarch_linux_relay_data_file:dir rw_dir_perms;
 allow lujarch_linux lujarch_linux_relay_data_file:file { create_file_perms rename };
-allow lujarch_linux lujarch_linux_swap_file:file { create_file_perms swapon };
+allow lujarch_linux lujarch_linux_swap_file:file create_file_perms;
 type_transition lujarch_linux lujarch_linux_data_file:file lujarch_linux_swap_file "swap";
 allowxperm lujarch_linux lujarch_linux_swap_file:file ioctl F2FS_IOC_SET_PIN_FILE;
 allow lujarch_linux labeledfs:filesystem getattr;
@@ -63,6 +62,9 @@ allow lujarch_linux tmpfs:filesystem unmount;
 
 # The terminals of the sessions.
 allow lujarch_linux ptmx_device:chr_file rw_file_perms;
+# The GPU's nodes it finds and binds into Linux's /dev (kgsl-3d0, dri/renderD128, dma_heap/system).
+allow lujarch_linux { gpu_device dmabuf_heap_device }:dir search;
+allow lujarch_linux { gpu_device dmabuf_system_heap_device }:chr_file getattr;
 allow lujarch_linux devpts:chr_file { rw_file_perms setattr };
 
 # Linux's programs: started in their domain, signalled, their foreground job read from /proc.
@@ -99,7 +101,7 @@ allow lujarch_linux lujarch_root_service:service_manager find;
 binder_call(lujarch_linux, lujarch_root)
 
 # An archive chosen in Files comes as an open file of the documents provider.
-allow lujarch_linux platform_app:fd use;
+allow lujarch_linux { platform_app mediaprovider_app }:fd use;
 allow lujarch_linux { media_rw_data_file fuse }:file { read getattr };
 
 # The Terminal app holds one end of a session's or the desktop's socket pair, and the desktop's

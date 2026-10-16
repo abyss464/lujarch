@@ -214,6 +214,9 @@ Result<std::string> Sessions::Create(const std::string& kind, const std::string&
     ws.ws_row = static_cast<unsigned short>(std::clamp(rows, 1, 1000));
     if (ioctl(master.get(), TIOCSWINSZ, &ws) != 0) return ErrnoError() << "TIOCSWINSZ";
     if (!SetNonBlocking(master.get())) return ErrnoError() << "O_NONBLOCK";
+    // Opened before it becomes the user's: the daemon opens only what it may as its owner.
+    unique_fd slave(open(tty, O_RDWR | O_NOCTTY | O_CLOEXEC));
+    if (slave < 0) return ErrnoError() << tty;
     // Programs that open their terminal by name (sudo, ssh, gpg) need it to be their user's.
     if (spawn.as == Spawn::As::kUser &&
         (chown(tty, aid::kLinux, aid::kLinux) != 0 || chmod(tty, 0620) != 0)) {
@@ -228,7 +231,7 @@ Result<std::string> Sessions::Create(const std::string& kind, const std::string&
         }
         id = "s" + std::to_string(next_id_++);
     }
-    spawn.tty = tty;
+    spawn.tty = slave.get();
     spawn.login = true;
     spawn.env.push_back("TERM=xterm-256color");
     spawn.env.push_back("COLORTERM=truecolor");

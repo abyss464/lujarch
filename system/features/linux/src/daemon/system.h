@@ -61,9 +61,9 @@ struct Spawn {
     std::vector<gid_t> groups;
     // NAME=value
     std::vector<std::string> env;
-    // A terminal's path, which becomes the program's controlling terminal and standard streams;
+    // A terminal, open, which becomes the program's controlling terminal and standard streams;
     // otherwise the three descriptors (-1: /dev/null).
-    std::string tty;
+    int tty = -1;
     int in = -1;
     int out = -1;
     int err = -1;
