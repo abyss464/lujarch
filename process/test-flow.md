@@ -26,7 +26,8 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
 - Every test that does not depend on the Xiaomi 13's hardware runs here.
 - Test components (probes, harness apps) are installed into the virtual device when a test runs.
   No test code is ever part of an image.
-- `tools/lujarch vm start` boots the images of the `vm` build with empty data and leaves it ready
+- `tools/lujarch vm start` boots a copy of the images of the `vm` build (so that builds go on while
+  it runs) with an empty data partition of the host's `vm.data_mb` and leaves it ready
   for tests: set up, awake, Developer options and Rooted debugging on, adb as root, on its Wi-Fi
   network. A module build installs files without packing them into the images. While the images
   lack files installed since the last full build, `vm start` names them and stops:
@@ -88,7 +89,22 @@ Rules:
 - Each test names the items it verifies (process/target.md). One item may have several tests.
 - Tests may be the feature's own scripts and programs; a test that needs to install a system
   build uses the System updates install path above.
-- Results are written per commit to `<out>/test/<commit>/results.json`; `tools/lujarch status`
-  reads them.
+- A test is a Python script in its feature's or device's `tests/`, whose text says
+  `verifies: <ITEM>, ...` (and `timeout: <seconds>` when it needs more than 900). It uses the
+  device as a person does, through the library `test/lib/lujarch_test.py`: taps on what the
+  screen shows, the system's own pages, screenshots of the display; it exits 0 when every check
+  holds. Files whose name starts with `_` are a feature's helpers, not tests.
+- Probes, the apps a test installs to act as an app would, are built from `test/probes/<name>/`
+  with the SDK's own tools when a test first needs them, and installed only while it runs.
+- `tools/lujarch test [ITEM | FEATURE | TEST ...]` runs the tests on the virtual device, each
+  from the unlocked home screen, and keeps each test's log and screenshots under
+  `<out>/test/<commit>/<feature>/<test>/`. A test of a `Verify: phone` item is not run there.
+- Results are written per commit to `<out>/test/<commit>/results.json`, an item passing when
+  every test that names it passed; `tools/lujarch status` reads them. They are written only for a
+  clean worktree, run on a device that `vm start` booted from that commit's packed images and
+  into which nothing was copied since; other runs keep their output under `<out>/test/work/`.
+- `LUJARCH_VM=<n>` runs a second (third...) virtual device beside the first: every `vm` and
+  `test` command then addresses instance n, with its own container, ports and runtime
+  directory.
 - A commit has passed the test flow when level 1 passes and the tests of the items it changes
   pass at the level that answers them.

@@ -14,6 +14,7 @@
   lujarch vm sync [MODULE...]       copy built modules, or what its images lack, into the running
                                     virtual device
   lujarch vm screenshot [PATH]      write what the virtual device's display shows
+  lujarch test [SELECTOR...]        run the tests of the target's items on the virtual device
 """
 
 import argparse
@@ -63,10 +64,18 @@ RECORD_RE = re.compile(
     re.IGNORECASE,
 )
 
-ADB_PORT = 6520
-WEBRTC_URL = "https://localhost:8443"
-VM_CONTAINER = "lujarch-vm"
-VM_PORTS = ("6520", "8443", "15550-15599/tcp", "15550-15599/udp")
+# The virtual device's instance (LUJARCH_VM, 1 by default): instances run side by side, each in
+# its own container with its own ports and runtime directory.
+VM_INSTANCE = int(os.environ.get("LUJARCH_VM", "1") or 1)
+VM_OFFSET = VM_INSTANCE - 1
+ADB_PORT = 6520 + VM_OFFSET
+WEBRTC_URL = f"https://localhost:{8443 + VM_OFFSET}"
+VM_CONTAINER = "lujarch-vm" if VM_INSTANCE == 1 else f"lujarch-vm-{VM_INSTANCE}"
+VM_DIR = "vm" if VM_INSTANCE == 1 else f"vm-{VM_INSTANCE}"
+# Cuttlefish numbers the instance too (its vsock CID and ports follow the number), so ports are
+# the same inside the container and out.
+VM_ICE_PORTS = f"{15550 + 50 * VM_OFFSET}-{15599 + 50 * VM_OFFSET}"
+VM_PORTS = (str(ADB_PORT), str(8443 + VM_OFFSET), f"{VM_ICE_PORTS}/tcp", f"{VM_ICE_PORTS}/udp")
 
 
 def log(message):
@@ -1893,6 +1902,9 @@ ANALYSIS_GO_GB = 38
 BESIDE_ANALYSIS_GB = 2
 # The least memory cap a build runs under.
 BUILD_MIN_GB = ANALYSIS_GO_GB + BESIDE_ANALYSIS_GB
+# The least memory cap of a build that reuses the last analysis: siso and the Java and R8 jobs of
+# two build jobs (fitting_jobs).
+BUILD_NO_ANALYSIS_MIN_GB = 30
 # How long a build waits for the memory it needs to come free.
 MEMORY_WAIT_MIN = 20
 
@@ -1968,14 +1980,34 @@ def wait_for_memory(need):
         f"build.memory_max in host.toml). What holds memory:\n{memory_holders()}")
 
 
-def build_budget(host):
+def analysis_pending(tree, product):
+    """Whether the build analyses the tree again: a file Soong read for its build graph changed
+    after the graph was written, or there is no graph."""
+    graph = tree / "out" / "soong" / f"build.{product}.ninja"
+    inputs = graph.with_name(graph.name + ".d")
+    try:
+        written = graph.stat().st_mtime
+        deps = inputs.read_text().split(":", 1)[1].replace("\\\n", " ").split()
+    except (OSError, IndexError):
+        return True
+    for dep in deps:
+        try:
+            if (tree / dep).stat().st_mtime > written:
+                return True
+        except OSError:
+            return True
+    return False
+
+
+def build_budget(host, analysis=True):
     """The build's memory cap, pressure point and jobs: from host.toml, or from free memory once
-    enough of it is free."""
+    enough of it is free for the build, with or without an analysis of the tree."""
     mem_max = host.get("build", "memory_max") or ""
     if not mem_max:
         # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT below
         # holds it; squeezed by the cap instead, it stalls for hours.
-        gb = wait_for_memory(BUILD_MIN_GB + DESKTOP_RESERVE_GB)
+        least = BUILD_MIN_GB if analysis else BUILD_NO_ANALYSIS_MIN_GB
+        gb = wait_for_memory(least + DESKTOP_RESERVE_GB)
         mem_max = f"{min(gb - DESKTOP_RESERVE_GB, 60)}G"
     mem_high = host.get("build", "memory_high") or mem_max
     jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
@@ -2111,7 +2143,7 @@ def cmd_build(args):
     pin = lock_file().get("stock", {}).get(args.device)
     if pin and pin.get("files") and not (stock_dump_dir(host, pin) / STOCK_UNPACKED).is_file():
         die(f"{args.device} needs files of its stock release: lujarch stock {args.device}")
-    mem_max, mem_high, jobs = build_budget(host)
+    mem_max, mem_high, jobs = build_budget(host, analysis_pending(tree, device["product"]))
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -2194,12 +2226,14 @@ m -j{jobs} {modules}
     # When the images were last packed (unpacked_files): a module build installs files and
     # packs no image.
     if not args.modules or "droid" in args.modules:
-        packed = time.time()
+        packed, image = time.time(), commit
     else:
-        packed = json.loads(info.read_text()).get("packed") if info.is_file() else None
+        before = json.loads(info.read_text()) if info.is_file() else {}
+        packed, image = before.get("packed"), before.get("image")
     info.write_text(json.dumps({
         "device": args.device, "lunch": lunch, "product_out": str(tree / product_out),
         "modules": args.modules, "commit": commit, "built": stamp, "packed": packed,
+        "image": image,
     }, indent=2) + "\n")
     log(f"built {args.device} in {minutes} min")
     return 0
@@ -2236,7 +2270,7 @@ def vm_paths(host):
         die("no vm build: lujarch build vm")
     info = json.loads(info_path.read_text())
     base = host.out / "vm"
-    home = base / "home"
+    home = host.out / VM_DIR / "home"
     home.mkdir(parents=True, exist_ok=True)
     # Cuttlefish asks Debian's cuttlefish-common package whether the host can run its VM
     # managers; the container provides everything that package would.
@@ -2725,6 +2759,11 @@ def vm_sync(host, info, host_out, modules):
         if push.returncode:
             die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
         log(f"copied /{rel}")
+    if changed:
+        state = device_state_path(host)
+        record = json.loads(state.read_text()) if state.is_file() else {"image": None}
+        record["synced"] = sorted(set(record.get("synced", [])) | set(synced or ["unpacked files"]))
+        state.write_text(json.dumps(record, indent=2) + "\n")
     services = mods.services(changed) if changed else {}
     needed = set().union(*services.values())
     framework = [f for f in changed if partition_path(f).startswith(READ_BY_FRAMEWORK)]
@@ -2775,7 +2814,7 @@ def vm_screenshot(host, path, frames, interval):
     if container_state() != "running":
         die("the virtual device is not running (lujarch vm start)")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    target = Path(path).resolve() if path else host.out / "vm" / "screenshots" / f"{stamp}.png"
+    target = Path(path).resolve() if path else host.out / VM_DIR / "screenshots" / f"{stamp}.png"
     if target.suffix not in SCREENSHOT_FORMATS:
         die(f"{target.name}: the display is written as {', '.join(SCREENSHOT_FORMATS)}")
     if frames > 1:
@@ -2786,27 +2825,51 @@ def vm_screenshot(host, path, frames, interval):
     target.parent.mkdir(parents=True, exist_ok=True)
     # The streamer in the container writes the file; the runtime home is the one directory both
     # sides see.
-    home = host.out / "vm" / "home"
+    home = host.out / VM_DIR / "home"
     staged = home / f".screenshot-{os.getpid()}{target.suffix}"
     start = time.monotonic()
     for i, dest in enumerate(targets):
         time.sleep(max(0.0, start + i * interval - time.monotonic()))
         try:
             run = subprocess.run(
-                ["docker", "exec", "-e", "HOME=/cf/home", VM_CONTAINER,
-                 "/cf/host/bin/cvd_internal_display", "screenshot",
-                 f"--screenshot_path=/cf/home/{staged.name}"],
+                ["docker", "exec", "-e", "HOME=/cf/home", "-e", f"CUTTLEFISH_INSTANCE={VM_INSTANCE}",
+                 VM_CONTAINER, "/cf/host/bin/cvd_internal_display", "screenshot",
+                 f"--instance_num={VM_INSTANCE}", f"--screenshot_path=/cf/home/{staged.name}"],
                 capture_output=True, text=True, timeout=60)
         except subprocess.TimeoutExpired:
             run = None
         if run is None or run.returncode or not staged.is_file():
             said = "no answer in 60 s" if run is None else (run.stdout + run.stderr).strip()
-            launcher = home / "cuttlefish" / "instances" / "cvd-1" / "logs" / "launcher.log"
+            launcher = home / "cuttlefish" / "instances" / f"cvd-{VM_INSTANCE}" / "logs" / "launcher.log"
             die(f"the display was not captured: {said}\nIt is captured by the streamer "
                 f"(/cf/host/bin/webRTC); log {launcher}")
         shutil.move(staged, dest)
         print(dest, flush=True)
     return 0
+
+
+def device_state_path(host):
+    """What the running virtual device boots: the commit of its images and the modules copied
+    into it since (vm sync). Tests record results only for a device that runs one clean
+    commit's images and nothing else."""
+    return host.out / VM_DIR / "device.json"
+
+
+def copy_images(host, info):
+    """The images the virtual device boots, copied (as reflinks: no space, no time) out of the
+    build's output, which the next build rewrites while the device runs."""
+    images = host.out / VM_DIR / "images"
+    if images.exists():
+        shutil.rmtree(images)
+    images.mkdir(parents=True)
+    for f in Path(info["product_out"]).iterdir():
+        if f.is_file():
+            r = subprocess.run(["cp", "--reflink=always", str(f), str(images / f.name)],
+                               capture_output=True, text=True)
+            if r.returncode:
+                die(f"copying {f.name} to {images}: {r.stderr.strip()} (the build output and "
+                    "the outputs must be on one file system that shares extents)")
+    return images
 
 
 def cmd_vm(args):
@@ -2820,8 +2883,10 @@ def cmd_vm(args):
             log("the virtual device is not running")
             return 0
         if state == "running":
-            subprocess.run(["docker", "exec", VM_CONTAINER, "/cf/host/bin/stop_cvd"],
+            subprocess.run(["docker", "exec", "-e", f"CUTTLEFISH_INSTANCE={VM_INSTANCE}",
+                            VM_CONTAINER, "/cf/host/bin/stop_cvd"],
                            capture_output=True, timeout=120)
+        device_state_path(host).unlink(missing_ok=True)
         return subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True).returncode
     if args.action == "sync":
         if state != "running" or not booted(host_out):
@@ -2848,6 +2913,8 @@ def cmd_vm(args):
         log(f"booting images that lack {len(unpacked)} files installed since they were packed")
     if state is not None:
         subprocess.run(["docker", "rm", "-f", VM_CONTAINER], capture_output=True)
+    device_state_path(host).unlink(missing_ok=True)
+    images = copy_images(host, info)
     vm = device_config("vm")
     display = device_config(vm["display_of"])["display"] if vm.get("display_of") else {}
     command = [
@@ -2860,7 +2927,7 @@ def cmd_vm(args):
         "--security-opt", "seccomp=unconfined", "--security-opt", "apparmor=unconfined",
         # crosvm opens more files than a container's default soft limit of 1024.
         "--ulimit", "nofile=524288:524288",
-        "-v", f"{host_out}:/cf/host:ro", "-v", f"{info['product_out']}:/cf/images",
+        "-v", f"{host_out}:/cf/host:ro", "-v", f"{images}:/cf/images",
         "-v", f"{home}:/cf/home", "-v", f"{common}:/usr/lib/cuttlefish-common/bin:ro",
         "-e", "HOME=/cf/home", "-e", "ANDROID_HOST_OUT=/cf/host",
         "-e", "ANDROID_PRODUCT_OUT=/cf/images", "-w", "/cf/home",
@@ -2875,6 +2942,9 @@ def cmd_vm(args):
         host.get("vm", "image", "debian:trixie-slim"),
         "/cf/host/bin/launch_cvd", "--report_anonymous_usage_stats=n", "--resume=false",
         "--enable_tap_devices=false", "--system_image_dir=/cf/images",
+        f"--base_instance_num={VM_INSTANCE}",
+        f"--tcp_port_range={VM_ICE_PORTS.replace('-', ':')}",
+        f"--udp_port_range={VM_ICE_PORTS.replace('-', ':')}",
         f"--cpus={host.get('vm', 'cpus', 4)}", f"--memory_mb={host.get('vm', 'memory_mb', 8192)}",
         "--data_policy=always_create", f"--blank_data_image_mb={host.get('vm', 'data_mb', 16384)}",
     ]
@@ -2901,11 +2971,158 @@ def cmd_vm(args):
         if booted(host_out):
             save_log()
             provision(host_out)
+            device_state_path(host).write_text(json.dumps({
+                "image": info.get("image"), "packed": not unpacked, "synced": [],
+            }, indent=2) + "\n")
             log(f"booted and ready; adb 127.0.0.1:{ADB_PORT} as root; screen {WEBRTC_URL}")
             return 0
         time.sleep(10)
     save_log()
     die(f"not booted after {args.timeout} s; log {logfile}")
+
+
+# ---------------------------------------------------------------------------
+# Tests
+
+
+TEST_TIMEOUT = 900
+TEST_TIMEOUT_RE = re.compile(r"timeout:\s*(\d+)")
+
+
+def discover_tests():
+    """Every test of the features and devices as (id, path, items it verifies)."""
+    tests = []
+    for path in sorted(SYSTEM.glob("*/*/tests/*.py")):
+        if path.name.startswith("_"):
+            continue
+        text = read_text(path) or ""
+        items = sorted({i for m in VERIFIES_RE.finditer(text) for i in re.findall(ID_RE, m.group(1))})
+        tests.append((f"{path.parent.parent.name}/{path.stem}", path, items))
+    return tests
+
+
+def item_levels():
+    return {i: v for p in target_files() for i, v, _ in parse_target(p)[0]}
+
+
+def recordable(host, host_out):
+    """Why results cannot be recorded for HEAD, or None: a clean worktree, and a device that
+    runs exactly HEAD's packed images with nothing copied in since."""
+    if git("status", "--porcelain").stdout.strip():
+        return "the worktree has changes"
+    head = git("rev-parse", "HEAD").stdout.strip()
+    state = device_state_path(host)
+    if not state.is_file():
+        return "the virtual device was not started by lujarch vm start"
+    record = json.loads(state.read_text())
+    image = record.get("image") or ""
+    if image.endswith("-dirty") or not image or not head.startswith(image):
+        return f"the device runs the images of {image or 'an unknown build'}, not {head[:12]}"
+    if not record.get("packed"):
+        return "the device booted images that lack installed files"
+    if record.get("synced"):
+        return f"modules were copied into the device since it started: {', '.join(record['synced'])}"
+    version = adb(host_out, "shell", "getprop", "ro.lujarch.version").stdout.strip()
+    if not version.split("-")[-1] or not head.startswith(version.split("-")[-1]):
+        return f"the device reports version {version or 'none'}"
+    return None
+
+
+def merge_results(path, head, runs):
+    data = json.loads(path.read_text()) if path.is_file() else {}
+    tests = data.get("tests", {})
+    tests.update(runs)
+    items = {}
+    for run in tests.values():
+        for item in run["items"]:
+            ok = run["result"] == "pass"
+            items[item] = "pass" if items.get(item, "pass") == "pass" and ok else "fail"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"commit": head, "items": dict(sorted(items.items())),
+                                "tests": dict(sorted(tests.items()))}, indent=2) + "\n")
+    return items
+
+
+def cmd_test(args):
+    host = Host()
+    levels = item_levels()
+    tests = discover_tests()
+    if args.selectors:
+        chosen = []
+        for test_id, path, items in tests:
+            feature = test_id.split("/", 1)[0]
+            if any(s in (test_id, feature, path.stem, str(path)) or s in items
+                   for s in args.selectors):
+                chosen.append((test_id, path, items))
+        tests = chosen
+    if not tests:
+        die("no test matches")
+    unknown = [(t, [i for i in items if i not in levels]) for t, _, items in tests]
+    unknown = [(t, u) for t, u in unknown if u]
+    if unknown:
+        die("tests name items the target lacks: "
+            + "; ".join(f"{t}: {', '.join(u)}" for t, u in unknown))
+    phone = [(t, p, i) for t, p, i in tests if any(levels[x] == "phone" for x in i)]
+    vm_tests = [(t, p, i) for t, p, i in tests if (t, p, i) not in phone]
+    for t, _, _ in phone:
+        log(f"{t}: verifies phone items; runs on a Xiaomi 13, not here")
+    if not vm_tests:
+        return 0
+    info, host_out, _, _ = vm_paths(host)
+    if container_state() != "running" or not booted(host_out):
+        die("the virtual device is not running (lujarch vm start)")
+    if not adb_root(host_out):
+        die("adb cannot run as root on the virtual device")
+    head = git("rev-parse", "HEAD").stdout.strip()
+    why = recordable(host, host_out)
+    base = host.out / "test" / (head if why is None else "work")
+    log(f"results for {head[:12]} in {base}" if why is None
+        else f"results not recorded for {head[:12]}: {why}; output in {base}")
+    sdk = host.get("paths", "android_sdk")
+    env = dict(os.environ)
+    env.update({
+        "PYTHONPATH": str(ROOT / "test" / "lib"), "PYTHONDONTWRITEBYTECODE": "1",
+        "LUJARCH_ADB": adb_binary(host_out), "LUJARCH_SERIAL": f"127.0.0.1:{ADB_PORT}",
+        "LUJARCH_TOOL": str(ROOT / "tools" / "lujarch"), "LUJARCH_ROOT": str(ROOT),
+        "LUJARCH_TREE": str(host.tree), "LUJARCH_PROBES": str(host.out / "test" / "probes"),
+        "LUJARCH_PRODUCT_OUT": info["product_out"], "LUJARCH_DEVICES": str(host.out / "devices"),
+    })
+    if sdk:
+        env["LUJARCH_SDK"] = str(Path(os.path.expanduser(sdk)))
+    runs = {}
+    failed = []
+    for test_id, path, items in vm_tests:
+        out = base / test_id
+        if out.exists():
+            shutil.rmtree(out)
+        out.mkdir(parents=True)
+        env["LUJARCH_TEST_OUT"] = str(out)
+        m = TEST_TIMEOUT_RE.search(read_text(path) or "")
+        timeout = int(m.group(1)) if m else TEST_TIMEOUT
+        # Every test starts from the unlocked home screen of an awake device.
+        adb(host_out, "shell", "svc power stayon true; input keyevent KEYCODE_WAKEUP; "
+            "wm dismiss-keyguard; input keyevent KEYCODE_HOME")
+        log(f"{test_id} ({', '.join(items) or 'no item'})")
+        start = time.monotonic()
+        with open(out / "log.txt", "w") as logf:
+            try:
+                r = subprocess.run([sys.executable, str(path)], cwd=out, env=env, stdout=logf,
+                                   stderr=subprocess.STDOUT, timeout=timeout)
+                result = "pass" if r.returncode == 0 else "fail"
+            except subprocess.TimeoutExpired:
+                logf.write(f"\nFAILED: no end within {timeout} s\n")
+                result = "fail"
+        seconds = round(time.monotonic() - start)
+        tail = [l for l in (out / "log.txt").read_text(errors="replace").splitlines() if l.strip()]
+        log(f"  {result} in {seconds} s" + (f": {tail[-1][:200]}" if result != "pass" and tail else ""))
+        runs[test_id] = {"items": items, "result": result, "seconds": seconds}
+        if result != "pass":
+            failed.append(test_id)
+    merged = merge_results(base / "results.json", head, runs)
+    passed = sum(1 for v in merged.values() if v == "pass")
+    log(f"{len(runs) - len(failed)} of {len(runs)} tests passed; items passing in {base.name}: "
+        f"{passed} of {len(merged)}")
+    return 1 if failed else 0
 
 
 # ---------------------------------------------------------------------------
@@ -3127,6 +3344,9 @@ def main():
     parser = argparse.ArgumentParser(prog="lujarch", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="check the repository against process/")
+    test = sub.add_parser("test", help="run the tests of the target's items")
+    test.add_argument("selectors", nargs="*",
+                      help="items, features or tests to run (default: every test)")
     status = sub.add_parser("status", help="progress of the target")
     status.add_argument("--list", action="store_true", help="list the items without a test")
     sub.add_parser("pin", help="write upstream.xml from the tree's commits")
@@ -3171,7 +3391,7 @@ def main():
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
         "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "stock": cmd_stock,
-        "build": cmd_build, "fetch": cmd_fetch,
+        "build": cmd_build, "fetch": cmd_fetch, "test": cmd_test,
         "vm": cmd_vm, "release": cmd_release,
     }[args.command](args)
 
