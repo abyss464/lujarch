@@ -7,4 +7,5 @@ prefix = "LNX"
 build = "go"
 module = "lujarch_linux_frpc"
 package = "./cmd/frpc"
-tags = ["frpc"]
+# noweb: the admin dashboard's assets are built by npm and are not in the repository.
+tags = ["frpc", "noweb"]
