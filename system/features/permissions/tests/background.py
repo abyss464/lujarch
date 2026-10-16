@@ -1,4 +1,5 @@
-"""Autostart decides whether the system starts an app that is not running for its alarm; network
+"""Autostart decides whether the system starts an app that is not running for its alarm, and
+while Ask every time waits for the answer only its alarm clock starts it; network
 access is chosen in Mobile data & Wi-Fi; notifications are Android's one switch, which is the
 Notifications permission.
 
@@ -26,8 +27,10 @@ def autostart_choice(d, p, choice):
     return summary
 
 
-def started_by_alarm(d, p):
-    p.do("alarm", "--ei seconds 15")
+def started_by_alarm(d, p, kind="alarm"):
+    """Whether the system started the probe, no longer running, for its alarm (kind: alarm, an
+    exact alarm, or alarmclock, an alarm clock it set)."""
+    p.do(kind, "--ei seconds 15")
     d.home()
     time.sleep(2)
     d.sh(f"am kill {p.PACKAGE}")
@@ -56,6 +59,10 @@ def main():
     check(any("push" in s.lower() or "lost" in s.lower() for s in summary),
           f"the summary says pushes can be lost ({summary})")
     check(not started_by_alarm(d, p), "not allowed, the alarm did not start the probe")
+    step("Autostart: Ask every time, until the answer, starts the app for its alarm clock only")
+    autostart_choice(d, p, "Ask every time")
+    check(not started_by_alarm(d, p), "asking, the alarm did not start the probe")
+    check(started_by_alarm(d, p, "alarmclock"), "asking, its alarm clock started the probe")
     autostart_choice(d, p, "Allow")
 
     step("Mobile data & Wi-Fi: Allow network access")

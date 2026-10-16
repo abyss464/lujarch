@@ -1,18 +1,34 @@
 """Every permission and background control takes its choices from one set, with the same words
 everywhere, and offers only the choices that act differently for it: each page of an app's
-permissions, and its Autostart, offers two or more choices, all of them from the set.
+permissions, and its Autostart, offers two or more choices, all of them from the set or Android's
+own that the target names for that permission.
 
 verifies: PERM-1
 timeout: 2400
 """
+import re
 import time
 
-from lujarch_test import (PERMISSION_SECTIONS, AppProbe, app_permissions, check, device, note, run,
-                          sections, step)
+from lujarch_test import (PERMISSION_SECTIONS, ROOT, AppProbe, app_permissions, check, device, note,
+                          run, sections, step)
 
-# The one set of choices, in its words.
-CHOICES = {"Allow", "Allow all the time", "Allow only while using the app", "Ask every time",
-           "Return empty data", "Don't allow"}
+
+def target_choices():
+    """The one set of choices, and per permission the choices of Android's that keep its words,
+    as PERM-1 names them."""
+    item = (ROOT / "target" / "permissions.md").read_text().split("### PERM-1 ", 1)[1]
+    item = item.split("\n### ", 1)[0]
+    switch = re.search(r"^- Switch: the permission's choices: (.*)$", item, re.M).group(1)
+    kept = {}
+    words = re.search(r"keeps\s+Android's words:\s+(.*?)\.\s*\n\n", item, re.S).group(1)
+    for part in " ".join(words.split()).split(", "):
+        choices, _, permission = part.rpartition(" for ")
+        kept[permission] = set(choices.split(" and "))
+    return set(switch.split(", ")), kept
+
+
+# The one set of choices, in its words, and Android's own choices that keep their words.
+CHOICES, ANDROID_CHOICES = target_choices()
 # Phone: Allow lets the app read basic phone info as well; this choice reads that alone.
 PHONE_ONLY = "Basic phone info only"
 
@@ -67,7 +83,8 @@ def main():
             note(f"{name}: {got}")
             if len(got) < 2:
                 single.append(name)
-            other = [c for c in got if c not in CHOICES and not (name == "Phone" and c == PHONE_ONLY)]
+            other = [c for c in got if c not in CHOICES and c not in ANDROID_CHOICES.get(name, ())
+                     and not (name == "Phone" and c == PHONE_ONLY)]
             if other:
                 strange[name] = other
             if name == rows[0]:

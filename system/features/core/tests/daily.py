@@ -1,6 +1,7 @@
 """Nothing the system restricts by default stops alarms or the message notifications of apps the
 user has not restricted: a new app, left with the defaults for new apps, is started for its alarm
-clock and for a pushed message while it is not running, and its notification shows.
+clock and for a high-priority pushed message while it is not running, and its notification
+shows.
 
 verifies: CORE-13
 timeout: 900
@@ -37,8 +38,10 @@ def main():
 
     step("a message pushed while it does not run shows its notification")
     not_running(d, p)
-    d.sh(f"am broadcast -a org.lujarch.probe.DO -n '{p.PACKAGE}/.Probe$Background' "
-         f"--es do notify --es title 'A message'")
+    # As Google Play services delivers a high-priority push: with the temporary allowlist of a
+    # push message (PowerExemptionManager.REASON_PUSH_MESSAGING).
+    d.sh(f"am broadcast --allow-fgs-start-reason 101 -a org.lujarch.probe.DO "
+         f"-n '{p.PACKAGE}/.Probe$Background' --es do notify --es title 'A message'")
     time.sleep(5)
     shown = d.sh("dumpsys notification --noredact", check=False)
     check(f"pkg={p.PACKAGE}" in shown and "A message" in shown, "the message notification shows")

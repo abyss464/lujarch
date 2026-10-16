@@ -128,7 +128,7 @@ index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175
 +</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..60941f37ab1e82ef47a3e990d3962ae5c0742913
+index 0000000000000000000000000000000000000000..6ed31694b928289f2df091612ad81136af981cbe
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
 @@ -0,0 +1,63 @@
@@ -162,8 +162,8 @@ index 0000000000000000000000000000000000000000..60941f37ab1e82ef47a3e990d3962ae5
 +    <string name="lujarch_footer_phone">"電話の基本情報とは、通信事業者とその国とコード、SIM の状態、信号強度、ネットワークの種類、データと通話の状態、サブスクリプション番号のことで、Android が電話の権限のないすべてのアプリに提供する情報です。通信事業者のコードはシステムがシステム プロパティとして公開しているため、アプリ自身のネイティブ コードは引き続き読み取れます。"</string>
 +    <string name="lujarch_ask_channel">"アクセスの確認"</string>
 +    <string name="lujarch_ask_until_answered">"回答するまで、アプリには空のデータが返されます。"</string>
-+    <string name="lujarch_ask_until_started">"回答するまで、アプリは閉じているときに起動されません。"</string>
-+    <string name="lujarch_ask_until_both">"回答するまで、アプリには空のデータが返され、閉じているときには起動されません。"</string>
++    <string name="lujarch_ask_until_started">"回答するまで、アプリは閉じているとき、自身のアラームと優先度の高いメッセージでのみ起動されます。"</string>
++    <string name="lujarch_ask_until_both">"回答するまで、アプリには空のデータが返され、閉じているときは自身のアラームと優先度の高いメッセージでのみ起動されます。"</string>
 +    <string name="lujarch_ask_phone_info">"通信事業者、信号、ネットワークの種類の読み取り"</string>
 +    <string name="lujarch_ask_autostart">"閉じているときの起動"</string>
 +    <string name="lujarch_autostart">"自動起動"</string>
@@ -197,7 +197,7 @@ index 0000000000000000000000000000000000000000..60941f37ab1e82ef47a3e990d3962ae5
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..d92a0fe3e73032107d01e2df5ade10a0f61234d2
+index 0000000000000000000000000000000000000000..6c7cd5d5ae5cf02a2893a00d1e5df0e765f80814
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 @@ -0,0 +1,63 @@
@@ -231,8 +231,8 @@ index 0000000000000000000000000000000000000000..d92a0fe3e73032107d01e2df5ade10a0
 +    <string name="lujarch_footer_phone">"基本电话信息包括运营商及其国家和代码、SIM 卡状态、信号强度、网络类型、数据和通话状态，以及订阅编号，即 Android 向每个没有“电话”权限的应用提供的信息。运营商代码由系统作为系统属性公开，应用自己的原生代码仍可读到。"</string>
 +    <string name="lujarch_ask_channel">"访问询问"</string>
 +    <string name="lujarch_ask_until_answered">"在您回答之前，该应用得到的是空数据。"</string>
-+    <string name="lujarch_ask_until_started">"在您回答之前，该应用在关闭时不会被启动。"</string>
-+    <string name="lujarch_ask_until_both">"在您回答之前，该应用得到的是空数据，且在关闭时不会被启动。"</string>
++    <string name="lujarch_ask_until_started">"在您回答之前，该应用在关闭时仅会因其闹钟和高优先级消息而启动。"</string>
++    <string name="lujarch_ask_until_both">"在您回答之前，该应用得到的是空数据，且在关闭时仅会因其闹钟和高优先级消息而启动。"</string>
 +    <string name="lujarch_ask_phone_info">"读取运营商、信号和网络类型"</string>
 +    <string name="lujarch_ask_autostart">"在关闭时启动"</string>
 +    <string name="lujarch_autostart">"自启动"</string>
@@ -266,7 +266,7 @@ index 0000000000000000000000000000000000000000..d92a0fe3e73032107d01e2df5ade10a0
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..8041324e0cb6957c76439bcde3ac791b2518f9b9
+index 0000000000000000000000000000000000000000..e98c4cf5b6fcd0b6fd7dae466070fe5a1c577cb2
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
 @@ -0,0 +1,82 @@
@@ -300,8 +300,8 @@ index 0000000000000000000000000000000000000000..8041324e0cb6957c76439bcde3ac791b
 +    <string name="lujarch_footer_phone">Basic phone info is the carrier and its country and code, the SIM\'s state, signal strength, the network type, the data and call state, and the subscription numbers: what Android gives every app without the Phone permission. The carrier\'s code, which the system publishes as a system property, stays readable to the app\'s own native code.</string>
 +    <string name="lujarch_ask_channel">Questions about access</string>
 +    <string name="lujarch_ask_until_answered">Until you answer, the app gets empty data.</string>
-+    <string name="lujarch_ask_until_started">Until you answer, the app is not started while it is closed.</string>
-+    <string name="lujarch_ask_until_both">Until you answer, the app gets empty data and is not started while it is closed.</string>
++    <string name="lujarch_ask_until_started">Until you answer, the app is started while it is closed only for its alarms and high-priority messages.</string>
++    <string name="lujarch_ask_until_both">Until you answer, the app gets empty data and is started while it is closed only for its alarms and high-priority messages.</string>
 +    <string name="lujarch_ask_phone_info">read the carrier, signal and network type</string>
 +    <string name="lujarch_ask_autostart">start while it is closed</string>
 +    <string name="lujarch_autostart">Autostart</string>
