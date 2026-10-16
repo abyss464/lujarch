@@ -42,6 +42,7 @@ class Sessions {
     using Exited = std::function<void(const std::string& id, int status)>;
 
     Sessions(System& system, Changed changed, Exited exited);
+    ~Sessions();
 
     // Starts the thread that carries the sessions' input and output.
     void Start();

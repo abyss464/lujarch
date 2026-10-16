@@ -40,6 +40,7 @@ namespace lujarch::linux {
 class Services {
   public:
     Services(System& system, std::function<void()> changed);
+    ~Services();
 
     void Start();
 

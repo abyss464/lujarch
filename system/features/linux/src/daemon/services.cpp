@@ -100,6 +100,8 @@ struct Services::Service {
 Services::Services(System& system, std::function<void()> changed)
     : system_(system), changed_(std::move(changed)) {}
 
+Services::~Services() = default;
+
 void Services::Start() {
     wake_.reset(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK));
     if (wake_ < 0) PLOG(FATAL) << "services: eventfd";

@@ -152,7 +152,8 @@ struct Sessions::Session {
     bool awake = false;
     bool busy = false;
     std::string job;
-    std::optional<android::wakelock::WakeLock> lock;
+    // A WakeLock neither moves nor copies: it is made in place.
+    std::unique_ptr<std::optional<android::wakelock::WakeLock>> lock;
     bool ending = false;
     bool killed = false;
     Clock::time_point kill_at;
@@ -173,6 +174,8 @@ void Sessions::Start() {
     }
     std::thread(&Sessions::Loop, this).detach();
 }
+
+Sessions::~Sessions() = default;
 
 void Sessions::Wake() {
     uint64_t one = 1;
@@ -560,7 +563,9 @@ void Sessions::Loop() {
                 }
                 const bool hold = s.awake && s.busy && !s.exited;
                 if (hold && !s.lock) {
-                    s.lock = android::wakelock::WakeLock::tryGet("lujarch_linux_" + s.id);
+                    s.lock.reset(new std::optional<android::wakelock::WakeLock>(
+                            android::wakelock::WakeLock::tryGet("lujarch_linux_" + s.id)));
+                    if (!s.lock->has_value()) s.lock.reset();
                     if (s.lock) {
                         LOG(INFO) << "session " << s.id << " holds the phone awake for " << s.job;
                     } else {
