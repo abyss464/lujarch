@@ -17,6 +17,7 @@
 #include <android-base/logging.h>
 #include <android-base/strings.h>
 #include <android/binder_ibinder.h>
+#include <lujarch/aid.h>
 #include <lujarch/daemon.h>
 
 #include "ksu.h"
@@ -31,6 +32,8 @@ using aidl::org::lujarch::root::RootInfo;
 using aidl::org::lujarch::root::RootProfile;
 
 constexpr char kSettingsPackage[] = "org.lujarch.settings";
+// KernelSU's allowlist names every profile; this one belongs to no app.
+constexpr char kLinuxRootKey[] = "lujarch.linux.root";
 // Lujarch's own apps never get root.
 constexpr char kOwnPrefix[] = "org.lujarch.";
 
@@ -133,6 +136,7 @@ ndk::ScopedAStatus Service::list(std::vector<AppRoot>* out) {
     if (!entries.ok()) return Failure(entries.error());
     out->clear();
     for (const ksu::Entry& e : *entries) {
+        if (e.uid == static_cast<int32_t>(aid::kLinuxRoot)) continue;
         AppRoot app;
         app.packageName = e.key;
         app.uid = e.uid;
@@ -200,6 +204,17 @@ ndk::ScopedAStatus Service::resetProfile(const std::string& package) {
     auto changed = ksu::SetFields(package, uid, ksu::DefaultFields());
     if (!changed.ok()) return Failure(changed.error());
     if (*changed) Changed("restored the default root profile", package);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Service::setLinuxRootSessions(bool allowed) {
+    // lujarch_linux, the only root caller service_contexts lets find this service.
+    if (AIBinder_getCallingUid() != 0) {
+        return Error(IRoot::ERROR_REFUSED, "only lujarch_linux may change root sessions");
+    }
+    auto changed = ksu::SetAllowSu(kLinuxRootKey, static_cast<int32_t>(aid::kLinuxRoot), allowed);
+    if (!changed.ok()) return Failure(changed.error());
+    if (*changed) Changed(allowed ? "allowed root" : "refused root", kLinuxRootKey);
     return ndk::ScopedAStatus::ok();
 }
 

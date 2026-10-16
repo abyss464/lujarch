@@ -109,4 +109,6 @@
     <string name="root_special_access">特別なアプリアクセス</string>
     <string name="root_summary">Root としてコマンドを実行できるアプリ</string>
     <string name="search_root_keywords">Root, スーパーユーザー, Root アクセス, su, superuser, KernelSU</string>
+    <string name="root_linux_title">Linux 開発環境</string>
+    <string name="root_linux_summary">Root セッションはオンです: Arch Linux と Android で root としてセッションを実行できます</string>
 </resources>

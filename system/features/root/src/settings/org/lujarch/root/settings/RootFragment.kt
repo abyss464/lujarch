@@ -16,7 +16,11 @@
 
 package org.lujarch.root.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceScreen
@@ -29,10 +33,12 @@ import org.lujarch.settings.pages.R as PagesR
  * Root access (ROOT-1): KernelSU's version, and the installed apps with their state (allowed,
  * allowed with a custom profile, not allowed; a package that shares its user ID with an allowed
  * one is allowed through it), the allowed ones first; an app's page holds the switch and its root
- * profile. Nothing can be changed while the kernel has no KernelSU.
+ * profile. Nothing can be changed while the kernel has no KernelSU. While the Linux development
+ * environment's Root sessions is on, a row says so.
  */
 class RootFragment : AppListFragment<AppPreference>() {
     private lateinit var ksuPref: Preference
+    private lateinit var linuxPref: Preference
     private var profiles: Map<String, SuApp> = emptyMap()
     private var byUid: Map<Int, SuApp> = emptyMap()
     private var available = false
@@ -54,10 +60,28 @@ class RootFragment : AppListFragment<AppPreference>() {
             setSummary(PagesR.string.loading)
             isSelectable = false
         }
+        // The Linux development environment's root sessions (LNX-4), while Root sessions is on.
+        linuxPref = status.add(Preference(prefContext)) {
+            key = "linux"
+            setTitle(R.string.root_linux_title)
+            setSummary(R.string.root_linux_summary)
+            setIcon(R.drawable.ic_root)
+            isVisible = false
+            setOnPreferenceClickListener {
+                try {
+                    startActivity(Intent(ACTION_LINUX).putExtra(EXTRA_HIGHLIGHT, KEY_LINUX_ROOT_SESSIONS))
+                } catch (e: ActivityNotFoundException) {
+                    Log.e(TAG, "no page of the Linux development environment", e)
+                }
+                true
+            }
+        }
         return status
     }
 
     override suspend fun loadState() {
+        linuxPref.isVisible = Settings.Global.getString(
+            requireContext().contentResolver, SETTING_LINUX_ROOT_SESSIONS) == "1"
         val status = attempt("status", R.string.error_load_root) { RootClient.status() }
         available = status?.available == true
         ksuPref.summary = when {
@@ -95,6 +119,13 @@ class RootFragment : AppListFragment<AppPreference>() {
                 true
             }
         }
+
+    private companion object {
+        const val ACTION_LINUX = "org.lujarch.linux.action.LINUX"
+        const val EXTRA_HIGHLIGHT = ":settings:fragment_args_key"
+        const val KEY_LINUX_ROOT_SESSIONS = "lujarch_linux_root_sessions"
+        const val SETTING_LINUX_ROOT_SESSIONS = "lujarch_linux_root_sessions"
+    }
 
     override fun bindAppPref(pref: AppPreference, app: AppEntry) {
         val own = profiles[app.packageName]

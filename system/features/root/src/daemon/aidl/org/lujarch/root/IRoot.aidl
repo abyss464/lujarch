@@ -44,7 +44,7 @@ interface IRoot {
 
     RootInfo getInfo();
 
-    /** Every profile KernelSU holds. */
+    /** Every profile KernelSU holds for an app. */
     AppRoot[] list();
 
     /** The app's profile; KernelSU's default root profile while it has none of its own. */
@@ -58,4 +58,10 @@ interface IRoot {
 
     /** Back to KernelSU's default root profile. */
     void resetProfile(String packageName);
+
+    /**
+     * Lets KernelSU grant su to the user ID of the Linux development environment's root sessions
+     * in Android while Root sessions is on (LNX-4); lujarch_linux calls it.
+     */
+    void setLinuxRootSessions(boolean allowed);
 }

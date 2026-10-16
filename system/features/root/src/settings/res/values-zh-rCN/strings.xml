@@ -109,4 +109,6 @@
     <string name="root_special_access">特殊应用权限</string>
     <string name="root_summary">可以以 Root 身份运行命令的应用</string>
     <string name="search_root_keywords">Root, 超级用户, Root 权限, su, superuser, KernelSU</string>
+    <string name="root_linux_title">Linux 开发环境</string>
+    <string name="root_linux_summary">Root 会话已开启：可以在 Arch Linux 和 Android 中以 root 身份运行会话</string>
 </resources>

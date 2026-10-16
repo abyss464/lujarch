@@ -114,4 +114,6 @@
     <string name="root_special_access">Special app access</string>
     <string name="root_summary">Apps that can run commands as Root</string>
     <string name="search_root_keywords">Root, su, superuser, Root access, KernelSU</string>
+    <string name="root_linux_title">Linux development environment</string>
+    <string name="root_linux_summary">Root sessions is on: sessions as root in Arch Linux and in Android</string>
 </resources>
