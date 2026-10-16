@@ -196,6 +196,7 @@ class AddFolderFragment : SyncPageFragment() {
         validate = { if (it.isEmpty()) getString(R.string.sync_name_required) else null },
     ) {
         label = it
+        if (dir == null) dir = Syncthing.dirNameFor(label, usedDirs().keys + dirs)
         render()
     }
 

@@ -32,9 +32,6 @@ namespace lujarch::sync::vault {
 
 // The sync storage: one directory per synced folder, labeled lujarch_sync_folder_file.
 inline constexpr char kFoldersRoot[] = "/data/lujarch/sync/folders";
-// The folder of requests that name none: clients from before the folder
-// choice (the phone-local path of Syncthing folder keepass-mesh-v1).
-inline constexpr char kDefaultFolder[] = "keepass";
 // The largest database served: the decompressed payload limit of the
 // vault's KDBX reader (KdbxReader.MAX_XML_BYTES); a larger file cannot be
 // opened there anyway. Read hands it out in parts of at most kMaxChunk.

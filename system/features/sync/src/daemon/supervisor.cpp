@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <deque>
 #include <thread>
 
 #include "conditions.h"
@@ -166,15 +167,14 @@ std::string Supervisor::Blocked() {
 }
 
 void Supervisor::Loop() {
-    int exits = 0;
-    int64_t window_start = Monotonic();
+    // When the engine exited in the last kExitWindow seconds.
+    std::deque<int64_t> exits;
     int backoff = 2;
     bool given_up = false;
     for (;;) {
         DrainEvents();
         if (reset_.exchange(false)) {
-            exits = 0;
-            window_start = Monotonic();
+            exits.clear();
             backoff = 2;
             given_up = false;
         }
@@ -210,20 +210,20 @@ void Supervisor::Loop() {
             continue;
         }
         SetState(ISync::STATE_RUNNING);
+        const int64_t started = Monotonic();
         End end = WaitEngine();
         if (end == End::kStopped) continue;
-        if (Monotonic() - window_start > kExitWindow) {
-            exits = 0;
-            window_start = Monotonic();
-            backoff = 2;
-        }
-        ++exits;
+        const int64_t now = Monotonic();
+        // An engine that ran through a whole window has recovered: its next pause is short again.
+        if (now - started >= kExitWindow) backoff = 2;
+        exits.push_back(now);
+        while (now - exits.front() > kExitWindow) exits.pop_front();
         {
             std::lock_guard lock(mutex_);
-            status_.exits = exits;
+            status_.exits = static_cast<int>(exits.size());
         }
-        if (exits >= kMaxExits) {
-            LOG(ERROR) << "the engine exited " << exits << " times within " << kExitWindow
+        if (static_cast<int>(exits.size()) >= kMaxExits) {
+            LOG(ERROR) << "the engine exited " << exits.size() << " times within " << kExitWindow
                        << " s; it stays stopped until sync is turned off and on";
             given_up = true;
             continue;

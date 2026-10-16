@@ -53,17 +53,23 @@ object SyncPages {
         val fragment: Class<out Fragment>,
         @StringRes val title: Int,
         @StringRes val keywords: Int,
+        /** The page's switches Settings search finds: each preference's key and title. */
+        val switches: List<Pair<String, Int>> = emptyList(),
     )
 
     const val ACTION_SYNC = "org.lujarch.sync.action.SYNC"
     private const val ACTION = "org.lujarch.sync.action."
 
     val all = listOf(
-        Page("lujarch_sync", ACTION_SYNC, SyncFragment::class.java, R.string.sync_title, R.string.search_sync_keywords),
+        Page("lujarch_sync", ACTION_SYNC, SyncFragment::class.java, R.string.sync_title, R.string.search_sync_keywords,
+            listOf("wifi_only" to R.string.sync_wifi_only, "charging_only" to R.string.sync_charging_only)),
         Page("lujarch_sync_identity", ACTION + "IDENTITY", IdentityFragment::class.java,
             R.string.sync_identity_title, R.string.search_sync_identity_keywords),
         Page("lujarch_sync_network", ACTION + "NETWORK", SyncOptionsFragment::class.java,
-            R.string.sync_network_title, R.string.search_sync_network_keywords),
+            R.string.sync_network_title, R.string.search_sync_network_keywords,
+            listOf("globalAnnounceEnabled" to R.string.sync_global_discovery,
+                "localAnnounceEnabled" to R.string.sync_local_discovery,
+                "relaysEnabled" to R.string.sync_relays, "natEnabled" to R.string.sync_nat)),
     )
 
     fun byAction(action: String?): Page? = all.firstOrNull { it.action == action }
@@ -73,15 +79,26 @@ object SyncPages {
 class SyncContribution : Contribution {
     override fun searchEntries(context: Context): List<SearchEntry> {
         val screen = context.getString(R.string.sync_title)
-        return SyncPages.all.map { page ->
-            SearchEntry(
-                key = page.key,
-                title = context.getString(page.title),
-                summary = "",
-                keywords = context.getString(page.keywords),
-                screenTitle = if (page.action == SyncPages.ACTION_SYNC) "" else screen,
-                action = page.action,
-            )
+        return SyncPages.all.flatMap { page ->
+            listOf(
+                SearchEntry(
+                    key = page.key,
+                    title = context.getString(page.title),
+                    summary = "",
+                    keywords = context.getString(page.keywords),
+                    screenTitle = if (page.action == SyncPages.ACTION_SYNC) "" else screen,
+                    action = page.action,
+                )
+            ) + page.switches.map { (key, title) ->
+                SearchEntry(
+                    key = key,
+                    title = context.getString(title),
+                    summary = "",
+                    keywords = context.getString(page.keywords),
+                    screenTitle = context.getString(page.title),
+                    action = page.action,
+                )
+            }
         }
     }
 }
