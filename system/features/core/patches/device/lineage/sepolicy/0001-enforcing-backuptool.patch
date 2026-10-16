@@ -1,0 +1,12 @@
+diff --git a/common/private/backuptool.te b/common/private/backuptool.te
+index b948b613499f45cc82c97a07113046ece3306c0d..6e79e6153637f73b5804d078e2c24643d28387fa 100644
+--- a/common/private/backuptool.te
++++ b/common/private/backuptool.te
+@@ -5,7 +5,3 @@ neverallow {
+     -recovery
+     -update_engine
+ } backuptool:process transition;
+-
+-userdebug_or_eng(`
+-    permissive backuptool;
+-')

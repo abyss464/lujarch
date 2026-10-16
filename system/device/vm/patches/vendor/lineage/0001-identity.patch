@@ -1,0 +1,10 @@
+diff --git a/build/target/product/lineage_cf_phone_x86_64.mk b/build/target/product/lineage_cf_phone_x86_64.mk
+index e35242bc122e2c9c8837cf627c47410cf0cab50b..ca1af520232ae49c26c8e75b692c6f42d4db0ebf 100644
+--- a/build/target/product/lineage_cf_phone_x86_64.mk
++++ b/build/target/product/lineage_cf_phone_x86_64.mk
+@@ -10,4 +10,4 @@ TARGET_NO_KERNEL_OVERRIDE := true
+ 
+ # Overrides
+ PRODUCT_NAME := lineage_cf_phone_x86_64
+-PRODUCT_MODEL := LineageOS Cuttlefish phone built for x86_64
++PRODUCT_MODEL := Lujarch Cuttlefish phone built for x86_64

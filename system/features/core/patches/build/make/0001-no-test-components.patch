@@ -1,0 +1,45 @@
+diff --git a/target/product/base_product.mk b/target/product/base_product.mk
+index 3b23c0b534bc6b9f9ccfcf558069184e8dd3ebbc..c132afaa187f7a1ca5f1d32615d83070616bd9b6 100644
+--- a/target/product/base_product.mk
++++ b/target/product/base_product.mk
+@@ -26,7 +26,6 @@ PRODUCT_PACKAGES += \
+     product_manifest.xml \
+     selinux_policy_product \
+     product-build.prop \
+-    com.android.hardware.biometrics.fingerprint.virtual \
+     preinstalled-packages-base-product.xml \
+ 
+ # Packages included only for eng or userdebug builds, previously debug tagged
+diff --git a/target/product/base_system.mk b/target/product/base_system.mk
+index 88aed43f03cddea1295bfd58b7db6fff8be2195b..58da037d65d604a95ddf489e662b45f4c6f80d9c 100644
+--- a/target/product/base_system.mk
++++ b/target/product/base_system.mk
+@@ -90,8 +90,6 @@ PRODUCT_PACKAGES += \
+     com.android.wifi \
+     ContactsProvider \
+     content \
+-    CtsShimPrebuilt \
+-    CtsShimPrivPrebuilt \
+     debuggerd\
+     device_config \
+     dmctl \
+@@ -269,7 +267,6 @@ PRODUCT_PACKAGES += \
+     rss_hwm_reset \
+     run-as \
+     sanitizer.libraries.txt \
+-    schedtest \
+     screencap \
+     sdcard \
+     secdiscard \
+diff --git a/target/product/updatable_apex.mk b/target/product/updatable_apex.mk
+index 8b3bc9a7e50b25dc52fb1bf02fc471c35c0f69bb..9842ae9ed0801363e277171546a1cd877de74bc7 100644
+--- a/target/product/updatable_apex.mk
++++ b/target/product/updatable_apex.mk
+@@ -14,7 +14,4 @@
+ # limitations under the License.
+ #
+ 
+-# com.android.apex.cts.shim.v1_prebuilt overrides CtsShimPrebuilt
+-# and CtsShimPrivPrebuilt since they are packaged inside the APEX.
+-PRODUCT_PACKAGES += com.android.apex.cts.shim.v1_prebuilt
+ PRODUCT_SYSTEM_PROPERTIES += ro.apex.updatable=true

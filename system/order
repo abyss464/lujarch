@@ -1,4 +1,5 @@
 device/fuxi
+device/vm
 features/core
 features/permissions
 features/updates

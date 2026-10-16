@@ -18,6 +18,10 @@ keep = [
     "privacy_settings_category",
 ]
 
+[renames.lineagesettings]
+package = "org.lineageos.lineagesettings"
+res = ["lineage-sdk/packages/LineageSettingsProvider/res"]
+
 [renames.setupwizard]
 package = "org.lineageos.setupwizard"
 res = ["packages/apps/SetupWizard/app/src/main/res"]
