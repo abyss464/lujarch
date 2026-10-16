@@ -9,6 +9,7 @@
   lujarch save ENTRY [PROJECT...]   save the tree's changes into ENTRY's patches (features/x, device/y)
   lujarch build DEVICE [MODULE...]  build a device (fuxi, vm), or some of its modules
   lujarch stock DEVICE [--add GLOB] download and unpack a device's stock release; pin its files
+  lujarch release                   tag, build, sign and verify a release of HEAD (fuxi)
   lujarch vm start|stop|status      the virtual device
   lujarch vm sync [MODULE...]       copy built modules, or what its images lack, into the running
                                     virtual device
@@ -24,11 +25,13 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import time
 import tomllib
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -2060,20 +2063,34 @@ def device_info_path(host, device):
     return host.out / "devices" / f"{device}.json"
 
 
+# The descriptor on which a release holds the build lock for the builds it runs.
+BUILD_LOCK_FD = "LUJARCH_BUILD_LOCK_FD"
+
+
+def build_lock(host):
+    """Takes the one lock of every Android build on the computer, waiting while another holds
+    it, until the process ends; a build a release runs holds it on the release's descriptor."""
+    lock_path = host.path_of("build", "lock")
+    if os.environ.get(BUILD_LOCK_FD):
+        lock = os.fdopen(int(os.environ[BUILD_LOCK_FD]), "a")
+    else:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock = open(lock_path, "a")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        log(f"another build holds {lock_path}; waiting")
+        fcntl.flock(lock, fcntl.LOCK_EX)
+    return lock
+
+
 def cmd_build(args):
     host = Host()
     tree = host.tree
     device = device_config(args.device)
     variant = lock_file()["build"]["variant"]
     lunch = f"{device['product']}-{release_config(tree)}-{variant}"
-    lock_path = host.path_of("build", "lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock = open(lock_path, "a")
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        log(f"another build holds {lock_path}; waiting")
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    lock = build_lock(host)
 
     if not args.modules and device.get("platform") == "cuttlefish":
         args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
@@ -2892,6 +2909,218 @@ def cmd_vm(args):
 
 
 # ---------------------------------------------------------------------------
+# Release (process/release-flow.md)
+
+RELEASE_DEVICE = "fuxi"
+RELEASE_GOALS = ("droid", "target-files-package", "otatools")
+RELEASE_TAG_RE = re.compile(r"^lujarch-(\d+)$")
+
+
+def release_tags():
+    """{n: tag} of every release tag lujarch-<n>."""
+    tags = git("tag", "--list", "lujarch-*").stdout.split()
+    return {int(m.group(1)): tag for tag in tags if (m := RELEASE_TAG_RE.match(tag))}
+
+
+def untested(host, commit):
+    """Why the commit has not passed the test flow: its results lack a pass of an item with
+    Verify: vm. Empty when it passed."""
+    path = host.out / "test" / commit / "results.json"
+    try:
+        results = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"no test results for {commit[:12]}: {path}"]
+    except (OSError, ValueError) as e:
+        return [f"{path}: {e}"]
+    if results.get("commit") != commit:
+        return [f"{path} holds the results of {results.get('commit')}"]
+    items = results.get("items", {})
+    failed, missing = [], []
+    for target in target_files():
+        for item, verify, _ in parse_target(target)[0]:
+            if verify == "vm" and items.get(item) != "pass":
+                (failed if item in items else missing).append(item)
+    return ([f"{len(failed)} items with Verify: vm failed: {', '.join(failed)}"] if failed else []) \
+        + ([f"{len(missing)} items with Verify: vm have no result: {', '.join(missing)}"]
+           if missing else [])
+
+
+def release_refusals(host, commit):
+    """What keeps the commit from being released (process/release-flow.md, Preconditions)."""
+    refusals = []
+    branch = git("symbolic-ref", "-q", "--short", "HEAD").stdout.strip()
+    if branch != "main":
+        refusals.append(f"HEAD is {'on ' + branch if branch else 'detached'}, not on main")
+    changed = [l for l in git("status", "--porcelain", "--untracked-files=all").stdout.split("\n")
+               if l.strip()]
+    if changed:
+        refusals.append("the worktree has changes:\n" + listed(changed, 10))
+    if cmd_check(None):
+        refusals.append("lujarch check reports findings")
+    for tag in git("tag", "--points-at", commit, "--list", "lujarch-*").stdout.split():
+        written = (host.out / "releases" / f"{tag}-{commit[:12]}").is_dir()
+        refusals.append(f"{commit[:12]} is already tagged {tag}" + ("" if written else
+                        f", and its release wrote no artifacts (git tag -d {tag} removes the tag)"))
+    return refusals + untested(host, commit)
+
+
+def target_at(rev):
+    """{file name: (title, [(item, item title, item text)], text)} of target/ at a revision."""
+    out = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        for name in pgit(ROOT, "ls-tree", "--name-only", f"{rev}:target", check=True).stdout.split():
+            if not name.endswith(".md"):
+                continue
+            text = pgit(ROOT, "show", f"{rev}:target/{name}", check=True).stdout
+            lines = text.split("\n")
+            title = next((l[2:].strip() for l in lines if l.startswith("# ")), name)
+            items = []
+            if name not in ITEMLESS:
+                path = Path(tmp) / name
+                path.write_text(text, encoding="utf-8")
+                for item, _, line in parse_target(path)[0]:
+                    body = []
+                    for l in lines[line:]:
+                        if l.startswith("#"):
+                            break
+                        body.append(l)
+                    items.append((item, lines[line - 1].split(" ", 2)[2], "\n".join(body).strip()))
+            out[name] = (title, items, text)
+    return out
+
+
+def release_notes(n, commit, tags):
+    """Lujarch n's notes: the change of target/ since the release before it, or the target's items
+    by feature for the first release."""
+    now = target_at(tags[n])
+    lines = [f"# Lujarch {n}", ""]
+    previous = max((m for m in tags if m < n), default=None)
+    if previous is None:
+        lines += [f"Commit {commit}, the first release. Its target:", ""]
+        for title, items, _ in (now[name] for name in sorted(now)):
+            if items:
+                lines += [f"## {title}", "", *(f"- {i} {t}" for i, t, _ in items), ""]
+        return "\n".join(lines)
+    before = target_at(tags[previous])
+    since = git("rev-list", "-n", "1", tags[previous]).stdout.strip()
+    lines += [f"Commit {commit}. The target's changes since Lujarch {previous} ({since[:12]}):", ""]
+    changes = False
+    for name in sorted(set(now) | set(before)):
+        title, new, text = now.get(name) or (before[name][0], [], "")
+        _, old, old_text = before.get(name) or (title, [], "")
+        old_by_title = {t: (i, body) for i, t, body in old}
+        entries = [f"- Added: {i} {t}" for i, t, _ in new if t not in old_by_title]
+        entries += [f"- Changed: {i} {t}" for i, t, body in new
+                    if t in old_by_title and old_by_title[t][1] != body]
+        titles = {t for _, t, _ in new}
+        entries += [f"- Removed: {t} (Lujarch {previous}'s {i})" for i, t, _ in old if t not in titles]
+        if name in ITEMLESS and text != old_text:
+            entries.append(f"- The wording of target/{name} changed")
+        if entries:
+            lines += [f"## {title}", "", *entries, ""]
+            changes = True
+    if not changes:
+        lines += [f"The target is Lujarch {previous}'s.", ""]
+    return "\n".join(lines)
+
+
+def remove_worktree(source):
+    if source.exists():
+        git("worktree", "remove", "--force", str(source))
+    git("worktree", "prune")
+
+
+def cmd_release(_args):
+    """Releases HEAD as lujarch-<n>-<commit> (process/release-flow.md)."""
+    host = Host()
+    commit = git("rev-parse", "HEAD").stdout.strip()
+    refusals = release_refusals(host, commit)
+    if refusals:
+        die(f"{commit[:12]} is not released:\n" + "\n".join(f"- {r}" for r in refusals))
+    keys = host.path_of("paths", "keys")
+    tags = release_tags()
+    n = max(tags, default=0) + 1
+    tag, name = f"lujarch-{n}", f"lujarch-{n}-{commit[:12]}"
+    releases = host.out / "releases"
+    dest, work = releases / name, releases / f".{name}"
+    source, signing, artifacts = work / "source", work / "sign", work / "artifacts"
+    if dest.exists():
+        die(f"{dest} exists")
+    remove_worktree(source)
+    shutil.rmtree(work, ignore_errors=True)
+    if git("tag", tag, commit).returncode:
+        die(f"could not tag {commit[:12]} {tag}")
+    log(f"tagged {commit[:12]} {tag}")
+    written = False
+    lock = None
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    try:
+        signing.mkdir(parents=True)
+        add = git("worktree", "add", "--detach", str(source), tag)
+        if add.returncode:
+            die(f"git worktree add {source}: {add.stderr.strip()}")
+        lock = build_lock(host)
+        env = dict(os.environ, **{BUILD_LOCK_FD: str(lock.fileno())})
+        started = time.time()
+        for step in (["sync"], ["build", RELEASE_DEVICE, *RELEASE_GOALS]):
+            log(f"lujarch {' '.join(step)}, from {source}")
+            if subprocess.run([sys.executable, str(source / "tools" / "lujarch"), *step], env=env,
+                              pass_fds=(lock.fileno(),)).returncode:
+                die(f"lujarch {step[0]} failed")
+        info = json.loads(device_info_path(host, RELEASE_DEVICE).read_text())
+        product_out = Path(info["product_out"])
+        target = (product_out / "obj" / "PACKAGING" / "target_files_intermediates"
+                  / f"{device_config(RELEASE_DEVICE)['product']}-target_files.zip")
+        if not commit.startswith(info["commit"]) or not target.is_file() \
+                or target.stat().st_mtime < started:
+            die(f"the build left no target files of {commit[:12]} ({target})")
+        version = version_rc()
+        with zipfile.ZipFile(target) as z:
+            if not any(i.file_size == len(version) and z.read(i) == version
+                       for i in z.infolist() if i.filename.endswith(".rc")):
+                die(f"the image's version is not {tag}'s:\n{version.decode()}")
+        app_keys = [f"--app-key={spec['module']}.apk={spec['key']}"
+                    for _, _, spec in feature_components() if spec.get("key")]
+        log("signing with the release keys")
+        if subprocess.run([sys.executable, str(source / "release" / "sign.py"),
+                           "--tree", str(host.tree), "--keys", str(keys), *app_keys, str(target),
+                           str(signing)], env=build_environment()).returncode:
+            die("signing failed")
+        log("verifying the signed release")
+        if subprocess.run([sys.executable, str(source / "release" / "verify.py"),
+                           "--tree", str(host.tree), "--product-out", str(product_out),
+                           "--source", str(source), "--keys-of", str(signing / "keys.txt"),
+                           "--unsigned", str(target),
+                           "--signed", str(signing / "signed-target_files.zip"),
+                           "--ota", str(signing / "ota.zip")],
+                          env=dict(build_environment(), TMPDIR=str(signing / "tmp"))).returncode:
+            die("the signed release does not verify")
+        lock.close()
+        lock = None
+        artifacts.mkdir()
+        (signing / "ota.zip").rename(artifacts / f"{name}.zip")
+        (signing / "images.zip").rename(artifacts / f"{name}-images.zip")
+        (artifacts / "notes.md").write_text(release_notes(n, commit, {**tags, n: tag}),
+                                            encoding="utf-8")
+        (artifacts / "sha256").write_text("".join(
+            f"{p.name}: {sha256_file(p)}\n" for p in sorted(artifacts.iterdir())))
+        artifacts.rename(dest)
+        written = True
+    finally:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        if lock is not None:
+            lock.close()
+        remove_worktree(source)
+        shutil.rmtree(work, ignore_errors=True)
+        if not written:
+            git("tag", "-d", tag)
+            log(f"removed the tag {tag}")
+    log(f"released {tag}: {dest}")
+    print(dest)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 
 
 def main():
@@ -2918,6 +3147,7 @@ def main():
     build = sub.add_parser("build", help="build a device or some of its modules")
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
+    sub.add_parser("release", help="tag, build, sign and verify a release of HEAD")
     vm = sub.add_parser("vm", help="the virtual device").add_subparsers(dest="action",
                                                                        required=True)
     start = vm.add_parser("start", help="boot the vm build with empty data, ready for tests")
@@ -2942,7 +3172,7 @@ def main():
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
         "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "stock": cmd_stock,
         "build": cmd_build, "fetch": cmd_fetch,
-        "vm": cmd_vm,
+        "vm": cmd_vm, "release": cmd_release,
     }[args.command](args)
 
 
