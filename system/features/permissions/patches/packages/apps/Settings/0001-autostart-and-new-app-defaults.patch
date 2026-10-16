@@ -128,25 +128,6 @@ index b6874973b22129d17858690d1f4036580cfe0fbf..302bbeebf36d41556edb3072c8f6fa8b
      <Preference
          android:key="special_access"
          android:fragment="com.android.settings.applications.specialaccess.SpecialAccessSettings"
-diff --git a/res/xml/power_usage_detail.xml b/res/xml/power_usage_detail.xml
-index c2b1c5e39052a23e341fcd56c0afc8dde9bed47d..db35a1acda6fae5ede636a40122e6a233eedbf05 100644
---- a/res/xml/power_usage_detail.xml
-+++ b/res/xml/power_usage_detail.xml
-@@ -54,6 +54,13 @@
-             android:key="background_usage_allowability_switch"
-             android:title="@string/manager_battery_usage_allow_background_usage_title"/>
- 
-+        <ListPreference
-+            android:key="lujarch_autostart"
-+            android:title="@string/lujarch_autostart"
-+            android:dialogTitle="@string/lujarch_autostart"
-+            android:persistent="false"/>
-+
-+
-     </PreferenceCategory>
- 
- </PreferenceScreen>
-\ No newline at end of file
 diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
 index 5f2089559f3ee77e8a2f713b5771d3147031d5fd..5fd1a2e4cf496965036352212371abc792b1490b 100644
 --- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java

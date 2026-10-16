@@ -1,0 +1,26 @@
+diff --git a/res/xml/special_access.xml b/res/xml/special_access.xml
+index 8bb7f4f0a165d67369973378059d88ab8ce3e882..3b63cfdb742e1daa775eb23600c133c999b6abb6 100644
+--- a/res/xml/special_access.xml
++++ b/res/xml/special_access.xml
+@@ -109,11 +109,13 @@
+ 
+     <Preference
+         android:key="use_full_screen_intent"
++        android:order="-1150"
+         android:title="@string/full_screen_intent_title"
+         settings:controller="com.android.settings.spa.app.specialaccess.UseFullScreenIntentPreferenceController" />
+ 
+     <Preference
+         android:key="write_system_preferences"
++        android:order="-1250"
+         android:title="@string/write_system_preferences_page_title"
+         settings:controller="com.android.settings.spa.app.specialaccess.WriteSystemPreferencesPreferenceController" />
+ 
+@@ -237,6 +239,7 @@
+ 
+     <Preference
+         android:key="change_nfc_tag_apps_state"
++        android:order="-150"
+         android:title="@string/change_nfc_tag_apps_title"
+         android:fragment="com.android.settings.applications.manageapplications.ManageApplications"
+         settings:keywords="@string/keywords_change_nfc_tag_apps_state"

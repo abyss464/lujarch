@@ -1,0 +1,33 @@
+diff --git a/src/com/android/settings/spa/app/appinfo/AppDataUsagePreference.kt b/src/com/android/settings/spa/app/appinfo/AppDataUsagePreference.kt
+index 7e6e72613b769af6b8499c20e54b0ff731612d2c..0ff6c41be2a056ef77945e7fef09c1b6d27cee60 100644
+--- a/src/com/android/settings/spa/app/appinfo/AppDataUsagePreference.kt
++++ b/src/com/android/settings/spa/app/appinfo/AppDataUsagePreference.kt
+@@ -34,7 +34,6 @@ import com.android.settings.datausage.lib.AppDataUsageSummaryRepository
+ import com.android.settings.datausage.lib.IAppDataUsageSummaryRepository
+ import com.android.settings.datausage.lib.INetworkTemplates
+ import com.android.settings.datausage.lib.NetworkTemplates
+-import com.android.settings.datausage.lib.NetworkTemplates.getTitleResId
+ import com.android.settingslib.spa.widget.preference.Preference
+ import com.android.settingslib.spa.widget.preference.PreferenceModel
+ import com.android.settingslib.spaprivileged.model.app.hasFlag
+@@ -68,11 +67,7 @@ fun AppDataUsagePreference(
+         initialValue = stringResource(R.string.computing_size),
+     )
+     Preference(object : PreferenceModel {
+-        override val title = stringResource(
+-            presenter.titleResIdFlow.collectAsStateWithLifecycle(
+-                initialValue = R.string.summary_placeholder,
+-            ).value
+-        )
++        override val title = stringResource(R.string.data_usage_app_summary_title)
+         override val summary = { summary }
+         override val enabled = { presenter.isEnabled() }
+         override val onClick = presenter::startActivity
+@@ -103,7 +98,6 @@ private class AppDataUsagePresenter(
+         })
+     }.shareIn(coroutineScope, SharingStarted.WhileSubscribed(), 1)
+ 
+-    val titleResIdFlow = templateFlow.map { it.getTitleResId() }
+     val summaryFlow = templateFlow.map { getSummary(it) }
+ 
+     private suspend fun getSummary(template: NetworkTemplate) = withContext(Dispatchers.IO) {

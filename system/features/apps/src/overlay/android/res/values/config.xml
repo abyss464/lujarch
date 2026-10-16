@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Store (APP-2) is the system's app store: Install unknown apps starts it at Allow. -->
+    <string-array name="config_lujarchAppStores" translatable="false">
+        <item>dev.imranr.obtainium.fdroid</item>
+    </string-array>
+</resources>

@@ -1,6 +1,7 @@
 # The system's apps (APP-2, APP-3), built from their source.
 PRODUCT_PACKAGES += \
     default-permissions-lujarch-apps.xml \
+    LujarchAppsAndroidOverlay \
     LujarchAppsFiles \
     LujarchAppsMusic \
     LujarchAppsReader \

@@ -53,3 +53,11 @@ prebuilt_etc {
     sub_dir: "default-permissions",
     product_specific: true,
 }
+
+// The system's app stores for Install unknown apps (PERM-12).
+runtime_resource_overlay {
+    name: "LujarchAppsAndroidOverlay",
+    manifest: "src/overlay/android/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/android/res"],
+    product_specific: true,
+}

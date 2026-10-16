@@ -1,5 +1,29 @@
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index a19202ff1683b2a5a3db8935ef41f9c003be0c36..ae09d3723c053a9a78fd1e197ce87f75527497fc 100644
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -8074,4 +8074,7 @@
+ 
+     <!-- Whether to explicitly disable the Video capability over IWLAN when Wi-Fi Calling is turned off. -->
+     <bool name="config_disable_video_capability_when_wfc_off">false</bool>
++
++    <!-- The app stores that come with the system: Install unknown apps starts them at Allow. -->
++    <string-array name="config_lujarchAppStores" translatable="false" />
+ </resources>
+diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
+index 684391a43567cd0d91cd075022e3fb44ca215046..e30915b99ebbc8255f9c284c08b3fc15fe16c999 100644
+--- a/core/res/res/values/symbols.xml
++++ b/core/res/res/values/symbols.xml
+@@ -6628,6 +6628,7 @@
+   <java-symbol type="bool" name="config_disable_video_capability_when_wfc_off" />
+   
+   <!-- Lujarch's permissions -->
++  <java-symbol type="array" name="config_lujarchAppStores" />
+   <java-symbol type="string" name="lujarch_permission_choice_empty" />
+   <java-symbol type="string" name="lujarch_permission_choice_deny" />
+   <java-symbol type="string" name="lujarch_permission_choice_foreground" />
 diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
-index 136fd4ad1b293ae5a2653cf84c801806b3658f7c..956ed086638211cc158141ac163f9eb0bbbe21f3 100644
+index 1c2ae381f1c2c741220a781dd03403246ec62934..2bb59a8064b39652135c939d4cc141db2ff09e63 100644
 --- a/services/core/java/com/android/server/appop/AppOpsService.java
 +++ b/services/core/java/com/android/server/appop/AppOpsService.java
 @@ -293,6 +293,8 @@ public class AppOpsService extends IAppOpsService.Stub {
@@ -40,10 +64,10 @@ index 136fd4ad1b293ae5a2653cf84c801806b3658f7c..956ed086638211cc158141ac163f9eb0
          mHistoricalRegistry.systemReady(mContext.getContentResolver());
 diff --git a/services/core/java/com/android/server/appop/LujarchNewApps.java b/services/core/java/com/android/server/appop/LujarchNewApps.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1150f6726
+index 0000000000000000000000000000000000000000..16dcba320c2b20da51ca34b6dd1a58adb0a29585
 --- /dev/null
 +++ b/services/core/java/com/android/server/appop/LujarchNewApps.java
-@@ -0,0 +1,191 @@
+@@ -0,0 +1,222 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -76,6 +100,7 @@ index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1
 +import android.net.VpnService;
 +import android.os.Binder;
 +import android.os.UserHandle;
++import android.os.UserManager;
 +import android.provider.Settings;
 +import android.util.Slog;
 +
@@ -190,6 +215,7 @@ index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1
 +
 +    /** From now on, a new holder of a role is not asked about what the role needs. */
 +    void systemReady() {
++        allowAppStores();
 +        try {
 +            final RoleManager roles = mContext.getSystemService(RoleManager.class);
 +            final OnRoleHoldersChangedListener listener = (role, user) ->
@@ -198,6 +224,35 @@ index 0000000000000000000000000000000000000000..36c4d21dfaa8a86c011ac82abc465ea1
 +                    UserHandle.ALL);
 +        } catch (RuntimeException e) {
 +            Slog.e(TAG, "role holders not watched", e);
++        }
++    }
++
++    /**
++     * The app stores that come with the system install from the start: their unknown sources
++     * switch is set to Allow until the user has set it.
++     */
++    private void allowAppStores() {
++        final String[] stores = mContext.getResources().getStringArray(
++                com.android.internal.R.array.config_lujarchAppStores);
++        final PackageManager pm = mContext.getPackageManager();
++        for (UserHandle user : mContext.getSystemService(UserManager.class).getUserHandles(true)) {
++            for (String store : stores) {
++                try {
++                    final int uid = pm.getPackageUidAsUser(store, user.getIdentifier());
++                    if (requests(store, user.getIdentifier(),
++                            android.Manifest.permission.REQUEST_INSTALL_PACKAGES)
++                            && mService.checkOperationRaw(AppOpsManager.OP_REQUEST_INSTALL_PACKAGES,
++                                    uid, store, null) == AppOpsManager.MODE_DEFAULT) {
++                        mService.setMode(AppOpsManager.OP_REQUEST_INSTALL_PACKAGES, uid, store,
++                                AppOpsManager.MODE_ALLOWED);
++                        Slog.i(TAG, store + " (" + uid + ") installs apps: a store of the system");
++                    }
++                } catch (PackageManager.NameNotFoundException e) {
++                    // Not installed for this user.
++                } catch (RuntimeException e) {
++                    Slog.e(TAG, "install choice of " + store + " not set", e);
++                }
++            }
 +        }
 +    }
 +

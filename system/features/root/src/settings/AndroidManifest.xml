@@ -48,6 +48,9 @@
                 android:name="com.android.settings.title"
                 android:resource="@string/root_title" />
             <meta-data
+                android:name="com.android.settings.order"
+                android:value="-120" />
+            <meta-data
                 android:name="com.android.settings.profile"
                 android:value="primary_profile_only" />
         </activity>

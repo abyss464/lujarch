@@ -697,10 +697,10 @@ index 0000000000000000000000000000000000000000..889e33b50b26e0a595e11e1ca82ac147
 +</resources>
 diff --git a/res/xml/lujarch_battery_app.xml b/res/xml/lujarch_battery_app.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..eba7f9bda3b269059f46d177eff38b6a44babf1a
+index 0000000000000000000000000000000000000000..9307a019486af01aff3a0a7f703c34d05eb7aff5
 --- /dev/null
 +++ b/res/xml/lujarch_battery_app.xml
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,69 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Copyright (C) 2026 The Lujarch Project
 +
@@ -759,6 +759,13 @@ index 0000000000000000000000000000000000000000..eba7f9bda3b269059f46d177eff38b6a
 +        <com.android.settingslib.PrimarySwitchPreference
 +            android:key="background_usage_allowability_switch"
 +            android:title="@string/manager_battery_usage_allow_background_usage_title"/>
++
++        <!-- PERM-15 -->
++        <ListPreference
++            android:key="lujarch_autostart"
++            android:title="@string/lujarch_autostart"
++            android:dialogTitle="@string/lujarch_autostart"
++            android:persistent="false"/>
 +
 +    </PreferenceCategory>
 +

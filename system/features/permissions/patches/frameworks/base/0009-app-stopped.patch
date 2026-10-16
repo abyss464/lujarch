@@ -123,11 +123,21 @@ index 1a8ae674b897910e099b376b19041ad60eea4295..a021b381b3d41f39d6399dcecba0d62e
 +
  }
 diff --git a/services/core/java/com/android/server/am/AppErrorDialog.java b/services/core/java/com/android/server/am/AppErrorDialog.java
-index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2aec400d58 100644
+index dccdc287d97a86dbd658d1a224450978ac23a71c..a555edfe7ccea52ac44de52a06796c46605f37c9 100644
 --- a/services/core/java/com/android/server/am/AppErrorDialog.java
 +++ b/services/core/java/com/android/server/am/AppErrorDialog.java
-@@ -28,8 +28,11 @@ import android.provider.Settings;
+@@ -20,16 +20,21 @@ import static android.app.ActivityTaskManager.INVALID_TASK_ID;
+ 
+ import android.content.Context;
+ import android.content.res.Resources;
++import android.graphics.drawable.Drawable;
+ import android.os.Build;
+ import android.os.Bundle;
+ import android.os.Handler;
+ import android.os.Message;
+ import android.provider.Settings;
  import android.text.BidiFormatter;
++import android.util.TypedValue;
  import android.view.LayoutInflater;
  import android.view.View;
 +import android.view.ViewGroup;
@@ -138,7 +148,7 @@ index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2a
  import android.widget.TextView;
  
  final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListener {
-@@ -53,6 +56,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+@@ -53,6 +58,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
      static final int TIMEOUT = 6;
      static final int CANCEL = 7;
      static final int APP_INFO = 8;
@@ -146,7 +156,7 @@ index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2a
  
      // 5-minute timeout, then we automatically dismiss the crash dialog
      static final long DISMISS_TIMEOUT = 1000 * 60 * 5;
-@@ -87,6 +91,10 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+@@ -87,6 +93,10 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
                      bidi.unicodeWrap(name.toString())));
          }
  
@@ -157,7 +167,7 @@ index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2a
          setCancelable(true);
          setCancelMessage(mHandler.obtainMessage(CANCEL));
  
-@@ -134,9 +142,41 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+@@ -134,9 +144,45 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
          mute.setOnClickListener(this);
          mute.setVisibility(showMute ? View.VISIBLE : View.GONE);
  
@@ -189,7 +199,11 @@ index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2a
 +        final Button button = new Button(context, null, 0,
 +                com.android.internal.R.style.aerr_list_item);
 +        button.setText(text);
-+        button.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
++        final Drawable drawable = context.getDrawable(icon);
++        final int size = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24,
++                context.getResources().getDisplayMetrics());
++        drawable.setBounds(0, 0, size, size);
++        button.setCompoundDrawablesRelative(drawable, null, null, null);
 +        button.setOnClickListener(listener);
 +        button.setLayoutParams(new LinearLayout.LayoutParams(
 +                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -199,7 +213,7 @@ index dccdc287d97a86dbd658d1a224450978ac23a71c..cb9ecbe5b015c89b481087a77732ed2a
      private final Handler mHandler = new Handler() {
          public void handleMessage(Message msg) {
              setResult(msg.what);
-@@ -205,5 +245,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
+@@ -205,5 +251,7 @@ final class AppErrorDialog extends BaseErrorDialog implements View.OnClickListen
          boolean repeating;
          ProcessRecord proc;
          boolean isRestartableForService;
