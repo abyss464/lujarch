@@ -20,10 +20,6 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application>
-        <meta-data
-            android:name="org.lujarch.settings.contribution.permissions"
-            android:value="org.lujarch.permissions.settings.PermissionsContribution" />
-
         <activity
             android:name="org.lujarch.permissions.settings.NewAppDefaultsActivity"
             android:exported="true"

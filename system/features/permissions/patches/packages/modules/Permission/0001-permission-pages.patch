@@ -1,5 +1,5 @@
 diff --git a/PermissionController/AndroidManifest.xml b/PermissionController/AndroidManifest.xml
-index 7bd569967cd4947ca9f3bd68ef303615726816a7..3d9723b20147398844c9200f776931f95f49c1c8 100644
+index 7bd569967cd4947ca9f3bd68ef303615726816a7..b535b683b48706c2b593628e274e59c018e62196 100644
 --- a/PermissionController/AndroidManifest.xml
 +++ b/PermissionController/AndroidManifest.xml
 @@ -103,6 +103,20 @@
@@ -23,7 +23,15 @@ index 7bd569967cd4947ca9f3bd68ef303615726816a7..3d9723b20147398844c9200f776931f9
          <receiver android:name="com.android.permissioncontroller.hibernation.HibernationBroadcastReceiver"
                    android:exported="true">
              <intent-filter>
-@@ -536,7 +550,7 @@
+@@ -386,6 +400,7 @@
+                   android:theme="@android:style/Theme.NoDisplay">
+             <intent-filter android:priority="1">
+                 <action android:name="com.android.permissioncontroller.settingssearch.action.MANAGE_PERMISSION_APPS" />
++                <action android:name="com.android.permissioncontroller.settingssearch.action.LUJARCH_ROW" />
+                 <action android:name="com.android.permissioncontroller.settingssearch.action.REVIEW_PERMISSION_USAGE" />
+                 <action android:name="com.android.permissioncontroller.devicestate.action.MANAGE_PERMISSIONS" />
+                 <action android:name="com.android.permissioncontroller.devicestate.action.MANAGE_PERMISSION_APPS" />
+@@ -536,7 +551,7 @@
              </intent-filter>
          </activity>
  
@@ -1549,10 +1557,10 @@ index 0000000000000000000000000000000000000000..f0e52a6cbac86aab9940a5362d66fb43
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..5a6ca1d67c162da600251b4566cf5e7428a3e7b7
+index 0000000000000000000000000000000000000000..a9ccf2ef2f351a8336d6b6484fccf6935c1b2cb5
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchOtherAccess.kt
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,99 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1589,8 +1597,7 @@ index 0000000000000000000000000000000000000000..5a6ca1d67c162da600251b4566cf5e74
 + * has no page of its own, each with the number of apps that used it and opening their list.
 + */
 +object LujarchOtherAccess {
-+    private const val KEY = "lujarch_other_access"
-+    private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
++    private const val KEY = LujarchSearchRows.KEY_OTHER_ACCESS
 +
 +    /** The packages of [user] that used each access, or have a choice of it, by op. */
 +    @JvmStatic
@@ -1623,12 +1630,7 @@ index 0000000000000000000000000000000000000000..5a6ca1d67c162da600251b4566cf5e74
 +                setTitle(R.string.lujarch_other_access)
 +            }
 +        screen.addPreference(category)
-+        val intent = fragment.activity?.intent
-+        if (intent?.getStringExtra(EXTRA_FRAGMENT_ARG_KEY) == KEY) {
-+            // Once: the page rebuilds the section whenever its list of accesses changes.
-+            intent.removeExtra(EXTRA_FRAGMENT_ARG_KEY)
-+            fragment.scrollToPreference(category)
-+        }
++        LujarchSearchRows.keepInView(fragment, KEY)
 +        val collator = Collator.getInstance(context.resources.configuration.locales.get(0))
 +        LujarchPermissions.OTHER.map { it to context.getString(it.title) }
 +            .sortedWith { l, r -> collator.compare(l.second, r.second) }
@@ -1942,10 +1944,10 @@ index 0000000000000000000000000000000000000000..e890ba3ecb25b98e3c8bb80219f3a918
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1af259574a752c98703caab8ce0aee6bca463c7d
+index 0000000000000000000000000000000000000000..26565c6f6c1ed272fd09fccc2a398c2678ba4714
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissionManager.kt
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,188 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2084,15 +2086,8 @@ index 0000000000000000000000000000000000000000..1af259574a752c98703caab8ce0aee6b
 +        explain.isChecked = Settings.Global.getInt(ctx.contentResolver, SETTING_EXPLAIN, 1) != 0
 +        if (screen.findPreference<Preference>(KEY_EXPLAIN) == null) screen.addPreference(explain)
 +        order(ctx, screen, groups)
-+        // A Settings search result for the switch opens the page with it in view.
-+        val highlight = fragment.activity?.intent?.getStringExtra(EXTRA_FRAGMENT_ARG_KEY)
-+        if (highlight == KEY_EXPLAIN && !highlighted) {
-+            highlighted = true
-+            fragment.scrollToPreference(KEY_EXPLAIN)
-+        }
++        LujarchSearchRows.keepInView(fragment, KEY_EXPLAIN)
 +    }
-+
-+    private var highlighted = false
 +
 +    /** Groups and permissions by name; then Android's other rows; the switch; the footers. */
 +    private fun order(ctx: Context, screen: PreferenceScreen, groups: Collection<String>) {
@@ -2110,8 +2105,7 @@ index 0000000000000000000000000000000000000000..1af259574a752c98703caab8ce0aee6b
 +    }
 +
 +    companion object {
-+        private const val KEY_EXPLAIN = "lujarch_explain_crashes"
-+        private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
++        private const val KEY_EXPLAIN = LujarchSearchRows.KEY_EXPLAIN
 +        const val SETTING_EXPLAIN = "lujarch_permissions_explain_crashes"
 +    }
 +}
@@ -2818,6 +2812,110 @@ index 0000000000000000000000000000000000000000..3ec92e036d5ac25ebee72450c07ebf9b
 +            )
 +    }
 +}
+diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchSearchRows.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchSearchRows.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..d80bddecbc24ae2208031d916f0e4b016b6c7652
+--- /dev/null
++++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchSearchRows.kt
+@@ -0,0 +1,98 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.permissioncontroller.lujarch
++
++import android.content.Context
++import android.content.Intent
++import androidx.annotation.StringRes
++import androidx.preference.PreferenceFragmentCompat
++import androidx.recyclerview.widget.RecyclerView
++import com.android.permissioncontroller.R
++import com.android.permissioncontroller.permission.ui.ManagePermissionsActivity
++import com.android.permissioncontroller.role.ui.specialappaccess.SpecialAppAccessListActivity
++import java.util.WeakHashMap
++
++/**
++ * The rows the permissions add to the permission controller's pages, found by Settings search
++ * through the controller's own search provider and opened with the row in view.
++ */
++object LujarchSearchRows {
++    /** The row a page brings into view, as Settings passes it to its own pages. */
++    const val EXTRA_HIGHLIGHT = ":settings:fragment_args_key"
++    const val KEY_EXPLAIN = "lujarch_explain_crashes"
++    const val KEY_OTHER_ACCESS = "lujarch_other_access"
++    /** The search result of every row; the row is the result's key. */
++    const val ACTION = "com.android.permissioncontroller.settingssearch.action.LUJARCH_ROW"
++
++    /** A row and the page that holds it. */
++    class Row(
++        val key: String,
++        @StringRes val title: Int,
++        @StringRes val screen: Int,
++        val page: (Context) -> Intent,
++    )
++
++    @JvmField
++    val ROWS =
++        listOf(
++            Row(KEY_EXPLAIN, R.string.lujarch_explain_crashes, R.string.app_permission_manager) {
++                Intent(it, ManagePermissionsActivity::class.java)
++                    .setAction(Intent.ACTION_MANAGE_PERMISSIONS)
++            },
++            Row(KEY_OTHER_ACCESS, R.string.lujarch_other_access, R.string.special_app_access) {
++                Intent(it, SpecialAppAccessListActivity::class.java)
++            },
++        )
++
++    /** The page of the row [key], to open with the row in view; null for a key of no row. */
++    @JvmStatic
++    fun page(context: Context, key: String?): Intent? =
++        ROWS.firstOrNull { it.key == key }?.let { it.page(context).putExtra(EXTRA_HIGHLIGHT, it.key) }
++
++    private val watched = WeakHashMap<RecyclerView, Boolean>()
++
++    /**
++     * Brings the row [key] into view when a search result opened [fragment]'s page for it, and
++     * again after each change while the page fills in, until the user scrolls it.
++     */
++    @JvmStatic
++    fun keepInView(fragment: PreferenceFragmentCompat, key: String) {
++        val intent = fragment.activity?.intent ?: return
++        if (intent.getStringExtra(EXTRA_HIGHLIGHT) != key) return
++        val list = fragment.listView
++        if (list == null) {
++            // Before the page has its list: it scrolls once the list is made.
++            fragment.scrollToPreference(key)
++            return
++        }
++        if (watched.put(list, true) == null) {
++            list.addOnScrollListener(
++                object : RecyclerView.OnScrollListener() {
++                    override fun onScrollStateChanged(view: RecyclerView, state: Int) {
++                        if (state == RecyclerView.SCROLL_STATE_DRAGGING) {
++                            intent.removeExtra(EXTRA_HIGHLIGHT)
++                        }
++                    }
++                }
++            )
++        }
++        // The list takes a change of the page on a later message: the row is found after it.
++        list.post {
++            if (intent.getStringExtra(EXTRA_HIGHLIGHT) == key) fragment.scrollToPreference(key)
++        }
++    }
++}
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/data/repository/v31/PermissionRepository.kt b/PermissionController/src/com/android/permissioncontroller/permission/data/repository/v31/PermissionRepository.kt
 index d8d96ae1868dfd6919b2ea35e6e43495a16b9811..efc1b132f8530a382b09f71c42000863a4a665e6 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/data/repository/v31/PermissionRepository.kt
@@ -2932,21 +3030,22 @@ index 022f42e6e352f98cb44ccff17fc14ff45a0000e1..c873029dbd5a284d0fe27bfc28e1f784
                          permissionGroupUsage.key ==
                              PermissionMapping.getGroupOfPlatformPermission(permission)
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java b/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java
-index f8720a0a3a63688772ce90ade260d9e1fce59eae..33a5332d4cb50db891ef962a257bccb897873f02 100644
+index f8720a0a3a63688772ce90ade260d9e1fce59eae..db6e5dbcd3a078c18ede330135d9c0cbf0d37ec8 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java
 +++ b/PermissionController/src/com/android/permissioncontroller/permission/service/PermissionSearchIndexablesProvider.java
-@@ -31,8 +31,10 @@ import android.database.MatrixCursor;
+@@ -31,8 +31,11 @@ import android.database.MatrixCursor;
  import android.util.Log;
  
  import com.android.permissioncontroller.R;
 +import com.android.permissioncontroller.lujarch.LujarchPermissions;
++import com.android.permissioncontroller.lujarch.LujarchSearchRows;
  import com.android.permissioncontroller.permission.utils.PermissionMapping;
  
 +import java.util.ArrayList;
  import java.util.List;
  
  /**
-@@ -49,7 +51,9 @@ public class PermissionSearchIndexablesProvider extends BaseSearchIndexablesProv
+@@ -49,7 +52,9 @@ public class PermissionSearchIndexablesProvider extends BaseSearchIndexablesProv
          Context context = getContext();
          PackageManager pm = context.getPackageManager();
  
@@ -2957,6 +3056,50 @@ index f8720a0a3a63688772ce90ade260d9e1fce59eae..33a5332d4cb50db891ef962a257bccb8
          MatrixCursor cursor = new MatrixCursor(INDEXABLES_RAW_COLUMNS);
  
          int numPermissionGroups = permissionGroupNames.size();
+@@ -66,6 +71,15 @@ public class PermissionSearchIndexablesProvider extends BaseSearchIndexablesProv
+                     .add(COLUMN_INTENT_ACTION, ACTION_MANAGE_PERMISSION_APPS)
+                     .add(COLUMN_SCREEN_TITLE, context.getString(R.string.app_permission_manager));
+         }
++        for (LujarchSearchRows.Row row : LujarchSearchRows.ROWS) {
++            String title = context.getString(row.getTitle());
++            cursor.newRow().add(COLUMN_RANK, 0)
++                    .add(COLUMN_TITLE, title)
++                    .add(COLUMN_KEYWORDS, title)
++                    .add(COLUMN_KEY, createRawDataKey(row.getKey(), context))
++                    .add(COLUMN_INTENT_ACTION, LujarchSearchRows.ACTION)
++                    .add(COLUMN_SCREEN_TITLE, context.getString(row.getScreen()));
++        }
+ 
+         return cursor;
+     }
+diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/ManagePermissionsActivityTrampoline.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/ManagePermissionsActivityTrampoline.java
+index 0ee74bbea5e69d1cbb3744376352044b5721147d..a3c993582f8e6673361e1a9247e2e91f8e461c9a 100644
+--- a/PermissionController/src/com/android/permissioncontroller/permission/ui/ManagePermissionsActivityTrampoline.java
++++ b/PermissionController/src/com/android/permissioncontroller/permission/ui/ManagePermissionsActivityTrampoline.java
+@@ -23,6 +23,7 @@ import android.provider.Settings;
+ 
+ import com.android.permissioncontroller.Constants;
+ import com.android.permissioncontroller.appfunctions.AppFunctionsUtil;
++import com.android.permissioncontroller.lujarch.LujarchSearchRows;
+ import com.android.permissioncontroller.permission.service.PermissionSearchIndexablesProvider;
+ 
+ /**
+@@ -56,6 +57,15 @@ public class ManagePermissionsActivityTrampoline extends Activity {
+                         Intent.EXTRA_PERMISSION_GROUP_NAME,
+                         PermissionSearchIndexablesProvider.getOriginalKey(intent));
+                 break;
++            case LujarchSearchRows.ACTION:
++                newIntent = LujarchSearchRows.page(this,
++                        PermissionSearchIndexablesProvider.getOriginalKey(intent));
++                if (newIntent == null) {
++                    finish();
++                    return;
++                }
++                newIntent.addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT);
++                break;
+             case AppFunctionsUtil.ACTION_MANAGE_PERMISSIONS:
+                 newIntent.setAction(Intent.ACTION_MANAGE_PERMISSIONS);
+                 break;
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/AppPermissionGroupsFragment.java b/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/AppPermissionGroupsFragment.java
 index cbaf0a1573538555f0e5652c818be0cf55ad5967..72ebbcb624403e1ecf0a6391a09872d44c973fc5 100644
 --- a/PermissionController/src/com/android/permissioncontroller/permission/ui/handheld/AppPermissionGroupsFragment.java

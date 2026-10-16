@@ -1,0 +1,16 @@
+diff --git a/src/com/android/settings/intelligence/search/indexing/DatabaseIndexingUtils.java b/src/com/android/settings/intelligence/search/indexing/DatabaseIndexingUtils.java
+index c7afcd4286dfc426912c0e28d4f51ce52f8ddc81..2ca25e99ca614c7af17ceb597f304f6cee2b6337 100644
+--- a/src/com/android/settings/intelligence/search/indexing/DatabaseIndexingUtils.java
++++ b/src/com/android/settings/intelligence/search/indexing/DatabaseIndexingUtils.java
+@@ -103,7 +103,10 @@ public class DatabaseIndexingUtils {
+             final ComponentName component = new ComponentName(targetPackage, targetClass);
+             intent.setComponent(component);
+         }
+-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++        // Lujarch: the page opens as the new root of its app's task. A task of the app opened
++        // from another result of the same page, which differs only in its extras, would
++        // otherwise come back as it was.
++        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+         return intent;
+     }
+ 

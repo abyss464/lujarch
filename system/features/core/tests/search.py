@@ -80,6 +80,13 @@ def main():
             note(f"results: {[n.text for n in results][:8]}")
             continue
         d.tap(hit, wait=3)
+        # The result left search for its page: neither search nor, after a failed start, home.
+        top = d.sh("dumpsys activity activities | grep -m1 topResumedActivity", check=False)
+        if "settings.intelligence" in top or "launcher3" in top:
+            unopened.append(query)
+            note(f"opened: {top.strip()[:160]}")
+            d.home()
+            continue
         if query in IN_MENU and not d.find(text=query):
             d.tap(d.wait(desc="More options", timeout=10))
             time.sleep(1)
