@@ -222,7 +222,8 @@ Lock keeps the app's restricted settings closed even where Android would open th
 Covers the system starting an app that is not running, for a broadcast: at boot, for an alarm or
 for a push message. Don't allow: the app starts only when the user opens it or another app opens
 it, and push messages that arrive while it is not running can be lost. The row's summary says
-so.
+so. Ask every time asks as PERM-11 says; until the answer, the app is still started for an alarm
+clock it set and for a high-priority push message (CORE-13), and for nothing else.
 
 ### PERM-16 Network access is chosen in Mobile data & Wi-Fi
 
