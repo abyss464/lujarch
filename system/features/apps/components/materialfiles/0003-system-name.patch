@@ -1,0 +1,46 @@
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index fb6dcb4..a6edb2d 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -50,7 +50,7 @@
+         android:enableOnBackInvokedCallback="true"
+         android:fullBackupContent="true"
+         android:icon="@mipmap/launcher_icon"
+-        android:label="@string/app_name"
++        android:label="@string/lujarch_app_name"
+         android:networkSecurityConfig="@xml/netework_security_config"
+         android:requestLegacyExternalStorage="true"
+         android:requestRawExternalStorageAccess="true"
+diff --git a/app/src/main/res/values-ja/lujarch_strings.xml b/app/src/main/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000..0db3cb6
+--- /dev/null
++++ b/app/src/main/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">ファイル</string>
++</resources>
+diff --git a/app/src/main/res/values-zh-rCN/lujarch_strings.xml b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000..c3eed90
+--- /dev/null
++++ b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">文件</string>
++</resources>
+diff --git a/app/src/main/res/values/lujarch_strings.xml b/app/src/main/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000..85f28bd
+--- /dev/null
++++ b/app/src/main/res/values/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">Files</string>
++</resources>

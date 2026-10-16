@@ -1,0 +1,46 @@
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 1414763..5bccbe7 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -2,7 +2,7 @@
+     xmlns:tools="http://schemas.android.com/tools"
+     package="dev.imranr.obtainium">
+     <application
+-        android:label="@string/label"
++        android:label="@string/lujarch_app_name"
+         android:name="${applicationName}"
+         android:icon="@mipmap/ic_launcher"
+         android:banner="@drawable/tv_banner"
+diff --git a/android/app/src/main/res/values-ja/lujarch_strings.xml b/android/app/src/main/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000..a1e40d0
+--- /dev/null
++++ b/android/app/src/main/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">アプリストア</string>
++</resources>
+diff --git a/android/app/src/main/res/values-zh-rCN/lujarch_strings.xml b/android/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000..597f764
+--- /dev/null
++++ b/android/app/src/main/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">应用商店</string>
++</resources>
+diff --git a/android/app/src/main/res/values/lujarch_strings.xml b/android/app/src/main/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000..085e28c
+--- /dev/null
++++ b/android/app/src/main/res/values/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">App Store</string>
++</resources>

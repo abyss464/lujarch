@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ファイル アクセス</string>
+    <string name="files_name">ファイル</string>
+    <string name="files_unavailable_title">%1$s を使用できません</string>
+    <string name="files_not_installed">インストールされていないため、他のアプリでファイルを選択、保存、または開くことができません。</string>
+    <string name="files_disabled">無効になっているため、他のアプリでファイルを選択、保存、または開くことができません。アプリ情報で有効にできます。</string>
+    <string name="files_not_system">インストールされているコピーはシステムに付属のものではないため、ファイルは渡されません。</string>
+    <string name="files_no_picker">このバージョンでは他のアプリのためにファイルを選択できません。</string>
+    <string name="app_info">アプリ情報</string>
+    <string name="folder_blocked_title">このフォルダは使用できません</string>
+    <string name="folder_blocked_message">プライバシーを保護するため、別のフォルダを選択してください</string>
+    <string name="folder_not_local_message">アプリに渡せるのは、このスマートフォンのストレージ、SD カード、USB ドライブ上のフォルダのみです。</string>
+    <string name="choose_again">もう一度選択</string>
+    <string name="handover_failed_title">ファイルをアプリに渡せませんでした</string>
+    <string name="write_failed_message">その場所にファイルを書き込めません。</string>
+    <string name="grant_failed_message">システムがこのファイルをアプリに渡すことを許可しませんでした。</string>
+    <string name="browse_no_home_title">この場所を開けません</string>
+    <string name="browse_no_home_message">このスマートフォンには %1$s の場所を参照できるアプリがありません。このスマートフォンのストレージ、SD カード、USB ドライブ上のフォルダはファイル マネージャーで開けます。</string>
+    <string name="browse_no_home_unknown">このスマートフォンにはこの場所を参照できるアプリがありません。このスマートフォンのストレージ、SD カード、USB ドライブ上のフォルダはファイル マネージャーで開けます。</string>
+</resources>

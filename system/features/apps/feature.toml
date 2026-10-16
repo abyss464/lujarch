@@ -1,1 +1,31 @@
 prefix = "APP"
+
+# Files (APP-2): Material Files, the build F-Droid makes, without its non-free crash reporting
+# and its own signing (components/materialfiles).
+[components.materialfiles]
+build = "gradle"
+module = "LujarchAppsFiles"
+task = ":app:assembleRelease"
+output = "app/build/outputs/apk/release/app-release-unsigned.apk"
+
+# Music (APP-2): FuoEvolve.
+[components.fuoevolve]
+build = "gradle"
+module = "LujarchAppsMusic"
+task = ":androidApp:assembleRelease"
+output = "androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk"
+
+# App Store (APP-2): Obtainium, F-Droid's flavor.
+[components.obtainium]
+build = "flutter"
+module = "LujarchAppsStore"
+args = ["--flavor", "fdroid", "-t", "lib/main_fdroid.dart"]
+output = "build/app/outputs/flutter-apk/app-fdroid-release.apk"
+
+# Reader (APP-3), signed on a release with its own key, so the owner's own builds update it.
+[components.reader]
+build = "gradle"
+module = "LujarchAppsReader"
+key = "reader"
+task = ":app:assembleRelease"
+output = "app/build/outputs/apk/release/app-universal-release-unsigned.apk"

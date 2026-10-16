@@ -1,0 +1,14 @@
+diff --git a/core/java/android/os/storage/VolumeInfo.java b/core/java/android/os/storage/VolumeInfo.java
+index 84b6b5eabda19ccbed76b6369f19d5536cf9478c..e98c2c85a90be9ca4ae0ea581c308361b5ffd0ba 100644
+--- a/core/java/android/os/storage/VolumeInfo.java
++++ b/core/java/android/os/storage/VolumeInfo.java
+@@ -511,6 +511,9 @@ public class VolumeInfo implements Parcelable {
+         final Intent intent = new Intent(Intent.ACTION_VIEW);
+         intent.addCategory(Intent.CATEGORY_DEFAULT);
+         intent.setDataAndType(uri, DocumentsContract.Root.MIME_TYPE_ITEM);
++        // Lujarch (FILE-3): File access routes a root to the owner's apps (DocumentsUI is not
++        // installed); a VIEW filter cannot outrank apps that claim every VIEW, so it is named.
++        intent.setPackage("org.lujarch.files");
+ 
+         // note that docsui treats this as *force* show advanced. So sending
+         // false permits advanced to be shown based on user preferences.

@@ -1,0 +1,13 @@
+diff --git a/app/build.gradle b/app/build.gradle
+index a0fc881..635d959 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -86,7 +86,7 @@ android {
+     }
+     packagingOptions {
+         jniLibs {
+-            useLegacyPackaging true
++            useLegacyPackaging false
+         }
+         resources {
+             excludes += [

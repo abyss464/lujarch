@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File access (FILE-1, FILE-2, FILE-3): the system's answer when an app asks
+    to choose a file, save a file or choose a folder, and when the system asks
+    to browse a storage location. DocumentsUI is not installed; Files (APP-2)
+    is the only file interface, and this app
+    hands each request to it and the result back in the form apps expect:
+    ExternalStorageProvider documents and trees, granted as DocumentsUI
+    grants them. No UI of its own except a dialog when it cannot serve a
+    request. Platform-signed priv-app in /system_ext, no launcher entry.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.files">
+
+    <!-- Every DocumentsProvider is guarded by it (DocumentsProvider.attachInfo): the
+         ExternalStorageProvider documents and trees handed to apps, the new document of a
+         save, and the folder flags checked before a tree is given (signature|role: the
+         platform signature). -->
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />
+    <!-- Files, the music app and the photo picker are found by package and intent. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FileAccess">
+
+        <!-- DocumentsUI's picker filters with its priorities: GET_CONTENT at 120 is its
+             TrampolineActivity's (media types to the photo picker, the photo picker's
+             priority being 105), the others at 100 its PickActivity's. A privileged app keeps
+             them, so they outrank Files' own filters (0) and no chooser appears.
+             OPEN_EXTERNAL_DIRECTORY is StorageVolume.createAccessIntent, which ends at once
+             with RESULT_CANCELED since Android 10 (DocumentsUI's ScopedAccessActivity). The
+             activity handles configuration changes itself: a recreation would lose the result
+             it waits for or is handing over. -->
+        <activity
+            android:name=".PickActivity"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|density|screenSize|smallestScreenSize|layoutDirection|colorMode|fontWeightAdjustment|grammaticalGender"
+            android:exported="true"
+            android:visibleToInstantApps="true">
+            <intent-filter android:priority="120">
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter android:priority="100">
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter android:priority="100">
+                <action android:name="android.intent.action.CREATE_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter android:priority="100">
+                <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.os.storage.action.OPEN_EXTERNAL_DIRECTORY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Browsing (FILE-3): DocumentsUI's VIEW filters of roots and folders and its
+             VIEW_DOWNLOADS alias. VIEW is a protected action, so no priority lifts these
+             above Files' "Save as" (any content VIEW): the callers name this package
+             (VolumeInfo, Settings > Storage, MtpDocumentsProvider). VIEW_DOWNLOADS is not
+             protected and only this app answers it. -->
+        <activity
+            android:name=".BrowseActivity"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|density|screenSize|smallestScreenSize|layoutDirection|colorMode|fontWeightAdjustment|grammaticalGender"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.document/root" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.document/directory" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_DOWNLOADS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

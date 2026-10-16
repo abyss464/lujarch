@@ -1,0 +1,46 @@
+diff --git a/androidApp/src/main/AndroidManifest.xml b/androidApp/src/main/AndroidManifest.xml
+index fb32300..aec1529 100644
+--- a/androidApp/src/main/AndroidManifest.xml
++++ b/androidApp/src/main/AndroidManifest.xml
+@@ -26,7 +26,7 @@
+         android:allowBackup="true"
+         android:enableOnBackInvokedCallback="false"
+         android:icon="@mipmap/ic_launcher"
+-        android:label="FuoEvolve"
++        android:label="@string/lujarch_app_name"
+         android:networkSecurityConfig="@xml/network_security_config"
+         android:supportsRtl="true"
+         android:theme="@style/AppTheme">
+diff --git a/androidApp/src/main/res/values-ja/lujarch_strings.xml b/androidApp/src/main/res/values-ja/lujarch_strings.xml
+new file mode 100644
+index 0000000..d9b6df4
+--- /dev/null
++++ b/androidApp/src/main/res/values-ja/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">音楽</string>
++</resources>
+diff --git a/androidApp/src/main/res/values-zh-rCN/lujarch_strings.xml b/androidApp/src/main/res/values-zh-rCN/lujarch_strings.xml
+new file mode 100644
+index 0000000..751b378
+--- /dev/null
++++ b/androidApp/src/main/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">音乐</string>
++</resources>
+diff --git a/androidApp/src/main/res/values/lujarch_strings.xml b/androidApp/src/main/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000..cdf0e58
+--- /dev/null
++++ b/androidApp/src/main/res/values/lujarch_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the name the system gives this app. -->
++<resources>
++    <string name="lujarch_app_name">Music</string>
++</resources>

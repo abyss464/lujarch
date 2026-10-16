@@ -1,3 +1,11 @@
+# The system's apps (APP-2, APP-3), built from their source.
+PRODUCT_PACKAGES += \
+    default-permissions-lujarch-apps.xml \
+    LujarchAppsFiles \
+    LujarchAppsMusic \
+    LujarchAppsReader \
+    LujarchAppsStore
+
 # Google's services from MindTheGapps (APP-1): Play services, Google Services Framework and the
 # Play Store with what they need to run, and nothing else of Google's.
 # MindTheGapps' Play services for x86_64 predates Android 17's services framework, so only arm64

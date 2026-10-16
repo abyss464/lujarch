@@ -1,0 +1,15 @@
+diff --git a/src/com/android/mtp/ReceiverActivity.java b/src/com/android/mtp/ReceiverActivity.java
+index 19c2c14478f196f099f59fcd1af75776653df0ad..8a04449e54c5cbaa7fa70793cc0f942b67a45a81 100644
+--- a/src/com/android/mtp/ReceiverActivity.java
++++ b/src/com/android/mtp/ReceiverActivity.java
+@@ -49,6 +49,10 @@ public class ReceiverActivity extends Activity {
+                 final Intent intent = new Intent(Intent.ACTION_VIEW);
+                 intent.setDataAndType(uri, DocumentsContract.Root.MIME_TYPE_ITEM);
+                 intent.addCategory(Intent.CATEGORY_DEFAULT);
++                // Lujarch (FILE-3): File access answers browsing (DocumentsUI is
++                // not installed); a VIEW filter cannot outrank apps that claim every VIEW, so it
++                // is named. No app browses an MTP device: it says so.
++                intent.setPackage("org.lujarch.files");
+                 this.startActivity(intent);
+             } catch (IOException exception) {
+                 Log.e(MtpDocumentsProvider.TAG, "Failed to open device", exception);

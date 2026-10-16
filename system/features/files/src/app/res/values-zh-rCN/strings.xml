@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">文件访问</string>
+    <string name="files_name">文件</string>
+    <string name="files_unavailable_title">“%1$s”不可用</string>
+    <string name="files_not_installed">该应用未安装，因此其他应用无法选择、保存或打开文件。</string>
+    <string name="files_disabled">该应用已停用，因此其他应用无法选择、保存或打开文件。您可以在应用信息中启用它。</string>
+    <string name="files_not_system">已安装的版本不是系统自带的版本，因此不会将文件交给它处理。</string>
+    <string name="files_no_picker">此版本无法为其他应用选择文件。</string>
+    <string name="app_info">应用信息</string>
+    <string name="folder_blocked_title">无法使用此文件夹</string>
+    <string name="folder_blocked_message">为保护您的隐私，请选择其他文件夹</string>
+    <string name="folder_not_local_message">只能将此手机存储空间、SD 卡或 U 盘中的文件夹提供给应用。</string>
+    <string name="choose_again">重新选择</string>
+    <string name="handover_failed_title">无法将文件提供给应用</string>
+    <string name="write_failed_message">无法在该位置写入此文件。</string>
+    <string name="grant_failed_message">系统不允许将此文件提供给该应用。</string>
+    <string name="browse_no_home_title">无法打开此位置</string>
+    <string name="browse_no_home_message">此手机上没有可浏览“%1$s”中位置的应用。此手机存储空间、SD 卡或 U 盘中的文件夹可在文件管理器中打开。</string>
+    <string name="browse_no_home_unknown">此手机上没有可浏览此位置的应用。此手机存储空间、SD 卡或 U 盘中的文件夹可在文件管理器中打开。</string>
+</resources>

@@ -1,0 +1,55 @@
+// The system's apps (APP-2, APP-3), built from their source by the tools and signed here. On a
+// release, Reader takes its own key (feature.toml) and the others the release key.
+
+// The libraries every app's manifest names as optional (AndroidX Window's).
+WINDOW_LIBS = [
+    "androidx.window.extensions",
+    "androidx.window.sidecar",
+]
+
+android_app_import {
+    name: "LujarchAppsFiles",
+    apk: "prebuilt/common/LujarchAppsFiles.apk",
+    default_dev_cert: true,
+    product_specific: true,
+    optional_uses_libs: WINDOW_LIBS,
+}
+
+android_app_import {
+    name: "LujarchAppsMusic",
+    apk: "prebuilt/common/LujarchAppsMusic.apk",
+    default_dev_cert: true,
+    product_specific: true,
+    optional_uses_libs: WINDOW_LIBS,
+}
+
+android_app_import {
+    name: "LujarchAppsStore",
+    arch: {
+        arm64: {
+            apk: "prebuilt/arm64/LujarchAppsStore.apk",
+        },
+        x86_64: {
+            apk: "prebuilt/x86_64/LujarchAppsStore.apk",
+        },
+    },
+    default_dev_cert: true,
+    product_specific: true,
+    optional_uses_libs: WINDOW_LIBS,
+}
+
+android_app_import {
+    name: "LujarchAppsReader",
+    apk: "prebuilt/common/LujarchAppsReader.apk",
+    default_dev_cert: true,
+    product_specific: true,
+    optional_uses_libs: WINDOW_LIBS,
+}
+
+// The permissions the system's apps start with.
+prebuilt_etc {
+    name: "default-permissions-lujarch-apps.xml",
+    src: "src/etc/default-permissions-lujarch-apps.xml",
+    sub_dir: "default-permissions",
+    product_specific: true,
+}

@@ -1,0 +1,18 @@
+// File access (FILE-1, FILE-2, FILE-3): the system's file picker, saver and folder chooser, and
+// the target of the system's "browse a storage location". It hands every request to Files and
+// the result back as ExternalStorageProvider documents and trees. Privileged, so its intent
+// filters keep DocumentsUI's priorities; platform-signed, for MANAGE_DOCUMENTS.
+android_app {
+    name: "LujarchFiles",
+    srcs: ["src/app/**/*.kt"],
+    resource_dirs: ["src/app/res"],
+    manifest: "src/app/AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    system_ext_specific: true,
+    overrides: [
+        "DocumentsUI",
+        "DocumentsUIOverlay",
+    ],
+}

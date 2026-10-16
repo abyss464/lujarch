@@ -1,0 +1,118 @@
+diff --git a/androidApp/src/main/AndroidManifest.xml b/androidApp/src/main/AndroidManifest.xml
+index aec1529..e8bb4f3 100644
+--- a/androidApp/src/main/AndroidManifest.xml
++++ b/androidApp/src/main/AndroidManifest.xml
+@@ -25,7 +25,7 @@
+         android:name=".FuoEvolveApplication"
+         android:allowBackup="true"
+         android:enableOnBackInvokedCallback="false"
+-        android:icon="@mipmap/ic_launcher"
++        android:icon="@mipmap/lujarch_launcher"
+         android:label="@string/lujarch_app_name"
+         android:networkSecurityConfig="@xml/network_security_config"
+         android:supportsRtl="true"
+diff --git a/androidApp/src/main/res/drawable/lujarch_launcher_background.xml b/androidApp/src/main/res/drawable/lujarch_launcher_background.xml
+new file mode 100644
+index 0000000..f85113b
+--- /dev/null
++++ b/androidApp/src/main/res/drawable/lujarch_launcher_background.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++    <path
++        android:fillColor="#ffffff"
++        android:pathData="M0,0h108v108h-108z" />
++    <path
++        android:fillColor="#A92D63"
++        android:fillType="evenOdd"
++        android:pathData="M45,44V55.515C43.57,54.558 41.85,54 40,54C35.029,54 31,58.029 31,63C31,67.971 35.029,72 40,72C44.971,72 49,67.971 49,63V48C49,45.791 50.791,44 53,44H67C69.209,44 71,45.791 71,48V55.515C69.57,54.558 67.85,54 66,54C61.029,54 57,58.029 57,63C57,67.971 61.029,72 66,72C70.971,72 75,67.971 75,63V44C75,39.582 71.418,36 67,36H53C48.582,36 45,39.582 45,44ZM71,63C71,60.239 68.761,58 66,58C63.239,58 61,60.239 61,63C61,65.761 63.239,68 66,68C68.761,68 71,65.761 71,63ZM40,68C42.761,68 45,65.761 45,63C45,60.239 42.761,58 40,58C37.239,58 35,60.239 35,63C35,65.761 37.239,68 40,68Z" />
++    <path
++        android:fillColor="#521E35"
++        android:fillType="evenOdd"
++        android:pathData="M40,68C42.761,68 45,65.761 45,63C45,60.239 42.761,58 40,58C37.239,58 35,60.239 35,63C35,65.761 37.239,68 40,68ZM66,68C68.761,68 71,65.761 71,63C71,60.239 68.761,58 66,58C63.239,58 61,60.239 61,63C61,65.761 63.239,68 66,68Z" />
++</vector>
+diff --git a/androidApp/src/main/res/drawable/lujarch_launcher_foreground.xml b/androidApp/src/main/res/drawable/lujarch_launcher_foreground.xml
+new file mode 100644
+index 0000000..d228a7d
+--- /dev/null
++++ b/androidApp/src/main/res/drawable/lujarch_launcher_foreground.xml
+@@ -0,0 +1,37 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:aapt="http://schemas.android.com/aapt"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++    <group>
++        <clip-path android:pathData="M0,0h108v108h-108z" />
++        <path
++            android:fillColor="#F73487"
++            android:fillType="evenOdd"
++            android:pathData="M40,72C44.971,72 49,67.971 49,63C49,58.029 44.971,54 40,54C35.029,54 31,58.029 31,63C31,67.971 35.029,72 40,72ZM66,72C70.971,72 75,67.971 75,63C75,58.029 70.971,54 66,54C61.029,54 57,58.029 57,63C57,67.971 61.029,72 66,72Z" />
++        <path
++            android:fillAlpha="0.6"
++            android:pathData="M28.54,28.54m-72,0a72,72 0,1 1,144 0a72,72 0,1 1,-144 0">
++            <aapt:attr name="android:fillColor">
++                <gradient
++                    android:centerX="28.54"
++                    android:centerY="28.54"
++                    android:gradientRadius="72"
++                    android:type="radial">
++                    <item
++                        android:color="#19FFFFFF"
++                        android:offset="0" />
++                    <item
++                        android:color="#00FFFFFF"
++                        android:offset="1" />
++                </gradient>
++            </aapt:attr>
++        </path>
++    </group>
++</vector>
+diff --git a/androidApp/src/main/res/drawable/lujarch_launcher_monochrome.xml b/androidApp/src/main/res/drawable/lujarch_launcher_monochrome.xml
+new file mode 100644
+index 0000000..fb340b0
+--- /dev/null
++++ b/androidApp/src/main/res/drawable/lujarch_launcher_monochrome.xml
+@@ -0,0 +1,15 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++    <path
++        android:fillColor="#ffffffff"
++        android:fillType="evenOdd"
++        android:pathData="M45,44V55.515C43.57,54.558 41.85,54 40,54C35.029,54 31,58.029 31,63C31,67.971 35.029,72 40,72C44.971,72 49,67.971 49,63V48C49,45.791 50.791,44 53,44H67C69.209,44 71,45.791 71,48V55.515C69.57,54.558 67.85,54 66,54C61.029,54 57,58.029 57,63C57,67.971 61.029,72 66,72C70.971,72 75,67.971 75,63V44C75,39.582 71.418,36 67,36H53C48.582,36 45,39.582 45,44Z" />
++</vector>
+diff --git a/androidApp/src/main/res/mipmap-anydpi-v26/lujarch_launcher.xml b/androidApp/src/main/res/mipmap-anydpi-v26/lujarch_launcher.xml
+new file mode 100644
+index 0000000..8e8ae32
+--- /dev/null
++++ b/androidApp/src/main/res/mipmap-anydpi-v26/lujarch_launcher.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Lujarch (APP-2): the icon of the stock app this app takes the place of. -->
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++    <background android:drawable="@drawable/lujarch_launcher_background" />
++    <foreground android:drawable="@drawable/lujarch_launcher_foreground" />
++    <monochrome android:drawable="@drawable/lujarch_launcher_monochrome" />
++</adaptive-icon>

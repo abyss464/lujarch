@@ -1,0 +1,58 @@
+diff --git a/src/com/android/settings/deviceinfo/storage/StorageItemPreferenceController.java b/src/com/android/settings/deviceinfo/storage/StorageItemPreferenceController.java
+index cb8e6fc03b02e3048b71350de1489e8184e28d41..c2fcdf4b321b11c7ef818aeb15e26d0775a1e017 100644
+--- a/src/com/android/settings/deviceinfo/storage/StorageItemPreferenceController.java
++++ b/src/com/android/settings/deviceinfo/storage/StorageItemPreferenceController.java
+@@ -539,6 +539,8 @@ public class StorageItemPreferenceController extends AbstractPreferenceControlle
+     private void launchActivityWithUri(Uri dataUri) {
+         final Intent intent = new Intent(Intent.ACTION_VIEW);
+         intent.setData(dataUri);
++        // Lujarch (FILE-3): File access routes a category to the owner's apps
++        intent.setPackage("org.lujarch.files");
+         mContext.startActivityAsUser(intent, new UserHandle(mUserId));
+     }
+ 
+diff --git a/src/com/android/settings/deviceinfo/storage/StoragePreferenceScreen.kt b/src/com/android/settings/deviceinfo/storage/StoragePreferenceScreen.kt
+index 5926c906f15d253c9f6598e679f10f169faa99bd..e07a8a5a1dc4bed138c6721420b0c5beab3e1c4a 100644
+--- a/src/com/android/settings/deviceinfo/storage/StoragePreferenceScreen.kt
++++ b/src/com/android/settings/deviceinfo/storage/StoragePreferenceScreen.kt
+@@ -168,6 +168,8 @@ open class StoragePreferenceScreen(private val context: Context) :
+                 { c ->
+                     Intent(Intent.ACTION_VIEW).apply {
+                         data = c.getString(R.string.config_images_storage_category_uri).toUri()
++                        // Lujarch (FILE-3): File access routes a category to the owner's apps
++                        setPackage("org.lujarch.files")
+                     }
+                 },
+                 { StorageUtils.getStorageSizeLabel(context, cache.imagesSize) },
+@@ -193,6 +195,7 @@ open class StoragePreferenceScreen(private val context: Context) :
+                 { c ->
+                     Intent(Intent.ACTION_VIEW).apply {
+                         data = c.getString(R.string.config_documents_storage_category_uri).toUri()
++                        setPackage("org.lujarch.files")
+                     }
+                 },
+                 { StorageUtils.getStorageSizeLabel(context, cache.documentsSize) },
+@@ -206,6 +209,7 @@ open class StoragePreferenceScreen(private val context: Context) :
+                 { c ->
+                     Intent(Intent.ACTION_VIEW).apply {
+                         data = c.getString(R.string.config_other_storage_category_uri).toUri()
++                        setPackage("org.lujarch.files")
+                     }
+                 },
+                 { StorageUtils.getStorageSizeLabel(context, cache.otherSize) },
+@@ -219,6 +223,7 @@ open class StoragePreferenceScreen(private val context: Context) :
+                 { c ->
+                     Intent(Intent.ACTION_VIEW).apply {
+                         data = c.getString(R.string.config_audio_storage_category_uri).toUri()
++                        setPackage("org.lujarch.files")
+                     }
+                 },
+                 { StorageUtils.getStorageSizeLabel(context, cache.audioSize) },
+@@ -232,6 +237,7 @@ open class StoragePreferenceScreen(private val context: Context) :
+                 { c ->
+                     Intent(Intent.ACTION_VIEW).apply {
+                         data = c.getString(R.string.config_videos_storage_category_uri).toUri()
++                        setPackage("org.lujarch.files")
+                     }
+                 },
+                 { StorageUtils.getStorageSizeLabel(context, cache.videosSize) },

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The application label (Settings > Apps with system apps shown). -->
+    <string name="app_name">File access</string>
+
+    <!-- Files cannot take a request. %1$s: Files' label. -->
+    <!-- Files' name when the system cannot read it (APP-2). -->
+    <string name="files_name">Files</string>
+    <string name="files_unavailable_title">%1$s isn\'t available</string>
+    <string name="files_not_installed">It isn\'t installed, so other apps can\'t choose, save or open files.</string>
+    <string name="files_disabled">It\'s turned off, so other apps can\'t choose, save or open files. You can turn it on in App info.</string>
+    <string name="files_not_system">The installed copy isn\'t the one that came with the system, so files aren\'t handed to it.</string>
+    <string name="files_no_picker">This version can\'t choose files for other apps.</string>
+    <!-- Button: Settings' application_info_label. -->
+    <string name="app_info">App info</string>
+
+    <!-- A folder chosen for an app is refused. Title and blocked message: DocumentsUI's
+         directory_blocked_header_title and _subtitle. -->
+    <string name="folder_blocked_title">Can\'t use this folder</string>
+    <string name="folder_blocked_message">To protect your privacy, choose another folder</string>
+    <string name="folder_not_local_message">Apps can only be given folders on this phone\'s storage, an SD card or a USB drive.</string>
+    <!-- Button: open Files again for the same request. -->
+    <string name="choose_again">Choose again</string>
+
+    <!-- What Files picked cannot be handed to the app. -->
+    <string name="handover_failed_title">Couldn\'t give the file to the app</string>
+    <string name="write_failed_message">The file can\'t be written there.</string>
+    <string name="grant_failed_message">The system didn\'t allow this file to be given to the app.</string>
+
+    <!-- A location the system asked to browse that no app opens. %1$s: the app it belongs
+         to (an MTP device's host, a cloud app). -->
+    <string name="browse_no_home_title">Can\'t open this location</string>
+    <string name="browse_no_home_message">No app on this phone can browse the locations of %1$s. Folders on this phone\'s storage, an SD card or a USB drive open in the file manager.</string>
+    <string name="browse_no_home_unknown">No app on this phone can browse this location. Folders on this phone\'s storage, an SD card or a USB drive open in the file manager.</string>
+</resources>

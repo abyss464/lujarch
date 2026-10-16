@@ -66,6 +66,26 @@ url = "https://github.com/syncthing/syncthing.git"
 version = "v2.1.5"
 commit = "2ca95cf1498104113fdfde46df4107f2450a0f71"
 
+[components.materialfiles]
+url = "https://github.com/zhanghai/MaterialFiles.git"
+version = "v1.7.5"
+commit = "7254ab32c3a84f53f3569f9845bbb8e4b0b16f56"
+
+[components.fuoevolve]
+url = "https://github.com/feeluown/FuoEvolve.git"
+version = "1.6.3"
+commit = "23623f20871af9f7d556f80e69b0ef954ccb266c"
+
+[components.obtainium]
+url = "https://github.com/ImranR98/Obtainium.git"
+version = "v1.6.17"
+commit = "031f18ef6636ee97a7d1ce25cb5e19bfb9b3833c"
+flutter = "9584c6713b324636289d067944a46fd6b49df14b"
+
+[components.reader]
+version = "0.1.0"
+commit = "d3d2dc3f04bc8ba3393a90f2d205588991746a10"
+
 [prebuilts.ksud.arm64]
 url = "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.4.0/ksud-aarch64-linux-android"
 sha256 = "52ba3da465459bfbac98dd25c53f8d31f93ee5a8ee89d84f67a28fe0d18cdef2"
