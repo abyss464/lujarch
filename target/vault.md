@@ -46,7 +46,7 @@ the passwords and the key file. The chosen policy deletes them by itself.
 ### VLT-4 Passwords are found and copied
 
 - Home: Settings > Passwords & passkeys > Lujarch Vault > Passwords
-- Switch: Verify to reveal: on, off; Verify to copy: on, off
+- Switch: Settings > Passwords & passkeys > Lujarch Vault > Settings > Verify to reveal: on, off; Settings > Passwords & passkeys > Lujarch Vault > Settings > Verify to copy: on, off
 - Default: Verify to reveal: on; Verify to copy: off
 - Verify: vm
 
@@ -84,7 +84,7 @@ the chosen time after the last copy.
 ### VLT-7 The vault fills apps and websites
 
 - Home: Settings > Passwords & passkeys > Preferred service
-- Switch: Preferred service: Lujarch Vault or another; Search the vault suggestion: on, off; Same host only: on, off
+- Switch: Preferred service: Lujarch Vault or another; Settings > Passwords & passkeys > Lujarch Vault > Settings > Search the vault suggestion: on, off; Settings > Passwords & passkeys > Lujarch Vault > Settings > Same host only: on, off
 - Default: Preferred service: Lujarch Vault; Search the vault suggestion: on; Same host only: off
 - Verify: vm
 
