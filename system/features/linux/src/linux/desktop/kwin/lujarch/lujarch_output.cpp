@@ -28,7 +28,6 @@ static constexpr int s_frameTimeoutMs = 250;
 LujarchOutput::LujarchOutput(LujarchBackend *backend)
     : BackendOutput()
     , m_backend(backend)
-    , m_renderLoop(std::make_unique<RenderLoop>(this))
     , m_frameTimeout(new QTimer(this))
 {
     setInformation(Information{
@@ -46,7 +45,7 @@ LujarchOutput::LujarchOutput(LujarchBackend *backend)
         }
     });
     // Rendering starts held: it waits for a pool and a visible configure.
-    m_renderLoop->inhibit();
+    renderLoop()->inhibit();
     m_inhibited = true;
 }
 
@@ -55,34 +54,32 @@ LujarchOutput::~LujarchOutput()
     m_frame.reset();
 }
 
-RenderLoop *LujarchOutput::renderLoop() const
-{
-    return m_renderLoop.get();
-}
-
-bool LujarchOutput::testPresentation(const std::shared_ptr<OutputFrame> &frame)
+std::expected<void, OutputError> LujarchOutput::testPresentation(const std::shared_ptr<OutputFrame> &frame)
 {
     Q_UNUSED(frame)
-    return true;
+    return {};
 }
 
-bool LujarchOutput::present(const QList<OutputLayer *> &layersToUpdate, const std::shared_ptr<OutputFrame> &frame)
+std::expected<void, OutputError> LujarchOutput::present(const QList<OutputLayer *> &layersToUpdate, const std::shared_ptr<OutputFrame> &frame)
 {
     Q_UNUSED(layersToUpdate)
     if (!m_layer) {
-        return false;
+        return std::unexpected(OutputError{
+            .code = OutputErrorCode::Other,
+            .message = QStringLiteral("the output has no layer"),
+        });
     }
     const std::optional<uint32_t> seq = m_layer->presentCurrent();
     if (!seq) {
         // Nothing reached the app (no pool any more): the frame is dropped, the loop goes on.
-        return true;
+        return {};
     }
     m_frame = frame;
     m_frameSeq = *seq;
     m_frameTimeout->start();
     // Every buffer is with the app: hold the loop until one comes back (LJD_RELEASE).
     setStarved(m_layer->freeBufferCount() == 0);
-    return true;
+    return {};
 }
 
 void LujarchOutput::applyChanges(const OutputConfiguration &config)
@@ -109,7 +106,7 @@ bool LujarchOutput::setHostMode(const QSize &size, qreal scale, int refreshMilli
         return false;
     }
     m_hostScale = scale;
-    m_renderLoop->setRefreshRate(refreshMilliHz);
+    renderLoop()->setRefreshRate(refreshMilliHz);
 
     State next = m_state;
     if (!sameMode) {
@@ -161,13 +158,13 @@ void LujarchOutput::updateInhibit()
     }
     m_inhibited = inhibit;
     if (inhibit) {
-        m_renderLoop->inhibit();
+        renderLoop()->inhibit();
     } else {
-        m_renderLoop->uninhibit();
+        renderLoop()->uninhibit();
         if (m_layer) {
             m_layer->addDeviceRepaint(Region::infinite());
         }
-        m_renderLoop->scheduleRepaint();
+        renderLoop()->scheduleRepaint();
     }
 }
 

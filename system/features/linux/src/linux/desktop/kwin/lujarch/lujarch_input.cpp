@@ -133,7 +133,7 @@ void LujarchInputDevice::pointerAxis(PointerAxis axis, qint32 deltaV120, std::ch
     // libinput's wheel delta is the wheel's angle, 15 degrees per detent (120 in v120), which is
     // what KWin and the clients scale scrolling by; the sign is libinput's too (down, right).
     const qreal delta = deltaV120 * 15.0 / 120.0;
-    Q_EMIT pointerAxisChanged(axis, delta, deltaV120, PointerAxisSource::Wheel, false, time, this);
+    Q_EMIT pointerAxisChanged(axis, delta, deltaV120, PointerAxisSource::Wheel, false, false, time, this);
 }
 
 void LujarchInputDevice::pointerFrame()

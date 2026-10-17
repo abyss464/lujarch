@@ -30,8 +30,6 @@ class QTimer;
 namespace KWin
 {
 
-class DrmDevice;
-class EglDisplay;
 class LujarchConnection;
 class LujarchInputBackend;
 class LujarchInputDevice;
@@ -48,14 +46,11 @@ public:
     ~LujarchBackend() override;
 
     bool initialize() override;
-    std::unique_ptr<EglBackend> createOpenGLBackend() override;
+    std::unique_ptr<EglBackend> createOpenGLBackend(RenderDevice *renderDevice) override;
     std::unique_ptr<InputBackend> createInputBackend() override;
     QList<CompositingType> supportedCompositors() const override;
     QList<BackendOutput *> outputs() const override;
-    EglDisplay *sceneEglDisplayObject() const override;
 
-    DrmDevice *drmDevice() const;
-    RenderDevice *renderDevice() const;
     LujarchConnection *connection() const;
     LujarchInputDevice *touchDevice() const;
     LujarchInputDevice *keyboardDevice() const;
@@ -83,7 +78,6 @@ private:
     QPointF mapToGlobal(float x, float y) const;
 
     const QString m_socketPath;
-    std::unique_ptr<RenderDevice> m_renderDevice;
     LujarchOutput *m_output = nullptr;
     std::unique_ptr<LujarchConnection> m_connection;
     std::unique_ptr<LujarchInputDevice> m_touchDevice;

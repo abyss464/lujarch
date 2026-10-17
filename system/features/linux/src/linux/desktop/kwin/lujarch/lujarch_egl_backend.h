@@ -37,10 +37,9 @@ public:
     LujarchEglLayer(LujarchOutput *output, LujarchEglBackend *backend);
     ~LujarchEglLayer() override;
 
-    std::optional<OutputLayerBeginFrameInfo> doBeginFrame() override;
-    bool doEndFrame(const Region &renderedDeviceRegion, const Region &damagedDeviceRegion, OutputFrame *frame) override;
+    std::optional<OutputLayerBeginFrameInfo> beginFrame(OutputFrame *frame) override;
+    bool endFrame(const Region &renderedDeviceRegion, const Region &damagedDeviceRegion, OutputFrame *frame) override;
 
-    DrmDevice *scanoutDevice() const override;
     FormatModifierMap supportedDrmFormats() const override;
     void releaseBuffers() override;
 
@@ -49,7 +48,7 @@ public:
     bool hasPool() const;
     /** LJD_RELEASE: the buffer is the producer's again once @p fence signals. */
     void bufferReleased(uint32_t poolId, uint32_t index, FileDescriptor &&fence);
-    /** Sends the frame rendered in doBeginFrame/doEndFrame; returns its seq. */
+    /** Sends the frame rendered in beginFrame/endFrame; returns its seq. */
     std::optional<uint32_t> presentCurrent();
     int freeBufferCount() const;
 
@@ -83,12 +82,11 @@ class LujarchEglBackend : public EglBackend
     Q_OBJECT
 
 public:
-    explicit LujarchEglBackend(LujarchBackend *backend);
+    LujarchEglBackend(LujarchBackend *backend, RenderDevice *renderDevice);
     ~LujarchEglBackend() override;
 
     bool init() override;
     QList<OutputLayer *> compatibleOutputLayers(BackendOutput *output) override;
-    DrmDevice *drmDevice() const override;
 
     LujarchBackend *backend() const
     {

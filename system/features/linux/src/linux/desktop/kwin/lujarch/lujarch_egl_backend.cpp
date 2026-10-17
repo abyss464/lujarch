@@ -89,7 +89,7 @@ bool LujarchEglLayer::importPool(const std::shared_ptr<LujarchPool> &pool)
             return false;
         }
 
-        std::shared_ptr<GLTexture> texture = m_backend->importDmaBufAsTexture(attributes);
+        std::shared_ptr<GLTexture> texture = m_backend->openglContext()->importDmaBufAsTexture(attributes);
         if (!texture) {
             qCWarning(KWIN_LUJARCH) << "pool" << pool->id << "buffer" << i << ": EGL import failed (format"
                                     << Qt::hex << pool->format << "modifier" << pool->modifier << Qt::dec
@@ -158,8 +158,9 @@ void LujarchEglLayer::waitReleaseFence(Slot &slot)
     }
 }
 
-std::optional<OutputLayerBeginFrameInfo> LujarchEglLayer::doBeginFrame()
+std::optional<OutputLayerBeginFrameInfo> LujarchEglLayer::beginFrame(OutputFrame *frame)
 {
+    Q_UNUSED(frame)
     auto *context = m_backend->openglContext();
     if (m_slots.empty() || !context || !context->makeCurrent()) {
         return std::nullopt;
@@ -185,7 +186,7 @@ std::optional<OutputLayerBeginFrameInfo> LujarchEglLayer::doBeginFrame()
     };
 }
 
-bool LujarchEglLayer::doEndFrame(const Region &renderedDeviceRegion, const Region &damagedDeviceRegion, OutputFrame *frame)
+bool LujarchEglLayer::endFrame(const Region &renderedDeviceRegion, const Region &damagedDeviceRegion, OutputFrame *frame)
 {
     Q_UNUSED(renderedDeviceRegion)
     Q_UNUSED(frame)
@@ -234,18 +235,14 @@ std::optional<uint32_t> LujarchEglLayer::presentCurrent()
     return seq;
 }
 
-DrmDevice *LujarchEglLayer::scanoutDevice() const
-{
-    return m_backend->drmDevice();
-}
-
 FormatModifierMap LujarchEglLayer::supportedDrmFormats() const
 {
     return m_backend->supportedFormats();
 }
 
-LujarchEglBackend::LujarchEglBackend(LujarchBackend *backend)
-    : m_backend(backend)
+LujarchEglBackend::LujarchEglBackend(LujarchBackend *backend, RenderDevice *renderDevice)
+    : EglBackend(renderDevice)
+    , m_backend(backend)
 {
 }
 
@@ -257,22 +254,12 @@ LujarchEglBackend::~LujarchEglBackend()
     cleanup();
 }
 
-DrmDevice *LujarchEglBackend::drmDevice() const
-{
-    return m_backend->drmDevice();
-}
-
 bool LujarchEglBackend::init()
 {
     if (!initClientExtensions()) {
         qCWarning(KWIN_LUJARCH) << "EGL client extensions missing";
         return false;
     }
-    if (!m_backend->renderDevice()) {
-        qCWarning(KWIN_LUJARCH) << "no render device";
-        return false;
-    }
-    setRenderDevice(m_backend->renderDevice());
     if (!createContext()) {
         qCWarning(KWIN_LUJARCH) << "could not create the EGL context";
         return false;

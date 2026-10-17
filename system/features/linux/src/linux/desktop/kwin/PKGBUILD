@@ -1,6 +1,6 @@
 # KWin with the Lujarch output backend: KWin renders the desktop into buffers that the Terminal
 # app allocates and shows with SurfaceControl (lujarch_display.h). Arch Linux's kwin PKGBUILD
-# (gitlab.archlinux.org/archlinux/packaging/packages/kwin, 6.7.5-2), plus kwin.patch and the
+# (gitlab.archlinux.org/archlinux/packaging/packages/kwin, 6.8.0-1), plus kwin.patch and the
 # backend sources in lujarch/. The desktop's install script stages every file flat next to this
 # PKGBUILD (makepkg finds local sources by name there), fills in KWin's pin from lock.toml
 # (@KWIN_VERSION@, @KWIN_URL@, @KWIN_SHA256@), builds it as the owner's user and installs the
@@ -16,13 +16,13 @@ license=(LGPL-2.0-or-later GPL-2.0-or-later)
 depends=(aurorae breeze glibc iio-sensor-proxy plasma-activities kauth kcmutils kcolorscheme
          kconfig kcoreaddons kcrash kdbusaddons kdeclarative kdecoration kglobalaccel
          kglobalacceld kguiaddons ki18n kidletime kirigami kitemmodels knewstuff knighttime
-         knotifications kpackage kquickcharts kscreenlocker kservice ksvg kwayland
+         knotifications kpackage kquickcharts krunner kscreenlocker kservice ksvg kwayland
          kwidgetsaddons kwindowsystem kxmlgui lcms2 libcanberra libdisplay-info libdrm libei
          libepoxy libevdev libgcc libinput libpipewire libqaccessibilityclient-qt6 libstdc++
          libxcb libxcvt libxkbcommon mesa milou pipewire-session-manager libplasma qt6-5compat
          qt6-base qt6-declarative qt6-svg qt6-tools systemd-libs vulkan-icd-loader wayland
          xcb-util-keysyms xcb-util-wm)
-makedepends=(cmake ninja extra-cmake-modules kdoctools krunner plasma-wayland-protocols python
+makedepends=(cmake ninja extra-cmake-modules kdoctools plasma-wayland-protocols python
              vulkan-headers wayland-protocols xorg-xwayland)
 optdepends=('plasma-keyboard: virtual keyboard')
 provides=("kwin=$pkgver")

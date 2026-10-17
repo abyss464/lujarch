@@ -37,9 +37,8 @@ public:
     LujarchOutput(LujarchBackend *backend);
     ~LujarchOutput() override;
 
-    RenderLoop *renderLoop() const override;
-    bool testPresentation(const std::shared_ptr<OutputFrame> &frame) override;
-    bool present(const QList<OutputLayer *> &layersToUpdate, const std::shared_ptr<OutputFrame> &frame) override;
+    std::expected<void, OutputError> testPresentation(const std::shared_ptr<OutputFrame> &frame) override;
+    std::expected<void, OutputError> present(const QList<OutputLayer *> &layersToUpdate, const std::shared_ptr<OutputFrame> &frame) override;
     void applyChanges(const OutputConfiguration &config) override;
 
     /** Size in pixels, scale, refresh in mHz; returns whether anything changed. */
@@ -62,7 +61,6 @@ private:
     void updateInhibit();
 
     LujarchBackend *const m_backend;
-    std::unique_ptr<RenderLoop> m_renderLoop;
     std::unique_ptr<LujarchEglLayer> m_layer;
     std::shared_ptr<OutputFrame> m_frame;
     uint32_t m_frameSeq = 0;

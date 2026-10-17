@@ -100,9 +100,9 @@ url = "https://github.com/BetterAndroid/android-notification-icon-project/releas
 sha256 = "5129c718d2144d4256c5d16a11444dcaa26b895ee6b467e4cc76d50d1f1739b8"
 
 [downloads.kwin]
-url = "https://download.kde.org/stable/plasma/6.7.5/kwin-6.7.5.tar.xz"
-version = "6.7.5"
-sha256 = "6baa910b732d93c48c90f9c1cc685cc93d0b8de0cdf138c24192c045bc3a48e2"
+url = "https://download.kde.org/stable/plasma/6.8.0/kwin-6.8.0.tar.xz"
+version = "6.8.0"
+sha256 = "4bfaf31e29a8f9fdf231dc3bbb9b09b0ce07cae9fee7a01cfc86425ece796258"
 
 [downloads.mesa]
 url = "https://archive.mesa3d.org/mesa-26.2.3.tar.xz"

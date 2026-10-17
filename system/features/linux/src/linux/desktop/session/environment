@@ -16,4 +16,6 @@ export __EGL_VENDOR_LIBRARY_FILENAMES="$mesa_kgsl/share/glvnd/egl_vendor.d/50_me
 export VK_DRIVER_FILES="$mesa_kgsl/share/vulkan/icd.d/freedreno_icd.aarch64.json"
 export GBM_BACKENDS_PATH="$mesa_kgsl/lib/gbm"
 export MESA_LOADER_DRIVER_OVERRIDE=zink
+# KWin renders on that node: Linux has no udev to list it.
+export KWIN_RENDER_NODES=/dev/dri/renderD128
 unset mesa_kgsl

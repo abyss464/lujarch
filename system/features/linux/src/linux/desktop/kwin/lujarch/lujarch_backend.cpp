@@ -15,9 +15,7 @@
 #include "lujarch_logging.h"
 #include "lujarch_output.h"
 
-#include "core/drmdevice.h"
 #include "core/renderdevice.h"
-#include "opengl/egldisplay.h"
 
 #include <KConfigGroup>
 #include <KSharedConfig>
@@ -84,17 +82,6 @@ LujarchBackend::~LujarchBackend()
 
 bool LujarchBackend::initialize()
 {
-    // EGL and GBM open the DRM render node; on this phone that is msm_drm (the display driver),
-    // and Zink picks Turnip on KGSL because no Vulkan device has that node (Mesa patch 0002).
-    // MESA_LOADER_DRIVER_OVERRIDE=zink comes from the session's environment.
-    const QString devicePath = qEnvironmentVariable("KWIN_LUJARCH_DRM_DEVICE", QStringLiteral("/dev/dri/renderD128"));
-    m_renderDevice = RenderDevice::open(devicePath);
-    if (!m_renderDevice) {
-        qCCritical(KWIN_LUJARCH) << "cannot open the render device" << devicePath << "(GBM and EGL on it)";
-        return false;
-    }
-    qCInfo(KWIN_LUJARCH) << "render device" << devicePath << "driver" << m_renderDevice->drmDevice()->driverName();
-
     m_touchDevice = std::make_unique<LujarchInputDevice>(LujarchInputDevice::Kind::Touch);
     m_keyboardDevice = std::make_unique<LujarchInputDevice>(LujarchInputDevice::Kind::Keyboard);
     m_pointerRemoveTimer = new QTimer(this);
@@ -124,9 +111,12 @@ bool LujarchBackend::initialize()
     return true;
 }
 
-std::unique_ptr<EglBackend> LujarchBackend::createOpenGLBackend()
+std::unique_ptr<EglBackend> LujarchBackend::createOpenGLBackend(RenderDevice *renderDevice)
 {
-    return std::make_unique<LujarchEglBackend>(this);
+    // KWin's compositor picks the render device (the session's KWIN_RENDER_NODES): msm_drm's
+    // render node, on which Zink takes Turnip on KGSL.
+    qCInfo(KWIN_LUJARCH) << "render device" << renderDevice->path();
+    return std::make_unique<LujarchEglBackend>(this, renderDevice);
 }
 
 std::unique_ptr<InputBackend> LujarchBackend::createInputBackend()
@@ -148,21 +138,6 @@ QList<BackendOutput *> LujarchBackend::outputs() const
         return {};
     }
     return {m_output};
-}
-
-EglDisplay *LujarchBackend::sceneEglDisplayObject() const
-{
-    return m_renderDevice ? m_renderDevice->eglDisplay() : nullptr;
-}
-
-DrmDevice *LujarchBackend::drmDevice() const
-{
-    return m_renderDevice ? m_renderDevice->drmDevice() : nullptr;
-}
-
-RenderDevice *LujarchBackend::renderDevice() const
-{
-    return m_renderDevice.get();
 }
 
 LujarchConnection *LujarchBackend::connection() const
