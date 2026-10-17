@@ -871,12 +871,30 @@ def apply_patches(tree):
         log(f"patches: {applied} applied, {kept} already in the tree")
 
 
-def revert_patches(tree):
-    """Bring every project back to the upstream commit under its patch commits."""
+def settled_projects(tree, pins):
+    """The patched projects already at their pin with exactly their patches, as patch commits made
+    from the same patch files, and nothing else changed. A sync has nothing to do there: moving
+    them would only touch every file their patches change, and so rebuild it."""
+    heads = project_heads(tree, pins)
+    settled = set()
+    for project, wanted in series_by_project().items():
+        pinned, where = pins.get(project), tree / project
+        if pinned is None or heads.get(project) in (None, pinned) or changes(where) \
+                or (git_dir(where) / APPLYING).exists():
+            continue
+        base, made = patch_base(where)
+        if base == pinned and len(made) == len(wanted) and all(map(in_sync, made, wanted)):
+            settled.add(project)
+    return settled
+
+
+def revert_patches(tree, keep=()):
+    """Bring every project but those in keep back to the upstream commit under its patch
+    commits."""
     pins = upstream_projects()
     heads = project_heads(tree, pins)
     for project, pinned in pins.items():
-        if heads[project] in (None, pinned):
+        if heads[project] in (None, pinned) or project in keep:
             continue
         where = tree / project
         if (git_dir(where) / APPLYING).exists():
@@ -1856,7 +1874,11 @@ def cmd_sync(_args):
     if extra:
         die("upstream.xml holds every project; the tree has local manifests besides it: "
             + ", ".join(str(p) for p in extra))
-    revert_patches(tree)
+    pins = upstream_projects()
+    settled = settled_projects(tree, pins)
+    if settled:
+        log(f"{len(settled)} patched projects are at their pin with their patches: left as they are")
+    revert_patches(tree, keep=settled)
     env = dict(os.environ)
     gitconfig = host.get("sync", "gitconfig")
     if gitconfig:
@@ -1865,7 +1887,8 @@ def cmd_sync(_args):
     log(f"repo sync to upstream.xml in {tree}")
     run = subprocess.run(["repo", "sync", "-m", str(ROOT / "upstream.xml"), "-j", jobs,
                           "--no-tags", "--no-clone-bundle", "--optimized-fetch",
-                          "--retry-fetches=5"], cwd=tree, env=env)
+                          "--retry-fetches=5", *(sorted(set(pins) - settled) if settled else [])],
+                         cwd=tree, env=env)
     if run.returncode:
         die("repo sync failed")
     pull_lfs(tree, env)
