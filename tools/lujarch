@@ -2572,8 +2572,11 @@ def provision(host_out):
         ["settings", "put", "secure", "user_setup_complete", "1"],
         ["settings", "put", "global", "device_provisioned", "1"],
         ["settings", "put", "global", "development_settings_enabled", "1"],
-        # LineageOS' setup wizard comes back at every start while it is enabled.
+        # LineageOS' setup wizard comes back at every start while it is enabled. It runs as the
+        # system uid, which disabling does not stop: stopped, it drops the status bar's disable
+        # (no shade, clock, heads-up or bubbles) it holds while it runs.
         ["pm", "disable-user", "--user", "0", "org.lineageos.setupwizard"],
+        ["am", "force-stop", "org.lineageos.setupwizard"],
         ["svc", "power", "stayon", "true"],
         ["input", "keyevent", "KEYCODE_WAKEUP"],
         ["wm", "dismiss-keyguard"],
