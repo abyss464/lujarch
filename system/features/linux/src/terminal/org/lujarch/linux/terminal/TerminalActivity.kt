@@ -81,14 +81,14 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private var opened = false
     private var wanted: String? = null
     private var refreshing: Job? = null
-    private var textSize = 0
+    private var textSizeSp = 0
     private var imeShown = false
     private var imeAnimating = false
     private var appliedImeBottom = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        textSize = getPreferences(Context.MODE_PRIVATE).getInt(PREF_TEXT_SIZE, dp(14))
+        textSizeSp = getPreferences(Context.MODE_PRIVATE).getInt(PREF_TEXT_SIZE_SP, DEFAULT_TEXT_SP).coerceIn(MIN_TEXT_SP, MAX_TEXT_SP)
         buildViews()
         wanted = intent.getStringExtra(Linux.EXTRA_SESSION)
         onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {}
@@ -200,7 +200,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         )
         terminal = ComposingTerminalView(this, model).apply {
             setTerminalViewClient(this@TerminalActivity)
-            setTextSize(textSize)
+            setTextSize(textPx())
             setTypeface(ownFont() ?: Typeface.MONOSPACE)
         }
         model.onChanged = {
@@ -327,6 +327,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    private fun textPx() =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSizeSp.toFloat(), resources.displayMetrics).toInt()
 
     // ---- state ----
 
@@ -555,9 +558,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     override fun onScale(scale: Float): Float {
         if (scale < 0.9f || scale > 1.1f) {
-            textSize = (textSize + if (scale > 1f) 2 else -2).coerceIn(dp(6), dp(40))
-            terminal.setTextSize(textSize)
-            getPreferences(Context.MODE_PRIVATE).edit().putInt(PREF_TEXT_SIZE, textSize).apply()
+            textSizeSp = (textSizeSp + if (scale > 1f) 1 else -1).coerceIn(MIN_TEXT_SP, MAX_TEXT_SP)
+            terminal.setTextSize(textPx())
+            getPreferences(Context.MODE_PRIVATE).edit().putInt(PREF_TEXT_SIZE_SP, textSizeSp).apply()
             return 1.0f
         }
         return scale
@@ -656,7 +659,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     }
 
     private companion object {
-        const val PREF_TEXT_SIZE = "text_size"
+        const val PREF_TEXT_SIZE_SP = "text_size_sp"
+        const val DEFAULT_TEXT_SP = 14
+        const val MIN_TEXT_SP = 8
+        const val MAX_TEXT_SP = 40
         const val DEFAULT_COLUMNS = 80
         const val DEFAULT_ROWS = 24
         const val REFRESH_DELAY_MS = 300L
