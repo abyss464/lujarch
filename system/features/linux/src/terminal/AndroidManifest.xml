@@ -32,6 +32,8 @@
     <!-- NFC card reading for Linux. -->
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The status line's network: the default network's interface. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- The Quick Settings tile Remote access switches When it runs. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <!-- The names of the apps whose notifications Linux is lent. -->
