@@ -13,7 +13,7 @@
     <string name="settings">設定</string>
     <string name="session_ended">終了しました</string>
     <string name="tab_busy">%1$s を実行中</string>
-    <string name="no_sessions">セッションはありません。+ をタップして開きます。</string>
+    <string name="no_sessions">セッションはありません</string>
     <string name="service_missing">Linux 開発環境が応答しません。</string>
     <string name="state_not_installed">Linux がインストールされていません。設定でルート ファイル システムをインストールしてください。</string>
     <string name="state_stopped">Linux はオフです。</string>

@@ -13,7 +13,7 @@
     <string name="settings">设置</string>
     <string name="session_ended">已结束</string>
     <string name="tab_busy">正在运行 %1$s</string>
-    <string name="no_sessions">没有会话。点按 + 即可新建。</string>
+    <string name="no_sessions">没有会话</string>
     <string name="service_missing">Linux 开发环境没有响应。</string>
     <string name="state_not_installed">尚未安装 Linux。请在设置中安装根文件系统。</string>
     <string name="state_stopped">Linux 已关闭。</string>

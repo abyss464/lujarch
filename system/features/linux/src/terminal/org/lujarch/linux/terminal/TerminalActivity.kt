@@ -208,23 +208,48 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             keys.refresh()
         }
         frame.addView(terminal, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // What shows instead of the terminal: an icon, a title and the button that applies.
         empty = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setPadding(dp(40), 0, dp(40), 0)
+            setBackgroundColor(getColor(R.color.surface))
+            isClickable = true
             visibility = View.GONE
         }
+        empty.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_terminal)
+            imageTintList = ColorStateList.valueOf(getColor(R.color.outline))
+        }, LinearLayout.LayoutParams(dp(56), dp(56)))
         emptyText = TextView(this).apply {
             gravity = Gravity.CENTER
-            setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Medium)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setTextColor(getColor(R.color.on_surface))
+            setPadding(0, dp(14), 0, 0)
         }
-        emptyButton = Button(this)
+        emptyButton = Button(this).apply {
+            isAllCaps = false
+            stateListAnimator = null
+            minHeight = 0
+            minimumHeight = 0
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(dp(24), 0, dp(24), 0)
+            background = GradientDrawable().apply {
+                setColor(getColor(R.color.primary))
+                cornerRadius = dp(22).toFloat()
+            }
+            setTextColor(getColor(R.color.on_primary))
+            isFocusable = false
+        }
         empty.addView(emptyText)
-        empty.addView(emptyButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(16)
+        empty.addView(emptyButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply {
+            topMargin = dp(24)
         })
-        frame.addView(empty, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        root.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
+        val content = FrameLayout(this)
+        content.addView(frame, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        content.addView(empty, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
             marginStart = dp(8)
             marginEnd = dp(8)
             bottomMargin = dp(8)
@@ -332,7 +357,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         status = s
         statusLine.setUser(s?.user)
         if (s == null) {
-            showEmpty(getString(R.string.service_missing), null)
+            showEmpty(getString(R.string.service_missing), null) {}
             return
         }
         val ids = s.sessions.map { it.id }.toSet()
@@ -366,8 +391,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         renderTabs()
         when {
             tabs.isNotEmpty() -> hideEmpty()
-            s.state == ILinux.STATE_RUNNING -> showEmpty(getString(R.string.no_sessions), null)
-            else -> showEmpty(stateText(s), getString(R.string.open_settings))
+            s.state == ILinux.STATE_RUNNING ->
+                showEmpty(getString(R.string.no_sessions), getString(R.string.new_session)) { create(Linux.openKind(this)) }
+            else -> showEmpty(stateText(s), getString(R.string.open_settings)) { openSettings() }
         }
     }
 
@@ -404,13 +430,13 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             else -> getString(R.string.state_failed)
         }
 
-    private fun showEmpty(text: String, button: String?) {
+    private fun showEmpty(text: String, button: String?, onButton: () -> Unit) {
         empty.visibility = View.VISIBLE
         terminal.visibility = View.INVISIBLE
         emptyText.text = text
         emptyButton.visibility = if (button == null) View.GONE else View.VISIBLE
         emptyButton.text = button
-        emptyButton.setOnClickListener { openSettings() }
+        emptyButton.setOnClickListener { onButton() }
     }
 
     private fun hideEmpty() {

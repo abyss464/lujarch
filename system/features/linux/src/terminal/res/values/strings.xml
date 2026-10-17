@@ -14,7 +14,7 @@
     <string name="session_ended">Ended</string>
     <!-- A command runs in a session; %1$s is its name -->
     <string name="tab_busy">Running %1$s</string>
-    <string name="no_sessions">No sessions. Tap + to open one.</string>
+    <string name="no_sessions">No sessions</string>
     <string name="service_missing">The Linux development environment does not answer.</string>
     <string name="state_not_installed">Linux is not installed. Install a root file system in Settings.</string>
     <string name="state_stopped">Linux is off.</string>
