@@ -3050,6 +3050,15 @@ def cmd_desktop(args):
                X=str(host.path_of("paths", "out") / "desktop"),
                RECIPE=str(SYSTEM / "features" / "linux" / "src" / "linux" / "desktop"))
     script = str(ROOT / "tools" / "desktop" / "xbuild.sh")
+    if not env.get("ANDROID_SERIAL"):
+        # The phone: the one device attached that is not a virtual device.
+        listed = subprocess.run(["adb", "devices"], capture_output=True, text=True).stdout
+        phones = [line.split()[0] for line in listed.splitlines()[1:]
+                  if line.endswith("\tdevice") and not line.startswith(("127.0.0.1:", "emulator-"))]
+        if len(phones) == 1:
+            env["ANDROID_SERIAL"] = phones[0]
+        elif args.action == "sysroot" or getattr(args, "install", False):
+            die("attach one phone, or name it in ANDROID_SERIAL")
 
     def run(*words):
         if subprocess.run(["bash", script, *words], env=env).returncode != 0:
