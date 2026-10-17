@@ -29,6 +29,10 @@ allow lujarch_linux_arch self:process {
 };
 allow lujarch_linux_arch self:netlink_audit_socket { create_socket_perms_no_ioctl nlmsg_relay };
 
+# Memory files (memfd): Wayland's keymaps and shared-memory buffers, PipeWire's.
+type lujarch_linux_arch_tmpfs, file_type;
+tmpfs_domain(lujarch_linux_arch)
+
 # The network, as Android's apps in inet and net_raw have it.
 net_domain(lujarch_linux_arch)
 allow lujarch_linux_arch self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_read };
