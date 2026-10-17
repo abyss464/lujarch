@@ -147,7 +147,11 @@ object Chrome {
         titles.addView(text(c, labelOf(c, tab.kind, tab.name), 18f, c.getColor(R.color.on_surface)))
         val state = text(
             c,
-            c.getString(if (tab.ended) R.string.session_ended else if (tab.busy) R.string.sheet_busy else R.string.sheet_idle),
+            when {
+                tab.ended -> c.getString(R.string.session_ended)
+                tab.busy -> tab.job?.takeIf { it.isNotBlank() } ?: c.getString(R.string.sheet_busy)
+                else -> c.getString(R.string.sheet_idle)
+            },
             13f, c.getColor(R.color.on_surface_variant), mono = true,
         )
         state.setPadding(0, dp(c, 2), 0, 0)
@@ -206,7 +210,7 @@ object Chrome {
         root.background = round(c.getColor(R.color.menu_surface), 16f, c)
         root.setPadding(0, dp(c, 8), 0, dp(c, 8))
         root.elevation = dp(c, 8).toFloat()
-        val popup = PopupWindow(root, dp(c, 240), ViewGroup.LayoutParams.WRAP_CONTENT, true)
+        val popup = PopupWindow(root, dp(c, 224), ViewGroup.LayoutParams.WRAP_CONTENT, true)
         data class Item(val kind: String, val label: Int, val summary: String, val enabled: Boolean)
         val items = listOf(
             Item(ILinux.KIND_ARCH, R.string.kind_arch, user ?: "user", linuxRuns),
