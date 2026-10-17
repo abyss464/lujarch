@@ -54,6 +54,9 @@ Linux, or of root in Android; sessions go on while Linux is left and end when Li
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner
 chooses so. The page holds the colors (follow the system, classic, the owner's own) and the keys row
 above the keyboard; the terminal draws with the owner's own font when there is one.
+The phone's keyboard types into the terminal as into a text field, composing, gliding and writing
+pinyin; what it composes is drawn at the cursor, underlined, and reaches the shell when committed.
+Ctrl and Alt on the keys row hold for the next key, from the row or the keyboard.
 
 ### LNX-4 Root sessions only while the owner allows them
 

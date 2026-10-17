@@ -16,7 +16,6 @@
 
 package org.lujarch.linux.terminal
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -24,7 +23,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.text.InputType
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
@@ -36,17 +34,14 @@ import android.view.WindowInsets
 import android.window.OnBackInvokedDispatcher
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
 import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
-import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -67,7 +62,8 @@ import org.lujarch.linux.Status
 class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionClient {
     private lateinit var root: LinearLayout
     private lateinit var tabsRow: LinearLayout
-    private lateinit var terminal: TerminalView
+    private lateinit var terminal: ComposingTerminalView
+    private lateinit var model: InputModel
     private lateinit var empty: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var emptyButton: Button
@@ -157,7 +153,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     // ---- views ----
 
     private fun buildViews() {
-        root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(getColor(R.color.surface))
+        }
         statusLine = StatusLine(this)
         root.addView(statusLine, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(STATUS_LINE_DP)))
         val bar = LinearLayout(this).apply {
@@ -189,12 +188,18 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             clipToOutline = true
         }
         card = frame
-        terminal = TerminalView(this, null).apply {
+        model = InputModel(
+            send = { bytes -> current?.session?.write(bytes, 0, bytes.size) },
+            applicationCursorKeys = { terminal.mEmulator?.isCursorKeysApplicationMode == true },
+        )
+        terminal = ComposingTerminalView(this, model).apply {
             setTerminalViewClient(this@TerminalActivity)
             setTextSize(textSize)
             setTypeface(ownFont() ?: Typeface.MONOSPACE)
-            isFocusable = true
-            isFocusableInTouchMode = true
+        }
+        model.onChanged = {
+            terminal.invalidate()
+            keys.setSticky(model.ctrlLatched, model.altLatched)
         }
         frame.addView(terminal, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         empty = LinearLayout(this).apply {
@@ -381,61 +386,31 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     // ---- tabs ----
 
-    private fun label(tab: TerminalTab): String =
-        tab.name.ifEmpty {
-            tab.session.title?.takeIf { it.isNotBlank() } ?: getString(kindLabel(tab.kind))
-        }
-
-    private fun kindLabel(kind: String) =
-        when (kind) {
-            ILinux.KIND_ARCH_ROOT -> R.string.kind_arch_root
-            ILinux.KIND_ANDROID_ROOT -> R.string.kind_android_root
-            else -> R.string.kind_arch
-        }
-
     private fun renderTabs() {
         tabsRow.removeAllViews()
         for (tab in tabs) {
-            val view = TextView(this).apply {
-                text = label(tab)
-                maxWidth = dp(180)
-                isSingleLine = true
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-                setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Small)
-                alpha = if (tab.ended) 0.5f else 1f
-                isSelected = tab === current
-                setBackgroundResource(if (tab === current) R.drawable.tab_selected else 0)
-                val dot = when {
-                    tab.busy && tab.awake -> R.drawable.ic_awake
-                    tab.busy -> R.drawable.ic_busy
-                    else -> 0
-                }
-                setCompoundDrawablesRelativeWithIntrinsicBounds(dot, 0, 0, 0)
-                compoundDrawablePadding = dp(6)
-                contentDescription = buildString {
-                    append(text)
-                    if (tab.busy) append(", ").append(getString(R.string.tab_busy, tab.job ?: ""))
-                    if (tab.awake) append(", ").append(getString(R.string.keep_awake))
-                    if (tab.ended) append(", ").append(getString(R.string.session_ended))
-                }
-                setOnClickListener { if (tab.ended) closeTab(tab) else select(tab) }
-                setOnLongClickListener {
-                    tabMenu(it, tab)
-                    true
-                }
-            }
-            tabsRow.addView(view)
+            tabsRow.addView(
+                Chrome.tabView(
+                    this, tab, tab === current,
+                    onClick = { if (tab.ended) closeTab(tab) else select(tab) },
+                    onLongClick = { tabSheet(tab) },
+                )
+            )
         }
     }
 
     private fun select(tab: TerminalTab) {
+        // What is composing goes to the session it was typed in.
+        if (tab !== current) model.finishComposingText()
         current = tab
         show(tab)
         renderTabs()
     }
 
     private fun show(tab: TerminalTab) {
+        val other = terminal.mTermSession !== tab.session
         terminal.attachSession(tab.session)
+        if (other) terminal.resetInput()
         terminal.onScreenUpdated()
         terminal.requestFocus()
     }
@@ -452,64 +427,22 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         if (tabs.isEmpty()) scope.launch { refresh(reattach = false) }
     }
 
-    private fun tabMenu(anchor: View, tab: TerminalTab) {
-        val menu = PopupMenu(this, anchor)
-        menu.menu.add(0, MENU_RENAME, 0, R.string.rename)
-        menu.menu.add(0, MENU_AWAKE, 1, R.string.keep_awake).apply {
-            isCheckable = true
-            isChecked = tab.awake
-        }
-        menu.menu.add(0, MENU_END, 2, R.string.end_session)
-        menu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                MENU_RENAME -> rename(tab)
-                MENU_AWAKE -> act("setSessionAwake") { it.setSessionAwake(tab.id, !tab.awake) }
-                MENU_END -> if (tab.ended) closeTab(tab) else act("endSession") { it.endSession(tab.id) }
-            }
-            true
-        }
-        menu.show()
-    }
-
-    private fun rename(tab: TerminalTab) {
-        val field = EditText(this).apply {
-            setText(tab.name)
-            setSelection(tab.name.length)
-            isSingleLine = true
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-        }
-        val frame = FrameLayout(this).apply {
-            setPadding(dp(24), dp(8), dp(24), 0)
-            addView(field)
-        }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.rename)
-            .setView(frame)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val name = field.text.toString().trim()
-                act("renameSession") { it.renameSession(tab.id, name) }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+    private fun tabSheet(tab: TerminalTab) {
+        Chrome.showSessionSheet(
+            this, tab,
+            onAwake = { awake -> act("setSessionAwake") { it.setSessionAwake(tab.id, awake) } },
+            onRename = { name -> act("renameSession") { it.renameSession(tab.id, name) } },
+            onEnd = { if (tab.ended) closeTab(tab) else act("endSession") { it.endSession(tab.id) } },
+        )
     }
 
     private fun newSession(anchor: View) {
-        val root = Linux.rootSessions(this)
-        val menu = PopupMenu(this, anchor)
-        menu.menu.add(0, 0, 0, R.string.kind_arch)
-        menu.menu.add(0, 1, 1, R.string.kind_arch_root).isEnabled = root
-        menu.menu.add(0, 2, 2, R.string.kind_android_root).isEnabled = root
-        menu.setOnMenuItemClickListener { item ->
-            create(
-                when (item.itemId) {
-                    1 -> ILinux.KIND_ARCH_ROOT
-                    2 -> ILinux.KIND_ANDROID_ROOT
-                    else -> ILinux.KIND_ARCH
-                },
-            )
-            true
-        }
-        menu.show()
+        Chrome.showNewSessionMenu(
+            this, anchor, status?.user,
+            linuxRuns = status?.state == ILinux.STATE_RUNNING,
+            rootOk = Linux.rootSessions(this),
+            onPick = ::create,
+        )
     }
 
     private fun create(kind: String) {
@@ -546,28 +479,33 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     // ---- the keys row ----
 
-    private var ctrl = false
-    private var alt = false
-
+    // Ctrl and Alt are the input model's latches, held for the next key from the row or the
+    // keyboard; the keys go through the model, so a composition is honoured.
     private fun onKeysRow(key: KeysRow.Key) {
         val session = current?.session ?: return
         when (key) {
-            KeysRow.Key.CTRL -> ctrl = !ctrl
-            KeysRow.Key.ALT -> alt = !alt
+            KeysRow.Key.CTRL -> model.toggleCtrl()
+            KeysRow.Key.ALT -> model.toggleAlt()
+            KeysRow.Key.ESC -> model.key(Key.ESC)
+            KeysRow.Key.TAB -> model.key(Key.TAB)
+            KeysRow.Key.LEFT -> model.key(Key.LEFT)
+            KeysRow.Key.DOWN -> model.key(Key.DOWN)
+            KeysRow.Key.UP -> model.key(Key.UP)
+            KeysRow.Key.RIGHT -> model.key(Key.RIGHT)
             else -> {
                 if (key.text != null) {
-                    for (c in key.text) terminal.inputCodePoint(c.code, ctrl, alt)
+                    model.finishComposingText()
+                    model.commitText(key.text)
                 } else {
+                    model.finishComposingText()
                     var mod = 0
-                    if (ctrl) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_CTRL
-                    if (alt) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_ALT
+                    if (model.ctrlLatched) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_CTRL
+                    if (model.altLatched) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_ALT
                     terminal.handleKeyCode(key.keyCode, mod)
+                    model.clearLatches()
                 }
-                ctrl = false
-                alt = false
             }
         }
-        keys.setSticky(ctrl, alt)
         if (session.emulator != null) terminal.onScreenUpdated()
     }
 
@@ -609,19 +547,12 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     override fun onKeyUp(keyCode: Int, e: KeyEvent) = false
     override fun onLongPress(event: MotionEvent) = false
-    override fun readControlKey() = ctrl
-    override fun readAltKey() = alt
+    override fun readControlKey() = model.ctrlLatched
+    override fun readAltKey() = model.altLatched
     override fun readShiftKey() = false
     override fun readFnKey() = false
 
-    override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: TerminalSession): Boolean {
-        if (ctrl || alt) {
-            ctrl = false
-            alt = false
-            keys.setSticky(false, false)
-        }
-        return false
-    }
+    override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: TerminalSession) = false
 
     override fun onEmulatorSet() {
         terminal.setTerminalCursorBlinkerState(true, true)
@@ -683,8 +614,5 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         const val DEFAULT_ROWS = 24
         const val REFRESH_DELAY_MS = 300L
         const val STATUS_LINE_DP = 28
-        const val MENU_RENAME = 1
-        const val MENU_AWAKE = 2
-        const val MENU_END = 3
     }
 }

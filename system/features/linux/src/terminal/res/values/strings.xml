@@ -29,7 +29,6 @@
     <string name="mode_name" translatable="false">Linux</string>
     <string name="mode_summary">Linux is on screen</string>
     <string name="mode_trigger">While the Linux desktop is on screen</string>
-    <string name="open_terminal">Open terminal</string>
     <string name="desktop_none">Linux has no desktop. Install it in Settings, on the page of the Linux development environment.</string>
     <string name="desktop_failed">The connection to the Linux desktop ended.</string>
     <string name="desktop_silent">The Linux desktop does not draw. Its service, desktop, and its log are under Services in Settings.</string>
@@ -62,4 +61,18 @@
     <string name="remote_failed">%1$s · stopped after failures</string>
     <!-- The status line when there is no network -->
     <string name="status_offline">offline</string>
+    <!-- The session tabs, a session's sheet and the new-session menu (Chrome.kt) -->
+    <string name="tab_arch">Arch Linux</string>
+    <string name="tab_arch_root">root</string>
+    <string name="tab_android_root">Android</string>
+    <string name="awake_description">Keeps the phone awake</string>
+    <string name="kind_android_root_summary">Android’s namespace</string>
+    <string name="kind_root_disabled">Root sessions off</string>
+    <string name="kind_linux_off">Not running</string>
+    <string name="sheet_sleep_title">When the phone sleeps</string>
+    <string name="sheet_sleep_option">Sleep with the phone</string>
+    <string name="sheet_busy">A command is running</string>
+    <string name="sheet_idle">Idle</string>
+    <string name="rename_title">Rename session</string>
+    <string name="rename_hint">Name</string>
 </resources>

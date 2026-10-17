@@ -27,7 +27,6 @@
     <string name="auth_title">在 Linux 中确认授权</string>
     <string name="mode_summary">Linux 正在屏幕上显示</string>
     <string name="mode_trigger">Linux 桌面在屏幕上显示时</string>
-    <string name="open_terminal">打开终端</string>
     <string name="desktop_none">Linux 没有桌面。请在“设置”的 Linux 开发环境页面中安装。</string>
     <string name="desktop_failed">与 Linux 桌面的连接已断开。</string>
     <string name="desktop_silent">Linux 桌面没有绘制画面。它的服务 desktop 及其日志位于“设置”中的“服务”。</string>
@@ -39,4 +38,17 @@
     <string name="remote_waiting">%1$s · 等待充电</string>
     <string name="remote_failed">%1$s · 多次失败后已停止</string>
     <string name="status_offline">离线</string>
+    <string name="tab_arch">Arch Linux</string>
+    <string name="tab_arch_root">root</string>
+    <string name="tab_android_root">Android</string>
+    <string name="awake_description">保持唤醒</string>
+    <string name="kind_android_root_summary">Android 的命名空间</string>
+    <string name="kind_root_disabled">Root 会话已关闭</string>
+    <string name="kind_linux_off">未运行</string>
+    <string name="sheet_sleep_title">手机休眠时</string>
+    <string name="sheet_sleep_option">随手机休眠</string>
+    <string name="sheet_busy">命令运行中</string>
+    <string name="sheet_idle">空闲</string>
+    <string name="rename_title">重命名会话</string>
+    <string name="rename_hint">名称</string>
 </resources>

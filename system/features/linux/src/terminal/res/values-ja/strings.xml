@@ -27,7 +27,6 @@
     <string name="auth_title">Linux での認証を確認</string>
     <string name="mode_summary">Linux を表示中</string>
     <string name="mode_trigger">Linux のデスクトップを表示しているとき</string>
-    <string name="open_terminal">ターミナルを開く</string>
     <string name="desktop_none">Linux にデスクトップがありません。設定の Linux 開発環境のページでインストールしてください。</string>
     <string name="desktop_failed">Linux のデスクトップとの接続が切れました。</string>
     <string name="desktop_silent">Linux のデスクトップが描画していません。サービス desktop とそのログは設定の「サービス」にあります。</string>
@@ -39,4 +38,17 @@
     <string name="remote_waiting">%1$s · 充電を待機中</string>
     <string name="remote_failed">%1$s · 失敗が続いたため停止</string>
     <string name="status_offline">オフライン</string>
+    <string name="tab_arch">Arch Linux</string>
+    <string name="tab_arch_root">root</string>
+    <string name="tab_android_root">Android</string>
+    <string name="awake_description">スリープさせない</string>
+    <string name="kind_android_root_summary">Android の名前空間</string>
+    <string name="kind_root_disabled">root セッションはオフです</string>
+    <string name="kind_linux_off">実行されていません</string>
+    <string name="sheet_sleep_title">スマートフォンのスリープ時</string>
+    <string name="sheet_sleep_option">スマートフォンと一緒にスリープ</string>
+    <string name="sheet_busy">コマンドを実行中</string>
+    <string name="sheet_idle">アイドル</string>
+    <string name="rename_title">セッション名の変更</string>
+    <string name="rename_hint">名前</string>
 </resources>
