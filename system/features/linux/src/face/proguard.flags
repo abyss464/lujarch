@@ -1,0 +1,7 @@
+# The desktop's display is native; its methods are called from the library by name.
+-keep class org.lujarch.linux.face.NativeDisplay { native <methods>; }
+
+# Dispatchers.Main is looked up through ServiceLoader.
+-keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

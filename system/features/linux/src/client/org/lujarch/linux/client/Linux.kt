@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.client
 
 import android.content.Context
 import android.os.DeadObjectException
@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 import org.lujarch.linux.ILinux
 import org.lujarch.linux.ILinuxListener
 
-/** Log tag of the Terminal app. */
+/** Log tag of Linux mode on Android: the home screen's Linux face and the Terminal app. */
 const val TAG = "lujarch_linux"
 
 /** A call to lujarch_linux that failed; [code] is one of ILinux's ERROR_ constants, 0 when the service is not there. */

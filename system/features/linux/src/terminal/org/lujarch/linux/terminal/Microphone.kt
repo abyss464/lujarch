@@ -29,6 +29,9 @@ import android.system.OsConstants
 import android.util.Log
 import java.io.IOException
 import org.lujarch.linux.ILinux
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * Android's microphone for Linux (LNX-7, Microphone): while a program in Linux reads

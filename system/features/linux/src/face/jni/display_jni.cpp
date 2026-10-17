@@ -641,7 +641,7 @@ Presenter* FromHandle(jlong h) { return reinterpret_cast<Presenter*>(h); }
 
 extern "C" {
 
-JNIEXPORT jlong JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeCreate(JNIEnv* env, jclass, jobject surface) {
+JNIEXPORT jlong JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeCreate(JNIEnv* env, jclass, jobject surface) {
     ANativeWindow* win = ANativeWindow_fromSurface(env, surface);
     if (win == nullptr) return 0;
     ASurfaceControl* sc = ASurfaceControl_createFromWindow(win, "lujarch_linux_desktop");
@@ -658,7 +658,7 @@ JNIEXPORT jlong JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeCrea
     return reinterpret_cast<jlong>(p);
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeDestroy(JNIEnv*, jclass, jlong h) {
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeDestroy(JNIEnv*, jclass, jlong h) {
     Presenter* p = FromHandle(h);
     if (p == nullptr) return;
     p->Post([p] { p->quit = true; });
@@ -671,7 +671,7 @@ JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeDestr
     delete p;
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeConfigure(
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeConfigure(
         JNIEnv*, jclass, jlong h, jint width, jint height, jint rotation, jint dpi, jint refresh_mhz, jboolean visible) {
     Presenter* p = FromHandle(h);
     if (p == nullptr) return;
@@ -691,7 +691,7 @@ JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeConfi
     });
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeAttach(JNIEnv*, jclass, jlong h, jint fd) {
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeAttach(JNIEnv*, jclass, jlong h, jint fd) {
     Presenter* p = FromHandle(h);
     if (p == nullptr) {
         close(fd);
@@ -700,17 +700,17 @@ JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeAttac
     p->Post([p, fd] { p->Attach(fd); });
 }
 
-JNIEXPORT jboolean JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeAttached(JNIEnv*, jclass, jlong h) {
+JNIEXPORT jboolean JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeAttached(JNIEnv*, jclass, jlong h) {
     Presenter* p = FromHandle(h);
     return p != nullptr && p->connected;
 }
 
-JNIEXPORT jboolean JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeDrawn(JNIEnv*, jclass, jlong h) {
+JNIEXPORT jboolean JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeDrawn(JNIEnv*, jclass, jlong h) {
     Presenter* p = FromHandle(h);
     return p != nullptr && p->peer_seen;
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeTouch(
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeTouch(
         JNIEnv* env, jclass, jlong h, jlong time_ns, jint count, jintArray types, jintArray ids, jfloatArray xs, jfloatArray ys) {
     Presenter* p = FromHandle(h);
     if (p == nullptr || count <= 0) return;
@@ -733,7 +733,7 @@ JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeTouch
     });
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeKey(
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativeKey(
         JNIEnv*, jclass, jlong h, jlong time_ns, jint keycode, jboolean pressed) {
     Presenter* p = FromHandle(h);
     if (p == nullptr) return;
@@ -743,7 +743,7 @@ JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativeKey(
     });
 }
 
-JNIEXPORT void JNICALL Java_org_lujarch_linux_terminal_NativeDisplay_nativePointer(
+JNIEXPORT void JNICALL Java_org_lujarch_linux_face_NativeDisplay_nativePointer(
         JNIEnv*, jclass, jlong h, jlong time_ns, jfloat x, jfloat y, jint buttons, jint scroll_v120, jint scroll_h120,
         jint flags) {
     Presenter* p = FromHandle(h);

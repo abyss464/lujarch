@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -38,27 +38,27 @@ class KeysRow(context: Context, private val model: InputModel) : LinearLayout(co
     private val ctrl: TextView
     private val alt: TextView
     private val handler = Handler(Looper.getMainLooper())
-    private val normal = context.getColor(R.color.on_surface)
-    private val latched = context.getColor(R.color.primary)
+    private val normal = context.getColor(R.color.lnx_on_surface)
+    private val latched = context.getColor(R.color.lnx_primary)
 
     init {
         orientation = HORIZONTAL
         background = GradientDrawable().apply {
-            setColor(context.getColor(R.color.strip_surface))
+            setColor(context.getColor(R.color.lnx_strip_surface))
             val r = dp(20).toFloat()
             cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
         }
         setPadding(dp(6), 0, dp(6), 0)
         isFocusable = false
         isFocusableInTouchMode = false
-        addKey(R.string.key_esc) { model.key(Key.ESC) }
-        addKey(R.string.key_tab) { model.key(Key.TAB) }
-        ctrl = addKey(R.string.key_ctrl) { model.toggleCtrl() }
-        alt = addKey(R.string.key_alt) { model.toggleAlt() }
-        addKey(R.string.key_left, repeat = true) { model.key(Key.LEFT) }
-        addKey(R.string.key_down, repeat = true) { model.key(Key.DOWN) }
-        addKey(R.string.key_up, repeat = true) { model.key(Key.UP) }
-        addKey(R.string.key_right, repeat = true) { model.key(Key.RIGHT) }
+        addKey(R.string.lnx_key_esc) { model.key(Key.ESC) }
+        addKey(R.string.lnx_key_tab) { model.key(Key.TAB) }
+        ctrl = addKey(R.string.lnx_key_ctrl) { model.toggleCtrl() }
+        alt = addKey(R.string.lnx_key_alt) { model.toggleAlt() }
+        addKey(R.string.lnx_key_left, repeat = true) { model.key(Key.LEFT) }
+        addKey(R.string.lnx_key_down, repeat = true) { model.key(Key.DOWN) }
+        addKey(R.string.lnx_key_up, repeat = true) { model.key(Key.UP) }
+        addKey(R.string.lnx_key_right, repeat = true) { model.key(Key.RIGHT) }
     }
 
     /** The latches changed. */

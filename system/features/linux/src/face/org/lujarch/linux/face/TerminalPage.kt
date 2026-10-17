@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -34,14 +32,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsAnimation
-import android.window.OnBackInvokedDispatcher
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
@@ -51,25 +46,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.lujarch.linux.ILinux
 import org.lujarch.linux.Status
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
- * The Terminal app (LNX-3): up to 16 sessions as tabs, each a shell of the owner's user, of root
- * in Arch Linux or of root in Android. A session goes on while the app is closed; it shows
- * whether a command runs, can be renamed and ended, and keeps the phone awake only when the owner
- * chooses so. The colors and the keys row above the keyboard are the owner's choices on the
- * Linux development environment's page. It is Linux mode beside the home screen: full screen with
- * Linux's own status line where Android's status bar was, the session tabs with + / Display /
- * Settings, the terminal on a card, and the keys row on the keyboard's top edge; a swipe from the
- * bottom goes home, and the back gesture does nothing (Linux has no "back").
+ * The terminal, the face's first page (LNX-3): up to 16 sessions as tabs, each a shell of the
+ * owner's user, of root in Arch Linux or of root in Android. A session goes on while Linux is
+ * left; it shows whether a command runs, can be renamed and ended, and keeps the phone awake only
+ * when the owner chooses so. The colors and the keys row above the keyboard are the owner's choices
+ * on the Linux development environment's page. Full screen with Linux's own status line where
+ * Android's status bar was, the session tabs with + / Display / Settings, the terminal on a card,
+ * and the keys row on the keyboard's top edge.
  */
-class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionClient {
+class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, TerminalSessionClient {
     private lateinit var root: LinearLayout
     private lateinit var tabsRow: LinearLayout
     private lateinit var terminal: ComposingTerminalView
     private lateinit var model: InputModel
-    private lateinit var empty: LinearLayout
-    private lateinit var emptyText: TextView
-    private lateinit var emptyButton: Button
+    private lateinit var empty: Chrome.Empty
     private lateinit var keys: KeysRow
     private lateinit var statusLine: StatusLine
     private lateinit var card: FrameLayout
@@ -86,16 +81,14 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private var imeAnimating = false
     private var appliedImeBottom = 0
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        textSizeSp = getPreferences(Context.MODE_PRIVATE).getInt(PREF_TEXT_SIZE_SP, DEFAULT_TEXT_SP).coerceIn(MIN_TEXT_SP, MAX_TEXT_SP)
+    override fun onCreate() {
+        super.onCreate()
+        textSizeSp = prefs.getInt(PREF_TEXT_SIZE_SP, DEFAULT_TEXT_SP).coerceIn(MIN_TEXT_SP, MAX_TEXT_SP)
         buildViews()
-        wanted = intent.getStringExtra(Linux.EXTRA_SESSION)
-        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {}
+        wanted = face.openIntent?.getStringExtra(Linux.EXTRA_SESSION)
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
         intent.getStringExtra(Linux.EXTRA_SESSION)?.let { id ->
             tabs.firstOrNull { it.id == id }?.let { select(it) } ?: run { wanted = id }
         }
@@ -107,7 +100,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         statusLine.start()
         updateKeys()
         scope.launch {
-            val choice = Linux.colors(this@TerminalActivity)
+            val choice = Linux.colors(this@TerminalPage)
             val own = if (choice == "own") {
                 try {
                     Linux.call("getColors") { it.colors }
@@ -118,7 +111,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             } else {
                 null
             }
-            Palette.apply(this@TerminalActivity, choice, own)
+            Palette.apply(this@TerminalPage, choice, own)
             terminal.setBackgroundColor(Palette.background())
             (card.background as GradientDrawable).setColor(Palette.background())
             for (tab in tabs) tab.session.emulator?.mColors?.reset()
@@ -136,18 +129,11 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     override fun onResume() {
         super.onResume()
         resumed = true
-        LinuxMode.enter(this)
     }
 
     override fun onPause() {
         resumed = false
-        LinuxMode.leave(this)
         super.onPause()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && resumed) LinuxMode.enter(this)
     }
 
     override fun onDestroy() {
@@ -160,7 +146,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private fun buildViews() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(getColor(R.color.surface))
+            setBackgroundColor(getColor(R.color.lnx_surface))
         }
         statusLine = StatusLine(this)
         root.addView(statusLine, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(STATUS_LINE_DP)))
@@ -174,7 +160,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(tabsRow)
-            addView(iconButton(R.drawable.ic_add, R.string.new_session, 40) { newSession(it) })
+            addView(iconButton(R.drawable.lnx_ic_add, R.string.lnx_new_session, 40) { newSession(it) })
         }
         val scroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
@@ -182,10 +168,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             addView(tabsAndNew)
         }
         bar.addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        bar.addView(iconButton(R.drawable.ic_display, R.string.display, 44) {
-            startActivity(Intent(this, DesktopActivity::class.java))
+        bar.addView(iconButton(R.drawable.lnx_ic_display, R.string.lnx_display, 44) {
+            face.show(LinuxFace.Page.DESKTOP)
         })
-        bar.addView(iconButton(R.drawable.ic_settings, R.string.settings, 44) { openSettings() })
+        bar.addView(iconButton(R.drawable.lnx_ic_settings, R.string.lnx_settings, 44) { openSettings() })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
 
         val frame = FrameLayout(this).apply {
@@ -199,7 +185,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             applicationCursorKeys = { terminal.mEmulator?.isCursorKeysApplicationMode == true },
         )
         terminal = ComposingTerminalView(this, model).apply {
-            setTerminalViewClient(this@TerminalActivity)
+            setTerminalViewClient(this@TerminalPage)
             setTextSize(textPx())
             setTypeface(ownFont() ?: Typeface.MONOSPACE)
         }
@@ -208,47 +194,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             keys.refresh()
         }
         frame.addView(terminal, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        // What shows instead of the terminal: an icon, a title and the button that applies.
-        empty = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(40), 0, dp(40), 0)
-            setBackgroundColor(getColor(R.color.surface))
-            isClickable = true
-            visibility = View.GONE
-        }
-        empty.addView(ImageView(this).apply {
-            setImageResource(R.drawable.ic_terminal)
-            imageTintList = ColorStateList.valueOf(getColor(R.color.outline))
-        }, LinearLayout.LayoutParams(dp(56), dp(56)))
-        emptyText = TextView(this).apply {
-            gravity = Gravity.CENTER
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(getColor(R.color.on_surface))
-            setPadding(0, dp(14), 0, 0)
-        }
-        emptyButton = Button(this).apply {
-            isAllCaps = false
-            stateListAnimator = null
-            minHeight = 0
-            minimumHeight = 0
-            minWidth = 0
-            minimumWidth = 0
-            setPadding(dp(24), 0, dp(24), 0)
-            background = GradientDrawable().apply {
-                setColor(getColor(R.color.primary))
-                cornerRadius = dp(22).toFloat()
-            }
-            setTextColor(getColor(R.color.on_primary))
-            isFocusable = false
-        }
-        empty.addView(emptyText)
-        empty.addView(emptyButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply {
-            topMargin = dp(24)
-        })
+        empty = Chrome.Empty(this, R.drawable.lnx_ic_terminal)
         val content = FrameLayout(this)
         content.addView(frame, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        content.addView(empty, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        content.addView(empty.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
             marginStart = dp(8)
             marginEnd = dp(8)
@@ -312,7 +261,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private fun iconButton(icon: Int, description: Int, sizeDp: Int, onClick: (View) -> Unit) =
         ImageView(this).apply {
             setImageResource(icon)
-            imageTintList = ColorStateList.valueOf(getColor(R.color.on_surface_variant))
+            imageTintList = ColorStateList.valueOf(getColor(R.color.lnx_on_surface_variant))
             contentDescription = getString(description)
             scaleType = ImageView.ScaleType.FIT_CENTER
             layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
@@ -360,7 +309,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         status = s
         statusLine.setUser(s?.user)
         if (s == null) {
-            showEmpty(getString(R.string.service_missing), null) {}
+            showEmpty(getString(R.string.lnx_service_missing), null) {}
             return
         }
         val ids = s.sessions.map { it.id }.toSet()
@@ -395,8 +344,8 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         when {
             tabs.isNotEmpty() -> hideEmpty()
             s.state == ILinux.STATE_RUNNING ->
-                showEmpty(getString(R.string.no_sessions), getString(R.string.new_session)) { create(Linux.openKind(this)) }
-            else -> showEmpty(stateText(s), getString(R.string.open_settings)) { openSettings() }
+                showEmpty(getString(R.string.lnx_no_sessions), getString(R.string.lnx_new_session)) { create(Linux.openKind(this)) }
+            else -> showEmpty(stateText(s), getString(R.string.lnx_open_settings)) { openSettings() }
         }
     }
 
@@ -426,24 +375,20 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     private fun stateText(s: Status): String =
         when (s.state) {
-            ILinux.STATE_NOT_INSTALLED -> getString(R.string.state_not_installed)
-            ILinux.STATE_STOPPED -> getString(R.string.state_stopped)
-            ILinux.STATE_STARTING -> getString(R.string.state_starting)
-            ILinux.STATE_SETUP -> getString(R.string.state_setup)
-            else -> getString(R.string.state_failed)
+            ILinux.STATE_NOT_INSTALLED -> getString(R.string.lnx_state_not_installed)
+            ILinux.STATE_STOPPED -> getString(R.string.lnx_state_stopped)
+            ILinux.STATE_STARTING -> getString(R.string.lnx_state_starting)
+            ILinux.STATE_SETUP -> getString(R.string.lnx_state_setup)
+            else -> getString(R.string.lnx_state_failed)
         }
 
     private fun showEmpty(text: String, button: String?, onButton: () -> Unit) {
-        empty.visibility = View.VISIBLE
+        empty.show(text, button, onButton)
         terminal.visibility = View.INVISIBLE
-        emptyText.text = text
-        emptyButton.visibility = if (button == null) View.GONE else View.VISIBLE
-        emptyButton.text = button
-        emptyButton.setOnClickListener { onButton() }
     }
 
     private fun hideEmpty() {
-        empty.visibility = View.GONE
+        empty.hide()
         terminal.visibility = View.VISIBLE
     }
 
@@ -518,12 +463,12 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             } catch (e: LinuxException) {
                 Log.w(TAG, e.message ?: "createSession")
                 val message = when (e.code) {
-                    ILinux.ERROR_ROOT_SESSIONS_OFF -> R.string.error_root_sessions_off
-                    ILinux.ERROR_TOO_MANY_SESSIONS -> R.string.error_too_many_sessions
-                    ILinux.ERROR_NOT_RUNNING -> R.string.state_stopped
-                    else -> R.string.error_session
+                    ILinux.ERROR_ROOT_SESSIONS_OFF -> R.string.lnx_error_root_sessions_off
+                    ILinux.ERROR_TOO_MANY_SESSIONS -> R.string.lnx_error_too_many_sessions
+                    ILinux.ERROR_NOT_RUNNING -> R.string.lnx_state_stopped
+                    else -> R.string.lnx_error_session
                 }
-                android.widget.Toast.makeText(this@TerminalActivity, message, android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(this@TerminalPage, message, android.widget.Toast.LENGTH_LONG).show()
             }
             refresh(reattach = false)
         }
@@ -560,7 +505,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         if (scale < 0.9f || scale > 1.1f) {
             textSizeSp = (textSizeSp + if (scale > 1f) 1 else -1).coerceIn(MIN_TEXT_SP, MAX_TEXT_SP)
             terminal.setTextSize(textPx())
-            getPreferences(Context.MODE_PRIVATE).edit().putInt(PREF_TEXT_SIZE_SP, textSizeSp).apply()
+            prefs.edit().putInt(PREF_TEXT_SIZE_SP, textSizeSp).apply()
             return 1.0f
         }
         return scale
@@ -582,9 +527,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     override fun copyModeChanged(copyMode: Boolean) {}
 
     override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
-        // Ctrl+Alt+F1 on a hardware keyboard leaves Linux for the home screen.
+        // Ctrl+Alt+F1 on a hardware keyboard turns the home screen to Android's home.
         if (e.isCtrlPressed && e.isAltPressed && keyCode == KeyEvent.KEYCODE_F1) {
-            startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            face.leave()
             return true
         }
         val tab = current
@@ -619,10 +564,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     override fun onSessionFinished(finishedSession: TerminalSession) = renderTabs()
 
     override fun onCopyTextToClipboard(session: TerminalSession, text: String) =
-        copyToClipboard(text, session.isHostOutput)
+        face.copyToClipboard(text, session.isHostOutput)
 
     override fun onPasteTextFromClipboard(session: TerminalSession) {
-        val text = clipboardText() ?: return
+        val text = face.clipboardText() ?: return
         session.emulator?.paste(text)
     }
 

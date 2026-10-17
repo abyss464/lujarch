@@ -29,6 +29,9 @@ import android.util.Log
 import java.util.concurrent.Executor
 import org.lujarch.linux.LinuxLocation
 import android.location.Location as AndroidLocation
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * Android's position for Linux (LNX-7, Location): while a program in Linux reads

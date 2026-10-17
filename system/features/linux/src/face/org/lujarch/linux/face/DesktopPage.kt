@@ -14,47 +14,42 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.database.ContentObserver
 import android.graphics.Color
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.PointerIcon
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.window.OnBackInvokedDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.lujarch.linux.ILinux
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
- * The desktop of Arch Linux full screen (LNX-6): KWin in Linux draws into buffers this window
+ * The desktop of Arch Linux full screen (LNX-6): KWin in Linux draws into buffers this page
  * allocates and shows with SurfaceControl (NativeDisplay), with touch, a mouse, hardware keys and
  * the phone's sound going both ways; text comes from Linux's own on-screen keyboard. The desktop
  * is on screen while this window is resumed and focused; otherwise KWin draws nothing and
- * lujarch_linux freezes it. While it is on screen the Mode Linux is on and the status bar is
- * locked; a swipe from the bottom returns to Android, and back does nothing.
+ * lujarch_linux freezes it. It is the face's second page: a swipe from the bottom goes to the
+ * terminal (LinuxFace).
  */
-class DesktopActivity : LinuxActivity() {
+class DesktopPage(face: LinuxFace) : FacePage(face) {
     private lateinit var surface: SurfaceView
-    private lateinit var message: LinearLayout
-    private lateinit var messageText: TextView
+    private lateinit var message: Chrome.Empty
     private val main = Handler(Looper.getMainLooper())
 
     private var handle = 0L
@@ -90,32 +85,15 @@ class DesktopActivity : LinuxActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreate() {
+        super.onCreate()
         val frame = FrameLayout(this)
         frame.setBackgroundColor(Color.BLACK)
         surface = SurfaceView(this)
         surface.holder.addCallback(holderCallback)
         frame.addView(surface, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        message = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(32), dp(32), dp(32), dp(32))
-            visibility = View.GONE
-        }
-        messageText = TextView(this).apply {
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Medium)
-        }
-        message.addView(messageText)
-        message.addView(Button(this).apply {
-            setText(R.string.open_settings)
-            setOnClickListener { openSettings() }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(16)
-        })
-        frame.addView(message, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        message = Chrome.Empty(this, R.drawable.lnx_ic_display)
+        frame.addView(message.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(frame)
 
         surface.setOnTouchListener { _, e ->
@@ -129,7 +107,6 @@ class DesktopActivity : LinuxActivity() {
         surface.pointerIcon = PointerIcon.getSystemIcon(this, PointerIcon.TYPE_NULL)
         surface.isFocusable = true
         surface.isFocusableInTouchMode = true
-        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {}
     }
 
     override fun onStart() {
@@ -157,32 +134,31 @@ class DesktopActivity : LinuxActivity() {
         sound = null
         main.removeCallbacks(leave)
         leave.run()
+        // The home screen's window is shared: the desktop's Caffeine ends with the desktop.
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
         resumed = true
-        LinuxMode.enter(this)
         updateShown()
     }
 
     override fun onPause() {
         resumed = false
         updateShown()
-        LinuxMode.leave(this)
         super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && resumed) LinuxMode.enter(this)
         updateShown()
         // Android's clipboard goes to Linux when the desktop comes back in front; Android lets
         // only the focused window read it.
         if (hasFocus && Linux.lent(this, "clipboard")) {
-            val text = clipboardText() ?: return
-            LinuxActivity.background.execute {
+            val text = face.clipboardText() ?: return
+            LinuxFace.background.execute {
                 try {
                     Linux.blocking("setClipboard") { it.setClipboard(text) }
                 } catch (e: LinuxException) {
@@ -212,39 +188,38 @@ class DesktopActivity : LinuxActivity() {
                     if (handle == h) NativeDisplay.nativeAttach(h, connection.detachFd()) else connection.close()
                     since = System.currentTimeMillis()
                     failed = null
-                    message.visibility = View.GONE
+                    message.hide()
                 } catch (e: LinuxException) {
                     // Once for each reason, not at every retry.
                     if (failed != e.code) Log.w(TAG, e.message ?: "attachDisplay")
                     failed = e.code
                     show(
                         when (e.code) {
-                            ILinux.ERROR_NOT_RUNNING -> R.string.state_stopped
-                            ILinux.ERROR_NO_DESKTOP -> R.string.desktop_none
-                            0 -> R.string.service_missing
-                            else -> R.string.desktop_failed
+                            ILinux.ERROR_NOT_RUNNING -> R.string.lnx_state_stopped
+                            ILinux.ERROR_NO_DESKTOP -> R.string.lnx_desktop_none
+                            0 -> R.string.lnx_service_missing
+                            else -> R.string.lnx_desktop_failed
                         },
                     )
                 }
             } else if (h != 0L && !NativeDisplay.nativeDrawn(h) && since > 0 &&
                 System.currentTimeMillis() - since > SILENT_MS
             ) {
-                show(R.string.desktop_silent)
+                show(R.string.lnx_desktop_silent)
             } else if (h != 0L && NativeDisplay.nativeDrawn(h)) {
-                message.visibility = View.GONE
+                message.hide()
             }
             delay(RETRY_MS)
         }
     }
 
     private fun show(text: Int) {
-        messageText.setText(text)
-        message.visibility = View.VISIBLE
+        message.show(getString(text), getString(R.string.lnx_open_settings)) { openSettings() }
     }
 
     /** On screen: resumed and focused. */
     private fun updateShown() {
-        val now = resumed && hasWindowFocus()
+        val now = resumed && face.activity.hasWindowFocus()
         if (now != shown) {
             shown = now
             configure()

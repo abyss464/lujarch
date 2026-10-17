@@ -15,12 +15,13 @@ type lujarch_linux_swap_file, file_type, data_file_type, core_data_file_type;
 # The installed systems' files, which Linux's programs execute (lujarch_linux_system).
 type lujarch_linux_arch_file, file_type, data_file_type, core_data_file_type;
 
-# Its interface, and the listeners of Lujarch Settings and the Terminal app.
+# Its interface, and the listeners of Lujarch Settings, the Terminal app and the home screen
+# (priv_app), whose other face is Linux mode; the daemon admits callers by package.
 binder_use(lujarch_linux)
 add_service(lujarch_linux, lujarch_linux_service)
-allow platform_app lujarch_linux_service:service_manager find;
-binder_call(platform_app, lujarch_linux)
-binder_call(lujarch_linux, platform_app)
+allow { platform_app priv_app } lujarch_linux_service:service_manager find;
+binder_call({ platform_app priv_app }, lujarch_linux)
+binder_call(lujarch_linux, { platform_app priv_app })
 allow lujarch_linux system_data_file:dir search;
 allow lujarch_linux packages_list_file:file r_file_perms;
 get_prop(lujarch_linux, lujarch_setting_prop)
@@ -104,14 +105,14 @@ allow lujarch_linux lujarch_root_service:service_manager find;
 binder_call(lujarch_linux, lujarch_root)
 
 # An archive chosen in Files comes as an open file of the documents provider.
-allow lujarch_linux { platform_app mediaprovider_app }:fd use;
+allow lujarch_linux { platform_app priv_app mediaprovider_app }:fd use;
 allow lujarch_linux { media_rw_data_file fuse }:file { read getattr };
 
-# The Terminal app holds one end of a session's or the desktop's socket pair, the desktop's sound
-# FIFO and the FIFOs of the microphone and the cameras, which the daemon opens.
-allow platform_app lujarch_linux:fd use;
-allow platform_app lujarch_linux:unix_stream_socket { read write getattr getopt setopt shutdown };
-allow platform_app lujarch_linux_arch_file:fifo_file { read write getattr };
+# The home screen holds one end of a session's or the desktop's socket pair and the desktop's
+# sound FIFO, the Terminal app the FIFOs of the microphone and the cameras; the daemon opens them.
+allow { platform_app priv_app } lujarch_linux:fd use;
+allow { platform_app priv_app } lujarch_linux:unix_stream_socket { read write getattr getopt setopt shutdown };
+allow { platform_app priv_app } lujarch_linux_arch_file:fifo_file { read write getattr };
 
 # The desktop's display: dma-bufs of the graphics allocator, the Terminal app's release fences and
 # KWin's acquire fences pass through the daemon, which passes every fence on as a sync_file of

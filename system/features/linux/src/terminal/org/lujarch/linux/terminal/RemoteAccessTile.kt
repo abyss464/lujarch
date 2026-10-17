@@ -30,6 +30,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.lujarch.linux.ILinux
 import org.lujarch.linux.RemoteStatus
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * Quick Settings > Remote access (LNX-9): shows when it runs and switches it between Always and

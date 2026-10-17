@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.content.ClipboardManager
 import android.content.Context

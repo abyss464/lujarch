@@ -30,6 +30,8 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Display
 import java.util.concurrent.Executor
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * Linux's desktop flips Android's own switches (LNX-7, Android's quick settings) through the

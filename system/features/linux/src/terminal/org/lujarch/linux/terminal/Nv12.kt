@@ -17,6 +17,7 @@
 package org.lujarch.linux.terminal
 
 import java.nio.ByteBuffer
+import org.lujarch.linux.client.Linux
 
 /**
  * YUV_420_888 to NV12 in native code (jni/camera_jni.cpp): the Y plane, then U and V
@@ -25,7 +26,7 @@ import java.nio.ByteBuffer
  */
 internal object Nv12 {
     init {
-        System.loadLibrary("lujarch_linux_display_jni")
+        System.loadLibrary("lujarch_linux_camera_jni")
     }
 
     /**

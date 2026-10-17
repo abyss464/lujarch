@@ -14,64 +14,51 @@
  * limitations under the License.
  */
 
+
 package org.lujarch.linux.terminal
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import org.lujarch.linux.client.TAG
 
 /**
- * The Terminal app's windows of Linux (the terminal and the desktop) as the lent parts see them:
- * [LinuxParts] serves while one of them is started, and when one window covers the other the new
- * one starts before the old one stops, so the parts go on across the switch. The window in front
- * is the resumed one, else the one started last: Android's permission dialogs go to it, each
- * permission at most once while Linux stays on screen. On the main thread.
+ * Android's permission dialogs for the parts Linux is lent (LNX-7), over the home screen while
+ * Linux is on it: each permission at most once while the parts are served (LinuxPartsService),
+ * asked one after the other through [PermissionActivity]. On the main thread.
  */
 object LinuxWindows {
     private class Ask(val permissions: Array<String>, val done: (Boolean) -> Unit)
 
     private val main = Handler(Looper.getMainLooper())
-    private val started = ArrayList<Activity>()
-    private var resumed: Activity? = null
-    private var parts: LinuxParts? = null
     private val asked = HashSet<String>()
     private val queue = ArrayDeque<Ask>()
     private var asking: Ask? = null
+    private var serving = false
 
-    private val front: Activity? get() = resumed ?: started.lastOrNull()
-
-    fun onStart(activity: Activity) {
-        started.remove(activity)
-        started.add(activity)
-        if (parts == null) {
+    /** The parts are served: Linux is on screen. */
+    fun start() {
+        main.post {
+            serving = true
             asked.clear()
-            parts = LinuxParts(activity.applicationContext).also { it.start() }
         }
     }
 
-    fun onStop(activity: Activity) {
-        if (!started.remove(activity)) return
-        if (resumed === activity) resumed = null
-        if (started.isEmpty()) {
+    /** Linux left the screen: what is still asked is not granted. */
+    fun stop() {
+        main.post {
+            serving = false
             val pending = ArrayList(queue)
             queue.clear()
             asking?.let { pending.add(0, it) }
             asking = null
             for (ask in pending) ask.done(false)
-            parts?.stop()
-            parts = null
         }
-    }
-
-    fun onResume(activity: Activity) {
-        resumed = activity
-    }
-
-    fun onPause(activity: Activity) {
-        if (resumed === activity) resumed = null
     }
 
     /** Any thread; [done] runs on the main thread with whether one of [permissions] is granted. */
@@ -79,33 +66,37 @@ object LinuxWindows {
         main.post {
             if (permissions.any { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
                 done(true)
-            } else if (permissions.any { it in asked } || started.isEmpty()) {
+            } else if (permissions.any { it in asked } || !serving) {
                 done(false)
             } else {
                 asked.addAll(permissions)
                 queue.addLast(Ask(permissions, done))
-                askNext()
+                askNext(context)
             }
         }
     }
 
-    private fun askNext() {
+    private fun askNext(context: Context) {
         if (asking != null) return
         val ask = queue.removeFirstOrNull() ?: return
-        val activity = front
-        if (activity == null || activity.isFinishing) {
-            ask.done(false)
-            askNext()
-            return
-        }
         asking = ask
         Log.i(TAG, "asking Android for ${ask.permissions.joinToString { it.substringAfterLast('.') }} for Linux")
-        activity.requestPermissions(ask.permissions, REQUEST_PERMISSIONS)
+        try {
+            context.startActivity(
+                Intent(context, PermissionActivity::class.java)
+                    .putExtra(PermissionActivity.EXTRA_PERMISSIONS, ask.permissions)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION),
+            )
+        } catch (e: RuntimeException) {
+            Log.e(TAG, "Android's permission dialog cannot be shown: ${e.message}")
+            asking = null
+            ask.done(false)
+            askNext(context)
+        }
     }
 
-    /** From the windows' onRequestPermissionsResult. */
-    fun onPermissionsResult(context: Context, requestCode: Int, permissions: Array<String>) {
-        if (requestCode != REQUEST_PERMISSIONS) return
+    /** From [PermissionActivity]'s result. */
+    fun onPermissionsResult(context: Context, permissions: Array<String>) {
         val ask = asking ?: return
         asking = null
         // No permissions in the result: the request was cancelled; it may come again.
@@ -113,8 +104,31 @@ object LinuxWindows {
         val granted = ask.permissions.any { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
         Log.i(TAG, "${ask.permissions.joinToString { it.substringAfterLast('.') }} for Linux: ${if (granted) "granted" else "not granted"}")
         ask.done(granted)
-        askNext()
+        askNext(context)
+    }
+}
+
+/** Shows Android's own permission dialog for one ask of [LinuxWindows], over the home screen. */
+class PermissionActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val permissions = intent.getStringArrayExtra(EXTRA_PERMISSIONS)
+        if (permissions.isNullOrEmpty()) {
+            LinuxWindows.onPermissionsResult(this, emptyArray())
+            finish()
+            return
+        }
+        if (savedInstanceState == null) requestPermissions(permissions, REQUEST_PERMISSIONS)
     }
 
-    const val REQUEST_PERMISSIONS = 0x4c58
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_PERMISSIONS) LinuxWindows.onPermissionsResult(this, permissions)
+        finish()
+    }
+
+    companion object {
+        const val EXTRA_PERMISSIONS = "org.lujarch.linux.extra.PERMISSIONS"
+        private const val REQUEST_PERMISSIONS = 0x4c58
+    }
 }

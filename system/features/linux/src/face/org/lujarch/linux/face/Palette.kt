@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.content.Context
 import android.content.res.Configuration
@@ -22,6 +22,7 @@ import android.util.Log
 import com.termux.terminal.TerminalColors
 import java.io.StringReader
 import java.util.Properties
+import org.lujarch.linux.client.TAG
 
 /**
  * The terminal's colors (LNX-3): following the system (Android's dynamic colors, light or dark

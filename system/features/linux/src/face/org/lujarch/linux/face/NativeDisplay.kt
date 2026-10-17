@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.view.Surface
+import org.lujarch.linux.client.Linux
 
 /**
  * The desktop's native presenter (jni/display_jni.cpp): the display protocol's app side, the

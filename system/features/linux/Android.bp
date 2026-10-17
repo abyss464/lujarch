@@ -573,16 +573,13 @@ android_library {
     },
 }
 
-// The desktop's presenter in the Terminal app (src/terminal/jni): the display protocol's app side,
-// the AHardwareBuffer pool, SurfaceControl transactions paced by Choreographer; and the cameras'
-// frames for Linux, YUV to NV12. NDK only, so the APK's copy loads in the app's own linker
-// namespace; AHardwareBuffer_getNativeHandle is looked up at run time.
+// The desktop's presenter in the home screen's Linux face (src/face/jni): the display protocol's
+// app side, the AHardwareBuffer pool, SurfaceControl transactions paced by Choreographer. NDK only,
+// so the APK's copy loads in the app's own linker namespace; AHardwareBuffer_getNativeHandle is
+// looked up at run time.
 cc_library_shared {
     name: "liblujarch_linux_display_jni",
-    srcs: [
-        "src/terminal/jni/camera_jni.cpp",
-        "src/terminal/jni/display_jni.cpp",
-    ],
+    srcs: ["src/face/jni/display_jni.cpp"],
     local_include_dirs: ["src/linux/desktop/protocol"],
     header_libs: ["jni_headers"],
     sdk_version: "current",
@@ -602,8 +599,63 @@ cc_library_shared {
     system_ext_specific: true,
 }
 
-// The Terminal app: the sessions, the desktop, the Mode Linux, and the parts of the phone Linux
-// is lent that need an app.
+// The cameras' frames for Linux in the Terminal app (src/terminal/jni), YUV to NV12; NDK only.
+cc_library_shared {
+    name: "liblujarch_linux_camera_jni",
+    srcs: ["src/terminal/jni/camera_jni.cpp"],
+    header_libs: ["jni_headers"],
+    sdk_version: "current",
+    stl: "c++_static",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wno-zero-length-array",
+    ],
+    shared_libs: [
+        "libandroid",
+        "libdl",
+        "liblog",
+        "libnativewindow",
+    ],
+    system_ext_specific: true,
+}
+
+// The Terminal app: the parts of the phone Linux is lent that need an app, and the Mode Linux;
+// Linux's screens are the home screen's (LujarchLinuxFace).
+// lujarch_linux's client, shared by the home screen's Linux face and the Terminal app.
+android_library {
+    name: "LujarchLinuxClient",
+    srcs: ["src/client/org/**/*.kt"],
+    manifest: "src/client/AndroidManifest.xml",
+    platform_apis: true,
+    static_libs: [
+        "kotlinx_coroutines_android",
+        "lujarch_linux_aidl-java",
+    ],
+}
+
+// Linux mode as the home screen's other face (LNX-3): the terminal and the desktop, linked into
+// the home screen (Launcher3QuickStep) with the display's JNI.
+android_library {
+    name: "LujarchLinuxFace",
+    srcs: ["src/face/org/**/*.kt"],
+    resource_dirs: ["src/face/res"],
+    manifest: "src/face/AndroidManifest.xml",
+    platform_apis: true,
+    static_libs: [
+        "LujarchLinuxClient",
+        "LujarchLinuxTermuxView",
+        "androidx.core_core",
+        "kotlinx_coroutines_android",
+    ],
+}
+
+filegroup {
+    name: "lujarch_linux_face_proguard",
+    srcs: ["src/face/proguard.flags"],
+}
+
 android_app {
     name: "LujarchLinuxTerminal",
     srcs: ["src/terminal/org/**/*.kt"],
@@ -612,10 +664,10 @@ android_app {
     platform_apis: true,
     certificate: "platform",
     system_ext_specific: true,
-    jni_libs: ["liblujarch_linux_display_jni"],
+    jni_libs: ["liblujarch_linux_camera_jni"],
     use_embedded_native_libs: true,
     static_libs: [
-        "LujarchLinuxTermuxView",
+        "LujarchLinuxClient",
         "androidx.core_core",
         "kotlinx_coroutines_android",
         "lujarch_linux_aidl-java",

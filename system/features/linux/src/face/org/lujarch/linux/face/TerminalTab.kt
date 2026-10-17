@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.os.ParcelFileDescriptor
 import android.system.ErrnoException
@@ -28,6 +28,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * One tab: a session of lujarch_linux shown by Termux's emulator. While the app is on screen the

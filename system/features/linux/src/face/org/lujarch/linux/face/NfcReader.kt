@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.app.Activity
 import android.nfc.NfcAdapter
@@ -24,6 +24,9 @@ import android.nfc.tech.IsoDep
 import android.util.Log
 import java.io.IOException
 import java.util.concurrent.Executors
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * NFC card reading for Linux (LNX-7) while a window of the app is in front: the card held to the
@@ -76,17 +79,17 @@ class NfcReader(private val activity: Activity) : NfcAdapter.ReaderCallback {
         worker.execute {
             val iso = card
             if (iso == null) {
-                LinuxActivity.answerNfc(id, ByteArray(0), "no card")
+                LinuxFace.answerNfc(id, ByteArray(0), "no card")
                 return@execute
             }
             try {
-                LinuxActivity.answerNfc(id, iso.transceive(command), null)
+                LinuxFace.answerNfc(id, iso.transceive(command), null)
             } catch (e: TagLostException) {
                 close()
                 name(null)
-                LinuxActivity.answerNfc(id, ByteArray(0), "card lost")
+                LinuxFace.answerNfc(id, ByteArray(0), "card lost")
             } catch (e: IOException) {
-                LinuxActivity.answerNfc(id, ByteArray(0), e.message ?: "io")
+                LinuxFace.answerNfc(id, ByteArray(0), e.message ?: "io")
             }
         }
     }

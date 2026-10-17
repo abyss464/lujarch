@@ -83,9 +83,13 @@ ndk::ScopedAStatus Fail(int code, const std::string& why,
     return ndk::ScopedAStatus::fromServiceSpecificErrorWithMessage(code, why.c_str());
 }
 
+// Linux mode's side: the home screen, which shows the terminal and the desktop, and the Terminal
+// app, which serves the parts Linux is lent.
+bool TerminalSide() { return CallerIs(kTerminalPackage) || CallerIs(kHomePackage); }
+
 bool Allowed(Caller caller, ndk::ScopedAStatus* refusal) {
     const bool settings = CallerIs(kSettingsPackage);
-    const bool terminal = CallerIs(kTerminalPackage);
+    const bool terminal = TerminalSide();
     if ((caller == Caller::kSettings && settings) || (caller == Caller::kTerminal && terminal) ||
         (caller == Caller::kEither && (settings || terminal))) {
         return true;
@@ -757,7 +761,7 @@ void Service::OnListenerDied(void* cookie) {
 ndk::ScopedAStatus Service::registerListener(const std::shared_ptr<ILinuxListener>& listener) {
     CHECK_CALLER(Caller::kEither);
     if (listener == nullptr) return Fail(ILinux::ERROR_INVALID, "no listener");
-    const bool terminal = CallerIs(kTerminalPackage) && AIBinder_getCallingUid() != 0;
+    const bool terminal = TerminalSide() && AIBinder_getCallingUid() != 0;
     std::lock_guard lock(listeners_mutex_);
     for (const Listener& l : listeners_) {
         if (l.listener->asBinder() == listener->asBinder()) return ndk::ScopedAStatus::ok();

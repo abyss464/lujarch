@@ -108,7 +108,7 @@
     <string name="lnx_lend_quick_settings_summary">桌面的快捷设置和状态栏显示并切换 WLAN、移动数据、蓝牙、飞行模式、热点、手电筒、自动旋转、勿扰、屏幕常亮和亮度</string>
     <string name="lnx_services">服务</string>
     <string name="lnx_remote">远程访问</string>
-    <string name="lnx_footer">Arch Linux ARM 与 Android 并行运行，共用同一内核和网络，并使用自己的用户。其会话在“终端”应用中打开。</string>
+    <string name="lnx_footer">Arch Linux ARM 与 Android 并行运行，共用同一内核和网络，并使用自己的用户。它的终端和桌面是主屏幕的另一面：在主屏幕上点按两下即可进入。</string>
     <string name="lnx_error_load">无法加载 Linux 开发环境</string>
     <string name="lnx_error_switch">无法更改设置</string>
     <string name="lnx_error_install">无法安装根文件系统</string>

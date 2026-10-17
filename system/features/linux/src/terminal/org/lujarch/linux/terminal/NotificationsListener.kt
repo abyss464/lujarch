@@ -24,6 +24,9 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import org.lujarch.linux.LinuxNotification
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * Android's notifications for Linux while they are lent (LNX-7): the notifications the shade
@@ -75,7 +78,7 @@ class NotificationsListener : NotificationListenerService() {
                 }
             }
             .toTypedArray()
-        LinuxActivity.background.execute {
+        LinuxParts.background.execute {
             try {
                 Linux.blocking("setNotifications") { it.setNotifications(list) }
             } catch (e: LinuxException) {

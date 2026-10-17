@@ -44,6 +44,9 @@ import android.view.Display
 import java.io.IOException
 import java.util.concurrent.Executor
 import org.lujarch.linux.ILinux
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
  * The phone's cameras for Linux (LNX-7, Camera): while a program in Linux reads

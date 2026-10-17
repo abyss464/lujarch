@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -26,6 +26,8 @@ import android.system.OsConstants
 import android.system.StructPollfd
 import android.util.Log
 import java.io.IOException
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * The desktop's sound on the phone (LNX-6): what Linux's desktop plays into its FIFO

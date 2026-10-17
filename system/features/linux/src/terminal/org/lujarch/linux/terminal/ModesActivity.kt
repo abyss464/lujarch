@@ -21,6 +21,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * The Mode Linux's own settings, the Linux development environment's page in Settings; the

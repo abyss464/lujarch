@@ -15,22 +15,18 @@
     limitations under the License.
 -->
 <!--
-    The Terminal app: the Linux development environment's sessions (LNX-3), its desktop (LNX-6)
-    and the parts of the phone Linux is lent that need an app on screen (LNX-7). Platform-signed:
-    it reaches lujarch_linux, owns the Mode Linux and locks the status bar while the desktop is
-    on screen.
+    The Terminal app: the service of the parts of the phone Linux is lent (LNX-7), bound by the
+    home screen's Linux face (LNX-3) while it is on screen, and the Mode Linux. Platform-signed:
+    it reaches lujarch_linux and owns the Mode Linux's rule.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lujarch.linux.terminal">
 
     <!-- The Mode Linux (an automatic Do Not Disturb rule of this app). -->
     <uses-permission android:name="android.permission.MANAGE_NOTIFICATIONS" />
-    <!-- The status bar stays locked while the desktop is on screen. -->
-    <uses-permission android:name="android.permission.STATUS_BAR" />
-    <!-- Confirming authorizations in Linux with the fingerprint or the screen lock. -->
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <!-- NFC card reading for Linux. -->
-    <uses-permission android:name="android.permission.NFC" />
+    <!-- Android's permission dialog for a lent part opens from the parts' service. -->
+    <uses-permission android:name="android.permission.START_ACTIVITIES_FROM_BACKGROUND" />
+    <!-- Linux's vibration, while it is lent. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- The status line's network: the default network's interface. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -59,9 +55,6 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <uses-feature
-        android:name="android.hardware.nfc"
-        android:required="false" />
-    <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
 
@@ -72,41 +65,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LujarchTerminal">
 
-        <!-- Linux is a mode of the phone beside the home screen, not an app: the terminal and the
-             desktop share one task, which is in neither the drawer nor recents. It is entered by
-             the home screen's double tap (Enter Linux) or from Settings, and left by going home. -->
-        <activity
-            android:name=".TerminalActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
-            android:excludeFromRecents="true"
+        <!-- The parts of the phone Linux is lent, served while the home screen shows Linux (its
+             other face) and binds this; only the home screen holds the status bar permission. -->
+        <service
+            android:name=".LinuxPartsService"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity="org.lujarch.linux"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="org.lujarch.linux.action.TERMINAL" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:permission="android.permission.STATUS_BAR" />
 
-        <!-- The desktop full screen: the Terminal app's Display, Settings' Open desktop and the
-             home screen's double tap (Enter Linux). -->
+        <!-- Android's permission dialog for a lent part, over the home screen. -->
         <activity
-            android:name=".DesktopActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:name=".PermissionActivity"
             android:excludeFromRecents="true"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:resizeableActivity="false"
-            android:screenOrientation="unspecified"
-            android:taskAffinity="org.lujarch.linux"
-            android:theme="@style/Theme.LujarchTerminal.Desktop"
-            android:windowSoftInputMode="adjustNothing|stateAlwaysHidden">
-            <intent-filter>
-                <action android:name="org.lujarch.linux.action.DESKTOP" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- The Mode Linux's page in Settings > Modes opens Linux's own page in Settings, the
              tile's long press the page of Remote access. -->

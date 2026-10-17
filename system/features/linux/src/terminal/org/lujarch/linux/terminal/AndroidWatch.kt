@@ -41,6 +41,8 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Display
 import org.lujarch.linux.AndroidState
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * Android's switches and readings as Linux's desktop shows them (LNX-7, Android's quick

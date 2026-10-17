@@ -24,12 +24,15 @@ import android.provider.Settings
 import android.util.Log
 import org.lujarch.linux.ILinux
 import org.lujarch.linux.ILinuxListener
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.LinuxException
+import org.lujarch.linux.client.TAG
 
 /**
- * The parts of the phone Linux is lent that the Terminal app serves while one of its windows of
- * Linux is started (LNX-7): Android's quick settings (its switches and readings, and the desktop
- * flipping them), vibration, the microphone, the cameras and the location. One for the process,
- * made by [LinuxWindows]; everything runs on its own thread.
+ * The parts of the phone Linux is lent that the Terminal app serves while the home screen shows
+ * Linux (LNX-7): Android's quick settings (its switches and readings, and the desktop flipping
+ * them), vibration, the microphone, the cameras and the location. One for the process, made by
+ * [LinuxPartsService]; everything runs on its own thread.
  */
 class LinuxParts(private val context: Context) {
     private val thread = HandlerThread("LinuxParts").apply { start() }
@@ -143,7 +146,10 @@ class LinuxParts(private val context: Context) {
         }
     }
 
-    private companion object {
-        val PARTS = listOf("quick_settings", "vibration", "microphone", "camera", "location")
+    companion object {
+        private val PARTS = listOf("quick_settings", "vibration", "microphone", "camera", "location")
+
+        /** Calls to lujarch_linux that may block, one after the other. */
+        val background: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
     }
 }

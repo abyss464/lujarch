@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -36,6 +36,8 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import java.util.Date
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * Linux's own status line where Android's status bar was (LNX-3): user@host on the left; the
@@ -131,7 +133,7 @@ class StatusLine(context: Context) : LinearLayout(context) {
     }
 
     private fun showNet() {
-        net.text = iface ?: context.getString(R.string.status_offline)
+        net.text = iface ?: context.getString(R.string.lnx_status_offline)
     }
 
     private fun showBattery(intent: Intent) {

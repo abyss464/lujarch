@@ -1,220 +1,247 @@
-diff --git a/quickstep/res/raw/lujarch_keep.xml b/quickstep/res/raw/lujarch_keep.xml
+diff --git a/Android.bp b/Android.bp
+index 72e18b77f4a841e6668154bfbe600a1dcc6c0b6b..46d7676617529f3484ba104eeedc7d52a73f066b 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -531,6 +531,8 @@ android_library {
+     // in QuickstepResLib to take precendece, so it should be the final
+     // dependency. See b/208647810 for how this can go wrong.
+     static_libs: [
++        // Lujarch (LNX-3): Linux mode, the home screen's other face.
++        "LujarchLinuxFace",
+         "SystemUI-statsd",
+         "QuickstepResLib",
+         // Compose dep
+@@ -554,8 +556,13 @@ android_library {
+ android_app {
+     name: "Launcher3QuickStep",
+     static_libs: ["Launcher3QuickStepLib"],
++    // Lujarch (LNX-6): the desktop's display in Linux's face.
++    jni_libs: ["liblujarch_linux_display_jni"],
+     optimize: {
+-        proguard_flags_files: [":launcher-proguard-rules"],
++        proguard_flags_files: [
++            ":launcher-proguard-rules",
++            ":lujarch_linux_face_proguard",
++        ],
+         enabled: true,
+         shrink_resources: true,
+         ignore_warnings: false,
+diff --git a/quickstep/AndroidManifest-launcher.xml b/quickstep/AndroidManifest-launcher.xml
+index 88de67fe8b4f26f839d497781eae30ffc645c972..f9302fc3a9a3a8f62bcbf326033cf5dd3c93d624 100644
+--- a/quickstep/AndroidManifest-launcher.xml
++++ b/quickstep/AndroidManifest-launcher.xml
+@@ -63,6 +63,13 @@
+                 <category android:name="android.intent.category.MONKEY"/>
+                 <category android:name="android.intent.category.LAUNCHER_APP" />
+             </intent-filter>
++            <!-- Lujarch (LNX-3): Linux mode is the home screen's other face; these turn it to Linux
++                 at the terminal or the desktop (Settings, the Linux development environment). -->
++            <intent-filter>
++                <action android:name="org.lujarch.linux.action.TERMINAL" />
++                <action android:name="org.lujarch.linux.action.DESKTOP" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
+             <meta-data
+                 android:name="com.android.launcher3.grid.control"
+                 android:value="${packageName}.grid_control" />
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+index ea1949b625fc7b6cced814447539392d6fe378dc..edb13e16cd9d115df4ddc763d8844a583f806dfb 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
++++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+@@ -166,6 +166,7 @@ import com.android.launcher3.taskbar.bubbles.BubbleBarController;
+ import com.android.launcher3.testing.TestLogging;
+ import com.android.launcher3.testing.shared.TestProtocol;
+ import com.android.launcher3.uioverrides.states.QuickstepAtomicAnimationFactory;
++import com.android.launcher3.uioverrides.touchcontrollers.LinuxFaceTouchController;
+ import com.android.launcher3.uioverrides.touchcontrollers.NavBarToHomeTouchController;
+ import com.android.launcher3.uioverrides.touchcontrollers.NoButtonNavbarToOverviewTouchController;
+ import com.android.launcher3.uioverrides.touchcontrollers.NoButtonQuickSwitchTouchController;
+@@ -742,6 +743,8 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+         NavigationMode mode = DisplayController.getNavigationMode(this);
+ 
+         ArrayList<TouchController> list = new ArrayList<>();
++        // Lujarch (LNX-3): Linux's face takes the whole gesture while it is shown.
++        list.add(new LinuxFaceTouchController(this));
+         list.add(getDragController());
+         BiConsumer<AnimatorSet, Long> splitAnimator = (animatorSet, duration) ->
+                 animatorSet.play(mSplitSelectStateController.getSplitAnimationController()
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/LinuxFaceTouchController.java b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/LinuxFaceTouchController.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..0a567788e0b3b6375de171a8ea36efd58e9e5b09
+index 0000000000000000000000000000000000000000..ac8e9dabeb9f2687b3cc052d0ef064154477b076
 --- /dev/null
-+++ b/quickstep/res/raw/lujarch_keep.xml
-@@ -0,0 +1,6 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- Lujarch: SystemUI reads back_gesture_blocking_activities by name from the recents package at
-+     runtime (EdgeBackGestureHandler), and LinuxModeInputConsumer reads lujarch_linux_mode_activities;
-+     the resource shrinker would drop what nothing references. -->
-+<resources xmlns:tools="http://schemas.android.com/tools"
-+    tools:keep="@array/back_gesture_blocking_activities,@array/lujarch_linux_mode_activities" />
-diff --git a/quickstep/res/values/config.xml b/quickstep/res/values/config.xml
-index fcad7e1a70ee1bfbeb87d782e39c0871f90db028..83ac4fbfa461fa3d1e2d97e42f57e6b4f7c5232e 100644
---- a/quickstep/res/values/config.xml
-+++ b/quickstep/res/values/config.xml
-@@ -16,6 +16,16 @@
- <resources>
-     <string-array name="back_gesture_blocking_activities" translatable="false">
-         <item>com.android.launcher3/com.android.quickstep.interaction.GestureSandboxActivity</item>
-+        <!-- Lujarch (LNX-3): Linux has no "back"; the edge back gesture does nothing in Linux mode. -->
-+        <item>org.lujarch.linux.terminal/.TerminalActivity</item>
-+        <item>org.lujarch.linux.terminal/.DesktopActivity</item>
-+    </string-array>
-+
-+    <!-- Lujarch (LNX-3): Linux mode, the terminal and the desktop in one task. While it is the running
-+         task, LinuxModeInputConsumer takes the bottom swipe: one swipe goes home, never overview. -->
-+    <string-array name="lujarch_linux_mode_activities" translatable="false">
-+        <item>org.lujarch.linux.terminal/.TerminalActivity</item>
-+        <item>org.lujarch.linux.terminal/.DesktopActivity</item>
-     </string-array>
- 
-     <!-- The number of thumbnails and icons to keep in the cache. The thumbnail cache size also
-diff --git a/quickstep/src/com/android/quickstep/InputConsumer.java b/quickstep/src/com/android/quickstep/InputConsumer.java
-index 2af6abd265716de93257ba0eda2561dcbbe5ddc0..46550a514d15080ad44c0ddc84493809e79e8375 100644
---- a/quickstep/src/com/android/quickstep/InputConsumer.java
-+++ b/quickstep/src/com/android/quickstep/InputConsumer.java
-@@ -42,6 +42,8 @@ public interface InputConsumer {
-     int TYPE_CURSOR_HOVER = 1 << 14;
-     int TYPE_NAV_HANDLE_LONG_PRESS = 1 << 15;
-     int TYPE_BUBBLE_BAR = 1 << 16;
-+    // Lujarch: the bottom swipe while Linux mode is the running task.
-+    int TYPE_LINUX_MODE = 1 << 17;
- 
-     String[] NAMES = new String[] {
-            "TYPE_NO_OP",                    // 0
-@@ -61,6 +63,7 @@ public interface InputConsumer {
-             "TYPE_CURSOR_HOVER",            // 14
-             "TYPE_NAV_HANDLE_LONG_PRESS",   // 15
-             "TYPE_BUBBLE_BAR",              // 16
-+            "TYPE_LINUX_MODE",              // 17
-     };
- 
-     InputConsumer DEFAULT_NO_OP = createNoOpInputConsumer(Display.DEFAULT_DISPLAY);
-diff --git a/quickstep/src/com/android/quickstep/InputConsumerUtils.kt b/quickstep/src/com/android/quickstep/InputConsumerUtils.kt
-index 2bb94d6e8e54b420b378d9f992133f50fdb86b5c..6acb5078cef6e9f0ac9b3de8636cf362228dec34 100644
---- a/quickstep/src/com/android/quickstep/InputConsumerUtils.kt
-+++ b/quickstep/src/com/android/quickstep/InputConsumerUtils.kt
-@@ -34,6 +34,7 @@ import com.android.quickstep.inputconsumers.BubbleBarInputConsumer
- import com.android.quickstep.inputconsumers.DeviceLockedInputConsumer
- import com.android.quickstep.inputconsumers.LauncherInputConsumer
- import com.android.quickstep.inputconsumers.LauncherWithoutFocusInputConsumer
-+import com.android.quickstep.inputconsumers.LinuxModeInputConsumer
- import com.android.quickstep.inputconsumers.NavHandleLongPressInputConsumer
- import com.android.quickstep.inputconsumers.OneHandedModeInputConsumer
- import com.android.quickstep.inputconsumers.OtherActivityInputConsumer
-@@ -638,6 +639,10 @@ object InputConsumerUtils {
-                     SUBSTRING_PREFIX,
-                 ),
-             )
-+        } else if (LinuxModeInputConsumer.isLinuxModeTask(context, runningTask)) {
-+            // Lujarch: Linux mode takes the bottom swipe itself (home at once, never overview).
-+            reasonString.append("%srunning task is Linux mode, using LinuxModeInputConsumer", SUBSTRING_PREFIX)
-+            LinuxModeInputConsumer(context, gestureState, inputMonitorCompat, rotationTouchHelper)
-         } else {
-             reasonString.append("%susing OtherActivityInputConsumer", SUBSTRING_PREFIX)
-             createOtherActivityInputConsumer<S, T>(
-diff --git a/quickstep/src/com/android/quickstep/inputconsumers/LinuxModeInputConsumer.kt b/quickstep/src/com/android/quickstep/inputconsumers/LinuxModeInputConsumer.kt
-new file mode 100644
-index 0000000000000000000000000000000000000000..3645131ffd55a002db0861f9b5cd72d2007fd5f5
---- /dev/null
-+++ b/quickstep/src/com/android/quickstep/inputconsumers/LinuxModeInputConsumer.kt
-@@ -0,0 +1,137 @@
++++ b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/LinuxFaceTouchController.java
+@@ -0,0 +1,58 @@
 +/*
-+ * Lujarch (LNX-3): the bottom swipe while Linux mode (the terminal and the desktop of
-+ * org.lujarch.linux.terminal, one task) is the running task.
++ * Copyright (C) 2026 The Lujarch Project
 + *
-+ * One swipe goes to the home screen. Overview is never entered from Linux mode: a swipe that ended
-+ * in overview would show the Linux task as a card in recents. The terminal almost always has the
-+ * keyboard up, whose window lies under the swipe-up region, so the swipe is taken from it once it
-+ * is past the slop.
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
 + */
-+package com.android.quickstep.inputconsumers
++package com.android.launcher3.uioverrides.touchcontrollers;
 +
-+import android.content.ComponentName
-+import android.content.Context
-+import android.graphics.PointF
-+import android.util.Log
-+import android.view.MotionEvent
-+import android.view.VelocityTracker
-+import android.view.ViewConfiguration
-+import com.android.launcher3.R
-+import com.android.launcher3.util.VelocityUtils.PX_PER_MS
-+import com.android.quickstep.GestureState
-+import com.android.quickstep.InputConsumer
-+import com.android.quickstep.OverviewComponentObserver.startHomeIntentSafely
-+import com.android.quickstep.RotationTouchHelper
-+import com.android.quickstep.TopTaskTracker.CachedTaskInfo
-+import com.android.systemui.shared.system.InputMonitorCompat
-+import kotlin.math.abs
++import android.view.MotionEvent;
 +
-+class LinuxModeInputConsumer(
-+    private val context: Context,
-+    private val gestureState: GestureState,
-+    private val inputMonitor: InputMonitorCompat,
-+    private val rotationTouchHelper: RotationTouchHelper,
-+) : InputConsumer {
-+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
-+    // The speed Quickstep's own swipe tracker calls a fling, in px/ms.
-+    private val flingSpeed = context.resources.getDimension(R.dimen.quickstep_fling_threshold_speed)
-+    private val touchDown = PointF()
-+    private var velocityTracker: VelocityTracker? = VelocityTracker.obtain()
-+    private var tracking = false
-+    private var pilfered = false
++import com.android.launcher3.Launcher;
++import com.android.launcher3.util.TouchController;
 +
-+    override fun getType() = InputConsumer.TYPE_LINUX_MODE
++import org.lujarch.linux.face.LinuxFace;
 +
-+    override fun getDisplayId() = gestureState.displayId
++/**
++ * Lujarch (LNX-3): while the home screen shows Linux, its bottom gesture is Linux's. Put before
++ * every other controller, it takes the whole gesture so none of Android's (all apps, overview,
++ * quick switch, home) starts, and hands it to the face, whose own swipe goes from the desktop to
++ * the terminal and from the terminal to Android's home.
++ */
++public class LinuxFaceTouchController implements TouchController {
++    private final Launcher mLauncher;
++    private boolean mTaking;
 +
-+    // Once the motion passed the slop it is this consumer's swipe: parents (one-handed mode, the
-+    // accessibility menu, the assistant) must not take it over.
-+    override fun allowInterceptByParent() = !pilfered
++    public LinuxFaceTouchController(Launcher launcher) {
++        mLauncher = launcher;
++    }
 +
-+    override fun onMotionEvent(ev: MotionEvent) {
-+        val tracker = velocityTracker ?: return
-+        tracker.addMovement(ev)
-+        when (ev.actionMasked) {
-+            MotionEvent.ACTION_DOWN -> {
-+                touchDown.set(ev.x, ev.y)
-+                tracking = rotationTouchHelper.isInSwipeUpTouchRegion(ev)
-+            }
-+            MotionEvent.ACTION_POINTER_DOWN -> {
-+                // A second finger outside the swipe-up region before the swipe is decided cancels it.
-+                if (
-+                    tracking &&
-+                        !pilfered &&
-+                        !rotationTouchHelper.isInSwipeUpTouchRegion(ev, ev.actionIndex)
-+                ) {
-+                    tracking = false
-+                }
-+            }
-+            MotionEvent.ACTION_MOVE -> {
-+                if (tracking && !pilfered && isUpward(ev.x, ev.y)) {
-+                    pilfered = true
-+                    // The keyboard (its window is under the swipe-up region) or the app gets a
-+                    // cancel; without this the swipe would end on the keyboard.
-+                    inputMonitor.pilferPointers()
-+                }
-+            }
-+            MotionEvent.ACTION_UP -> {
-+                val counted = tracking && pilfered && swipeCounts(tracker, ev)
-+                release()
-+                if (counted) onSwipeUp()
-+            }
-+            MotionEvent.ACTION_CANCEL -> release()
++    @Override
++    public boolean onControllerInterceptTouchEvent(MotionEvent ev) {
++        LinuxFace face = mLauncher.getLinuxFace();
++        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
++            mTaking = face != null && face.getShown();
 +        }
++        if (mTaking) face.onGestureMotion(ev);
++        return mTaking;
 +    }
 +
-+    // Past the touch slop, up more than sideways.
-+    private fun isUpward(x: Float, y: Float): Boolean {
-+        val up = touchDown.y - y
-+        return up >= touchSlop && up > abs(x - touchDown.x)
-+    }
-+
-+    // A swipe counts when it flung upward, or, below fling speed, when it ended far enough up
-+    // (Quickstep's TriggerSwipeUpTouchTracker takes the touch slop as "far enough").
-+    private fun swipeCounts(tracker: VelocityTracker, ev: MotionEvent): Boolean {
-+        tracker.computeCurrentVelocity(PX_PER_MS)
-+        val vx = tracker.xVelocity
-+        val vy = tracker.yVelocity
-+        return if (abs(vy) >= flingSpeed && abs(vy) >= abs(vx)) vy < 0 else isUpward(ev.x, ev.y)
-+    }
-+
-+    private fun onSwipeUp() {
-+        Log.d(TAG, "swipe up: home")
-+        startHomeIntentSafely(context, gestureState.homeIntent, null, TAG)
-+    }
-+
-+    private fun release() {
-+        velocityTracker?.recycle()
-+        velocityTracker = null
-+    }
-+
-+    override fun onConsumerAboutToBeSwitched() = release()
-+
-+    companion object {
-+        private const val TAG = "LujarchLinuxMode"
-+
-+        @Volatile private var linuxMode: Set<ComponentName>? = null
-+
-+        /** Whether the running task's top or base activity is Linux mode. */
-+        @JvmStatic
-+        fun isLinuxModeTask(context: Context, task: CachedTaskInfo?): Boolean {
-+            val set = linuxMode
-+                ?: load(context, R.array.lujarch_linux_mode_activities).also { linuxMode = it }
-+            return runs(task, set)
-+        }
-+
-+        private fun runs(task: CachedTaskInfo?, set: Set<ComponentName>): Boolean {
-+            val info = task?.legacyBaseTask ?: return false
-+            return set.contains(info.topActivity) || set.contains(info.baseActivity)
-+        }
-+
-+        private fun load(context: Context, array: Int): Set<ComponentName> =
-+            context.resources
-+                .getStringArray(array)
-+                .mapNotNull { ComponentName.unflattenFromString(it) }
-+                .toSet()
++    @Override
++    public boolean onControllerTouchEvent(MotionEvent ev) {
++        if (!mTaking) return false;
++        LinuxFace face = mLauncher.getLinuxFace();
++        if (face != null) face.onGestureMotion(ev);
++        int action = ev.getActionMasked();
++        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) mTaking = false;
++        return true;
 +    }
 +}
+diff --git a/src/com/android/launcher3/Launcher.java b/src/com/android/launcher3/Launcher.java
+index cf5b1adc8b1a21529271534aac396be4cd11829c..2647f955e6de62e9cc78c6031899b866708032c2 100644
+--- a/src/com/android/launcher3/Launcher.java
++++ b/src/com/android/launcher3/Launcher.java
+@@ -403,6 +403,14 @@ public class Launcher extends StatefulActivity<LauncherState>
+         return fromContext(context);
+     }
+ 
++    // Lujarch (LNX-3): Linux mode, the home screen's other face.
++    private org.lujarch.linux.face.LinuxFace mLinuxFace;
++
++    /** Lujarch: Linux mode, the home screen's other face; null before onCreate. */
++    public org.lujarch.linux.face.LinuxFace getLinuxFace() {
++        return mLinuxFace;
++    }
++
+     @Override
+     @TargetApi(Build.VERSION_CODES.S)
+     protected void onCreate(Bundle savedInstanceState) {
+@@ -485,6 +493,16 @@ public class Launcher extends StatefulActivity<LauncherState>
+ 
+         setContentView(getRootView());
+         getRootView().dispatchInsets();
++        // Lujarch (LNX-3): Linux mode over the home screen's own views, as its other face.
++        mLinuxFace = new org.lujarch.linux.face.LinuxFace(this,
++                allow -> getRotationHelper().setStateHandlerRequest(allow
++                        ? com.android.launcher3.states.RotationHelper.REQUEST_ROTATE
++                        : com.android.launcher3.states.RotationHelper.REQUEST_NONE));
++        InsettableFrameLayout.LayoutParams linuxLp = new InsettableFrameLayout.LayoutParams(
++                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
++        linuxLp.ignoreInsets = true;
++        getRootView().addView(mLinuxFace.getRoot(), linuxLp);
++        mLinuxFace.onNewIntent(getIntent());
+ 
+         final SettingsCache settingsCache = SettingsCache.INSTANCE.get(this);
+         mNaturalScrollingChangedSafeCloseable = settingsCache.getListenableRef(
+@@ -538,6 +556,11 @@ public class Launcher extends StatefulActivity<LauncherState>
+     @NonNull
+     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+     protected OnBackAnimationCallback getOnBackAnimationCallback() {
++        // Lujarch (LNX-3): Linux has no "back"; on Linux's face the gesture does nothing.
++        if (mLinuxFace != null && mLinuxFace.onBack()) {
++            return () -> { };
++        }
++
+         // #1 auto cancel action mode handler
+         if (isInAutoCancelActionMode()) {
+             return this::finishAutoCancelActionMode;
+@@ -935,6 +958,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+     @Override
+     protected void onStop() {
+         super.onStop();
++        if (mLinuxFace != null) mLinuxFace.onStop();
+         hideKeyboard();
+         logStopAndResume(false /* isResume */);
+         mAppWidgetHolder.setActivityStarted(false);
+@@ -948,6 +972,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+         TraceHelper.INSTANCE.beginSection(ON_START_EVT);
+         super.onStart();
+         mAppWidgetHolder.setActivityStarted(true);
++        if (mLinuxFace != null) mLinuxFace.onStart();
+         TraceHelper.INSTANCE.endSection();
+     }
+ 
+@@ -989,6 +1014,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+     @Override
+     public void onWindowFocusChanged(boolean hasFocus) {
+         super.onWindowFocusChanged(hasFocus);
++        if (mLinuxFace != null) mLinuxFace.onWindowFocusChanged(hasFocus);
+         if (!hasFocus) {
+             AccessibilityManagerCompat.sendTestProtocolEventToTest(
+                     this, LAUNCHER_ACTIVITY_LOST_WINDOW_FOCUS_MESSAGE);
+@@ -1114,6 +1140,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+         TraceHelper.INSTANCE.beginSection(ON_RESUME_EVT);
+         super.onResume();
+         mLauncherUiState.setIsResumedActivity(true);
++        if (mLinuxFace != null) mLinuxFace.onResume();
+         DragView.removeAllViews(this);
+         TraceHelper.INSTANCE.endSection();
+     }
+@@ -1125,6 +1152,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+ 
+         super.onPause();
+         mLauncherUiState.setIsResumedActivity(false);
++        if (mLinuxFace != null) mLinuxFace.onPause();
+         mDragController.cancelDrag();
+         mLastTouchUpTime = -1;
+         mDropTargetBar.animateToVisibility(false);
+@@ -1426,6 +1454,11 @@ public class Launcher extends StatefulActivity<LauncherState>
+         }
+         TraceHelper.INSTANCE.beginSection(ON_NEW_INTENT_EVT);
+         super.onNewIntent(intent);
++        // Lujarch (LNX-3): an intent for Linux turns the home screen to its Linux face.
++        if (mLinuxFace != null && mLinuxFace.onNewIntent(intent)) {
++            TraceHelper.INSTANCE.endSection();
++            return;
++        }
+ 
+         boolean alreadyOnHome = hasWindowFocus() && ((intent.getFlags() &
+                 Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT)
+@@ -1585,6 +1618,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+     @Override
+     public void onDestroy() {
+         super.onDestroy();
++        if (mLinuxFace != null) mLinuxFace.onDestroy();
+         ACTIVITY_TRACKER.onContextDestroyed(this);
+ 
+         if (mNaturalScrollingChangedSafeCloseable != null) {
+@@ -1902,6 +1936,7 @@ public class Launcher extends StatefulActivity<LauncherState>
+     @Override
+     public boolean dispatchKeyEvent(KeyEvent event) {
+         TestLogging.recordKeyEvent(TestProtocol.SEQUENCE_MAIN, "Key event", event);
++        if (mLinuxFace != null && mLinuxFace.dispatchKeyEvent(event)) return true;
+         return (event.getKeyCode() == KeyEvent.KEYCODE_HOME) || tryHandleEscapeKey(event)
+                     || super.dispatchKeyEvent(event);
+     }

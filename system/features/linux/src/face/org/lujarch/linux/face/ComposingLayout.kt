@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.lujarch.linux.terminal
+package org.lujarch.linux.face
 
 /** One character of the composing text on the terminal's grid. */
 data class ComposingCell(val codePoint: Int, val col: Int, val row: Int, val width: Int)

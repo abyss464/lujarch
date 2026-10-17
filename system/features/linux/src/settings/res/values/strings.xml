@@ -121,7 +121,7 @@
     <string name="lnx_lend_quick_settings_summary">The desktop\'s quick settings and status bar show and switch Wi-Fi, mobile data, Bluetooth, airplane mode, hotspot, flashlight, auto-rotate, Do Not Disturb, the screen staying on and the brightness</string>
     <string name="lnx_services">Services</string>
     <string name="lnx_remote">Remote access</string>
-    <string name="lnx_footer">Arch Linux ARM runs beside Android on the same kernel and network, as a user of its own. Its sessions open in the Terminal app.</string>
+    <string name="lnx_footer">Arch Linux ARM runs beside Android on the same kernel and network, as a user of its own. Its terminal and desktop are the home screen\'s other face: double tap the home screen.</string>
     <string name="lnx_error_load">Couldn\'t load the Linux development environment</string>
     <string name="lnx_error_switch">Couldn\'t change the setting</string>
     <string name="lnx_error_install">Couldn\'t install the root file system</string>

@@ -21,6 +21,8 @@ inline constexpr char kFeature[] = "linux";
 inline constexpr char kServiceName[] = "lujarch_linux";
 inline constexpr char kSettingsPackage[] = "org.lujarch.settings";
 inline constexpr char kTerminalPackage[] = "org.lujarch.linux.terminal";
+// The home screen: Linux mode is its other face (LNX-3), with the terminal and the desktop in it.
+inline constexpr char kHomePackage[] = "com.android.launcher3";
 
 // Android's side. init makes the directories (lujarch_linux.rc).
 inline constexpr char kData[] = "/data/lujarch/linux";

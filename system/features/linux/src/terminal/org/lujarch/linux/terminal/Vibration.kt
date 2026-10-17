@@ -22,6 +22,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import org.lujarch.linux.client.Linux
+import org.lujarch.linux.client.TAG
 
 /**
  * Linux's vibration (LNX-7, Vibration): "<amplitude 0-255>:<ms>,..." or "<ms>", which

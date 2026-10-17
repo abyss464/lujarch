@@ -108,7 +108,7 @@
     <string name="lnx_lend_quick_settings_summary">デスクトップのクイック設定とステータスバーで Wi-Fi、モバイルデータ、Bluetooth、機内モード、テザリング、ライト、自動回転、サイレント モード、画面の点灯維持、明るさを表示、切り替えます</string>
     <string name="lnx_services">サービス</string>
     <string name="lnx_remote">リモート アクセス</string>
-    <string name="lnx_footer">Arch Linux ARM は Android と同じカーネルとネットワークで、専用のユーザーとして並行して動作します。セッションはターミナル アプリで開きます。</string>
+    <string name="lnx_footer">Arch Linux ARM は Android と同じカーネルとネットワークで、専用のユーザーとして並行して動作します。ターミナルとデスクトップはホーム画面のもう一つの面です。ホーム画面をダブルタップすると開きます。</string>
     <string name="lnx_error_load">Linux 開発環境を読み込めませんでした</string>
     <string name="lnx_error_switch">設定を変更できませんでした</string>
     <string name="lnx_error_install">ルート ファイル システムをインストールできませんでした</string>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lnx_app_name">ターミナル</string>
+    <string name="lnx_kind_arch">Arch Linux</string>
+    <string name="lnx_kind_arch_root">Arch Linux（root）</string>
+    <string name="lnx_kind_android_root">Android（root）</string>
+    <string name="lnx_new_session">新しいセッション</string>
+    <string name="lnx_rename">名前を変更</string>
+    <string name="lnx_keep_awake">スリープしない</string>
+    <string name="lnx_end_session">セッションを終了</string>
+    <string name="lnx_display">ディスプレイ</string>
+    <string name="lnx_settings">設定</string>
+    <string name="lnx_session_ended">終了しました</string>
+    <string name="lnx_tab_busy">%1$s を実行中</string>
+    <string name="lnx_no_sessions">セッションはありません</string>
+    <string name="lnx_service_missing">Linux 開発環境が応答しません。</string>
+    <string name="lnx_state_not_installed">Linux がインストールされていません。設定でルート ファイル システムをインストールしてください。</string>
+    <string name="lnx_state_stopped">Linux はオフです。</string>
+    <string name="lnx_state_starting">Linux を起動しています…</string>
+    <string name="lnx_state_setup">初期設定を実行しています…</string>
+    <string name="lnx_state_failed">Linux を起動できませんでした。</string>
+    <string name="lnx_open_settings">設定を開く</string>
+    <string name="lnx_error_root_sessions_off">Root セッションはオフです。</string>
+    <string name="lnx_error_too_many_sessions">開けるセッションは 16 個までです。</string>
+    <string name="lnx_error_session">セッションを開けませんでした。</string>
+    <string name="lnx_auth_title">Linux での認証を確認</string>
+    <string name="lnx_desktop_none">Linux にデスクトップがありません。設定の Linux 開発環境のページでインストールしてください。</string>
+    <string name="lnx_desktop_failed">Linux のデスクトップとの接続が切れました。</string>
+    <string name="lnx_desktop_silent">Linux のデスクトップが描画していません。サービス desktop とそのログは設定の「サービス」にあります。</string>
+    <string name="lnx_status_offline">オフライン</string>
+    <string name="lnx_tab_arch">Arch Linux</string>
+    <string name="lnx_tab_arch_root">root</string>
+    <string name="lnx_tab_android_root">Android</string>
+    <string name="lnx_awake_description">スリープさせない</string>
+    <string name="lnx_kind_android_root_summary">Android の名前空間</string>
+    <string name="lnx_kind_root_disabled">root セッションはオフです</string>
+    <string name="lnx_kind_linux_off">実行されていません</string>
+    <string name="lnx_sheet_sleep_title">スマートフォンのスリープ時</string>
+    <string name="lnx_sheet_sleep_option">スマートフォンと一緒にスリープ</string>
+    <string name="lnx_sheet_busy">コマンドを実行中</string>
+    <string name="lnx_sheet_idle">アイドル</string>
+    <string name="lnx_rename_title">セッション名の変更</string>
+    <string name="lnx_rename_hint">名前</string>
+</resources>
