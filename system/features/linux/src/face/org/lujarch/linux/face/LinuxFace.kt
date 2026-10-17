@@ -91,6 +91,8 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
     /** Linux on screen in front: resumed and focused. */
     var inFront = false
         private set
+    /** Told when Linux comes to the front or leaves it: what floats over the home steps aside. */
+    var onFront: ((Boolean) -> Unit)? = null
     /** The intent that last opened the face (a session to select). */
     var openIntent: Intent? = null
         private set
@@ -228,6 +230,8 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
     fun onWindowFocusChanged(hasFocus: Boolean) {
         focused = hasFocus
         follow()
+        // Coming back from an app the window gets the bars' control only with its focus.
+        if (hasFocus && inFront) hideBars()
         pages[page]?.takeIf { shown }?.onWindowFocusChanged(hasFocus)
     }
 
@@ -280,6 +284,7 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
         val front = shown && resumed
         if (front != inFront) {
             inFront = front
+            onFront?.invoke(front)
             bars(front)
             if (front && Linux.lent(activity, "nfc")) {
                 nfc = NfcReader(activity).also { it.start() }
@@ -411,8 +416,10 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
 
     fun openSettings() {
         try {
-            // Its own task, as the home screen opens every app: never one of the home's.
-            activity.startActivity(Intent(Linux.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            // Its own task, as the home screen opens every app: never one of the home's; the page
+            // itself, not one opened from it before.
+            activity.startActivity(Intent(Linux.ACTION_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
         } catch (e: android.content.ActivityNotFoundException) {
             Log.e(TAG, "no page of the Linux development environment in Settings")
         }

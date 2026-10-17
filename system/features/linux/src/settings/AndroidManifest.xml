@@ -29,10 +29,12 @@
             android:value="org.lujarch.linux.settings.LinuxContribution" />
 
         <!-- The pages (LinuxPages), and the Linux development environment row in System with its
-             state (LinuxSummaryProvider). -->
+             state (LinuxSummaryProvider). Opened from Linux's face, it is a task of its own, never
+             on top of another page of Lujarch Settings. -->
         <activity
             android:name="org.lujarch.linux.settings.LinuxActivity"
             android:exported="true"
+            android:taskAffinity="org.lujarch.settings.linux"
             android:label="@string/lnx_title"
             android:theme="@style/Theme.LujarchSettings">
             <intent-filter>
