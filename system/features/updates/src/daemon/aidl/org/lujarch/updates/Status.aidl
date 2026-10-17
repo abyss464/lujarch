@@ -30,4 +30,23 @@ parcelable Status {
     @utf8InCpp String previousBuild;
     /** Why the previous build cannot be restored (a RESTORE_ constant); empty when it can. */
     @utf8InCpp String restoreBlocker;
+    /** Safe boot (UPD-5): what its switches turned off at this boot ("proxy", "sync", "linux",
+        "root", "test_updates"); empty when it is not on. */
+    @utf8InCpp String[] safeBootOff;
+    /** Safe boot's switches are set, for this boot or from the next one on. */
+    boolean safeBootSet;
+
+    /** System slots (UPD-6): the running slot and its build. */
+    @utf8InCpp String runningSlot;
+    @utf8InCpp String runningBuild;
+    @utf8InCpp String runningAndroid;
+    @utf8InCpp String runningSecurityPatch;
+    /** Unix seconds: the running build's first start in its slot; 0 when not known. */
+    long runningFirstBoot;
+    /** The other slot and its build as last recorded (previousBuild); empty when not known. */
+    @utf8InCpp String otherSlot;
+    @utf8InCpp String otherAndroid;
+    @utf8InCpp String otherSecurityPatch;
+    /** Whether the other slot can start: 1 yes, 0 no, -1 not known. */
+    int otherBootable = -1;
 }

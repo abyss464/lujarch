@@ -167,10 +167,10 @@ index 90d2618d1a3c2116e8b9a243827a3191aa2aeff9..808d456c627865d2a9c7018739064fa1
                  val intent = Intent(Intent.ACTION_VIEW, url.toUri())
 diff --git a/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb0baa309c
+index 0000000000000000000000000000000000000000..e07eb275518b7523cb0cc0f3da6686d5e16cbc35
 --- /dev/null
 +++ b/app/src/main/java/org/lineageos/updater/lujarch/LujarchBuild.kt
-@@ -0,0 +1,230 @@
+@@ -0,0 +1,314 @@
 +/*
 + * SPDX-FileCopyrightText: The Lujarch Project
 + * SPDX-License-Identifier: Apache-2.0
@@ -180,6 +180,7 @@ index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb
 +
 +import android.content.Context
 +import android.icu.text.DateFormat
++import android.icu.text.ListFormatter
 +import android.icu.text.MessageFormat
 +import android.os.PowerManager
 +import android.os.ServiceManager
@@ -256,6 +257,18 @@ index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb
 +
 +    fun restorePrevious(): String? = call("restore the previous build") { it.restorePrevious() }
 +
++    fun endSafeBoot(): String? = call("end safe boot") { it.endSafeBoot() }
++
++    private fun safeBootName(context: Context, name: String): String =
++        when (name) {
++            "proxy" -> context.getString(R.string.lujarch_safe_boot_proxy)
++            "sync" -> context.getString(R.string.lujarch_safe_boot_sync)
++            "linux" -> context.getString(R.string.lujarch_safe_boot_linux)
++            "root" -> context.getString(R.string.lujarch_safe_boot_root)
++            "test_updates" -> context.getString(R.string.lujarch_safe_boot_test_updates)
++            else -> name
++        }
++
 +    fun setAutoConfirm(context: Context, minutes: Int) {
 +        if (!Settings.Global.putInt(context.contentResolver, SETTING_AUTO_CONFIRM, minutes)) {
 +            Log.e(TAG, "$SETTING_AUTO_CONFIRM not written")
@@ -292,6 +305,46 @@ index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb
 +                else -> R.string.lujarch_restore_unknown
 +            }
 +        )
++
++    /** System slots (UPD-6): the build of each slot, and whether the other one can still start. */
++    private fun slotsModel(context: Context, s: Status): CardModel {
++        val date = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
++        fun build(b: String, android: String, patch: String) =
++            context.getString(R.string.lujarch_slot_build, b, android, patch)
++        val running = buildString {
++            append(context.getString(R.string.lujarch_slot_running, s.runningSlot.uppercase(Locale.ROOT)))
++            append("\n")
++            append(build(s.runningBuild, s.runningAndroid, s.runningSecurityPatch))
++            if (s.runningFirstBoot > 0) {
++                append("\n")
++                append(context.getString(R.string.lujarch_slot_first_start, date.format(Date(s.runningFirstBoot * 1000))))
++            }
++        }
++        val other = buildString {
++            append(context.getString(R.string.lujarch_slot_other, s.otherSlot.uppercase(Locale.ROOT)))
++            append("\n")
++            if (s.previousBuild.isEmpty()) {
++                append(context.getString(R.string.lujarch_slot_no_record))
++            } else {
++                append(build(s.previousBuild, s.otherAndroid, s.otherSecurityPatch))
++            }
++            append("\n")
++            append(
++                when {
++                    s.state == IUpdates.STATE_RESTORING -> context.getString(R.string.lujarch_slot_starts_next)
++                    s.state == IUpdates.STATE_WAITING && s.restoreBlocker.isEmpty() ->
++                        context.getString(R.string.lujarch_slot_restorable)
++                    s.state == IUpdates.STATE_WAITING -> restoreBlockerText(context, s.restoreBlocker)
++                    s.otherBootable == 0 -> context.getString(R.string.lujarch_slot_not_bootable)
++                    else -> context.getString(R.string.lujarch_slot_replaced)
++                }
++            )
++        }
++        return CardModel(
++            title = context.getString(R.string.lujarch_slots_title),
++            text = running + "\n\n" + other,
++        )
++    }
 +
 +    /** The card of a build that waits for confirmation, is merged or gives way to the previous one. */
 +    @Composable
@@ -334,6 +387,36 @@ index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb
 +        }
 +        val restart = {
 +            context.getSystemService(PowerManager::class.java)!!.reboot(null)
++        }
++        // Safe boot (UPD-5): what its switches turned off at this start, and the way back.
++        if (s.safeBootSet || s.safeBootOff.isNotEmpty()) {
++            val names = s.safeBootOff.map { safeBootName(context, it) }
++            val lines = mutableListOf(
++                if (names.isEmpty()) {
++                    context.getString(R.string.lujarch_safe_boot_next)
++                } else {
++                    context.getString(R.string.lujarch_safe_boot_off, ListFormatter.getInstance().format(names))
++                }
++            )
++            val buttons =
++                if (s.safeBootSet) {
++                    lines += context.getString(R.string.lujarch_safe_boot_until)
++                    listOf(
++                        CardButton(context.getString(R.string.lujarch_safe_boot_end)) {
++                            act(R.string.lujarch_safe_boot_end_failed, ::endSafeBoot)
++                        }
++                    )
++                } else {
++                    lines += context.getString(R.string.lujarch_safe_boot_ended)
++                    listOf(CardButton(context.getString(R.string.lujarch_restart), onClick = restart))
++                }
++            SettingsCard(
++                CardModel(
++                    title = context.getString(R.string.lujarch_safe_boot_title),
++                    text = lines.joinToString("\n"),
++                    buttons = buttons,
++                )
++            )
 +        }
 +        val model =
 +            when (s.state) {
@@ -396,9 +479,10 @@ index 0000000000000000000000000000000000000000..377096a34caaf67a3515c18c810feceb
 +                        text = context.getString(R.string.lujarch_restoring_text),
 +                        buttons = listOf(CardButton(context.getString(R.string.lujarch_restart), onClick = restart)),
 +                    )
-+                else -> return
++                else -> null
 +            }
-+        SettingsCard(model)
++        model?.let { SettingsCard(it) }
++        SettingsCard(slotsModel(context, s))
 +    }
 +}
 diff --git a/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt b/app/src/main/java/org/lineageos/updater/preferences/PreferencesScreen.kt
@@ -549,10 +633,10 @@ index 49dce2a5d016c2847782bc0af753f9d97e279328..a0cc38470d6f9f8c2b60fd2a7b03c793
                      (context.applicationContext as UpdaterApplication).userPreferencesRepository
 diff --git a/app/src/main/res/values-ja/lujarch_strings.xml b/app/src/main/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..cc995a5273cefe1e5dddf9c398b12877b873b668
+index 0000000000000000000000000000000000000000..69ac3a7dd0f2126313d4b344a03e0e1bff5a78ef
 --- /dev/null
 +++ b/app/src/main/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    SPDX-FileCopyrightText: The Lujarch Project
@@ -590,13 +674,35 @@ index 0000000000000000000000000000000000000000..cc995a5273cefe1e5dddf9c398b12877
 +    <string name="lujarch_restoring_title">"次回の再起動で以前のビルドが起動します"</string>
 +    <string name="lujarch_restoring_text">"以前のビルドが起動すると、このビルドへのアップデートは取り消されます。"</string>
 +    <string name="lujarch_restart">"今すぐ再起動"</string>
++    <string name="lujarch_safe_boot_title">セーフブートがオンです</string>
++    <string name="lujarch_safe_boot_off">今回の起動でオフにしたもの：%1$s。</string>
++    <string name="lujarch_safe_boot_next">セーフブートは次回の起動で有効になります。</string>
++    <string name="lujarch_safe_boot_until">ここまたはリカバリーで通常に戻すまで、オフのままです。</string>
++    <string name="lujarch_safe_boot_ended">次回の起動は通常どおりです。</string>
++    <string name="lujarch_safe_boot_end">通常に戻す</string>
++    <string name="lujarch_safe_boot_end_failed">通常に戻せませんでした</string>
++    <string name="lujarch_safe_boot_proxy">プロキシ</string>
++    <string name="lujarch_safe_boot_sync">同期</string>
++    <string name="lujarch_safe_boot_linux">Linux</string>
++    <string name="lujarch_safe_boot_root">root 権限</string>
++    <string name="lujarch_safe_boot_test_updates">システムアプリのテスト用アップデート（削除済み）</string>
++    <string name="lujarch_slots_title">システム スロット</string>
++    <string name="lujarch_slot_running">スロット %1$s · 実行中</string>
++    <string name="lujarch_slot_other">スロット %1$s</string>
++    <string name="lujarch_slot_build">ビルド %1$s · Android %2$s · セキュリティ アップデート %3$s</string>
++    <string name="lujarch_slot_first_start">初回起動 %1$s</string>
++    <string name="lujarch_slot_no_record">ビルドの記録がありません</string>
++    <string name="lujarch_slot_restorable">以前のビルド：現在のビルドが確認待ちの間は、まだ戻せます。</string>
++    <string name="lujarch_slot_starts_next">次回の再起動で起動します。</string>
++    <string name="lujarch_slot_not_bootable">起動できません。</string>
++    <string name="lujarch_slot_replaced">使用できません：使用中のアップデートは統合済みです。</string>
 +</resources>
 diff --git a/app/src/main/res/values-zh-rCN/lujarch_strings.xml b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..cf0852433afc232e513264afcdb52e6e37d5a685
+index 0000000000000000000000000000000000000000..610d3366c57ea0cbdd147aae1199e46b60cdf6eb
 --- /dev/null
 +++ b/app/src/main/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    SPDX-FileCopyrightText: The Lujarch Project
@@ -634,13 +740,35 @@ index 0000000000000000000000000000000000000000..cf0852433afc232e513264afcdb52e6e
 +    <string name="lujarch_restoring_title">"上一版本将在下次重启时启动"</string>
 +    <string name="lujarch_restoring_text">"上一版本启动后，到此版本的更新将被取消。"</string>
 +    <string name="lujarch_restart">"立即重启"</string>
++    <string name="lujarch_safe_boot_title">安全启动已开启</string>
++    <string name="lujarch_safe_boot_off">这次启动关掉了：%1$s。</string>
++    <string name="lujarch_safe_boot_next">安全启动将在下次启动时生效。</string>
++    <string name="lujarch_safe_boot_until">在这里或 recovery 中恢复正常之前，它们会一直关着。</string>
++    <string name="lujarch_safe_boot_ended">下次启动将恢复正常。</string>
++    <string name="lujarch_safe_boot_end">恢复正常</string>
++    <string name="lujarch_safe_boot_end_failed">无法恢复正常</string>
++    <string name="lujarch_safe_boot_proxy">代理</string>
++    <string name="lujarch_safe_boot_sync">同步</string>
++    <string name="lujarch_safe_boot_linux">Linux</string>
++    <string name="lujarch_safe_boot_root">Root 权限</string>
++    <string name="lujarch_safe_boot_test_updates">系统应用的测试更新（已移除）</string>
++    <string name="lujarch_slots_title">系统槽位</string>
++    <string name="lujarch_slot_running">槽位 %1$s · 正在运行</string>
++    <string name="lujarch_slot_other">槽位 %1$s</string>
++    <string name="lujarch_slot_build">版本 %1$s · Android %2$s · 安全更新 %3$s</string>
++    <string name="lujarch_slot_first_start">首次启动于 %1$s</string>
++    <string name="lujarch_slot_no_record">没有版本记录</string>
++    <string name="lujarch_slot_restorable">上一个版本：当前版本等待确认期间，仍可退回到它。</string>
++    <string name="lujarch_slot_starts_next">下次重启时启动。</string>
++    <string name="lujarch_slot_not_bootable">无法启动。</string>
++    <string name="lujarch_slot_replaced">不可用：正在使用的更新已经合并。</string>
 +</resources>
 diff --git a/app/src/main/res/values/lujarch_strings.xml b/app/src/main/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..75809719be7389fa68a71562114bd111e278629a
+index 0000000000000000000000000000000000000000..0d192b0abee11eadcbef29b8c7ccceafe6605826
 --- /dev/null
 +++ b/app/src/main/res/values/lujarch_strings.xml
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,68 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    SPDX-FileCopyrightText: The Lujarch Project
@@ -684,4 +812,28 @@ index 0000000000000000000000000000000000000000..75809719be7389fa68a71562114bd111
 +    <string name="lujarch_restoring_title">The previous build starts at the next restart</string>
 +    <string name="lujarch_restoring_text">The update to this build is cancelled once the previous build has started.</string>
 +    <string name="lujarch_restart">Restart now</string>
++    <!-- Safe boot (UPD-5): the switches of recovery's safe boot menu that are in effect -->
++    <string name="lujarch_safe_boot_title">Safe boot is on</string>
++    <string name="lujarch_safe_boot_off">Turned off at this start: %1$s.</string>
++    <string name="lujarch_safe_boot_next">Safe boot is set for the next start.</string>
++    <string name="lujarch_safe_boot_until">They stay off until you return to normal here or in recovery.</string>
++    <string name="lujarch_safe_boot_ended">The next start is a normal one.</string>
++    <string name="lujarch_safe_boot_end">Return to normal</string>
++    <string name="lujarch_safe_boot_end_failed">Could not return to normal</string>
++    <string name="lujarch_safe_boot_proxy">Proxy</string>
++    <string name="lujarch_safe_boot_sync">Sync</string>
++    <string name="lujarch_safe_boot_linux">Linux</string>
++    <string name="lujarch_safe_boot_root">Root access</string>
++    <string name="lujarch_safe_boot_test_updates">Test updates of system apps (removed)</string>
++    <!-- System slots (UPD-6): the build of each slot -->
++    <string name="lujarch_slots_title">System slots</string>
++    <string name="lujarch_slot_running">Slot %1$s · running</string>
++    <string name="lujarch_slot_other">Slot %1$s</string>
++    <string name="lujarch_slot_build">Build %1$s · Android %2$s · security update %3$s</string>
++    <string name="lujarch_slot_first_start">First started %1$s</string>
++    <string name="lujarch_slot_no_record">No build recorded</string>
++    <string name="lujarch_slot_restorable">The previous build: it can still be restored while this one waits for confirmation.</string>
++    <string name="lujarch_slot_starts_next">Starts at the next restart.</string>
++    <string name="lujarch_slot_not_bootable">Cannot start.</string>
++    <string name="lujarch_slot_replaced">Not available: the update in use was merged.</string>
 +</resources>

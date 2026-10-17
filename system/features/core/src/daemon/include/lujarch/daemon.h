@@ -27,6 +27,12 @@ bool CallerIs(std::string_view package);
 std::string Setting(std::string_view feature, std::string_view key);
 bool SettingIsOn(std::string_view feature, std::string_view key);
 
+// Whether safe boot (UPD-5) turned the feature off for this boot: lujarch.safeboot.<feature>=off,
+// set from the recovery menu's switches before the services start.
+bool SafeBootOff(std::string_view feature);
+// The feature's own switch "enabled", unless safe boot turned the feature off for this boot.
+bool FeatureEnabled(std::string_view feature);
+
 // Blocks until the mirror of a switch differs from value, and returns the new value.
 std::string WaitForSettingChange(std::string_view feature, std::string_view key,
                                  const std::string& value);

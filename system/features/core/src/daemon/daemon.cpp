@@ -88,6 +88,14 @@ bool SettingIsOn(std::string_view feature, std::string_view key) {
     return Setting(feature, key) == "1";
 }
 
+bool SafeBootOff(std::string_view feature) {
+    return android::base::GetProperty("lujarch.safeboot." + std::string(feature), "") == "off";
+}
+
+bool FeatureEnabled(std::string_view feature) {
+    return SettingIsOn(feature, "enabled") && !SafeBootOff(feature);
+}
+
 std::string WaitForSettingChange(std::string_view feature, std::string_view key,
                                  const std::string& value) {
     std::string name = MirrorName(feature, key);

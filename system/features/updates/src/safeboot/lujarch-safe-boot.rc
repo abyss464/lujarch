@@ -1,0 +1,16 @@
+# Lujarch safe boot (UPD-5): the switches the recovery menu writes to /metadata/lujarch/safe-boot,
+# applied at every boot until they are cleared. Root is applied by the kernel (KernelSU reads the
+# file itself); the rest by lujarch-safe-boot below.
+
+# After init.rc's post-fs-data (the /data keys, /data/app) and before zygote starts: the package
+# scan must not see a test update that is to be removed.
+on post-fs-data
+    exec_start lujarch_safe_boot
+
+service lujarch_safe_boot /system_ext/bin/lujarch-safe-boot
+    # The owner of /data/app and its package directories: moving an update needs no capability.
+    user system
+    group system
+    capabilities
+    disabled
+    oneshot

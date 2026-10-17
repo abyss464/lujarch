@@ -156,7 +156,7 @@ aidl::org::lujarch::sync::Status Supervisor::Status() {
 }
 
 std::string Supervisor::Blocked() {
-    if (!SettingIsOn(kFeature, "enabled")) return ISync::STATE_OFF;
+    if (!FeatureEnabled(kFeature)) return ISync::STATE_OFF;
     if (android::base::GetProperty("sys.boot_completed", "") != "1") return ISync::STATE_STARTING;
     {
         std::lock_guard lock(mutex_);
@@ -370,7 +370,7 @@ android::base::Result<bool> Supervisor::WithEngineStopped(
     reset_ = true;
     Wake();
     if (!result.ok()) return result.error();
-    return SettingIsOn(kFeature, "enabled") && conditions::Waiting().empty();
+    return FeatureEnabled(kFeature) && conditions::Waiting().empty();
 }
 
 }  // namespace lujarch::sync

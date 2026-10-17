@@ -236,7 +236,7 @@ void Supervisor::Wake() {
 void Supervisor::RequestRestart() {
     restart_requested_ = true;
     // Whoever asked sees the restart begin before the loop gets to it.
-    if (SettingIsOn(kFeature, "enabled")) SetState(IProxy::STATE_STARTING);
+    if (FeatureEnabled(kFeature)) SetState(IProxy::STATE_STARTING);
     Wake();
 }
 
@@ -383,7 +383,7 @@ void Supervisor::Loop() {
     bool given_up = false;
     for (;;) {
         DrainEvents();
-        if (!SettingIsOn(kFeature, "enabled")) {
+        if (!FeatureEnabled(kFeature)) {
             exits.clear();
             backoff = 2;
             given_up = false;
@@ -488,7 +488,7 @@ void Supervisor::Loop() {
             if (left.count() <= 0) break;
             WaitEvent(left.count());
             DrainEvents();
-            if (!SettingIsOn(kFeature, "enabled") || restart_requested_) break;
+            if (!FeatureEnabled(kFeature) || restart_requested_) break;
         }
         backoff = std::min(backoff * 2, kMaxBackoff);
     }
@@ -608,7 +608,7 @@ Supervisor::End Supervisor::WaitCore(Run* run) {
         if (fds[0].revents == 0) {
             DrainEvents();
             End end;
-            if (!SettingIsOn(kFeature, "enabled")) {
+            if (!FeatureEnabled(kFeature)) {
                 end = End::kSwitchedOff;
             } else if (restart_requested_) {
                 end = End::kRequested;

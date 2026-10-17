@@ -29,6 +29,10 @@ namespace lujarch::updates {
 inline constexpr char kDir[] = "/metadata/lujarch/updates";
 inline constexpr char kSlotsFile[] = "/metadata/lujarch/updates/slots";
 inline constexpr char kConfirmedFile[] = "/metadata/lujarch/updates/confirmed";
+// Safe boot's switches (UPD-5), written by recovery's menu, read at boot by lujarch-safe-boot and
+// the kernel, and the names the services read as lujarch.safeboot.<name>.
+inline constexpr char kSafeBootFile[] = "/metadata/lujarch/safe-boot";
+inline constexpr const char* kSafeBootSwitches[] = {"proxy", "sync", "linux", "root", "test_updates"};
 // Set by update_engine: waiting, merging, merged, none, cancelled, installed, failed,
 // needs_reboot.
 inline constexpr char kMergeProperty[] = "lujarch.updates.merge";
@@ -90,6 +94,7 @@ class Updates : public aidl::org::lujarch::updates::BnUpdates {
     ndk::ScopedAStatus getStatus(aidl::org::lujarch::updates::Status* status) override;
     ndk::ScopedAStatus confirm() override;
     ndk::ScopedAStatus restorePrevious() override;
+    ndk::ScopedAStatus endSafeBoot() override;
 };
 
 }  // namespace lujarch::updates

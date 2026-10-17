@@ -302,7 +302,7 @@ void Service::Reconcile() {
         Replace();
     }
     const bool installed = Exists(kRoot);
-    const bool enabled = SettingIsOn(kFeature, "enabled");
+    const bool enabled = FeatureEnabled(kFeature);
     if (!enabled) held_ = false;
     const bool want = enabled && installed && !held_;
     if (want && !system_.Created()) {

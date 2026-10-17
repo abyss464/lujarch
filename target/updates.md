@@ -57,3 +57,31 @@ may not open it. The offer is not made, and the card says why, when the previous
 older Android version or security patch than the running one, when the update is already being
 merged, or when the previous slot cannot start. A build that does not start returns to the
 previous slot by itself after the bootloader's retries.
+
+## Rescue
+
+### UPD-5 Safe boot turns parts off from recovery
+
+- Home: Recovery > Lujarch safe boot; Settings > System > System updates > Return to normal
+- Switch: Proxy, Sync, Linux, Root access: normal, off each; App test updates: kept, removed
+- Default: normal each; kept
+- Verify: phone
+
+A part that breaks the system is turned off without reflashing, from Lujarch safe boot in
+recovery. Each switch takes effect from the next start and stays until it is switched back: the
+proxy, sync or Linux does not run whatever its own switch says (the switch itself keeps the owner's
+choice), no app gets root, or the test updates of the system apps are removed so that the image's
+own versions run. While safe boot is on, System updates says so with what it turned off, and
+Return to normal clears it for the next start.
+
+### UPD-6 Each slot's build is shown
+
+- Home: Settings > System > System updates > System slots; Recovery > System slots
+- Switch: none
+- Default: none
+- Verify: vm
+
+System updates and recovery show the build of each slot: the running one with its Android version,
+security update and first start, and the other one as last recorded, with whether it can still be
+started. In recovery the other slot can be set to start, after a confirmation, while the update
+waits for confirmation.

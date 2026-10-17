@@ -58,3 +58,11 @@ android_library {
     platform_apis: true,
     libs: ["LujarchSettingsContribution"],
 }
+
+// Safe boot (UPD-5): applies the switches of the recovery menu at every boot.
+sh_binary {
+    name: "lujarch-safe-boot",
+    src: "src/safeboot/lujarch-safe-boot.sh",
+    system_ext_specific: true,
+    init_rc: ["src/safeboot/lujarch-safe-boot.rc"],
+}

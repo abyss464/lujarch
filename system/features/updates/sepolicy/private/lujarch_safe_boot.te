@@ -1,0 +1,40 @@
+# Safe boot (UPD-5). The recovery menu writes /metadata/lujarch/safe-boot; at boot the kernel
+# (KernelSU, root) and lujarch-safe-boot (the rest) apply it; lujarch_updates removes it when the
+# owner returns to normal.
+
+# The switch file. Not a data_file_type: recovery may never write /data types, and /metadata is
+# outside /data.
+type lujarch_safe_boot_file, file_type;
+
+# lujarch.safeboot.<name>=off: a switch applied at this boot. Each service reads its own.
+system_internal_prop(lujarch_safeboot_prop)
+get_prop({ lujarch_proxy lujarch_sync lujarch_linux lujarch_updates system_server system_app }, lujarch_safeboot_prop)
+
+# ---- boot: lujarch-safe-boot (lujarch-safe-boot.rc, uid system) ----
+type lujarch_safe_boot, domain, coredomain;
+type lujarch_safe_boot_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(lujarch_safe_boot)
+
+# The script: sh and toybox (log, setprop, mv, rmdir, date, printf, head).
+allow lujarch_safe_boot { shell_exec toolbox_exec }:file rx_file_perms;
+allow lujarch_safe_boot metadata_file:dir search;
+allow lujarch_safe_boot lujarch_safe_boot_file:file r_file_perms;
+set_prop(lujarch_safe_boot, lujarch_safeboot_prop)
+
+# test_updates=off: an update of a system app moves from /data/app/~~<random>/<package>-<random>
+# to /data/app/vmdl<id>.tmp, which the package manager deletes through installd as an abandoned
+# session, and the empty random parent is removed. The image's APK of each app is checked first.
+allow lujarch_safe_boot system_data_root_file:dir search;
+allow lujarch_safe_boot apk_data_file:dir { r_dir_perms write add_name remove_name reparent rename rmdir };
+allow lujarch_safe_boot system_file:dir r_dir_perms;
+allow lujarch_safe_boot system_file:file getattr;
+
+# ---- recovery: the menu (bootable/recovery patch) replaces the file through a temporary one ----
+recovery_only(`
+  allow recovery metadata_file:dir { search write add_name remove_name };
+  allow recovery lujarch_safe_boot_file:file create_file_perms;
+')
+
+# ---- lujarch_updates: reports the switches and removes the file (returning to normal) ----
+allow lujarch_updates lujarch_safe_boot_file:file { r_file_perms unlink };
+allow lujarch_updates metadata_file:dir { write remove_name };

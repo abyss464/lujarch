@@ -1,0 +1,920 @@
+diff --git a/Android.bp b/Android.bp
+index 490fe0c8b890f2b04247049f7d3c7fd7229cb7d5..7919f3ca75a1ca1cb92fa5bf258b86a07b8c278c 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -147,11 +147,22 @@ cc_library_static {
+     ],
+ 
+     srcs: [
++        "lujarch_safe_boot.cpp",
++        // The Lujarch system slots menu (boot control HAL and libsnapshot,
++        // both linked through librecovery_defaults).
++        "lujarch_slots.cpp",
+         "recovery.cpp",
+     ],
+ 
+     shared_libs: [
+         "librecovery_ui",
++        // Labels of the Lujarch safe boot files (lujarch_safe_boot.cpp).
++        "libselinux",
++    ],
++
++    // libsnapshot's headers include update_engine's (lujarch_slots.cpp).
++    header_libs: [
++        "libupdate_engine_headers",
+     ],
+ }
+ 
+diff --git a/lujarch_safe_boot.cpp b/lujarch_safe_boot.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..af76ff9b52809e328b68616cbd030c429390d6c5
+--- /dev/null
++++ b/lujarch_safe_boot.cpp
+@@ -0,0 +1,300 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "lujarch_safe_boot.h"
++
++#include <errno.h>
++#include <fcntl.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include <functional>
++#include <set>
++#include <string>
++#include <vector>
++
++#include <android-base/file.h>
++#include <android-base/logging.h>
++#include <android-base/stringprintf.h>
++#include <android-base/strings.h>
++#include <android-base/unique_fd.h>
++#include <private/android_filesystem_config.h>
++#include <selinux/android.h>
++#include <selinux/label.h>
++#include <selinux/selinux.h>
++
++#include "recovery_ui/ui.h"
++#include "recovery_utils/roots.h"
++
++using android::base::StringPrintf;
++using android::base::unique_fd;
++
++namespace {
++
++constexpr const char* kMetadataRoot = "/metadata";
++constexpr const char* kDir = "/metadata/lujarch";
++constexpr const char* kFile = "/metadata/lujarch/safe-boot";
++constexpr const char* kTmpFile = "/metadata/lujarch/safe-boot.tmp";
++// What every reader of the file reads at most (lujarch-safe-boot, the
++// services); this menu writes far less.
++constexpr size_t kMaxSize = 4096;
++
++struct Switch {
++  const char* name;    // "<name>=off" in the file
++  const char* normal;  // the menu item while the component runs normally
++  const char* off;     // the menu item while the switch is set
++};
++
++// The recovery font has ASCII only, so the menu is in English, as the rest
++// of Lineage's recovery; Settings > Security & privacy names the switches in the
++// owner's language. A menu line holds kMaxItem characters on this phone
++// (1080 px, 27 px menu glyphs, 24 px indent) and is cut beyond that.
++constexpr size_t kMaxItem = 39;
++constexpr Switch kSwitches[] = {
++  { "proxy", "Proxy: normal", "Proxy: OFF (direct connection)" },
++  { "sync", "Sync: normal", "Sync: OFF" },
++  { "linux", "Linux: normal", "Linux: OFF" },
++  { "root", "Root: normal", "Root: OFF (no su for any app)" },
++  // The test builds of Lujarch's apps installed over the image's copies.
++  { "test_updates", "App test updates: kept", "App test updates: REMOVED at boot" },
++};
++
++constexpr size_t Length(const char* text) {
++  size_t n = 0;
++  while (text[n] != '\0') ++n;
++  return n;
++}
++
++constexpr bool ItemsFit() {
++  for (const Switch& s : kSwitches) {
++    if (Length(s.normal) > kMaxItem || Length(s.off) > kMaxItem) return false;
++  }
++  return true;
++}
++static_assert(ItemsFit(), "a safe boot menu line is longer than the menu shows");
++
++using Flags = std::set<std::string>;
++
++bool IsSwitch(const std::string& name) {
++  for (const Switch& s : kSwitches) {
++    if (name == s.name) return true;
++  }
++  return false;
++}
++
++// The label file_contexts gives a path (lujarch_safe_boot_file, product
++// policy), set for the files this menu creates as recovery labels the files
++// it installs (otautil/dirutil.cpp).
++class ScopedCreateContext {
++ public:
++  ScopedCreateContext(const char* path, mode_t mode) {
++    static selabel_handle* handle = selinux_android_file_context_handle();
++    char* context = nullptr;
++    if (handle == nullptr || selabel_lookup(handle, &context, path, mode) != 0) {
++      PLOG(WARNING) << "Lujarch safe boot: no SELinux label for " << path;
++      return;
++    }
++    if (setfscreatecon(context) == 0) {
++      set_ = true;
++    } else {
++      PLOG(WARNING) << "Lujarch safe boot: setfscreatecon " << context;
++    }
++    freecon(context);
++  }
++  ~ScopedCreateContext() {
++    if (set_) setfscreatecon(nullptr);
++  }
++
++ private:
++  bool set_ = false;
++};
++
++bool FsyncDir(const char* path, std::string* error) {
++  unique_fd fd(open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC));
++  if (fd == -1 || fsync(fd.get()) != 0) {
++    *error = StringPrintf("cannot sync %s: %s", path, strerror(errno));
++    return false;
++  }
++  return true;
++}
++
++// The switches in the file; no file is the normal boot.
++bool ReadFlags(Flags* flags, std::string* error) {
++  flags->clear();
++  unique_fd fd(open(kFile, O_RDONLY | O_CLOEXEC | O_NOFOLLOW));
++  if (fd == -1) {
++    if (errno == ENOENT) return true;
++    *error = StringPrintf("cannot open %s: %s", kFile, strerror(errno));
++    return false;
++  }
++  std::string text(kMaxSize, '\0');
++  size_t size = 0;
++  while (size < text.size()) {
++    ssize_t n = TEMP_FAILURE_RETRY(read(fd.get(), &text[size], text.size() - size));
++    if (n < 0) {
++      *error = StringPrintf("cannot read %s: %s", kFile, strerror(errno));
++      return false;
++    }
++    if (n == 0) break;
++    size += static_cast<size_t>(n);
++  }
++  text.resize(size);
++  for (std::string line : android::base::Split(text, "\n")) {
++    if (!line.empty() && line.back() == '\r') line.pop_back();
++    if (!android::base::EndsWith(line, "=off")) continue;
++    std::string name = line.substr(0, line.size() - 4);
++    if (IsSwitch(name)) flags->insert(name);
++  }
++  return true;
++}
++
++// /metadata/lujarch: 0750 root:system, readable by lujarch-safe-boot (uid
++// system), writable by lujarch_updates (uid root). Init creates it at every boot;
++// it is missing only after /metadata was formatted.
++bool EnsureDir(std::string* error) {
++  struct stat st;
++  if (lstat(kDir, &st) == 0) {
++    if (S_ISDIR(st.st_mode)) return true;
++    *error = StringPrintf("%s is not a directory", kDir);
++    return false;
++  }
++  if (errno != ENOENT) {
++    *error = StringPrintf("cannot stat %s: %s", kDir, strerror(errno));
++    return false;
++  }
++  {
++    ScopedCreateContext context(kDir, S_IFDIR);
++    if (mkdir(kDir, 0750) != 0 && errno != EEXIST) {
++      *error = StringPrintf("cannot create %s: %s", kDir, strerror(errno));
++      return false;
++    }
++  }
++  if (chown(kDir, AID_ROOT, AID_SYSTEM) != 0 || chmod(kDir, 0750) != 0) {
++    *error = StringPrintf("cannot set the owner of %s: %s", kDir, strerror(errno));
++    return false;
++  }
++  return FsyncDir(kMetadataRoot, error);
++}
++
++// Replaces the file atomically, or removes it when every switch is normal.
++bool WriteFlags(const Flags& flags, std::string* error) {
++  if (flags.empty()) {
++    if (unlink(kFile) != 0 && errno != ENOENT) {
++      *error = StringPrintf("cannot remove %s: %s", kFile, strerror(errno));
++      return false;
++    }
++    unlink(kTmpFile);
++    struct stat st;
++    if (lstat(kDir, &st) != 0) return true;
++    return FsyncDir(kDir, error);
++  }
++  if (!EnsureDir(error)) return false;
++
++  std::string text = "# Lujarch safe boot, set in recovery; read at every boot until cleared\n";
++  for (const Switch& s : kSwitches) {
++    if (flags.count(s.name) != 0) text += std::string(s.name) + "=off\n";
++  }
++
++  unique_fd fd;
++  {
++    ScopedCreateContext context(kTmpFile, S_IFREG);
++    fd.reset(open(kTmpFile, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, 0640));
++  }
++  if (fd == -1) {
++    *error = StringPrintf("cannot create %s: %s", kTmpFile, strerror(errno));
++    return false;
++  }
++  // root:system 0640: lujarch-safe-boot reads it as uid system.
++  if (fchown(fd.get(), AID_ROOT, AID_SYSTEM) != 0 || fchmod(fd.get(), 0640) != 0 ||
++      !android::base::WriteStringToFd(text, fd.get()) || fsync(fd.get()) != 0) {
++    *error = StringPrintf("cannot write %s: %s", kTmpFile, strerror(errno));
++    unlink(kTmpFile);
++    return false;
++  }
++  fd.reset();
++  if (rename(kTmpFile, kFile) != 0) {
++    *error = StringPrintf("cannot replace %s: %s", kFile, strerror(errno));
++    unlink(kTmpFile);
++    return false;
++  }
++  return FsyncDir(kDir, error);
++}
++
++std::string Describe(const Flags& flags) {
++  if (flags.empty()) return "normal boot";
++  std::vector<std::string> names(flags.begin(), flags.end());
++  return "off: " + android::base::Join(names, ", ");
++}
++
++}  // namespace
++
++void ShowLujarchSafeBootMenu(Device* device) {
++  RecoveryUI* ui = device->GetUI();
++  if (ensure_path_mounted(kMetadataRoot) != 0) {
++    LOG(ERROR) << "Lujarch safe boot: cannot mount " << kMetadataRoot;
++    ui->Print("Lujarch safe boot: cannot mount %s.\n", kMetadataRoot);
++    return;
++  }
++  Flags flags;
++  std::string error;
++  if (!ReadFlags(&flags, &error)) {
++    LOG(ERROR) << "Lujarch safe boot: " << error;
++    ui->Print("Lujarch safe boot: %s\n", error.c_str());
++    return;
++  }
++  LOG(INFO) << "Lujarch safe boot: " << Describe(flags);
++
++  const std::vector<std::string> headers{
++    "Lujarch safe boot",
++    "A switch takes effect at the next boot and stays until it is switched back here or "
++    "cleared in Settings > Security & privacy.",
++  };
++  size_t selected = 0;
++  for (;;) {
++    std::vector<std::string> items;
++    for (const Switch& s : kSwitches) {
++      items.push_back(flags.count(s.name) != 0 ? s.off : s.normal);
++    }
++    const size_t all_normal = items.size();
++    items.push_back("All back to normal");
++
++    size_t chosen = ui->ShowMenu(
++        headers, items, selected, true /* menu_only */,
++        std::bind(&Device::HandleMenuKey, device, std::placeholders::_1, std::placeholders::_2));
++    // Back, home, a timeout or an interrupt (each a negative code) leave
++    // the menu; the switches are already saved.
++    if (chosen >= items.size()) return;
++    selected = chosen;
++
++    Flags next = flags;
++    if (chosen == all_normal) {
++      next.clear();
++    } else if (next.erase(std::string(kSwitches[chosen].name)) == 0) {
++      next.insert(kSwitches[chosen].name);
++    }
++    if (next == flags) continue;
++    if (!WriteFlags(next, &error)) {
++      LOG(ERROR) << "Lujarch safe boot: " << error;
++      ui->Print("Lujarch safe boot: %s\n", error.c_str());
++      continue;
++    }
++    flags = next;
++    LOG(INFO) << "Lujarch safe boot: " << Describe(flags);
++    ui->Print("Lujarch safe boot from the next boot: %s.\n", Describe(flags).c_str());
++  }
++}
+diff --git a/lujarch_safe_boot.h b/lujarch_safe_boot.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..cfe48c2d95b96ffaac5984433428831e7ef03310
+--- /dev/null
++++ b/lujarch_safe_boot.h
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include "recovery_ui/device.h"
++
++// Lujarch safe boot (UPD-5):
++// switches that turn a component off from the next boot on, until they are
++// switched back here or cleared in Settings > Security & privacy. They are kept in
++// /metadata/lujarch/safe-boot, which /data's encryption does not cover, one
++// "<name>=off" line per switch (proxy, sync, linux, root, test_updates);
++// without the file the system boots normally. init (lujarch-safe-boot) reads
++// it early at every boot.
++void ShowLujarchSafeBootMenu(Device* device);
+diff --git a/lujarch_slots.cpp b/lujarch_slots.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..a0611358358e7ac0731ab6dc0aa72212df981f0e
+--- /dev/null
++++ b/lujarch_slots.cpp
+@@ -0,0 +1,450 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "lujarch_slots.h"
++
++#include <ctype.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <unistd.h>
++
++#include <functional>
++#include <map>
++#include <memory>
++#include <optional>
++#include <string>
++#include <vector>
++
++#include <BootControlClient.h>
++#include <android-base/logging.h>
++#include <android-base/parseint.h>
++#include <android-base/properties.h>
++#include <android-base/strings.h>
++#include <android-base/unique_fd.h>
++#include <libsnapshot/snapshot.h>
++
++#include "recovery_ui/ui.h"
++#include "recovery_utils/roots.h"
++
++using android::base::GetProperty;
++using android::hal::BootControlClient;
++using android::snapshot::SnapshotManager;
++using android::snapshot::UpdateState;
++
++namespace {
++
++using MergeStatus = BootControlClient::MergeStatus;
++
++constexpr const char* kMetadataRoot = "/metadata";
++// Written by lujarch_updates (the updates feature), "key: value"
++// lines: the slots as "<slot>.<key>", the confirmation as plain keys.
++constexpr const char* kSlotsFile = "/metadata/lujarch/updates/slots";
++constexpr const char* kConfirmedFile = "/metadata/lujarch/updates/confirmed";
++// Both are a few hundred bytes.
++constexpr size_t kMaxSize = 16384;
++
++struct Build {
++  std::string version;                // ro.build.version.incremental
++  std::string android;                // ro.build.version.release
++  std::string security_patch;         // ro.build.version.security_patch
++  std::string vendor_security_patch;  // ro.vendor.build.security_patch
++  int64_t first_boot = 0;             // records only: its first start in the slot
++};
++
++// What the menu shows and decides on.
++struct Slots {
++  std::unique_ptr<BootControlClient> hal;
++  int32_t cur = -1;
++  int32_t other = -1;
++  std::string cur_name;    // "A", "B"
++  std::string other_name;
++  // The running slot's build is this recovery's own: every update writes the
++  // recovery partition of its slot with the rest of the build.
++  Build running;
++  // The other slot's build as lujarch_updates recorded it when it last ran, and the
++  // running slot's record (for when this build first started).
++  std::optional<Build> previous;
++  std::optional<Build> running_record;
++  std::optional<UpdateState> state;
++  std::optional<MergeStatus> merge;
++  std::optional<bool> other_bootable;
++  std::optional<bool> cur_successful;
++  std::string confirmation;  // "<version> (slot <x>, by <who>)", or ""
++  bool confirmed = false;    // the confirmation names the running build
++  bool can_start = false;
++  // The other slot holds an update that has not run yet: its record names
++  // the build that was there before.
++  bool previous_replaced = false;
++  std::string running_state;  // after the running build's version
++  std::string other_state;    // after the other build's version
++  std::string why;            // a sentence for "Details"
++};
++
++bool ReadSmall(const char* path, std::string* out) {
++  android::base::unique_fd fd(open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW));
++  if (fd == -1) {
++    if (errno != ENOENT) PLOG(ERROR) << "Lujarch slots: cannot open " << path;
++    return false;
++  }
++  out->assign(kMaxSize, '\0');
++  size_t size = 0;
++  while (size < out->size()) {
++    ssize_t n = TEMP_FAILURE_RETRY(read(fd.get(), &(*out)[size], out->size() - size));
++    if (n < 0) {
++      PLOG(ERROR) << "Lujarch slots: cannot read " << path;
++      return false;
++    }
++    if (n == 0) break;
++    size += static_cast<size_t>(n);
++  }
++  out->resize(size);
++  return true;
++}
++
++// "key: value" lines; '#' starts a comment line.
++std::map<std::string, std::string> ParseLines(const std::string& text) {
++  std::map<std::string, std::string> values;
++  for (const std::string& raw : android::base::Split(text, "\n")) {
++    std::string line = android::base::Trim(raw);
++    if (line.empty() || line[0] == '#') continue;
++    size_t colon = line.find(':');
++    if (colon == std::string::npos) continue;
++    values[android::base::Trim(line.substr(0, colon))] = android::base::Trim(line.substr(colon + 1));
++  }
++  return values;
++}
++
++std::string Get(const std::map<std::string, std::string>& values, const std::string& key) {
++  auto it = values.find(key);
++  return it == values.end() ? std::string() : it->second;
++}
++
++std::string Upper(std::string text) {
++  for (char& c : text) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
++  return text;
++}
++
++std::string Lower(std::string text) {
++  for (char& c : text) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
++  return text;
++}
++
++// "b" for "_b".
++std::string Name(const std::string& suffix) {
++  return android::base::StartsWith(suffix, "_") ? suffix.substr(1) : suffix;
++}
++
++const char* MergeStatusName(std::optional<MergeStatus> status) {
++  if (!status) return "not read";
++  switch (*status) {
++    case MergeStatus::NONE: return "none";
++    case MergeStatus::UNKNOWN: return "unknown";
++    case MergeStatus::SNAPSHOTTED: return "snapshotted";
++    case MergeStatus::MERGING: return "merging";
++    case MergeStatus::CANCELLED: return "cancelled";
++  }
++  return "unknown";
++}
++
++const char* YesNo(std::optional<bool> value) {
++  if (!value) return "unknown";
++  return *value ? "yes" : "no";
++}
++
++// libsnapshot's state. /metadata is mounted for the query and unmounted with
++// |mount| (libsnapshot's AutoDevice), so it is read before the files.
++std::optional<UpdateState> ReadUpdateState() {
++  auto sm = SnapshotManager::New();
++  if (!sm) {
++    LOG(ERROR) << "Lujarch slots: no SnapshotManager";
++    return std::nullopt;
++  }
++  auto mount = sm->EnsureMetadataMounted();
++  if (!mount) {
++    LOG(ERROR) << "Lujarch slots: /metadata cannot be mounted or has no OTA state";
++    return std::nullopt;
++  }
++  return sm->GetUpdateState();
++}
++
++// Whether the previous build can be started, and the words for both slots.
++void Decide(Slots* s) {
++  const std::string other = "slot " + s->other_name;
++  if (!s->hal || s->cur < 0 || s->other < 0 || !s->state) {
++    s->other_state = "unknown";
++    s->why = "The update state or the boot control could not be read.";
++    return;
++  }
++  switch (*s->state) {
++    case UpdateState::Unverified:
++      if (s->merge == MergeStatus::MERGING) break;
++      if (s->merge != MergeStatus::SNAPSHOTTED) {
++        // This slot is the update's source: a rollback is set already, or
++        // the new build in the other slot has not started yet.
++        s->previous_replaced = true;
++        s->other_state = "not in use";
++        s->why = "The update in " + other + " has not started, or a rollback to this slot is "
++                 "set; rebooting starts this slot.";
++        return;
++      }
++      // The new build runs from this slot on snapshots; the previous build is
++      // still whole in the other slot.
++      s->running_state = s->confirmed ? "confirmed, not merged yet" : "not confirmed";
++      if (s->cur_successful == false) s->running_state += ", did not finish booting";
++      if (s->other_bootable != true) {
++        s->other_state = "cannot start";
++        s->why = "The boot control reports " + other + " as not bootable.";
++        return;
++      }
++      if (s->cur_successful != false) {
++        // A completed boot moved the keys to this build's patch level
++        // (KeyMint), and an older build could not use them: the data would
++        // stay locked. Only a build with the same Android version and no
++        // older patch level can open it.
++        if (!s->previous) {
++          s->other_state = "no record of its build";
++          s->why = "The build in " + other + " left no record, so its security patch cannot be "
++                   "checked.";
++          return;
++        }
++        if (s->previous->android != s->running.android) {
++          s->other_state = "other Android version";
++          s->why = "The build in " + other + " runs another Android version; it could not open "
++                   "this build's data.";
++          return;
++        }
++        if (s->previous->security_patch < s->running.security_patch ||
++            s->previous->vendor_security_patch < s->running.vendor_security_patch) {
++          s->other_state = "older security patch";
++          s->why = "The build in " + other + " has an older security patch; the keys have moved "
++                   "on to this build's patch level and the data would stay locked.";
++          return;
++        }
++        s->why = "The previous build starts with the same data. An app this build updated may "
++                 "need its data cleared.";
++      } else {
++        s->why = "This build never finished booting, so nothing it changed was committed; the "
++                 "previous build starts as after failed boots.";
++      }
++      s->can_start = true;
++      s->other_state = "can be restored";
++      return;
++    case UpdateState::Merging:
++    case UpdateState::MergeNeedsReboot:
++    case UpdateState::MergeFailed:
++      break;
++    case UpdateState::None:
++    case UpdateState::MergeCompleted:
++    case UpdateState::Cancelled:
++      // After a merge the other slot has no system left; after a rollback it
++      // holds the abandoned newer build, marked unbootable. The records tell
++      // them apart: an abandoned build first started after this one.
++      if (s->previous && s->running_record && s->previous->first_boot > 0 &&
++          s->running_record->first_boot > 0) {
++        s->other_state = s->previous->first_boot > s->running_record->first_boot
++                             ? "rolled back, not available"
++                             : "update merged, not available";
++      } else {
++        s->other_state = "not available";
++      }
++      s->why = "No update is pending, so " + other + " holds no build that can start.";
++      return;
++    case UpdateState::Initiated:
++      s->other_state = "update being written, not available";
++      s->why = "An update is being written to " + other + ".";
++      return;
++    default:
++      s->other_state = "unknown";
++      s->why = "Unknown update state.";
++      return;
++  }
++  s->running_state = "update being merged";
++  s->other_state = "being merged, not available";
++  s->why = "The merge has started: " + other + " is being overwritten and cannot start.";
++}
++
++Slots Read() {
++  Slots s;
++  s.running.version = GetProperty("ro.build.version.incremental", "");
++  s.running.android = GetProperty("ro.build.version.release", "");
++  s.running.security_patch = GetProperty("ro.build.version.security_patch", "");
++  s.running.vendor_security_patch = GetProperty("ro.vendor.build.security_patch", "");
++
++  s.state = ReadUpdateState();
++
++  s.hal = BootControlClient::WaitForService();
++  if (s.hal) {
++    s.cur = s.hal->GetCurrentSlot();
++    const int32_t slots = s.hal->GetNumSlots();
++    if (slots == 2 && (s.cur == 0 || s.cur == 1)) {
++      s.other = 1 - s.cur;
++      s.cur_name = Upper(Name(s.hal->GetSuffix(s.cur)));
++      s.other_name = Upper(Name(s.hal->GetSuffix(s.other)));
++      s.other_bootable = s.hal->IsSlotBootable(s.other);
++      s.cur_successful = s.hal->IsSlotMarkedSuccessful(s.cur);
++      s.merge = s.hal->getSnapshotMergeStatus();
++    } else {
++      LOG(ERROR) << "Lujarch slots: " << slots << " slots, current " << s.cur;
++      s.cur = -1;
++    }
++  } else {
++    LOG(ERROR) << "Lujarch slots: no boot control HAL";
++  }
++  if (s.cur_name.empty()) s.cur_name = Upper(Name(GetProperty("ro.boot.slot_suffix", "")));
++
++  if (ensure_path_mounted(kMetadataRoot) == 0) {
++    std::string text;
++    if (ReadSmall(kSlotsFile, &text) && !s.other_name.empty()) {
++      const auto values = ParseLines(text);
++      auto record = [&values](const std::string& name) -> std::optional<Build> {
++        const std::string slot = Lower(name);
++        Build b{ Get(values, slot + ".build"), Get(values, slot + ".android"),
++                 Get(values, slot + ".security_patch"),
++                 Get(values, slot + ".vendor_security_patch"), 0 };
++        if (b.version.empty()) return std::nullopt;
++        android::base::ParseInt(Get(values, slot + ".first_boot"), &b.first_boot, int64_t{0});
++        return b;
++      };
++      s.previous = record(s.other_name);
++      s.running_record = record(s.cur_name);
++      // A record of another build than this recovery's is from before the
++      // update that wrote this slot.
++      if (s.running_record && s.running_record->version != s.running.version) {
++        s.running_record.reset();
++      }
++    }
++    if (ReadSmall(kConfirmedFile, &text)) {
++      const auto values = ParseLines(text);
++      const std::string version = Get(values, "version");
++      const std::string slot = Get(values, "slot");
++      s.confirmation = version + " (slot " + Upper(slot) + ", by " + Get(values, "by") + ")";
++      s.confirmed = !version.empty() && version == s.running.version && Upper(slot) == s.cur_name;
++    }
++  } else {
++    LOG(ERROR) << "Lujarch slots: cannot mount " << kMetadataRoot;
++  }
++  Decide(&s);
++  return s;
++}
++
++std::string VersionOr(const std::string& version, const char* otherwise) {
++  return version.empty() ? otherwise : version;
++}
++
++// The other slot's build, or words for it when it left no record.
++std::string PreviousName(const Slots& s) {
++  return s.previous ? s.previous->version : std::string("the previous build");
++}
++
++void PrintDetails(RecoveryUI* ui, const Slots& s) {
++  ui->Print("\nSystem slots:\n");
++  ui->Print("  Slot %s (running): %s, Android %s, patch %s, vendor patch %s, marked successful: %s\n",
++            s.cur_name.c_str(), VersionOr(s.running.version, "unknown").c_str(),
++            s.running.android.c_str(), s.running.security_patch.c_str(),
++            s.running.vendor_security_patch.c_str(), YesNo(s.cur_successful));
++  if (s.previous) {
++    ui->Print("  Slot %s: %s, Android %s, patch %s, vendor patch %s, bootable: %s\n",
++              s.other_name.c_str(), s.previous->version.c_str(), s.previous->android.c_str(),
++              s.previous->security_patch.c_str(), s.previous->vendor_security_patch.c_str(),
++              YesNo(s.other_bootable));
++  } else {
++    ui->Print("  Slot %s: no record, bootable: %s\n", s.other_name.c_str(), YesNo(s.other_bootable));
++  }
++  ui->Print("  Update state: %s; bootloader merge status: %s\n",
++            s.state ? android::snapshot::UpdateState_Name(*s.state).c_str() : "not read",
++            MergeStatusName(s.merge));
++  ui->Print("  Confirmed: %s\n", s.confirmation.empty() ? "nothing" : s.confirmation.c_str());
++  ui->Print("  %s\n", s.why.c_str());
++}
++
++bool Confirm(Device* device, const Slots& s) {
++  const std::vector<std::string> headers{
++    "Start slot " + s.other_name + " now?",
++    PreviousName(s) + " starts, and the update in slot " + s.cur_name +
++        " is removed once it has booted.",
++    "Your data stays. An app updated in slot " + s.cur_name + " may need its data cleared.",
++  };
++  const std::vector<std::string> items{ " No", " Yes" };
++  size_t chosen = device->GetUI()->ShowMenu(
++      headers, items, 0, true,
++      std::bind(&Device::HandleMenuKey, device, std::placeholders::_1, std::placeholders::_2));
++  return chosen == 1;
++}
++
++}  // namespace
++
++Device::BuiltinAction ShowLujarchSlotsMenu(Device* device) {
++  RecoveryUI* ui = device->GetUI();
++  size_t selected = 0;
++  for (;;) {
++    Slots s = Read();
++    LOG(INFO) << "Lujarch slots: running " << s.cur_name << " " << s.running.version << " ("
++              << s.running_state << "), other " << s.other_name << " "
++              << (s.previous ? s.previous->version : "no record") << " (" << s.other_state << ")";
++
++    std::string running_line = "Slot " + s.cur_name + " (running): " +
++                               VersionOr(s.running.version, "version unknown");
++    if (!s.running_state.empty()) running_line += ", " + s.running_state;
++    std::string other_build = s.previous_replaced ? std::string("new build")
++                              : s.previous       ? s.previous->version
++                                                 : std::string("no record");
++    std::string other_line = "Slot " + s.other_name + ": " + other_build + ", " + s.other_state;
++    const std::vector<std::string> headers{
++      "System slots",
++      running_line,
++      other_line,
++      "Until a new build is confirmed in Settings > System > System updates, the previous build "
++      "stays in the other slot and can be started here.",
++    };
++    // Menu lines are cut at 39 characters on this phone (lujarch_safe_boot.cpp,
++    // kMaxItem); the header lines wrap.
++    std::vector<std::string> items;
++    const std::string start_item = "Start slot " + s.other_name + " (previous build)";
++    if (s.can_start) items.push_back(start_item);
++    const size_t details = items.size();
++    items.push_back("Details");
++
++    size_t chosen = ui->ShowMenu(
++        headers, items, selected < items.size() ? selected : 0, true /* menu_only */,
++        std::bind(&Device::HandleMenuKey, device, std::placeholders::_1, std::placeholders::_2));
++    // Back, home, a timeout or an interrupt (each a negative code).
++    if (chosen >= items.size()) return Device::NO_ACTION;
++    selected = chosen;
++    if (chosen == details) {
++      PrintDetails(ui, s);
++      continue;
++    }
++    if (!Confirm(device, s)) continue;
++    // The state again, right before the switch.
++    Slots now = Read();
++    if (!now.can_start || now.other != s.other || PreviousName(now) != PreviousName(s)) {
++      ui->Print("Slot %s cannot be started now: %s\n", s.other_name.c_str(), now.why.c_str());
++      continue;
++    }
++    const auto result = now.hal->SetActiveBootSlot(now.other);
++    if (!result.IsOk() || now.hal->GetActiveBootSlot() != now.other) {
++      LOG(ERROR) << "Lujarch slots: cannot set slot " << now.other_name
++                 << " active: " << result.errMsg;
++      ui->Print("Could not set slot %s active: %s\n", now.other_name.c_str(), result.errMsg.c_str());
++      continue;
++    }
++    LOG(INFO) << "Lujarch slots: slot " << now.other_name << " (" << PreviousName(now)
++              << ") is active; the update in slot " << now.cur_name
++              << " is cancelled once it has booted";
++    ui->Print("Slot %s is active. Restarting.\n", now.other_name.c_str());
++    return Device::REBOOT;
++  }
++}
+diff --git a/lujarch_slots.h b/lujarch_slots.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..4f319bb8c8004337f7a4bc59a15d1135aa70df4e
+--- /dev/null
++++ b/lujarch_slots.h
+@@ -0,0 +1,33 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include "recovery_ui/device.h"
++
++// Lujarch system slots (UPD-6):
++// the build of each slot and whether the previous build can still be
++// started. After an update the new build runs on snapshots, and the previous
++// build stays whole in the other slot until the owner confirms the new one in
++// Settings > System > System updates (update_engine merges only then). Until the merge this
++// menu can set the other slot active, after a confirmation, and restart into
++// it; libsnapshot then cancels the update once the previous build has booted.
++// The builds are named from /metadata/lujarch/updates/slots (written by
++// lujarch_updates at every boot) and, for the running slot, from this recovery's own
++// properties: recovery is an A/B partition written by every update.
++//
++// Returns Device::REBOOT after the other slot was set active, else NO_ACTION.
++Device::BuiltinAction ShowLujarchSlotsMenu(Device* device);
+diff --git a/recovery.cpp b/recovery.cpp
+index 44c7261f021c11bb3c02cd4e282879ae52662c97..b2b467d2bf89d84d207c2c99bad6c3fb6751df74 100644
+--- a/recovery.cpp
++++ b/recovery.cpp
+@@ -52,6 +52,8 @@
+ #include "install/snapshot_utils.h"
+ #include "install/wipe_data.h"
+ #include "install/wipe_device.h"
++#include "lujarch_safe_boot.h"
++#include "lujarch_slots.h"
+ #include "otautil/error_code.h"
+ #include "otautil/package.h"
+ #include "otautil/paths.h"
+@@ -648,6 +650,15 @@ change_menu:
+         choose_recovery_file(device);
+         break;
+ 
++      case Device::LUJARCH_SAFE_BOOT:
++        ShowLujarchSafeBootMenu(device);
++        break;
++
++      case Device::LUJARCH_SLOTS:
++        // A switch to the previous build restarts into it.
++        if (ShowLujarchSlotsMenu(device) == Device::REBOOT) return Device::REBOOT;
++        break;
++
+       case Device::ENABLE_ADB:
+         android::base::SetProperty("ro.adb.secure.recovery", "0");
+         android::base::SetProperty("ctl.restart", "adbd");
+diff --git a/recovery_ui/device.cpp b/recovery_ui/device.cpp
+index db357d7203f3ab0aeb686bd71eba62016927488d..61a7d17728ea293d51f3997aa2e5f2b20004bb46 100644
+--- a/recovery_ui/device.cpp
++++ b/recovery_ui/device.cpp
+@@ -33,6 +33,8 @@ static std::vector<std::string> g_main_header{};
+ static std::vector<menu_action_t> g_main_actions{
+   { "Reboot system now", Device::REBOOT },
+   { "Apply update", Device::APPLY_UPDATE },
++  { "Lujarch safe boot", Device::LUJARCH_SAFE_BOOT },
++  { "System slots", Device::LUJARCH_SLOTS },
+   { "Factory reset", Device::MENU_WIPE },
+   { "Advanced", Device::MENU_ADVANCED },
+ };
+diff --git a/recovery_ui/include/recovery_ui/device.h b/recovery_ui/include/recovery_ui/device.h
+index d33bda2d2c1f73f5d3eb13c18ba5e0f2e352ac8e..4b35de7985af95c583cc31a50f419092c9b3f273 100644
+--- a/recovery_ui/include/recovery_ui/device.h
++++ b/recovery_ui/include/recovery_ui/device.h
+@@ -73,6 +73,11 @@ class Device {
+     SHUTDOWN_FROM_FASTBOOT = 21,
+     WIPE_SYSTEM = 100,
+     ENABLE_ADB = 101,
++    // Lujarch safe boot switches (lujarch_safe_boot.h).
++    LUJARCH_SAFE_BOOT = 102,
++    // Lujarch system slots: the previous build until the new one is
++    // confirmed (lujarch_slots.h).
++    LUJARCH_SLOTS = 103,
+     MENU_BASE = 200,
+     MENU_WIPE = 202,
+     MENU_ADVANCED = 203,

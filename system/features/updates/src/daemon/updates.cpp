@@ -15,6 +15,7 @@
 #include "updates.h"
 
 #include <errno.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <poll.h>
@@ -498,6 +499,33 @@ ndk::ScopedAStatus Updates::getStatus(Status* out) {
     out->autoConfirmAt = at ? *at : 0;
     out->previousBuild = s.other_record ? s.other_record->build : "";
     out->restoreBlocker = s.state() == IUpdates::STATE_WAITING ? RestoreBlocker(s.facts()) : "";
+    for (const char* name : kSafeBootSwitches) {
+        if (GetProperty(std::string("lujarch.safeboot.") + name, "") == "off") {
+            out->safeBootOff.push_back(name);
+        }
+    }
+    out->safeBootSet = access(kSafeBootFile, F_OK) == 0;
+    out->runningSlot = s.slot;
+    out->runningBuild = s.running.build;
+    out->runningAndroid = s.running.android;
+    out->runningSecurityPatch = s.running.security_patch;
+    out->runningFirstBoot = s.running.first_boot;
+    out->otherSlot = s.other;
+    if (s.other_record) {
+        out->otherAndroid = s.other_record->android;
+        out->otherSecurityPatch = s.other_record->security_patch;
+    }
+    out->otherBootable = s.other_bootable ? (*s.other_bootable ? 1 : 0) : -1;
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Updates::endSafeBoot() {
+    if (auto refused = CheckCaller()) return std::move(*refused);
+    if (unlink(kSafeBootFile) != 0 && errno != ENOENT) {
+        return Failed(std::string("cannot remove ") + kSafeBootFile + ": " + strerror(errno));
+    }
+    LOG(WARNING) << "safe boot ended: the next start is a normal one";
+    NotifyChanged();
     return ndk::ScopedAStatus::ok();
 }
 

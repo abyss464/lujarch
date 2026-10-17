@@ -56,4 +56,7 @@ interface IUpdates {
 
     /** Makes the previous build start at the next restart, which the caller then makes. */
     void restorePrevious();
+
+    /** Ends safe boot: its switches are removed, and the next start is a normal one (UPD-5). */
+    void endSafeBoot();
 }

@@ -1,0 +1,202 @@
+diff --git a/kernel/policy/allowlist.c b/kernel/policy/allowlist.c
+index becf29d4b2e2540b3a9864214fdf9424edcc343f..00d01d5943d016fe1a721af95f2e83b566d6c8bc 100644
+--- a/kernel/policy/allowlist.c
++++ b/kernel/policy/allowlist.c
+@@ -11,6 +11,7 @@
+ #include <linux/list.h>
+ #include <linux/printk.h>
+ #include <linux/slab.h>
++#include <linux/string.h>
+ #include <linux/types.h>
+ #include <linux/compiler_types.h>
+ #include <linux/hashtable.h>
+@@ -69,6 +70,13 @@ static u16 allow_list_count = 0;
+ 
+ #define KERNEL_SU_ALLOWLIST "/data/adb/ksu/.allowlist"
+ 
++// Lujarch safe boot (allowlist.h).
++#define LUJARCH_SAFE_BOOT_FILE "/metadata/lujarch/safe-boot"
++// The size every reader of the file honours (the recovery writes less).
++#define LUJARCH_SAFE_BOOT_MAX 4096
++
++bool ksu_lujarch_root_off __read_mostly = false;
++
+ void ksu_persistent_allow_list(void);
+ 
+ void ksu_show_allow_list(void)
+@@ -258,6 +266,11 @@ bool __ksu_is_allow_uid(uid_t uid)
+ {
+ 	struct perm_data *p;
+ 
++	if (unlikely(ksu_lujarch_root_off)) {
++		// Lujarch safe boot: no uid, not even the manager's.
++		return false;
++	}
++
+ 	if (forbid_system_uid(uid)) {
+ 		// do not bother going through the list if it's system
+ 		return false;
+@@ -459,6 +472,13 @@ void ksu_persistent_allow_list()
+ {
+ 	struct task_struct *tsk;
+ 
++	if (unlikely(ksu_lujarch_root_off)) {
++		// The list in memory is empty on purpose: writing it would
++		// delete every stored profile.
++		pr_info("lujarch safe boot: allowlist not saved\n");
++		return;
++	}
++
+ 	rcu_read_lock();
+ 	tsk = get_pid_task(find_vpid(1), PIDTYPE_PID);
+ 	if (!tsk) {
+@@ -580,6 +600,58 @@ exit:
+ 	filp_close(fp, 0);
+ }
+ 
++bool ksu_lujarch_read_root_off(void)
++{
++	const struct cred *saved = NULL;
++	struct file *fp;
++	char *buf, *cursor, *line;
++	loff_t off = 0;
++	ssize_t len;
++	bool root_off = false;
++
++	buf = kzalloc(LUJARCH_SAFE_BOOT_MAX + 1, GFP_KERNEL);
++	if (!buf) {
++		pr_err("lujarch safe boot: no memory to read %s\n", LUJARCH_SAFE_BOOT_FILE);
++		return false;
++	}
++
++	// Read as KernelSU itself, whichever process reached post-fs-data
++	// first (ksud or init starting zygote).
++	if (ksu_cred)
++		saved = override_creds(ksu_cred);
++	fp = filp_open(LUJARCH_SAFE_BOOT_FILE, O_RDONLY | O_NOFOLLOW, 0);
++	if (IS_ERR(fp)) {
++		// No file: the normal boot.
++		if (PTR_ERR(fp) != -ENOENT)
++			pr_err("lujarch safe boot: cannot open %s: %ld\n", LUJARCH_SAFE_BOOT_FILE, PTR_ERR(fp));
++		goto out;
++	}
++	len = kernel_read(fp, buf, LUJARCH_SAFE_BOOT_MAX, &off);
++	filp_close(fp, NULL);
++	if (len < 0) {
++		pr_err("lujarch safe boot: cannot read %s: %zd\n", LUJARCH_SAFE_BOOT_FILE, len);
++		goto out;
++	}
++	buf[len] = '\0';
++
++	// One "<name>=off" per line; only "root=off" concerns the kernel.
++	cursor = buf;
++	while ((line = strsep(&cursor, "\n")) != NULL) {
++		size_t n = strlen(line);
++
++		if (n > 0 && line[n - 1] == '\r')
++			line[n - 1] = '\0';
++		if (strcmp(line, "root=off") == 0)
++			root_off = true;
++	}
++
++out:
++	if (saved)
++		revert_creds(saved);
++	kfree(buf);
++	return root_off;
++}
++
+ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *),
+ 				void *data)
+ {
+diff --git a/kernel/policy/allowlist.h b/kernel/policy/allowlist.h
+index 589a25d40cd19b67d7e5405f2115d18dac07173a..dbc4ac94860ef1cc4c0e046cf4d1153efd1fc7e8 100644
+--- a/kernel/policy/allowlist.h
++++ b/kernel/policy/allowlist.h
+@@ -60,4 +60,12 @@ static inline bool is_isolated_process(uid_t uid)
+ }
+ extern bool allow_shell;
+ 
++// Lujarch safe boot (UPD-5): the recovery
++// menu writes /metadata/lujarch/safe-boot; a line "root=off" there keeps
++// the allowlist unloaded at post-fs-data, so no uid gets su for the rest of
++// the boot (the manager and adb shell included), and nothing writes the
++// allowlist file, which stays as stored for the next normal boot.
++extern bool ksu_lujarch_root_off;
++bool ksu_lujarch_read_root_off(void);
++
+ #endif
+diff --git a/kernel/runtime/boot_event.c b/kernel/runtime/boot_event.c
+index eed9047d103ae93735fdfb01ffdd319cb172d6b0..26e1b2e57b5315fe2f42a09c767a40599c597361 100644
+--- a/kernel/runtime/boot_event.c
++++ b/kernel/runtime/boot_event.c
+@@ -28,7 +28,14 @@ void on_post_fs_data(void)
+     done = true;
+     pr_info("on_post_fs_data!\n");
+ 
+-    ksu_load_allow_list();
++    if (ksu_lujarch_read_root_off()) {
++        // Lujarch safe boot (policy/allowlist.h): set before anything can
++        // ask, since apps start only after post-fs-data.
++        ksu_lujarch_root_off = true;
++        pr_warn("lujarch safe boot: root=off, the allowlist is not loaded and no uid gets su this boot\n");
++    } else {
++        ksu_load_allow_list();
++    }
+     ksu_observer_init();
+     // Sanity check for safe mode only needs early-boot input samples.
+     ksu_stop_input_hook_runtime();
+diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
+index 365803f4c2366071f84d7556c62cb912cb00027d..2ff7de92ddcf7ce2a409b1fc063f8a9529d00896 100644
+--- a/kernel/supercall/dispatch.c
++++ b/kernel/supercall/dispatch.c
+@@ -62,6 +62,9 @@ static int do_get_info(void __user *arg)
+ #ifdef EXPECTED_SIZE2
+     cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
+ #endif
++    if (ksu_lujarch_root_off) {
++        cmd.flags |= KSU_GET_INFO_FLAG_LUJARCH_ROOT_OFF;
++    }
+     cmd.features = KSU_FEATURE_MAX;
+     cmd.uapi_version = KERNEL_SU_UAPI_VERSION;
+ 
+@@ -371,6 +374,13 @@ static int do_set_app_profile(void __user *arg)
+     struct ksu_set_app_profile_cmd cmd;
+     int ret;
+ 
++    if (ksu_lujarch_root_off) {
++        // Lujarch safe boot: the stored allowlist is not loaded, so a
++        // change could be neither applied nor saved without losing it.
++        pr_info("set_app_profile: refused during lujarch safe boot\n");
++        return -EPERM;
++    }
++
+     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+         pr_err("set_app_profile: copy_from_user failed\n");
+         return -EFAULT;
+diff --git a/kernel/supercall/perm.c b/kernel/supercall/perm.c
+index 974b5b4ec6a2682c78f3218703279b8e6342fb96..fb8de77568a5f44877747b471768676bb997ced5 100644
+--- a/kernel/supercall/perm.c
++++ b/kernel/supercall/perm.c
+@@ -26,5 +26,8 @@ bool always_allow(void)
+ 
+ bool allowed_for_su(void)
+ {
++    // Lujarch safe boot: GRANT_ROOT for no one (the manager included).
++    if (unlikely(ksu_lujarch_root_off))
++        return false;
+     return is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
+ }
+diff --git a/uapi/supercall.h b/uapi/supercall.h
+index d1471cbe1af1491cae3ea9b6127f2a979c42712c..180d7cf3107047de63a2a6f02755d979b3432496 100644
+--- a/uapi/supercall.h
++++ b/uapi/supercall.h
+@@ -36,6 +36,8 @@ static const __u32 KSU_GET_INFO_FLAG_MANAGER = (1U << 1);
+ static const __u32 KSU_GET_INFO_FLAG_LATE_LOAD = (1U << 2);
+ static const __u32 KSU_GET_INFO_FLAG_PR_BUILD = (1U << 3);
+ static const __u32 KSU_GET_INFO_FLAG_BUNDLED = (1U << 4);
++/* Lujarch safe boot (UPD-5): the allowlist is not honoured this boot. */
++static const __u32 KSU_GET_INFO_FLAG_LUJARCH_ROOT_OFF = (1U << 31);
+ 
+ struct ksu_get_info_cmd {
+     __u32 version; /* Output: KERNEL_SU_VERSION */
