@@ -713,7 +713,11 @@ def git_dir(where):
 
 
 def changes(where):
-    return pgit(where, "status", "--porcelain").stdout.strip()
+    """The project's changes. A repository of its own checked out inside the project (a project of
+    upstream.xml, such as KernelSU-Next in the kernel) is none of them."""
+    lines = pgit(where, "status", "--porcelain").stdout.strip().split("\n")
+    return "\n".join(l for l in lines if l and not (
+        l.startswith("?? ") and l.endswith("/") and (where / l[3:] / ".git").exists()))
 
 
 def unmerged(where):
