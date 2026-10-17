@@ -81,6 +81,13 @@ Rules:
   has.
 - On the owner's phone, the owner's repository's rules decide what needs the owner's approval.
 
+Linux's desktop is built on this computer, not on the phone's small cores: `tools/lujarch desktop`
+streams the headers and libraries of the phone's Linux (`sysroot`), builds KWin with the Lujarch
+backend from the recipe and its pin in lock.toml (`kwin`), and builds the Plasma components the
+distribution has not built yet (`plasma VERSION NAME...`, packaged with release 0 so that the
+distribution's own replaces them); `--install` installs the packages in the phone's Linux and
+records the recipe's state, so that Install the desktop finds them current.
+
 ## Keys
 
 - Builds for the virtual device are signed with the public AOSP test keys. A test build cannot be

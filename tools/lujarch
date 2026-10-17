@@ -3041,6 +3041,37 @@ def copy_images(host, info):
     return images
 
 
+def cmd_desktop(args):
+    """Builds Linux's desktop on this computer for the phone's Linux and installs it there
+    (tools/desktop/xbuild.sh): KWin from the recipe and its pin, and Plasma components the
+    distribution has not built yet."""
+    host = Host()
+    env = dict(os.environ,
+               X=str(host.path_of("paths", "out") / "desktop"),
+               RECIPE=str(SYSTEM / "features" / "linux" / "src" / "linux" / "desktop"))
+    script = str(ROOT / "tools" / "desktop" / "xbuild.sh")
+
+    def run(*words):
+        if subprocess.run(["bash", script, *words], env=env).returncode != 0:
+            die(f"desktop {words[0]} failed")
+
+    if args.action == "sysroot":
+        run("sysroot")
+    elif args.action == "kwin":
+        pin = lock_file().get("downloads", {}).get("kwin")
+        if not pin:
+            die("lock.toml has no [downloads.kwin]")
+        run("kwin", pin["url"], pin["version"], pin["sha256"])
+        if args.install:
+            run("install-kwin")
+    elif args.action == "plasma":
+        for name in args.names:
+            run("plasma", name, args.version)
+        if args.install:
+            run("install-plasma", *args.names)
+    return 0
+
+
 def cmd_vm(args):
     host = Host()
     if args.action == "screenshot":
@@ -3589,6 +3620,18 @@ def main():
     release.add_argument("--untested", action="store_true",
                          help="only when the owner asks: release HEAD before it passed the test "
                               "flow; the release notes list what had not passed")
+    desktop = sub.add_parser("desktop", help="build Linux's desktop on this computer and install it "
+                                              "in the phone's Linux").add_subparsers(dest="action",
+                                                                                     required=True)
+    desktop.add_parser("sysroot", help="stream the headers and libraries of the phone's Linux")
+    kwin = desktop.add_parser("kwin", help="KWin with the Lujarch backend, from the recipe and "
+                                           "lock.toml")
+    kwin.add_argument("--install", action="store_true", help="install it in the phone's Linux")
+    plasma = desktop.add_parser("plasma", help="Plasma components the distribution has not "
+                                               "built yet, in this order")
+    plasma.add_argument("version")
+    plasma.add_argument("names", nargs="+")
+    plasma.add_argument("--install", action="store_true", help="install them in the phone's Linux")
     vm = sub.add_parser("vm", help="the virtual device").add_subparsers(dest="action",
                                                                        required=True)
     start = vm.add_parser("start", help="boot the vm build with empty data, ready for tests")
@@ -3613,7 +3656,7 @@ def main():
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,
         "patch": cmd_patch, "unpatch": cmd_unpatch, "save": cmd_save, "stock": cmd_stock,
         "build": cmd_build, "fetch": cmd_fetch, "test": cmd_test,
-        "vm": cmd_vm, "release": cmd_release,
+        "vm": cmd_vm, "release": cmd_release, "desktop": cmd_desktop,
     }[args.command](args)
 
 
