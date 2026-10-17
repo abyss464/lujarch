@@ -1,5 +1,5 @@
 diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
-index 756008a2d8d5498f4dea1fc3f93cc9baa841fc2f..9a9a2a05dd780da9a5c14313950e9d09ac13ca90 100644
+index a5854ade5e96e757aa033da2490798fe5f4565ed..4576d758c01b91a341c4f17cfdeaa9be88b8555d 100644
 --- a/res/values-ja/lujarch_strings.xml
 +++ b/res/values-ja/lujarch_strings.xml
 @@ -27,4 +27,8 @@
@@ -12,7 +12,7 @@ index 756008a2d8d5498f4dea1fc3f93cc9baa841fc2f..9a9a2a05dd780da9a5c14313950e9d09
 +    <string name="lujarch_double_tap_linux">Linux に入る</string>
  </resources>
 diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
-index b2af0c3a877cca64369429431bc2edbf73979a94..ea9ba7fac599e3095ec5369114c643a861357b11 100644
+index b49a51b4edabf127e172be26ce7dae31d6345887..d41aa790d50cdf8dc72edd92ce0b3cdbebbe41d7 100644
 --- a/res/values-zh-rCN/lujarch_strings.xml
 +++ b/res/values-zh-rCN/lujarch_strings.xml
 @@ -27,4 +27,8 @@
@@ -25,7 +25,7 @@ index b2af0c3a877cca64369429431bc2edbf73979a94..ea9ba7fac599e3095ec5369114c643a8
 +    <string name="lujarch_double_tap_linux">进入 Linux</string>
  </resources>
 diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
-index 9e91f3e1bd915eb93c4e31ab43f0e12ea8f23541..52cbdb408938605fd227e5694e90fa36f80027ce 100644
+index dec909f6933012dff510d9c550bc974197c77b26..a0e930150df6034603f6cc4d9cb8bdcfe1ba760d 100644
 --- a/res/values/lujarch_strings.xml
 +++ b/res/values/lujarch_strings.xml
 @@ -48,4 +48,23 @@
@@ -38,7 +38,7 @@ index 9e91f3e1bd915eb93c4e31ab43f0e12ea8f23541..52cbdb408938605fd227e5694e90fa36
 +    <string name="lujarch_double_tap_nothing">Nothing</string>
 +    <!-- A double tap turns off the screen [CHAR LIMIT=30] -->
 +    <string name="lujarch_double_tap_sleep">Turn off screen</string>
-+    <!-- A double tap opens the Linux desktop [CHAR LIMIT=30] -->
++    <!-- A double tap opens the terminal of Linux [CHAR LIMIT=30] -->
 +    <string name="lujarch_double_tap_linux">Enter Linux</string>
 +    <string-array name="lujarch_double_tap_entries" translatable="false">
 +        <item>@string/lujarch_double_tap_nothing</item>
@@ -79,7 +79,7 @@ index e865b28bc517acf6b9341045fa156cdc6b8f1a06..b0eb219376a5297b455c6acafe4d3bd7
      <com.android.launcher3.settings.NotificationDotsPreference
          android:key="pref_icon_badging"
 diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
-index 050ec199aacb00ace26c96313fb06fc0030b5ee1..488a603cec722bd9710effe4c23df0189c3a0909 100644
+index 5dc38d6c4c0b2a45da021eec3e1469b5de3f72b0..3825c73b6fe4b17e6f8982e5c6b317b415e1c985 100644
 --- a/src/com/android/launcher3/settings/SettingsActivity.java
 +++ b/src/com/android/launcher3/settings/SettingsActivity.java
 @@ -64,6 +64,7 @@ import com.android.launcher3.display.DisplayController;
@@ -90,12 +90,12 @@ index 050ec199aacb00ace26c96313fb06fc0030b5ee1..488a603cec722bd9710effe4c23df018
  import com.android.launcher3.util.SafeCloseable;
  import com.android.launcher3.util.SettingsCache;
  import com.android.settingslib.widget.SettingsBasePreferenceFragment;
-@@ -381,6 +382,16 @@ public class SettingsActivity extends FragmentActivity
+@@ -390,6 +391,16 @@ public class SettingsActivity extends FragmentActivity
                  case SHOW_HOTSEAT_QSB_KEY:
                      return launcherApps != null &&
                              launcherApps.isPackageEnabled(SEARCH_PACKAGE, myUserHandle());
 +                case WorkspaceTouchListener.DOUBLE_TAP_PREFERENCE_KEY: {
-+                    // Lujarch (LNX-6): what a double tap does lives in Settings.Secure.
++                    // Lujarch (LNX-3): what a double tap does lives in Settings.Secure.
 +                    ListPreference list = (ListPreference) preference;
 +                    list.setValue(String.valueOf(WorkspaceTouchListener.doubleTap(getContext())));
 +                    list.setOnPreferenceChangeListener((pref, value) -> Settings.Secure.putInt(
@@ -108,7 +108,7 @@ index 050ec199aacb00ace26c96313fb06fc0030b5ee1..488a603cec722bd9710effe4c23df018
                      // Lujarch (LCH-2): the drawer's order lives in Settings.Secure.
                      ListPreference list = (ListPreference) preference;
 diff --git a/src/com/android/launcher3/touch/WorkspaceTouchListener.java b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
-index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..b7d416303563d609a68a9007276bfd7225c9d9c3 100644
+index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da7f369e23 100644
 --- a/src/com/android/launcher3/touch/WorkspaceTouchListener.java
 +++ b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
 @@ -29,8 +29,13 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
@@ -137,17 +137,17 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..b7d416303563d609a68a9007276bfd72
          }
      }
  
-+    /** Lujarch (LNX-6): what a double tap on an empty space does, in Settings.Secure. */
++    /** Lujarch (LNX-3): what a double tap on an empty space does, in Settings.Secure. */
 +    public static final String SETTING_DOUBLE_TAP = "lujarch_linux_double_tap";
 +    public static final String DOUBLE_TAP_PREFERENCE_KEY = "pref_double_tap";
 +    public static final int DOUBLE_TAP_NOTHING = 0;
 +    public static final int DOUBLE_TAP_SLEEP = 1;
 +    public static final int DOUBLE_TAP_LINUX = 2;
-+    private static final String ACTION_LINUX_DESKTOP = "org.lujarch.linux.action.DESKTOP";
++    private static final String ACTION_LINUX_TERMINAL = "org.lujarch.linux.action.TERMINAL";
 +
 +    public static int doubleTap(Context context) {
 +        return Settings.Secure.getInt(context.getContentResolver(), SETTING_DOUBLE_TAP,
-+                DOUBLE_TAP_NOTHING);
++                DOUBLE_TAP_LINUX);
 +    }
 +
      @Override
@@ -161,10 +161,10 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..b7d416303563d609a68a9007276bfd72
 +                return true;
 +            case DOUBLE_TAP_LINUX:
 +                try {
-+                    mLauncher.startActivity(new Intent(ACTION_LINUX_DESKTOP)
++                    mLauncher.startActivity(new Intent(ACTION_LINUX_TERMINAL)
 +                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
 +                } catch (ActivityNotFoundException e) {
-+                    Log.e("WorkspaceTouchListener", "no Linux desktop", e);
++                    Log.e("WorkspaceTouchListener", "no terminal", e);
 +                }
 +                return true;
 +            default:

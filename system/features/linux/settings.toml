@@ -47,8 +47,8 @@ item = "LNX-5"
 [double_tap]
 table = "secure"
 type = "int"
-default = 0
-item = "LNX-6"
+default = 2
+item = "LNX-3"
 
 [lend_clipboard]
 table = "global"

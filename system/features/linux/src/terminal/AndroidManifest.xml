@@ -48,16 +48,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LujarchTerminal">
 
+        <!-- Linux is a mode of the phone beside the home screen, not an app: the terminal and the
+             desktop share one task, which is in neither the drawer nor recents. It is entered by
+             the home screen's double tap (Enter Linux) or from Settings, and left by going home. -->
         <activity
             android:name=".TerminalActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTask"
+            android:taskAffinity="org.lujarch.linux"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="org.lujarch.linux.action.TERMINAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -74,7 +75,7 @@
             android:launchMode="singleTask"
             android:resizeableActivity="false"
             android:screenOrientation="unspecified"
-            android:taskAffinity="org.lujarch.linux.desktop"
+            android:taskAffinity="org.lujarch.linux"
             android:theme="@style/Theme.LujarchTerminal.Desktop"
             android:windowSoftInputMode="adjustNothing|stateAlwaysHidden">
             <intent-filter>

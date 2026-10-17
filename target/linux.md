@@ -1,9 +1,9 @@
 # Linux
 
 The Linux development environment runs Arch Linux ARM on the phone beside Android, on the same
-kernel and the same network: its own user, its services, terminal sessions in an app of the system,
-its desktop on the phone's screen, and the phone's sensors, USB devices, fingerprint, infrared and
-NFC when the owner lends them. Its page in System holds all of it.
+kernel and the same network: its own user, its services, its terminal and desktop as a mode of the
+phone beside the home screen, and the phone's sensors, USB devices, fingerprint, infrared and NFC
+when the owner lends them. Its page in System holds all of it.
 
 ## Turning it on
 
@@ -35,13 +35,17 @@ shows the root file system's state and the last action with its outcome.
 
 ### LNX-3 Terminal sessions
 
-- Home: the Terminal app; Settings > System > Linux development environment > When the terminal opens
-- Switch: When the terminal opens: Arch Linux, Arch Linux as root, Android as root; each session: when the phone sleeps: sleep with the phone, keep awake
-- Default: When the terminal opens: Arch Linux; each session: sleep with the phone
+- Home: the terminal; Home settings > Double tap; Settings > System > Linux development environment > When the terminal opens
+- Switch: Double tap: Nothing, Turn off screen, Enter Linux; When the terminal opens: Arch Linux, Arch Linux as root, Android as root; each session: when the phone sleeps: sleep with the phone, keep awake
+- Default: Double tap: Enter Linux; When the terminal opens: Arch Linux; each session: sleep with the phone
 - Verify: phone
 
-The Terminal app holds up to 16 sessions as tabs, each a shell of the owner's user, of root in Arch
-Linux, or of root in Android; sessions go on while the app is closed and end when Linux stops. Each
+Linux is a mode of the phone beside the home screen, not an app: the terminal and the desktop are
+one screen in place of the home screen, in neither the app drawer nor recents. A double tap on an
+empty space of the home screen enters Linux at the terminal when the owner chooses so; Settings >
+System > Linux development environment opens it too; going home leaves it, and Linux goes on.
+The terminal holds up to 16 sessions as tabs, each a shell of the owner's user, of root in Arch
+Linux, or of root in Android; sessions go on while Linux is left and end when Linux stops. Each
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner
 chooses so. The page holds the colors (follow the system, classic, the owner's own) and the keys row
 above the keyboard.
@@ -69,20 +73,19 @@ page shows the current use. Swap gives Linux a swap file in its own storage whil
 
 ### LNX-6 The desktop on the phone's screen
 
-- Home: the Terminal app > Display; Settings > System > Linux development environment > Open desktop; Install the desktop
+- Home: the terminal > Display; Settings > System > Linux development environment > Open desktop; Install the desktop
 - Switch: none
 - Default: none
 - Verify: phone
 
-The desktop of Arch Linux shows full screen on the phone through the Terminal app, with touch, the
+The desktop of Arch Linux shows full screen on the phone in the terminal's place, with touch, the
 keyboard and the phone's sound, and stops drawing while it is not on screen. Install the desktop
 installs Plasma Mobile in Linux and builds KWin with Lujarch's display and Mesa for the phone's
 GPU, as root in Linux while it runs and on the small cores only; installing again updates it. The
 page shows the last install with its outcome. While Linux is on
 screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and media through and
 holds other notifications; the status bar stays locked and a swipe from the bottom returns to
-Android. A double tap on an empty space of the home screen opens Linux when the owner chooses so
-(Home settings > Double tap: Nothing, Turn off screen, Enter Linux).
+Android.
 
 ## Lending the phone
 
