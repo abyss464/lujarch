@@ -1,0 +1,13 @@
+diff --git a/sm8550-common-vendor.mk b/sm8550-common-vendor.mk
+index 965d0ce6f90a17ec03e9d63b1eab57564325b524..1ed57d6ff443675b396e0180dc4407a4f517e8b0 100644
+--- a/sm8550-common-vendor.mk
++++ b/sm8550-common-vendor.mk
+@@ -1063,8 +1063,6 @@ PRODUCT_PACKAGES += \
+     vendor.qti.camera.provider.xml \
+     vendor.qti.gnss-service.xml \
+     ATFWD-daemon \
+-    TrustedUISampleTAClient \
+-    TrustedUISampleTest \
+     adpl \
+     adsprpcd \
+     batterysecret \

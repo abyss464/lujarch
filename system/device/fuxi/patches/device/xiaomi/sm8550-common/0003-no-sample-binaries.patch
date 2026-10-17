@@ -1,0 +1,13 @@
+diff --git a/proprietary-files.txt b/proprietary-files.txt
+index 612a36e1b745a4637682f3d9eb51e22738b48a12..88dbb66d5ce32cf98dbefcef930834ab6630681f 100644
+--- a/proprietary-files.txt
++++ b/proprietary-files.txt
+@@ -1211,8 +1211,6 @@ vendor/lib64/vendor.qti.hardware.qteeconnector@1.0.so
+ vendor/app/TrustedUIService/TrustedUIService.apk
+ vendor/bin/hw/vendor.qti.hardware.trustedui@1.0-service-qti
+ vendor/bin/hw/vendor.qti.hardware.tui_comm@1.0-service-qti
+-vendor/bin/TrustedUISampleTAClient
+-vendor/bin/TrustedUISampleTest
+ vendor/bin/trusteduilistener
+ vendor/etc/init/trusteduilistener.rc
+ vendor/etc/init/vendor.qti.hardware.trustedui@1.0-service-qti.rc
