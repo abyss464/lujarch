@@ -1,1 +1,2 @@
 lujarch.setting.        u:object_r:lujarch_setting_prop:s0
+persist.lujarch.logs.defaulted    u:object_r:lujarch_logs_prop:s0 exact bool

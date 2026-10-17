@@ -1,0 +1,2 @@
+# Whether the persistent log store was turned on once at the first boot (CORE-14).
+system_internal_prop(lujarch_logs_prop)

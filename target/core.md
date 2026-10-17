@@ -150,3 +150,14 @@ update.
 
 Nothing the system restricts on its own by default stops incoming calls, alarms, or the message
 notifications of apps the user has not restricted.
+
+### CORE-14 The phone keeps its logs
+
+- Home: Settings > System > Developer options > Logger persistent store
+- Switch: Logger persistent store: Off, All, All but radio, Kernel only
+- Default: All
+- Verify: vm
+
+From the first boot, Android's persistent log store keeps every log buffer on the phone, so what
+happened before a restart can still be read after it. The choice is Android's own switch; turned
+off there, it stays off.

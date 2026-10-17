@@ -1,0 +1,8 @@
+# The phone keeps its logs (CORE-14): once, at the first completed boot, Android's persistent log
+# store (Developer options > Logger persistent store) is set to all buffers, as if the owner had
+# chosen it there; from then on that setting alone decides. A build property default would start
+# the store at every boot before the owner's own choice is loaded, so an "off" would not stay off.
+on property:sys.boot_completed=1 && property:persist.lujarch.logs.defaulted=
+    setprop persist.logd.logpersistd.buffer all
+    setprop persist.logd.logpersistd logcatd
+    setprop persist.lujarch.logs.defaulted true
