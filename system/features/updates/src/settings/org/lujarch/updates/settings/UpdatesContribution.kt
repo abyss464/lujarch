@@ -19,11 +19,15 @@ package org.lujarch.updates.settings
 import android.content.Context
 import org.lujarch.settings.Contribution
 import org.lujarch.settings.SearchEntry
+import org.lujarch.settings.appString
 
-/** Confirm automatically, in System updates' preferences, found by Settings search. */
+/**
+ * Confirm automatically, in System updates' preferences, and Install local update, on System
+ * updates' page, found by Settings search; the latter is titled by System updates' own string.
+ */
 class UpdatesContribution : Contribution {
     override fun searchEntries(context: Context): List<SearchEntry> =
-        listOf(
+        listOfNotNull(
             SearchEntry(
                 key = "lujarch_updates_auto_confirm",
                 title = context.getString(R.string.lujarch_updates_auto_confirm),
@@ -31,6 +35,21 @@ class UpdatesContribution : Contribution {
                 keywords = context.getString(R.string.lujarch_updates_auto_confirm_keywords),
                 screenTitle = context.getString(R.string.lujarch_updates_screen),
                 action = "org.lujarch.updates.action.UPDATE_PREFERENCES",
-            )
+            ),
+            appString(context, UPDATER, "local_update_import")?.let {
+                SearchEntry(
+                    key = "lujarch_updates_install_local",
+                    title = it,
+                    summary = appString(context, UPDATER, "local_update_import_summary") ?: "",
+                    keywords = "",
+                    screenTitle = context.getString(R.string.lujarch_updates_screen),
+                    action = "android.settings.SYSTEM_UPDATE_SETTINGS",
+                    targetPackage = UPDATER,
+                )
+            },
         )
+
+    private companion object {
+        const val UPDATER = "org.lineageos.updater"
+    }
 }

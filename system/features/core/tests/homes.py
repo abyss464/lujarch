@@ -138,6 +138,9 @@ def main():
             unreached.append(f"{item} {key}: {e}")
             last = ([], None)
             continue
+        if any(seg in SHOWN_IN_STATE or seg.startswith("(") for seg in segments):
+            # A page of a state, or of one entry: its feature's tests check its switches there.
+            continue
         for name in switches:
             try:
                 d.switch_of(name)

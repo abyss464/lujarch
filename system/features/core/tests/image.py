@@ -35,6 +35,13 @@ def image_files(product_out):
     return files
 
 
+def device_hals(files):
+    """The HAL services whose VINTF manifest fragment the image installs: the device's own, served
+    whatever their name (Android's IR HAL is named example)."""
+    fragments = {Path(f).stem for f in files if "/etc/vintf/manifest/" in f and f.endswith(".xml")}
+    return {f for f in files if "/bin/hw/" in f and Path(f).name in fragments}
+
+
 def owner_words():
     """What names the computer's owner: their git identity, user and host names."""
     words = set()
@@ -63,7 +70,8 @@ def main():
     step("no development or test component in the image")
     files = image_files(product)
     check(len(files) > 1000, f"the image's file lists ({len(files)} files)")
-    found = [f for f in files if TEST_PATH.search(f) and not ANDROID_OWN.search(f)]
+    hals = device_hals(files)
+    found = [f for f in files if TEST_PATH.search(f) and not ANDROID_OWN.search(f) and f not in hals]
     check(not found, f"no test component ({found[:20]})")
     packages = d.sh("pm list packages -f -s").splitlines()
     shipped = set(files)
