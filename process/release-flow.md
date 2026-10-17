@@ -4,8 +4,9 @@ A release is a signed build of one commit that passed the test flow (process/tes
 release flow ends with the release's artifacts; bringing them to a phone is delivery, which is
 the owner's (the owner's repository).
 
-`tools/lujarch release` runs the flow for `HEAD`, from the preconditions to the release notes. It
-has no options.
+`tools/lujarch release` runs the flow for `HEAD`, from the preconditions to the release notes.
+`--untested`, only when the owner asks, releases a commit that has not passed the test flow; the
+release notes then begin with what had not passed.
 
 ## When
 

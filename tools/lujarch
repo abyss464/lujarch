@@ -3345,8 +3345,9 @@ def untested(host, commit):
            if missing else [])
 
 
-def release_refusals(host, commit):
-    """What keeps the commit from being released (process/release-flow.md, Preconditions)."""
+def release_refusals(host, commit, untested_ok=False):
+    """What keeps the commit from being released (process/release-flow.md, Preconditions); with
+    untested_ok, a commit that has not passed the test flow is not refused."""
     refusals = []
     branch = git("symbolic-ref", "-q", "--short", "HEAD").stdout.strip()
     if branch != "main":
@@ -3361,7 +3362,7 @@ def release_refusals(host, commit):
         written = (host.out / "releases" / f"{tag}-{commit[:12]}").is_dir()
         refusals.append(f"{commit[:12]} is already tagged {tag}" + ("" if written else
                         f", and its release wrote no artifacts (git tag -d {tag} removes the tag)"))
-    return refusals + untested(host, commit)
+    return refusals if untested_ok else refusals + untested(host, commit)
 
 
 def target_at(rev):
@@ -3389,11 +3390,14 @@ def target_at(rev):
     return out
 
 
-def release_notes(n, commit, tags):
+def release_notes(n, commit, tags, untested_lines=()):
     """Lujarch n's notes: the change of target/ since the release before it, or the target's items
     by feature for the first release."""
     now = target_at(tags[n])
     lines = [f"# Lujarch {n}", ""]
+    if untested_lines:
+        lines += ["Released at the owner's request before it passed the test flow:", "",
+                  *(f"- {l}" for l in untested_lines), ""]
     previous = max((m for m in tags if m < n), default=None)
     if previous is None:
         lines += [f"Commit {commit}, the first release. Its target:", ""]
@@ -3430,11 +3434,12 @@ def remove_worktree(source):
     git("worktree", "prune")
 
 
-def cmd_release(_args):
+def cmd_release(args):
     """Releases HEAD as lujarch-<n>-<commit> (process/release-flow.md)."""
     host = Host()
     commit = git("rev-parse", "HEAD").stdout.strip()
-    refusals = release_refusals(host, commit)
+    refusals = release_refusals(host, commit, args.untested)
+    untested_lines = untested(host, commit) if args.untested else []
     if refusals:
         die(f"{commit[:12]} is not released:\n" + "\n".join(f"- {r}" for r in refusals))
     keys = host.path_of("paths", "keys")
@@ -3500,8 +3505,8 @@ def cmd_release(_args):
         artifacts.mkdir()
         (signing / "ota.zip").rename(artifacts / f"{name}.zip")
         (signing / "images.zip").rename(artifacts / f"{name}-images.zip")
-        (artifacts / "notes.md").write_text(release_notes(n, commit, {**tags, n: tag}),
-                                            encoding="utf-8")
+        (artifacts / "notes.md").write_text(
+            release_notes(n, commit, {**tags, n: tag}, untested_lines), encoding="utf-8")
         (artifacts / "sha256").write_text("".join(
             f"{p.name}: {sha256_file(p)}\n" for p in sorted(artifacts.iterdir())))
         artifacts.rename(dest)
@@ -3553,7 +3558,10 @@ def main():
     build = sub.add_parser("build", help="build a device or some of its modules")
     build.add_argument("device")
     build.add_argument("modules", nargs="*")
-    sub.add_parser("release", help="tag, build, sign and verify a release of HEAD")
+    release = sub.add_parser("release", help="tag, build, sign and verify a release of HEAD")
+    release.add_argument("--untested", action="store_true",
+                         help="only when the owner asks: release HEAD before it passed the test "
+                              "flow; the release notes list what had not passed")
     vm = sub.add_parser("vm", help="the virtual device").add_subparsers(dest="action",
                                                                        required=True)
     start = vm.add_parser("start", help="boot the vm build with empty data, ready for tests")
