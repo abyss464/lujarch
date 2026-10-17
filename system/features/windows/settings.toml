@@ -1,0 +1,38 @@
+# Use small windows (WIN-1) is Android's own bubbles switch, Settings.Secure notification_bubbles.
+
+[dock_on_touch]
+table = "secure"
+type = "bool"
+default = true
+item = "WIN-3"
+
+[live_previews]
+table = "secure"
+type = "bool"
+default = true
+item = "WIN-7"
+
+# 2, 3 or 4.
+[max]
+table = "secure"
+type = "int"
+default = 4
+item = "WIN-8"
+
+[home]
+table = "secure"
+type = "bool"
+default = true
+item = "WIN-10"
+
+[recents]
+table = "secure"
+type = "bool"
+default = true
+item = "WIN-11"
+
+[notifications]
+table = "secure"
+type = "bool"
+default = true
+item = "WIN-12"

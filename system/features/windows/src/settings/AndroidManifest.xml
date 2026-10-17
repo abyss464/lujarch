@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.windows.settings">
+
+    <!-- Use small windows is Android's own bubbles switch, in Settings.Secure. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- The apps with conversations and their choice, which only the system reads. -->
+    <uses-permission android:name="android.permission.STATUS_BAR_SERVICE" />
+
+    <application>
+        <meta-data
+            android:name="org.lujarch.settings.contribution.windows"
+            android:value="org.lujarch.windows.settings.SmallWindowsContribution" />
+
+        <!-- Settings > Display > Small windows, and the row Small windows in Notifications. -->
+        <activity
+            android:name="org.lujarch.windows.settings.SmallWindowsActivity"
+            android:exported="true"
+            android:label="@string/windows_title"
+            android:theme="@style/Theme.LujarchSettings">
+            <intent-filter>
+                <action android:name="org.lujarch.windows.action.SMALL_WINDOWS" />
+                <action android:name="android.settings.NOTIFICATION_BUBBLE_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.android.settings.action.EXTRA_SETTINGS" />
+            </intent-filter>
+            <meta-data
+                android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.display" />
+            <meta-data
+                android:name="com.android.settings.keyhint"
+                android:value="lujarch_windows" />
+            <meta-data
+                android:name="com.android.settings.title"
+                android:resource="@string/windows_title" />
+            <meta-data
+                android:name="com.android.settings.summary_uri"
+                android:value="content://org.lujarch.windows.tile" />
+            <meta-data
+                android:name="com.android.settings.icon"
+                android:resource="@drawable/ic_windows" />
+            <meta-data
+                android:name="com.android.settings.profile"
+                android:value="primary_profile_only" />
+        </activity>
+
+        <provider
+            android:name="org.lujarch.windows.settings.SmallWindowsSummaryProvider"
+            android:authorities="org.lujarch.windows.tile"
+            android:exported="true" />
+    </application>
+</manifest>

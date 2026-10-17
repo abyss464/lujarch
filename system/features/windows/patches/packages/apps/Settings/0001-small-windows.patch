@@ -1,0 +1,94 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 8c09c25d40e23304ef869d7810c71cbff3883f1b..0a80049c66e0c2d1cd94688317decf29ef34814b 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -4358,11 +4358,7 @@
+         <activity
+             android:name="Settings$BubbleNotificationSettingsActivity"
+             android:label="@string/bubbles_app_toggle_title"
+-            android:exported="true">
+-            <intent-filter android:priority="1">
+-                <action android:name="android.settings.NOTIFICATION_BUBBLE_SETTINGS" />
+-                <category android:name="android.intent.category.DEFAULT" />
+-            </intent-filter>
++            android:exported="false">
+             <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                        android:value="com.android.settings.notification.BubbleNotificationSettings" />
+             <meta-data android:name="com.android.settings.HIGHLIGHT_MENU_KEY"
+diff --git a/res/xml/configure_notification_settings.xml b/res/xml/configure_notification_settings.xml
+index 790231465b3170780e3caca910f9da2330550756..298a293bb3941ccb1e435309be56f8c755b22ee6 100644
+--- a/res/xml/configure_notification_settings.xml
++++ b/res/xml/configure_notification_settings.xml
+@@ -77,9 +77,9 @@
+             android:order="2"
+             android:title="@string/notification_bubbles_title"
+             android:summary="@string/notifications_bubble_setting_on_summary"
+-            settings:controller="com.android.settings.notification.BubbleSummaryNotificationPreferenceController"
+-            android:fragment="com.android.settings.notification.BubbleNotificationSettings"
+-        />
++            settings:controller="com.android.settings.notification.BubbleSummaryNotificationPreferenceController">
++            <intent android:action="org.lujarch.windows.action.SMALL_WINDOWS" />
++        </Preference>
+     </PreferenceCategory>
+ 
+     <PreferenceCategory
+diff --git a/src/com/android/settings/appfunctions/stateprovidersources/BubblesStateSource.kt b/src/com/android/settings/appfunctions/stateprovidersources/BubblesStateSource.kt
+index f293cd51674f57579671863d8d0b31a6ea6970ef..45f12f87c1b9be7679b67077424d4e0291dda28b 100644
+--- a/src/com/android/settings/appfunctions/stateprovidersources/BubblesStateSource.kt
++++ b/src/com/android/settings/appfunctions/stateprovidersources/BubblesStateSource.kt
+@@ -18,7 +18,7 @@ package com.android.settings.appfunctions.stateprovidersources
+ 
+ import android.content.Context
+ import android.provider.Settings
+-import android.provider.Settings.Global.NOTIFICATION_BUBBLES
++import android.provider.Settings.Secure.NOTIFICATION_BUBBLES
+ import com.android.settings.R
+ import com.android.settings.appfunctions.DeviceStateAppFunctionType
+ import com.android.settings.notification.BubbleHelper
+@@ -34,7 +34,7 @@ class BubblesStateSource : DeviceStateSource {
+         sharedDeviceStateData: SharedDeviceStateData,
+     ): List<PerScreenDeviceStates> {
+         val isEnabled =
+-            Settings.Global.getInt(
++            Settings.Secure.getInt(
+                 context.contentResolver,
+                 NOTIFICATION_BUBBLES,
+                 BubbleHelper.SYSTEM_WIDE_ON,
+diff --git a/src/com/android/settings/notification/BubbleNotificationPreferenceController.java b/src/com/android/settings/notification/BubbleNotificationPreferenceController.java
+index 67ac5053eb2347e1007a6c4acfa31138247b95c6..029de54a8f08adec8218a106d4e887b1353d9eb5 100644
+--- a/src/com/android/settings/notification/BubbleNotificationPreferenceController.java
++++ b/src/com/android/settings/notification/BubbleNotificationPreferenceController.java
+@@ -92,13 +92,13 @@ public class BubbleNotificationPreferenceController extends
+ 
+     @Override
+     public boolean isChecked() {
+-        return Settings.Global.getInt(mContext.getContentResolver(), NOTIFICATION_BUBBLES,
++        return Settings.Secure.getInt(mContext.getContentResolver(), NOTIFICATION_BUBBLES,
+                 BubbleHelper.SYSTEM_WIDE_ON) == BubbleHelper.SYSTEM_WIDE_ON;
+     }
+ 
+     @Override
+     public boolean setChecked(boolean isChecked) {
+-        Settings.Global.putInt(mContext.getContentResolver(), NOTIFICATION_BUBBLES,
++        Settings.Secure.putInt(mContext.getContentResolver(), NOTIFICATION_BUBBLES,
+                 isChecked ? BubbleHelper.SYSTEM_WIDE_ON : BubbleHelper.SYSTEM_WIDE_OFF);
+         return true;
+     }
+diff --git a/src/com/android/settings/notification/BubbleNotificationSettings.java b/src/com/android/settings/notification/BubbleNotificationSettings.java
+index 12cd406dd03f2fb924c1b2ec683d47a5a60c441e..11e5c6c5d8d401c4c91f3496097bbee86c599388 100644
+--- a/src/com/android/settings/notification/BubbleNotificationSettings.java
++++ b/src/com/android/settings/notification/BubbleNotificationSettings.java
+@@ -58,6 +58,12 @@ public class BubbleNotificationSettings extends DashboardFragment implements
+      * For Search.
+      */
+     public static final BaseSearchIndexProvider SEARCH_INDEX_DATA_PROVIDER =
+-            new BaseSearchIndexProvider(R.xml.bubble_notification_settings);
++            new BaseSearchIndexProvider(R.xml.bubble_notification_settings) {
++                @Override
++                protected boolean isPageSearchEnabled(Context context) {
++                    // Settings > Display > Small windows holds the switch.
++                    return false;
++                }
++            };
+ }
+ // LINT.ThenChange(BubbleNotificationScreen.kt)

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="notification_bubbles_title">小ウィンドウ</string>
+    <string name="bubbles_app_toggle_title">小ウィンドウ</string>
+    <string name="bubbles_conversation_toggle_title">この会話を小ウィンドウで開く</string>
+    <string name="bubbles_conversation_toggle_summary">カードとしてドックで待機し、小ウィンドウとして開きます</string>
+    <string name="bubbles_feature_disabled_dialog_title">小ウィンドウをオンにしますか？</string>
+    <string name="bubbles_feature_disabled_dialog_text">このアプリの小ウィンドウをオンにすると、「小ウィンドウを使用」もオンになります。\n\n小ウィンドウが許可されている他のアプリや会話にも影響します。</string>
+    <string name="notifications_bubble_setting_on_summary">オン / アプリと会話を他のアプリの上に表示します</string>
+    <string name="notifications_bubble_setting_title">小ウィンドウを使用</string>
+    <string name="notifications_bubble_setting_description">アプリと会話を他のアプリの上に表示します</string>
+    <string name="bubble_app_setting_all">すべての会話</string>
+    <string name="bubble_app_setting_selected">選択した会話</string>
+    <string name="bubble_app_setting_none">なし</string>
+    <string name="bubble_app_setting_excluded_conversation_title">次を除くすべての会話</string>
+    <string name="bubble_app_setting_unbubble_conversation">この会話の小ウィンドウをオフにする</string>
+    <string name="bubble_app_setting_bubble_conversation">この会話の小ウィンドウをオンにする</string>
+</resources>

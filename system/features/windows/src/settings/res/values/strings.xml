@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="windows_title">Small windows</string>
+    <string name="windows_summary">Apps and conversations float over other apps</string>
+    <string name="windows_display">Display</string>
+    <string name="windows_use">Use small windows</string>
+    <string name="windows_open_from">Open from</string>
+    <string name="windows_recents">Recents</string>
+    <string name="windows_recents_summary">Drag a card into Running, or choose Open in small window in a card’s menu</string>
+    <string name="windows_notifications">Notifications</string>
+    <string name="windows_notifications_summary">Pull a heads-up notification down, or tap a notification’s small-window button</string>
+    <string name="windows_home">Home screen</string>
+    <string name="windows_home_summary">Small window in the menu of an app’s icon</string>
+    <string name="windows_behavior">Behavior</string>
+    <string name="windows_max">At most</string>
+    <plurals name="windows_max_summary">
+        <item quantity="one">%d small window; another one sends the one used longest ago back to Recents</item>
+        <item quantity="other">%d small windows; another one sends the one used longest ago back to Recents</item>
+    </plurals>
+    <string name="windows_max_search">How many small windows are open at a time</string>
+    <string name="windows_dock_on_touch">Move to dock when the app below is touched</string>
+    <string name="windows_dock_on_touch_summary">A touch on the app under the open window moves the window to the dock</string>
+    <string name="windows_live_previews">Live previews in the dock</string>
+    <string name="windows_live_previews_summary">Cards show each app’s live screen; off, its icon and name</string>
+    <string name="windows_conversations">Conversations</string>
+    <string name="windows_conversations_none">No app has conversations yet</string>
+    <string name="windows_choice_all">All conversations</string>
+    <string name="windows_choice_selected">Selected conversations</string>
+    <string name="windows_choice_none">None</string>
+    <string name="windows_footer">Small windows wait as cards in the dock at an edge of the screen. A conversation you pull into a small window from its notification counts as selected.</string>
+    <string name="windows_row_on">On</string>
+    <string name="windows_row_off">Off</string>
+    <string name="windows_error_apps">Couldn’t load the apps with conversations</string>
+    <string name="windows_error_app_page">Couldn’t open the app’s page</string>
+    <string name="windows_keywords">small window, floating window, dock, conversations, bubbles, multitasking, freeform</string>
+</resources>

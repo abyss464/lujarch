@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="windows_title">小ウィンドウ</string>
+    <string name="windows_summary">アプリと会話を他のアプリの上に表示します</string>
+    <string name="windows_display">ディスプレイ</string>
+    <string name="windows_use">小ウィンドウを使用</string>
+    <string name="windows_open_from">開く方法</string>
+    <string name="windows_recents">最近</string>
+    <string name="windows_recents_summary">カードを「実行中」にドラッグするか、カードのメニューで「小ウィンドウで開く」を選択します</string>
+    <string name="windows_notifications">通知</string>
+    <string name="windows_notifications_summary">ヘッドアップ通知を下に引くか、通知の小ウィンドウ ボタンをタップします</string>
+    <string name="windows_home">ホーム画面</string>
+    <string name="windows_home_summary">アプリアイコンのメニューの「小ウィンドウ」</string>
+    <string name="windows_behavior">動作</string>
+    <string name="windows_max">最大数</string>
+    <plurals name="windows_max_summary">
+        <item quantity="other">小ウィンドウ %d 個。さらに開くと、最も長く使っていないものが最近に戻ります</item>
+    </plurals>
+    <string name="windows_max_search">同時に開ける小ウィンドウの数</string>
+    <string name="windows_dock_on_touch">下のアプリに触れたらドックに移動</string>
+    <string name="windows_dock_on_touch_summary">開いている小ウィンドウの下のアプリに触れると、小ウィンドウがドックに移動します</string>
+    <string name="windows_live_previews">ドックにライブプレビューを表示</string>
+    <string name="windows_live_previews_summary">カードにアプリのライブ画面を表示します。オフにすると、アイコンと名前を表示します</string>
+    <string name="windows_conversations">会話</string>
+    <string name="windows_conversations_none">会話のあるアプリはまだありません</string>
+    <string name="windows_choice_all">すべての会話</string>
+    <string name="windows_choice_selected">選択した会話</string>
+    <string name="windows_choice_none">なし</string>
+    <string name="windows_footer">小ウィンドウは、画面の端にあるドックでカードとして待機します。通知から小ウィンドウに引き込んだ会話は、選択した会話として扱われます。</string>
+    <string name="windows_row_on">オン</string>
+    <string name="windows_row_off">オフ</string>
+    <string name="windows_error_apps">会話のあるアプリを読み込めませんでした</string>
+    <string name="windows_error_app_page">アプリのページを開けませんでした</string>
+    <string name="windows_keywords">小ウィンドウ, フローティング ウィンドウ, ドック, 会話, バブル, マルチタスク, small window, floating window, bubbles, freeform</string>
+</resources>

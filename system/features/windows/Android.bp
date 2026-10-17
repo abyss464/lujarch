@@ -1,0 +1,27 @@
+// Small windows' page in Lujarch Settings: Settings > Display > Small windows and its search
+// entries.
+android_library {
+    name: "LujarchWindowsSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: ["LujarchSettingsPages"],
+    libs: ["LujarchSettingsContribution"],
+}
+
+// Android's per-app bubbles pages say Small windows (WIN-13).
+runtime_resource_overlay {
+    name: "LujarchWindowsSettingsOverlay",
+    manifest: "src/overlay/settings/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/settings/res"],
+    system_ext_specific: true,
+}
+
+// Every app can be in a small window (WIN-2, WIN-10).
+runtime_resource_overlay {
+    name: "LujarchWindowsFrameworkOverlay",
+    manifest: "src/overlay/android/AndroidManifest.xml",
+    resource_dirs: ["src/overlay/android/res"],
+    product_specific: true,
+}

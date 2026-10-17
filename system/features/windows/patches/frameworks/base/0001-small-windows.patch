@@ -1,0 +1,4362 @@
+diff --git a/libs/WindowManager/Shell/res/drawable/lujarch_small_window_close.xml b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_close.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..48d93b7294c5621a8a079b62e79417711eb27635
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_close.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:pathData="M6,6L18,18M18,6L6,18"
++        android:strokeColor="#FFFFFFFF"
++        android:strokeWidth="1.8"
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round"
++        android:fillColor="#00000000" />
++</vector>
+diff --git a/libs/WindowManager/Shell/res/drawable/lujarch_small_window_dock.xml b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_dock.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..7bcffbde29534afc6aeea16a5dc8595a4cfdf43c
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_dock.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:pathData="M14,4V20M4,12H11M8,8L11,12L8,16"
++        android:strokeColor="#FFFFFFFF"
++        android:strokeWidth="1.8"
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round"
++        android:fillColor="#00000000" />
++</vector>
+diff --git a/libs/WindowManager/Shell/res/drawable/lujarch_small_window_fullscreen.xml b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_fullscreen.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..1d0cbc7be313d81d7ea812b0e1601bf11db356fa
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_fullscreen.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:pathData="M4,9V4H9M15,4H20V9M20,15V20H15M9,20H4V15"
++        android:strokeColor="#FFFFFFFF"
++        android:strokeWidth="1.8"
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round"
++        android:fillColor="#00000000" />
++</vector>
+diff --git a/libs/WindowManager/Shell/res/values-ja/lujarch_small_windows_strings.xml b/libs/WindowManager/Shell/res/values-ja/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..6606eda616aac5cdf47b94cd80f6f634ea80752c
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/values-ja/lujarch_small_windows_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window_fullscreen">全画面表示</string>
++    <string name="lujarch_small_window_dock">ドックに移動</string>
++    <string name="lujarch_small_window_close">閉じる</string>
++</resources>
+diff --git a/libs/WindowManager/Shell/res/values-zh-rCN/lujarch_small_windows_strings.xml b/libs/WindowManager/Shell/res/values-zh-rCN/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ffda570d3830ab957a275310bdeb526898f37d1
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/values-zh-rCN/lujarch_small_windows_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window_fullscreen">全屏</string>
++    <string name="lujarch_small_window_dock">收进停靠条</string>
++    <string name="lujarch_small_window_close">关闭</string>
++</resources>
+diff --git a/libs/WindowManager/Shell/res/values/lujarch_small_windows_strings.xml b/libs/WindowManager/Shell/res/values/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb5bf085ef5cb51f307bf6f2295c978522ec335a
+--- /dev/null
++++ b/libs/WindowManager/Shell/res/values/lujarch_small_windows_strings.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- The menu of a small window's handle (target/windows.md, WIN-2) -->
++    <string name="lujarch_small_window_fullscreen">Full screen</string>
++    <string name="lujarch_small_window_dock">Move to dock</string>
++    <string name="lujarch_small_window_close">Close</string>
++</resources>
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
+index 80577829d9ad884bd91d006f45d5e964c9f6fd67..3bf78bdbf1c47957ab0271008777b8c9ae3b6c66 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
+@@ -131,6 +131,7 @@ public class Bubble implements BubbleViewProvider {
+     private BubbleBarExpandedView mBubbleBarExpandedView;
+     @Nullable
+     private BubbleTaskView mBubbleTaskView;
++    private boolean mInflatedForSmallWindows;
+ 
+     @Nullable
+     private BubbleViewInfoTask mInflationTask;
+@@ -687,6 +688,7 @@ public class Bubble implements BubbleViewProvider {
+                 cleanupTaskView);
+         cleanupExpandedView(cleanupTaskView);
+         mIconView = null;
++        mInflatedForSmallWindows = false;
+     }
+ 
+     void setPendingIntentCanceled() {
+@@ -781,7 +783,14 @@ public class Bubble implements BubbleViewProvider {
+     }
+ 
+     boolean isInflated() {
+-        return (mIconView != null && mExpandedView != null) || mBubbleBarExpandedView != null;
++        return (mIconView != null && mExpandedView != null) || mBubbleBarExpandedView != null
++                || (mInflatedForSmallWindows && mBubbleTaskView != null);
++    }
++
++    /** The task view holder of a bubble that shows as one of Lujarch's small windows. */
++    @Nullable
++    public BubbleTaskView getBubbleTaskView() {
++        return mBubbleTaskView;
+     }
+ 
+     void stopInflation() {
+@@ -797,6 +806,7 @@ public class Bubble implements BubbleViewProvider {
+             mIconView = info.imageView;
+             mExpandedView = info.expandedView;
+             mBubbleBarExpandedView = info.bubbleBarExpandedView;
++            mInflatedForSmallWindows = info.smallWindow;
+             BubbleLog.d("Bubble.setViewInfo() key=%s setting expanded view info to %s",
+                     mKey, mExpandedView != null ? mExpandedView : mBubbleBarExpandedView);
+         }
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
+index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0d1b587fd 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
+@@ -262,6 +262,8 @@ public class BubbleController implements ConfigurationChangeListener,
+     private final BubbleHelper mBubbleHelper;
+     @Nullable private BubbleStackView mStackView;
+     @Nullable private BubbleBarLayerView mLayerView;
++    /** Lujarch's small windows: the bubbles of a phone, in place of the floating stack. */
++    @Nullable private LujarchSmallWindowsView mSmallWindows;
+     private BubbleIconFactory mBubbleIconFactory;
+     private final BubblePositioner mBubblePositioner;
+     private final BubbleFeatureConfig mFeatureConfig;
+@@ -441,8 +443,11 @@ public class BubbleController implements ConfigurationChangeListener,
+                 // transparent bubble are shown.
+                 boolean disableBackgroundLayer =
+                         !com.android.window.flags.Flags.addBgColorForTransparentBubbles();
+-                TaskView taskView = new TaskView(context, mTaskViewController,
+-                        taskViewTaskController, mainHandler, disableBackgroundLayer);
++                TaskView taskView = isShowingAsBubbleBar()
++                        ? new TaskView(context, mTaskViewController,
++                                taskViewTaskController, mainHandler, disableBackgroundLayer)
++                        : new LujarchSmallWindowTaskView(context, mTaskViewController,
++                                taskViewTaskController, mainHandler, disableBackgroundLayer);
+                 return new BubbleTaskView(taskView, mainExecutor, BubbleController.this);
+             }
+         };
+@@ -497,9 +502,10 @@ public class BubbleController implements ConfigurationChangeListener,
+     }
+ 
+     protected void onInit() {
++        LujarchSmallWindowsMode.setActive(!isShowingAsBubbleBar());
+         mBubbleViewCallback = isShowingAsBubbleBar()
+                 ? mBubbleBarViewCallback
+-                : mBubbleStackViewCallback;
++                : mSmallWindowsViewCallback;
+         mBubbleData.setListener(mBubbleDataListener);
+         mBubbleData.setSuppressionChangedListener(this::onBubbleMetadataFlagChanged);
+         mDataRepository.setSuppressionChangedListener(this::onBubbleMetadataFlagChanged);
+@@ -1113,20 +1119,9 @@ public class BubbleController implements ConfigurationChangeListener,
+                         mLogger, mMainExecutor);
+                 mLayerView.setUnBubbleConversationCallback(mSysuiProxy::onUnbubbleConversation);
+             }
+-        } else {
+-            if (mStackView == null) {
+-                BubbleStackViewManager bubbleStackViewManager =
+-                        BubbleStackViewManager.fromBubbleController(this);
+-                mStackView = new BubbleStackView(
+-                        mContext, bubbleStackViewManager, mBubblePositioner, mBubbleData,
+-                        mSurfaceSynchronizer, mFloatingContentCoordinator, this, mMainExecutor,
+-                        mSessionTracker);
+-                mStackView.onOrientationChanged();
+-                if (mExpandListener != null) {
+-                    mStackView.setExpandListener(mExpandListener);
+-                }
+-                mStackView.setUnbubbleConversationCallback(mSysuiProxy::onUnbubbleConversation);
+-            }
++        } else if (mSmallWindows == null) {
++            mSmallWindows = new LujarchSmallWindowsView(mContext, this, mBubbleData,
++                    mExpandedViewManager);
+         }
+         addToWindowManagerMaybe();
+     }
+@@ -1140,7 +1135,7 @@ public class BubbleController implements ConfigurationChangeListener,
+         // If the appropriate view is null, don't add it.
+         if (isShowingAsBubbleBar() && mLayerView == null) {
+             return;
+-        } else if (!isShowingAsBubbleBar() && mStackView == null) {
++        } else if (!isShowingAsBubbleBar() && mSmallWindows == null) {
+             return;
+         }
+ 
+@@ -1171,9 +1166,6 @@ public class BubbleController implements ConfigurationChangeListener,
+             if (isShowingAsBubbleBar()) {
+                 mBubbleData.getOverflow().initializeForBubbleBar(
+                         mExpandedViewManager, mBubblePositioner);
+-            } else {
+-                mBubbleData.getOverflow().initialize(
+-                        mExpandedViewManager, mStackView, mBubblePositioner);
+             }
+             // (TODO: b/273314541) some duplication in the inset listener
+             if (isShowingAsBubbleBar()) {
+@@ -1187,18 +1179,12 @@ public class BubbleController implements ConfigurationChangeListener,
+                     return windowInsets;
+                 });
+             } else {
+-                if (mStackView.isExpanded()) {
+-                    BubbleLog.w(
+-                            "BubbleController.addToWindowManagerMaybe() - BubbleStackView is "
+-                                    + "already expanded!");
+-                    mStackView.overrideCollapsed();
+-                }
+-                mWindowManager.addView(mStackView, mWmLayoutParams);
+-                mStackView.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+-                    if (!windowInsets.equals(mWindowInsets) && mStackView != null) {
++                mWindowManager.addView(mSmallWindows, mWmLayoutParams);
++                mSmallWindows.setOnApplyWindowInsetsListener((view, windowInsets) -> {
++                    if (!windowInsets.equals(mWindowInsets) && mSmallWindows != null) {
+                         mWindowInsets = windowInsets;
+                         mBubblePositioner.update(DeviceConfig.create(mContext, mWindowManager));
+-                        mStackView.onDisplaySizeChanged();
++                        mSmallWindows.onDisplaySizeChanged();
+                     }
+                     return windowInsets;
+                 });
+@@ -1225,8 +1211,8 @@ public class BubbleController implements ConfigurationChangeListener,
+                     : WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                             | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+             mWmLayoutParams.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+-            if (mStackView != null) {
+-                mWindowManager.updateViewLayout(mStackView, mWmLayoutParams);
++            if (mSmallWindows != null) {
++                mWindowManager.updateViewLayout(mSmallWindows, mWmLayoutParams);
+             } else if (mLayerView != null) {
+                 mWindowManager.updateViewLayout(mLayerView, mWmLayoutParams);
+             }
+@@ -1268,6 +1254,9 @@ public class BubbleController implements ConfigurationChangeListener,
+                 mWindowManager.removeView(mLayerView);
+                 mBubbleData.getOverflow().cleanUpExpandedState();
+             }
++            if (mSmallWindows != null) {
++                mWindowManager.removeView(mSmallWindows);
++            }
+         } catch (IllegalArgumentException e) {
+             // This means the stack has already been removed - it shouldn't happen, but ignore if it
+             // does, since we wanted it removed anyway.
+@@ -1423,6 +1412,13 @@ public class BubbleController implements ConfigurationChangeListener,
+             return;
+         }
+         BubbleOverflow bubbleOverflow = mBubbleData.getOverflow();
++        if (mSmallWindows != null
++                && (newConfig.densityDpi != mDensityDpi
++                || !newConfig.windowConfiguration.getBounds().equals(mScreenBounds))) {
++            mDensityDpi = newConfig.densityDpi;
++            mScreenBounds.set(newConfig.windowConfiguration.getBounds());
++            mSmallWindows.onDisplaySizeChanged();
++        }
+         if (mStackView != null
+                 && (newConfig.densityDpi != mDensityDpi
+                 || !newConfig.windowConfiguration.getBounds().equals(mScreenBounds))) {
+@@ -1508,7 +1504,7 @@ public class BubbleController implements ConfigurationChangeListener,
+      * screen (e.g. if on AOD).
+      */
+     public boolean hasBubbles() {
+-        if (mStackView == null && mLayerView == null) {
++        if (mStackView == null && mLayerView == null && mSmallWindows == null) {
+             return false;
+         }
+         return mBubbleData.hasBubbles() || mBubbleData.isShowingOverflow();
+@@ -1824,6 +1820,21 @@ public class BubbleController implements ConfigurationChangeListener,
+         }
+     }
+ 
++    /** Opens a running task in a small window, as Recents asks for it. */
++    public void showTaskInSmallWindow(int taskId) {
++        final ActivityManager.RunningTaskInfo task = mTaskOrganizer.getRunningTaskInfo(taskId);
++        if (task == null) {
++            Log.w(TAG, "task " + taskId + " is not running; it does not open in a small window");
++            return;
++        }
++        final Bubble existing = mBubbleData.getBubbleInStackWithTaskId(taskId);
++        if (existing != null) {
++            expandStackAndSelectBubble(existing);
++            return;
++        }
++        expandStackAndSelectBubble(task, null /* dragData */);
++    }
++
+     /**
+      * Expands and selects a bubble created from a running task in a different mode.
+      *
+@@ -2169,9 +2180,10 @@ public class BubbleController implements ConfigurationChangeListener,
+             }
+         }
+ 
++        LujarchSmallWindowsMode.setActive(!isShowingAsBubbleBar());
+         mBubbleViewCallback = isShowingAsBubbleBar()
+                 ? mBubbleBarViewCallback
+-                : mBubbleStackViewCallback;
++                : mSmallWindowsViewCallback;
+ 
+         if (mStackView != null) {
+             mStackView.cancelClipAnimation();
+@@ -2188,6 +2200,7 @@ public class BubbleController implements ConfigurationChangeListener,
+         removeFromWindowManagerMaybe();
+         mLayerView = null;
+         mStackView = null;
++        mSmallWindows = null;
+ 
+         if (!mBubbleData.hasBubbles()) {
+             // if there are no bubbles, don't create the stack or layer views. they will be created
+@@ -2201,7 +2214,10 @@ public class BubbleController implements ConfigurationChangeListener,
+         BubbleViewInfoTask.Callback callback = null;
+         if (!isShowingAsBubbleBar()) {
+             callback = b -> {
+-                if (mStackView != null) {
++                if (mSmallWindows != null) {
++                    mSmallWindows.addBubble(b);
++                    mSmallWindows.onStackChanged();
++                } else if (mStackView != null) {
+                     b.setSuppressFlyout(true);
+                     mStackView.addBubble(b);
+                     if (b.getKey().equals(mBubbleData.getSelectedBubbleKey())) {
+@@ -2454,7 +2470,11 @@ public class BubbleController implements ConfigurationChangeListener,
+             }
+             if (entry != null && (entry.shouldSuppressNotificationList()
+                     || entry.getRanking().isSuspended())) {
+-                shouldBubbleUp = false;
++                // A conversation in a small window or the dock keeps counting its messages
++                // through Do Not Disturb.
++                shouldBubbleUp = LujarchSmallWindowsMode.getActive()
++                        && !entry.getRanking().isSuspended()
++                        && mBubbleData.hasBubbleInStackWithKey(key);
+             }
+             rankingMap.getRanking(key, mTmpRanking);
+             boolean isActiveOrInOverflow = mBubbleData.hasAnyBubbleWithKey(key);
+@@ -2665,6 +2685,79 @@ public class BubbleController implements ConfigurationChangeListener,
+         }
+     };
+ 
++    /** On a phone, this notifies Lujarch's small windows. */
++    private final BubbleViewCallback mSmallWindowsViewCallback = new BubbleViewCallback() {
++        @Override
++        public void removeBubble(Bubble removedBubble) {
++            if (mSmallWindows != null) {
++                mSmallWindows.removeBubble(removedBubble);
++            } else {
++                removedBubble.cleanupViews();
++            }
++        }
++
++        @Override
++        public void addBubble(Bubble addedBubble) {
++            if (mSmallWindows != null) {
++                mSmallWindows.addBubble(addedBubble);
++            }
++        }
++
++        @Override
++        public void updateBubble(Bubble updatedBubble) {
++            if (mSmallWindows != null) {
++                mSmallWindows.updateBubble(updatedBubble);
++            }
++        }
++
++        @Override
++        public void bubbleOrderChanged(List<Bubble> bubbleOrder, boolean updatePointer) {
++            // The dock keeps the order its cards were put in (WIN-4).
++        }
++
++        @Override
++        public void suppressionChanged(Bubble bubble, boolean isSuppressed) {
++            if (mSmallWindows != null) {
++                mSmallWindows.setBubbleSuppressed(bubble, isSuppressed);
++            }
++        }
++
++        @Override
++        public void expansionChanged(boolean isExpanded) {
++            if (mSmallWindows != null) {
++                mSmallWindows.onStackChanged();
++            }
++        }
++
++        @Override
++        public void selectionChanged(BubbleViewProvider selectedBubble) {
++            if (mSmallWindows != null) {
++                mSmallWindows.onStackChanged();
++            }
++        }
++
++        @Override
++        public void bubbleOverflowChanged(boolean hasBubbles) {
++        }
++
++        @Override
++        public void updateVisibility(boolean visible) {
++            if (mSmallWindows != null) {
++                mSmallWindows.setVisibility(visible ? VISIBLE : INVISIBLE);
++            }
++        }
++
++        @Override
++        public void hideJumpcutClosingBubble(Bubble closingBubble) {
++        }
++    };
++
++    /** The small windows, when bubbles show as small windows. */
++    @Nullable
++    public LujarchSmallWindowsView getSmallWindows() {
++        return mSmallWindows;
++    }
++
+     /** When bubbles are in the bubble bar, this will be used to notify bubble bar views. */
+     private final BubbleViewCallback mBubbleBarViewCallback = new BubbleViewCallback() {
+         @Override
+@@ -3039,7 +3132,7 @@ public class BubbleController implements ConfigurationChangeListener,
+      * Updates bubbles' icon views clickable states (when floating).
+      */
+     public void updateBubbleViews() {
+-        if (mStackView == null && mLayerView == null) {
++        if (mStackView == null && mLayerView == null && mSmallWindows == null) {
+             return;
+         }
+         BubbleLog.v("BubbleController.updateBubbleViews() mIsStatusBarShade=%b hasBubbles=%b",
+@@ -3097,6 +3190,10 @@ public class BubbleController implements ConfigurationChangeListener,
+             return mStackView.getDisplay().getDisplayId();
+         }
+ 
++        if (mSmallWindows != null && mSmallWindows.getDisplay() != null) {
++            return mSmallWindows.getDisplay().getDisplayId();
++        }
++
+         return INVALID_DISPLAY;
+     }
+ 
+@@ -3143,6 +3240,9 @@ public class BubbleController implements ConfigurationChangeListener,
+         mBubbleData.dump(pw);
+         pw.println();
+ 
++        if (mSmallWindows != null) {
++            mSmallWindows.dump(pw, prefix);
++        }
+         if (mStackView != null) {
+             mStackView.dump(pw);
+         }
+@@ -3231,6 +3331,13 @@ public class BubbleController implements ConfigurationChangeListener,
+             // so we have the total height of the ime.
+             int totalImeHeight = imeHeight + mBubblePositioner.getInsets().bottom;
+             mBubblePositioner.setImeVisible(imeVisible, totalImeHeight);
++            if (mSmallWindows != null) {
++                mSmallWindows.setImeVisible(imeVisible, totalImeHeight);
++                if (!imeVisible && mOnImeHidden != null) {
++                    mOnImeHidden.run();
++                    mOnImeHidden = null;
++                }
++            }
+             if (mStackView != null) {
+                 mStackView.setImeVisible(imeVisible, heightChanged);
+                 if (!imeVisible && mOnImeHidden != null) {
+@@ -3508,6 +3615,26 @@ public class BubbleController implements ConfigurationChangeListener,
+                     (controller) -> controller.moveDraggedBubbleToFullscreen(key, dropLocation));
+         }
+ 
++        @Override
++        public void showTaskInSmallWindow(int taskId) {
++            executeRemoteCallWithTaskPermission(
++                    mController,
++                    "showTaskInSmallWindow",
++                    controller -> controller.showTaskInSmallWindow(taskId));
++        }
++
++        @Override
++        public void setRecentsShown(boolean shown) {
++            executeRemoteCallWithTaskPermission(
++                    mController,
++                    "setRecentsShown",
++                    controller -> {
++                        if (controller.getSmallWindows() != null) {
++                            controller.getSmallWindows().setRecentsShown(shown);
++                        }
++                    });
++        }
++
+         @Override
+         public void setHasBubbleBar(boolean hasBubbleBar) {
+             executeRemoteCallWithTaskPermission(
+@@ -3820,6 +3947,12 @@ public class BubbleController implements ConfigurationChangeListener,
+                             sensitiveNotificationProtectionActive));
+         }
+ 
++        @Override
++        public void showPendingIntentInSmallWindow(PendingIntent intent, UserHandle user) {
++            mMainExecutor.execute(() -> BubbleController.this.expandStackAndSelectBubble(intent,
++                    user, EntryPoint.NOTIFICATION, null /* bubbleBarLocation */));
++        }
++
+         @Override
+         public boolean canShowBubbleNotification() {
+             // in bubble bar mode, when the IME is visible we can't animate new bubbles.
+@@ -3983,7 +4116,9 @@ public class BubbleController implements ConfigurationChangeListener,
+             }
+ 
+             boolean hideRootTask = false;
+-            if (!mBubbleData.isExpanded()) {
++            if (mSmallWindows != null) {
++                hideRootTask = !mSmallWindows.showsTaskOtherThan(taskView);
++            } else if (!mBubbleData.isExpanded()) {
+                 hideRootTask = true;
+             } else if (mLayerView != null && !mLayerView.isExpanded()) {
+                 // When bubble is being dragged in launcher, layerView is collapsed while
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleData.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleData.java
+index cc11982d840e0975c6844ba860db0bc57f2f1d80..f9158f0251e99e3bcee97ab197e9dfba7ff34545 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleData.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleData.java
+@@ -835,6 +835,8 @@ public class BubbleData {
+                     .sorted(Comparator.comparingLong(Bubble::getLastActivity))
+                     // skip the selected bubble
+                     .filter((b) -> !b.equals(mSelectedBubble))
++                    // small windows of apps leave by the small windows' own limit
++                    .filter((b) -> !(LujarchSmallWindowsMode.getActive() && !b.isChat()))
+                     .forEachOrdered((b) -> {
+                         if (toRemove.size() < numtoRemove) {
+                             toRemove.add(b);
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewManager.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewManager.kt
+index 29faae4299198d3ddec99e4a90bccdad7f0bdefa..0e67712fdf817296b99e16b51a50282c64fa7881 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewManager.kt
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewManager.kt
+@@ -52,6 +52,9 @@ interface BubbleExpandedViewManager {
+ 
+     fun getBubbleHelper(): BubbleHelper
+ 
++    /** Lujarch's small windows, when bubbles show as small windows. */
++    fun getSmallWindows(): LujarchSmallWindowsView? = null
++
+     companion object {
+         /**
+          * Convenience function for creating a [BubbleExpandedViewManager] that delegates to the
+@@ -112,6 +115,8 @@ interface BubbleExpandedViewManager {
+                 }
+ 
+                 override fun getBubbleHelper(): BubbleHelper = controller.bubbleHelper
++
++                override fun getSmallWindows(): LujarchSmallWindowsView? = controller.smallWindows
+             }
+         }
+     }
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java
+index 1ff1c961332491f1263e09998d30958463587b16..827dff2da8c063b5f4cb5743eaba4e2bc8708859 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java
+@@ -904,6 +904,12 @@ public class BubblePositioner implements BubbleDropTargetBoundsProvider {
+      *  floating only.
+      */
+     public void getTaskViewRestBounds(Rect out) {
++        if (LujarchSmallWindowsMode.getActive()) {
++            // A new small window lays its app out at the screen's size, its task just right of
++            // the display (LujarchSmallWindowTaskView).
++            out.set(mScreenRect.width(), 0, 2 * mScreenRect.width(), mScreenRect.height());
++            return;
++        }
+         if (isShowingInBubbleBar()) {
+             getBubbleBarExpandedViewBounds(isBubbleBarOnLeft(), false /* isOverflow */, out);
+         } else {
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleViewInfoTask.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleViewInfoTask.java
+index 8c0a04ee01f970d1182521df39cb9a05bd8a3678..62fed2cba5d06be1a9389dbe73cc462cb35a92cf 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleViewInfoTask.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleViewInfoTask.java
+@@ -207,6 +207,9 @@ public class BubbleViewInfoTask {
+             return BubbleViewInfo.populateForBubbleBar(mContext.get(), mTaskViewFactory.get(),
+                     mLayerView.get(), mIconFactory, mBubble, mAppInfoProvider, mSkipInflation,
+                     mUserResolver);
++        } else if (mStackView.get() == null) {
++            return BubbleViewInfo.populateForSmallWindows(mContext.get(), mTaskViewFactory.get(),
++                    mIconFactory, mBubble, mAppInfoProvider, mSkipInflation, mUserResolver);
+         } else {
+             return BubbleViewInfo.populate(mContext.get(), mTaskViewFactory.get(),
+                     mPositioner.get(), mStackView.get(), mIconFactory, mBubble, mAppInfoProvider,
+@@ -247,7 +250,8 @@ public class BubbleViewInfoTask {
+         if (mExpandedViewManager.get().isShowingAsBubbleBar()) {
+             return mLayerView.get() != null;
+         } else {
+-            return mStackView.get() != null;
++            // Lujarch's small windows need no view of their own to inflate a bubble.
++            return true;
+         }
+     }
+ 
+@@ -269,6 +273,9 @@ public class BubbleViewInfoTask {
+         // Only populated when showing in taskbar
+         @Nullable BubbleBarExpandedView bubbleBarExpandedView;
+ 
++        // Whether the views were inflated for Lujarch's small windows
++        boolean smallWindow;
++
+         // These are only populated when not showing in taskbar
+         @Nullable BadgedImageView imageView;
+         @Nullable BubbleExpandedView expandedView;
+@@ -309,6 +316,31 @@ public class BubbleViewInfoTask {
+             return info;
+         }
+ 
++        /** Populates the info of a bubble that shows as one of Lujarch's small windows. */
++        @Nullable
++        public static BubbleViewInfo populateForSmallWindows(Context c,
++                BubbleTaskViewFactory taskViewFactory,
++                BubbleIconFactory iconFactory,
++                Bubble b,
++                BubbleAppInfoProvider appInfoProvider,
++                boolean skipInflation,
++                BubbleUserResolver userResolver) {
++            BubbleViewInfo info = new BubbleViewInfo();
++            if (!skipInflation && !b.isInflated()) {
++                info.taskView = b.getOrCreateBubbleTaskView(taskViewFactory);
++                info.smallWindow = true;
++            }
++            if (!populateCommonInfo(info, c, b, iconFactory, appInfoProvider, userResolver)) {
++                return null;
++            }
++            info.flyoutMessage = b.getFlyoutMessage();
++            if (info.flyoutMessage != null) {
++                info.flyoutMessage.senderAvatar =
++                        loadFlyoutDrawable(info.flyoutMessage.senderIcon, c);
++            }
++            return info;
++        }
++
+         @VisibleForTesting
+         @Nullable
+         public static BubbleViewInfo populate(Context c,
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubbles.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubbles.java
+index ceb7925161d13a7cca80d8b08b0cdfcfd08ac1c9..fb500c58c4c39d61077c2d421ffb618a3e6f1115 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubbles.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubbles.java
+@@ -23,6 +23,7 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
+ 
+ import android.app.ActivityManager;
+ import android.app.NotificationChannel;
++import android.app.PendingIntent;
+ import android.content.Intent;
+ import android.content.pm.ShortcutInfo;
+ import android.content.pm.UserInfo;
+@@ -318,6 +319,9 @@ public interface Bubbles {
+      */
+     boolean canShowBubbleNotification();
+ 
++    /** Opens what the pending intent starts in a small window (Lujarch's small windows). */
++    void showPendingIntentInSmallWindow(PendingIntent intent, UserHandle user);
++
+     /**
+      * Returns the string representation of the given dismiss reason.
+      */
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
+index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..cfb15f66bfe749b6a1f561baa9d19574a82799f7 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
+@@ -65,4 +65,8 @@ interface IBubbles {
+     oneway void moveDraggedBubbleToFullscreen(in String key, in Point dropLocation) = 15;
+ 
+     oneway void setHasBubbleBar(in boolean hasBubbleBar) = 16;
++
++    oneway void showTaskInSmallWindow(in int taskId) = 17;
++
++    oneway void setRecentsShown(in boolean shown) = 18;
+ }
+\ No newline at end of file
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8eadccea6
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
+@@ -0,0 +1,437 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.annotation.SuppressLint
++import android.content.Context
++import android.graphics.Canvas
++import android.graphics.Color
++import android.graphics.LinearGradient
++import android.graphics.Outline
++import android.graphics.Paint
++import android.graphics.Path
++import android.graphics.Rect
++import android.graphics.RectF
++import android.graphics.Shader
++import android.graphics.drawable.Drawable
++import android.text.Layout
++import android.text.StaticLayout
++import android.text.TextPaint
++import android.text.TextUtils
++import android.view.View
++import android.view.ViewOutlineProvider
++import android.widget.FrameLayout
++import com.android.wm.shell.bubbles.model.BubbleIcon
++import com.android.wm.shell.taskview.TaskView
++import kotlin.math.ceil
++import kotlin.math.max
++import kotlin.math.min
++import kotlin.math.roundToInt
++
++/**
++ * One small window: the same shape is a card in the dock, an icon in the rail and the open window,
++ * and changes between them along the springs of [LujarchSmallWindowsView] (WIN-9).
++ */
++class LujarchSmallWindowItem(var bubble: Bubble, context: Context, host: LujarchSmallWindowsView) {
++    val view = LujarchSmallWindowItemView(context, host, this)
++
++    // The frame, untransformed, in the coordinates of the small windows' window.
++    val x = LujarchSpring()
++    val y = LujarchSpring()
++    val w = LujarchSpring()
++    val h = LujarchSpring()
++    val radius = LujarchSpring()
++    /** 1 for a card turned towards the middle of the screen, 0 for a flat shape. */
++    val turn = LujarchSpring()
++    /** 1 for the open window (its handle and outline), 0 for a card. */
++    val window = LujarchSpring()
++    /** 1 for an icon in the rail. */
++    val icon = LujarchSpring()
++    /** The scale of the app's layout in the shape. */
++    val scale = LujarchSpring(1f)
++    val alpha = LujarchSpring(1f)
++    /** The app's live screen, faded in once it has drawn. */
++    val content = LujarchSpring()
++    /** Picked up by a finger: larger; over the close circle: smaller. */
++    val lift = LujarchSpring(1f)
++    val springs = arrayOf(x, y, w, h, radius, turn, window, icon, scale, alpha, content, lift)
++    var startAt = 0L
++
++    // The open window's own place and size (WIN-2), kept while it waits in the dock.
++    var winX = Float.NaN
++    var winY = Float.NaN
++    /** The size the app lays itself out at, in pixels. */
++    var layoutW = 0
++    var layoutH = 0
++    /** The window's scale of that layout. */
++    var winScale = 0f
++    /** The size the task view is laid out at; [layoutW] and [layoutH] once a resize ends. */
++    var taskW = 0
++    var taskH = 0
++
++    var listener: BubbleTaskViewListener? = null
++    var taskView: TaskView? = null
++    var contentDrawn = false
++    var headerColor = 0
++    var unread = 0
++    var lastMessage: CharSequence? = null
++    /** A conversation counts towards the limit once it was opened (WIN-8). */
++    var opened = false
++    /** Whether the task may take the focus: the window is open and was touched last. */
++    var focusable: Boolean? = null
++    var lastUsed = 0L
++    var leaving = false
++
++    val isConversation: Boolean
++        get() = bubble.isChat
++
++    val counts: Boolean
++        get() = !bubble.isChat || opened
++}
++
++/** Draws one [LujarchSmallWindowItem] around its task view, as its springs place it. */
++@SuppressLint("ViewConstructor")
++class LujarchSmallWindowItemView(
++    context: Context,
++    private val host: LujarchSmallWindowsView,
++    private val item: LujarchSmallWindowItem,
++) : FrameLayout(context) {
++    private val density = resources.displayMetrics.density
++    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
++    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
++    private val shade = Paint(Paint.ANTI_ALIAS_FLAG)
++    private val namePaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
++    private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
++    private val countPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
++    private val rect = RectF()
++    private val path = Path()
++    private val clip = Rect()
++    private var appIcon: Drawable? = null
++    private var avatar: Drawable? = null
++    private var textLayout: StaticLayout? = null
++    private var textLayoutWidth = 0
++    private var shownRadius = -1f
++    private val lastClip = Rect()
++
++    init {
++        setWillNotDraw(false)
++        clipChildren = false
++        clipToPadding = false
++        outlineProvider =
++            object : ViewOutlineProvider() {
++                override fun getOutline(view: View, outline: Outline) {
++                    outline.setRoundRect(0, 0, view.width, view.height, item.radius.value)
++                    outline.alpha = item.alpha.value
++                }
++            }
++        namePaint.textSize = 12.5f * density * resources.configuration.fontScale
++        textPaint.textSize = 11f * density * resources.configuration.fontScale
++        countPaint.textSize = 11.5f * density
++        countPaint.isFakeBoldText = true
++        countPaint.textAlign = Paint.Align.CENTER
++        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
++    }
++
++    /** Takes the bubble's icon, picture, name and last message. */
++    fun bind() {
++        val b = item.bubble
++        appIcon = b.appBadge?.newIcon(context) ?: (b.bubbleIcon as? BubbleIcon.AppIcon)
++            ?.bitmapInfo?.newIcon(context)
++        avatar =
++            when (val icon = b.bubbleIcon) {
++                is BubbleIcon.Custom -> android.graphics.drawable.BitmapDrawable(resources, icon.bitmap)
++                is BubbleIcon.AppIcon -> icon.bitmapInfo.newIcon(context)
++                null -> null
++            }
++        if (b.isChat) {
++            b.flyoutMessage?.senderAvatar?.let { avatar = it }
++        }
++        textLayout = null
++        contentDescription = b.title ?: b.appName
++        invalidate()
++    }
++
++    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
++        setMeasuredDimension(
++            MeasureSpec.getSize(widthMeasureSpec),
++            MeasureSpec.getSize(heightMeasureSpec),
++        )
++        item.taskView?.measure(
++            MeasureSpec.makeMeasureSpec(item.taskW, MeasureSpec.EXACTLY),
++            MeasureSpec.makeMeasureSpec(item.taskH, MeasureSpec.EXACTLY),
++        )
++    }
++
++    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
++        item.taskView?.layout(0, 0, item.taskW, item.taskH)
++    }
++
++    /** Applies the springs' values: the shape's turn, the task's scale, place, crop, corners. */
++    fun apply(header: Float, right: Boolean) {
++        val w = width.toFloat()
++        val h = height.toFloat()
++        val turnScale = 1f - (1f - LujarchSmallWindowsView.TURN_SCALE) * item.turn.value
++        val lift = item.lift.value
++        pivotX = if (item.turn.value > 0.01f) (if (right) w else 0f) else w / 2f
++        pivotY = h / 2f
++        scaleX = turnScale * lift
++        scaleY = lift
++        alpha = item.alpha.value
++        invalidateOutline()
++        val tv = item.taskView ?: run {
++            invalidate()
++            return
++        }
++        val s = max(item.scale.value, 0.01f)
++        val top = header * item.window.value
++        tv.pivotX = 0f
++        tv.pivotY = 0f
++        tv.scaleX = s
++        tv.scaleY = s
++        tv.translationY = top
++        tv.alpha = item.content.value * (1f - item.icon.value)
++        val visibleW = ceil(w / s).toInt().coerceIn(1, max(1, item.taskW))
++        val visibleH = ceil((h - top) / s).toInt().coerceIn(1, max(1, item.taskH))
++        clip.set(0, 0, visibleW, visibleH)
++        if (clip != lastClip) {
++            lastClip.set(clip)
++            tv.setClipBounds(Rect(clip))
++        }
++        val r = item.radius.value / s
++        if (kotlin.math.abs(r - shownRadius) > 0.5f) {
++            shownRadius = r
++            tv.setCornerRadius(r)
++        }
++        invalidate()
++    }
++
++    fun onTaskViewChanged() {
++        shownRadius = -1f
++        lastClip.setEmpty()
++    }
++
++    override fun dispatchDraw(canvas: Canvas) {
++        val w = width.toFloat()
++        val h = height.toFloat()
++        if (w <= 0f || h <= 0f) return
++        val radius = item.radius.value
++        val window = item.window.value
++        val icon = item.icon.value
++        rect.set(0f, 0f, w, h)
++        // The body under the app's screen: the header's color in a window, the card's otherwise.
++        fill.color =
++            blend(host.cardColor(item), if (item.headerColor != 0) item.headerColor
++            else host.windowColor, window)
++        canvas.drawRoundRect(rect, radius, radius, fill)
++        super.dispatchDraw(canvas)
++        val cardness = (1f - window) * (1f - icon)
++        val content = item.content.value * (1f - icon)
++        if (item.isConversation) {
++            drawConversation(canvas, w, h, (1f - window) * (1f - icon) + 0f)
++        } else if (content < 1f) {
++            drawAppPlaceholder(canvas, w, h, (1f - content) * (1f - icon))
++        }
++        if (icon > 0f) drawRailIcon(canvas, w, h, icon)
++        if (cardness > 0f && !item.isConversation && content > 0f) {
++            drawBadge(canvas, h, cardness * content)
++        }
++        if (item.turn.value > 0f) drawShade(canvas, w, h, item.turn.value * cardness)
++        if (window > 0f) drawChrome(canvas, w, h, window)
++    }
++
++    private fun drawAppPlaceholder(canvas: Canvas, w: Float, h: Float, a: Float) {
++        if (a <= 0f) return
++        val icon = appIcon ?: return
++        val size = min(48f * density, min(w, h) * 0.5f)
++        val name = item.bubble.appName ?: ""
++        val cx = w / 2f
++        val cy = h / 2f - if (name.isNotEmpty()) 10f * density else 0f
++        icon.setBounds(
++            (cx - size / 2).roundToInt(),
++            (cy - size / 2).roundToInt(),
++            (cx + size / 2).roundToInt(),
++            (cy + size / 2).roundToInt(),
++        )
++        icon.alpha = (a * 255).roundToInt()
++        icon.draw(canvas)
++        icon.alpha = 255
++        if (name.isNotEmpty() && h > 80f * density) {
++            namePaint.color = withAlpha(host.cardTextColor, a)
++            namePaint.textAlign = Paint.Align.CENTER
++            val label =
++                TextUtils.ellipsize(name, namePaint, w - 16f * density, TextUtils.TruncateAt.END)
++            canvas.drawText(label, 0, label.length, cx, cy + size / 2 + 18f * density, namePaint)
++        }
++    }
++
++    private fun drawBadge(canvas: Canvas, h: Float, a: Float) {
++        val icon = appIcon ?: return
++        val size = 22f * density
++        val margin = 8f * density
++        // In the lower corner towards the middle of the screen.
++        val left = if (host.dockRight) margin else width - margin - size
++        val top = h - margin - size
++        fill.color = withAlpha(Color.WHITE, a * 0.9f)
++        canvas.drawCircle(left + size / 2, top + size / 2, size / 2 + 2f * density, fill)
++        icon.setBounds(left.roundToInt(), top.roundToInt(), (left + size).roundToInt(),
++            (top + size).roundToInt())
++        icon.alpha = (a * 255).roundToInt()
++        icon.draw(canvas)
++        icon.alpha = 255
++    }
++
++    private fun drawConversation(canvas: Canvas, w: Float, h: Float, a: Float) {
++        if (a <= 0.01f) return
++        val size = min(52f * density, w * 0.5f)
++        val cx = w / 2f
++        val message = item.lastMessage
++        val name = item.bubble.title ?: item.bubble.appName ?: ""
++        val textBlock = 16f * density + if (message.isNullOrEmpty()) 0f else 34f * density
++        val top = (h - size - 8f * density - textBlock) / 2f
++        drawAvatar(canvas, cx, top + size / 2, size, a)
++        if (item.unread > 0) {
++            // The unread count at the picture's upper outer corner.
++            val r = 10f * density
++            val bx = cx + size / 2 + 4f * density - r
++            val by = top - 4f * density + r
++            fill.color = withAlpha(host.accentColor, a)
++            canvas.drawCircle(bx, by, r, fill)
++            countPaint.color = withAlpha(host.onAccentColor, a)
++            val count = if (item.unread > 99) "99+" else item.unread.toString()
++            canvas.drawText(count, bx, by + countPaint.textSize * 0.36f, countPaint)
++        }
++        namePaint.color = withAlpha(host.conversationTextColor, a)
++        namePaint.textAlign = Paint.Align.CENTER
++        val nameText =
++            TextUtils.ellipsize(name, namePaint, w - 16f * density, TextUtils.TruncateAt.END)
++        val nameY = top + size + 8f * density + namePaint.textSize
++        canvas.drawText(nameText, 0, nameText.length, cx, nameY, namePaint)
++        if (!message.isNullOrEmpty()) {
++            val width = (w - 20f * density).roundToInt().coerceAtLeast(1)
++            if (textLayout == null || textLayoutWidth != width) {
++                textLayoutWidth = width
++                textLayout =
++                    StaticLayout.Builder.obtain(message, 0, message.length, textPaint, width)
++                        .setAlignment(Layout.Alignment.ALIGN_CENTER)
++                        .setMaxLines(2)
++                        .setEllipsize(TextUtils.TruncateAt.END)
++                        .build()
++            }
++            textPaint.color = withAlpha(host.conversationSubTextColor, a)
++            canvas.save()
++            canvas.translate((w - width) / 2f, nameY + 6f * density)
++            textLayout?.draw(canvas)
++            canvas.restore()
++        }
++    }
++
++    private fun drawAvatar(canvas: Canvas, cx: Float, cy: Float, size: Float, a: Float) {
++        val d = avatar ?: appIcon ?: return
++        canvas.save()
++        path.reset()
++        path.addCircle(cx, cy, size / 2, Path.Direction.CW)
++        canvas.clipPath(path)
++        d.setBounds((cx - size / 2).roundToInt(), (cy - size / 2).roundToInt(),
++            (cx + size / 2).roundToInt(), (cy + size / 2).roundToInt())
++        d.alpha = (a * 255).roundToInt()
++        d.draw(canvas)
++        d.alpha = 255
++        canvas.restore()
++    }
++
++    private fun drawRailIcon(canvas: Canvas, w: Float, h: Float, a: Float) {
++        val size = min(w, h)
++        val cx = w / 2f
++        val cy = h / 2f
++        if (item.isConversation) {
++            drawAvatar(canvas, cx, cy, size, a)
++            stroke.strokeWidth = (if (item.unread > 0) 2f else 1.5f) * density
++            stroke.color =
++                if (item.unread > 0) withAlpha(host.accentColor, a)
++                else withAlpha(Color.WHITE, a * 0.7f)
++            canvas.drawCircle(cx, cy, size / 2 + stroke.strokeWidth / 2, stroke)
++            if (item.unread > 0) {
++                stroke.strokeWidth = 3f * density
++                stroke.color = withAlpha(host.accentColor, a * 0.25f)
++                canvas.drawCircle(cx, cy, size / 2 + 3.5f * density, stroke)
++            }
++        } else {
++            val d = appIcon ?: return
++            d.setBounds(0, 0, size.roundToInt(), size.roundToInt())
++            d.alpha = (a * 255).roundToInt()
++            d.draw(canvas)
++            d.alpha = 255
++            stroke.strokeWidth = 1.5f * density
++            stroke.color = withAlpha(Color.WHITE, a * 0.7f)
++            canvas.drawCircle(cx, cy, size / 2 + 0.75f * density, stroke)
++        }
++    }
++
++    private fun drawShade(canvas: Canvas, w: Float, h: Float, a: Float) {
++        if (a <= 0.01f) return
++        // The side turned away from the viewer is the one towards the middle of the screen.
++        val far = if (host.dockRight) 0f else w
++        val near = if (host.dockRight) w else 0f
++        shade.shader =
++            LinearGradient(far, 0f, near, 0f, Color.argb((46 * a).roundToInt(), 0, 0, 0),
++                Color.TRANSPARENT, Shader.TileMode.CLAMP)
++        canvas.drawRoundRect(rect, item.radius.value, item.radius.value, shade)
++    }
++
++    private fun drawChrome(canvas: Canvas, w: Float, h: Float, a: Float) {
++        val header = host.headerHeight * a
++        // The handle along the top edge.
++        val pillW = 30f * density
++        val pillH = 4f * density
++        fill.color = withAlpha(host.handleColor(item), a)
++        rect.set((w - pillW) / 2, (header - pillH) / 2, (w + pillW) / 2, (header + pillH) / 2)
++        canvas.drawRoundRect(rect, pillH / 2, pillH / 2, fill)
++        // The corner that scales the window.
++        stroke.strokeWidth = 3f * density
++        stroke.strokeCap = Paint.Cap.ROUND
++        stroke.color = withAlpha(host.handleColor(item), a * 0.9f)
++        val g = 14f * density
++        val inset = 7f * density
++        path.reset()
++        path.moveTo(w - inset, h - inset - g)
++        path.lineTo(w - inset, h - inset - 7f * density)
++        path.quadTo(w - inset, h - inset, w - inset - 7f * density, h - inset)
++        path.lineTo(w - inset - g, h - inset)
++        canvas.drawPath(path, stroke)
++        // The thin outline.
++        stroke.strokeWidth = 1.5f * density
++        stroke.strokeCap = Paint.Cap.BUTT
++        stroke.color = withAlpha(host.accentColor, a * host.outlineAlpha)
++        val o = stroke.strokeWidth / 2
++        rect.set(-o, -o, w + o, h + o)
++        canvas.drawRoundRect(rect, item.radius.value + o, item.radius.value + o, stroke)
++    }
++
++    private fun withAlpha(color: Int, a: Float): Int =
++        Color.argb((Color.alpha(color) * a.coerceIn(0f, 1f)).roundToInt(), Color.red(color),
++            Color.green(color), Color.blue(color))
++
++    private fun blend(from: Int, to: Int, t: Float): Int {
++        val k = t.coerceIn(0f, 1f)
++        return Color.argb(
++            (Color.alpha(from) + (Color.alpha(to) - Color.alpha(from)) * k).roundToInt(),
++            (Color.red(from) + (Color.red(to) - Color.red(from)) * k).roundToInt(),
++            (Color.green(from) + (Color.green(to) - Color.green(from)) * k).roundToInt(),
++            (Color.blue(from) + (Color.blue(to) - Color.blue(from)) * k).roundToInt(),
++        )
++    }
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..2ec3adf87d169f9affb4e5897e47cccd9e984df0
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.content.Context
++import android.graphics.Rect
++import android.os.Handler
++import android.view.SurfaceHolder
++import android.view.ViewTreeObserver
++import com.android.wm.shell.taskview.TaskView
++import com.android.wm.shell.taskview.TaskViewController
++import com.android.wm.shell.taskview.TaskViewTaskController
++
++/**
++ * The task view of a small window. It is laid out at the size the app lays itself out at and is
++ * scaled into the window or the card it shows in, so a scale never lays the app out again.
++ *
++ * The task's bounds are that size placed just right of the display: no system bar, cutout or
++ * input method overlaps them, so the app gets no insets wherever its window shows; its surface
++ * and its input follow the view.
++ */
++class LujarchSmallWindowTaskView(
++    context: Context,
++    taskViewController: TaskViewController,
++    taskViewTaskController: TaskViewTaskController,
++    handler: Handler,
++    disableBackgroundLayer: Boolean,
++) : TaskView(context, taskViewController, taskViewTaskController, handler, disableBackgroundLayer) {
++    private val taskBounds = Rect()
++
++    /** The task's bounds for the size the view is laid out at. */
++    fun taskBounds(out: Rect): Rect {
++        val displayWidth = resources.displayMetrics.widthPixels
++        out.set(displayWidth, 0, displayWidth + width, height)
++        return out
++    }
++
++    override fun getBoundsOnScreen(outRect: Rect) {
++        taskBounds(outRect)
++    }
++
++    override fun getCurrentBoundsOnScreen(): Rect = taskBounds(taskBounds)
++
++    override fun onLocationChanged() {
++        onLocationChanged(taskBounds(Rect()))
++    }
++
++    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
++        onLocationChanged()
++    }
++
++    /** The small windows' view sets the touchable region of their window by itself. */
++    override fun onComputeInternalInsets(inoutInfo: ViewTreeObserver.InternalInsetsInfo) {}
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..92dbbc1cd7105b78d0d5ae772619dc86df896aca
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt
+@@ -0,0 +1,115 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.animation.ValueAnimator
++import android.view.Choreographer
++import kotlin.math.abs
++import kotlin.math.cos
++import kotlin.math.exp
++import kotlin.math.sin
++import kotlin.math.sqrt
++
++/**
++ * The one spring of WIN-9: damping ratio 0.8, natural frequency 16 rad/s, unit mass. It overshoots
++ * by about 1.5 % and settles in about half a second. Stepped in closed form by the gap between
++ * frame times, so it follows the same path at any frame rate.
++ */
++class LujarchSpring(value: Float = 0f) {
++    var pos = value.toDouble()
++        private set
++    var vel = 0.0
++        private set
++    var target = value.toDouble()
++        private set
++
++    val value: Float
++        get() = pos.toFloat()
++
++    val atRest: Boolean
++        get() = pos == target && vel == 0.0
++
++    /** Moves the target; a velocity, when given, replaces the current one (a fling). */
++    fun to(value: Float, velocity: Float = Float.NaN) {
++        target = value.toDouble()
++        if (!velocity.isNaN()) vel = velocity.toDouble()
++    }
++
++    /** Puts the spring at rest at [value]: what a finger holding the thing does. */
++    fun snap(value: Float) {
++        pos = value.toDouble()
++        target = pos
++        vel = 0.0
++    }
++
++    /** Advances by [ms] milliseconds; [threshold] is the distance that counts as there. */
++    fun step(ms: Long, threshold: Double) {
++        if (atRest) return
++        val t = ms / 1000.0
++        val x0 = pos - target
++        val wd = W0 * sqrt(1 - Z * Z)
++        val sc = (Z * W0 * x0 + vel) / wd
++        val e = exp(-Z * W0 * t)
++        val x = e * (x0 * cos(wd * t) + sc * sin(wd * t))
++        val v = x * -W0 * Z + e * (-wd * x0 * sin(wd * t) + wd * sc * cos(wd * t))
++        pos = x + target
++        vel = v
++        if (abs(x) < threshold && abs(v) < threshold * 20) {
++            pos = target
++            vel = 0.0
++        }
++    }
++
++    companion object {
++        const val Z = 0.8
++        const val W0 = 16.0
++        /** Cards moving together start one after another at this interval. */
++        const val STAGGER_MS = 35L
++
++        /** Whether motion plays: off with Settings > Accessibility > Remove animations. */
++        @JvmStatic
++        fun animated(): Boolean = ValueAnimator.areAnimatorsEnabled()
++    }
++}
++
++/**
++ * Drives every spring of the small windows from one frame callback, so that what moves together
++ * is placed in the same frame. [onFrame] steps the springs and places the views; it returns
++ * whether anything still moves.
++ */
++class LujarchFrameClock(private val onFrame: (Long) -> Boolean) : Choreographer.FrameCallback {
++    private val choreographer = Choreographer.getInstance()
++    private var lastNanos = 0L
++    private var posted = false
++
++    fun start() {
++        if (posted) return
++        posted = true
++        lastNanos = 0L
++        choreographer.postFrameCallback(this)
++    }
++
++    override fun doFrame(frameTimeNanos: Long) {
++        posted = false
++        val ms = if (lastNanos == 0L) 0L else (frameTimeNanos - lastNanos) / 1_000_000L
++        lastNanos = frameTimeNanos
++        if (onFrame(ms.coerceIn(0L, 64L))) {
++            posted = true
++            choreographer.postFrameCallback(this)
++        }
++    }
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsSettings.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsSettings.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..1bc8c21140ae1a5404ddb2ae079868a65a0f5de8
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsSettings.kt
+@@ -0,0 +1,96 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.content.Context
++import android.database.ContentObserver
++import android.net.Uri
++import android.os.Handler
++import android.os.UserHandle
++import android.provider.Settings
++
++/**
++ * Whether bubbles show as small windows (target/windows.md): set by BubbleController whenever it
++ * picks the views for its mode, read where bubble code outside the views decides what a small
++ * window needs (each task its own bounds, the dock's own limit).
++ */
++object LujarchSmallWindowsMode {
++    @JvmStatic @Volatile var active = false
++}
++
++/**
++ * The switches of Settings > Display > Small windows, as the current user set them, each read
++ * live. Use small windows is Android's own bubbles switch, Settings.Secure notification_bubbles.
++ */
++class LujarchSmallWindowsSettings(
++    private val context: Context,
++    private val handler: Handler,
++    private val onChange: () -> Unit,
++) {
++    private val resolver = context.contentResolver
++    private val observer =
++        object : ContentObserver(handler) {
++            override fun onChange(selfChange: Boolean, uri: Uri?) {
++                onChange()
++            }
++        }
++    private var registered = false
++
++    /** WIN-1: Use small windows. */
++    val enabled: Boolean
++        get() = secure(Settings.Secure.NOTIFICATION_BUBBLES, 1) != 0
++
++    /** WIN-3: Move to dock when the app below is touched. */
++    val dockOnTouch: Boolean
++        get() = secure(DOCK_ON_TOUCH, 1) != 0
++
++    /** WIN-7: Live previews in the dock. */
++    val livePreviews: Boolean
++        get() = secure(LIVE_PREVIEWS, 1) != 0
++
++    /** WIN-8: At most, 2 to 4; a stored value outside counts as the nearest. */
++    val maxWindows: Int
++        get() = secure(MAX, 4).coerceIn(2, 4)
++
++    fun register() {
++        if (registered) return
++        registered = true
++        for (key in listOf(Settings.Secure.NOTIFICATION_BUBBLES, DOCK_ON_TOUCH, LIVE_PREVIEWS, MAX)) {
++            resolver.registerContentObserver(
++                Settings.Secure.getUriFor(key),
++                false,
++                observer,
++                UserHandle.USER_ALL,
++            )
++        }
++    }
++
++    fun unregister() {
++        if (!registered) return
++        registered = false
++        resolver.unregisterContentObserver(observer)
++    }
++
++    private fun secure(key: String, default: Int): Int =
++        Settings.Secure.getIntForUser(resolver, key, default, UserHandle.USER_CURRENT)
++
++    companion object {
++        const val DOCK_ON_TOUCH = "lujarch_windows_dock_on_touch"
++        const val LIVE_PREVIEWS = "lujarch_windows_live_previews"
++        const val MAX = "lujarch_windows_max"
++    }
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsTouchMonitor.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsTouchMonitor.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c481205663
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsTouchMonitor.kt
+@@ -0,0 +1,71 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.content.Context
++import android.hardware.input.InputManager
++import android.os.Looper
++import android.view.InputEvent
++import android.view.InputEventReceiver
++import android.view.InputMonitor
++import android.view.MotionEvent
++
++/**
++ * Watches where touches go down on the display while a small window is open, without taking
++ * them: a touch on the app below moves the window to the dock and still reaches that app (WIN-3).
++ */
++class LujarchSmallWindowsTouchMonitor(
++    context: Context,
++    private val onDown: (Float, Float) -> Unit,
++) {
++    private val inputManager = context.getSystemService(InputManager::class.java)
++    private var monitor: InputMonitor? = null
++    private var receiver: InputEventReceiver? = null
++
++    fun start(displayId: Int) {
++        if (monitor != null) return
++        val m = inputManager.monitorGestureInput(NAME, displayId)
++        monitor = m
++        receiver =
++            object : InputEventReceiver(m.inputChannel, Looper.myLooper()) {
++                override fun onInputEvent(event: InputEvent) {
++                    try {
++                        if (event is MotionEvent && event.actionMasked == MotionEvent.ACTION_DOWN) {
++                            onDown(event.rawX, event.rawY)
++                        }
++                    } finally {
++                        finishInputEvent(event, false)
++                    }
++                }
++            }
++    }
++
++    fun stop() {
++        receiver?.let {
++            receiver = null
++            it.dispose()
++        }
++        monitor?.let {
++            monitor = null
++            it.dispose()
++        }
++    }
++
++    private companion object {
++        const val NAME = "lujarch-small-windows"
++    }
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414264dd9ed
+--- /dev/null
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
+@@ -0,0 +1,1629 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.wm.shell.bubbles
++
++import android.annotation.SuppressLint
++import android.app.ActivityManager
++import android.app.WindowConfiguration
++import android.content.Context
++import android.graphics.Canvas
++import android.graphics.Color
++import android.graphics.Paint
++import android.graphics.Rect
++import android.graphics.RectF
++import android.graphics.Region
++import android.graphics.drawable.Drawable
++import android.os.Handler
++import android.os.Looper
++import android.os.SystemClock
++import android.text.TextPaint
++import android.util.Log
++import android.view.Gravity
++import android.view.MotionEvent
++import android.view.SurfaceControl
++import android.view.SurfaceView
++import android.view.VelocityTracker
++import android.view.View
++import android.view.ViewConfiguration
++import android.view.ViewGroup
++import android.view.ViewTreeObserver
++import android.view.WindowInsets
++import android.window.TransitionInfo
++import android.window.WindowAnimationState
++import android.window.WindowContainerTransaction
++import android.widget.FrameLayout
++import com.android.wm.shell.R
++import com.android.wm.shell.bubbles.util.BubbleUtils
++import com.android.wm.shell.shared.bubbles.DismissView
++import com.android.wm.shell.taskview.TaskViewTaskController
++import com.android.wm.shell.transition.Transitions
++import kotlin.math.abs
++import kotlin.math.hypot
++import kotlin.math.max
++import kotlin.math.min
++import kotlin.math.roundToInt
++
++/**
++ * Lujarch's small windows (target/windows.md): the presentation of Android's app bubbles on a
++ * phone. Bubbles stay Android's (BubbleController, BubbleData, their tasks and transitions); this
++ * view shows the selected bubble of an expanded stack as a free window over the app on screen and
++ * every other bubble as a card in the dock at an edge of the screen, or as an icon in its rail.
++ */
++@SuppressLint("ViewConstructor")
++class LujarchSmallWindowsView(
++    context: Context,
++    private val controller: BubbleController,
++    private val data: BubbleData,
++    private val manager: BubbleExpandedViewManager,
++) : FrameLayout(context), BubbleExpandedViewTransitionAnimator,
++    ViewTreeObserver.OnComputeInternalInsetsListener {
++
++    private val density = resources.displayMetrics.density
++    private val handler = Handler(Looper.myLooper()!!)
++    private val settings = LujarchSmallWindowsSettings(context, handler) { onSettingsChanged() }
++    private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
++    private val items = LinkedHashMap<String, LujarchSmallWindowItem>()
++    /** The cards of the dock, the top card first. */
++    private val dock = ArrayList<LujarchSmallWindowItem>()
++    private var open: LujarchSmallWindowItem? = null
++    private val touchMonitor = LujarchSmallWindowsTouchMonitor(context, ::onTouchBelow)
++
++    var dockRight = prefs.getBoolean(KEY_RIGHT, true)
++        private set
++    private var dockTopFraction = prefs.getFloat(KEY_TOP, Float.NaN)
++    private var dockTop = 0f
++    private var folded = false
++    /** While Recents shows, the windows and the cards wait in its Running layer (WIN-11). */
++    private var recentsShown = false
++
++    private val handleX = LujarchSpring()
++    private val handleY = LujarchSpring()
++    private val handleAlpha = LujarchSpring()
++    private val railTop = LujarchSpring()
++    private val railHeight = LujarchSpring()
++    private val railAlpha = LujarchSpring()
++    private val menuAlpha = LujarchSpring()
++    private val ownSprings =
++        arrayOf(handleX, handleY, handleAlpha, railTop, railHeight, railAlpha, menuAlpha)
++    private val clock = LujarchFrameClock(::onFrame)
++
++    private val dismissView = DismissView(context)
++    private var menuFor: LujarchSmallWindowItem? = null
++    private val menuRect = RectF()
++    private var imeTop = Int.MAX_VALUE
++    /** The last touch went to the app below the open window, which then has the focus. */
++    private var belowTouched = false
++
++    // Colors, from the system's palette.
++    val accentColor = context.getColor(com.android.internal.R.color.materialColorPrimary)
++    val onAccentColor = context.getColor(com.android.internal.R.color.materialColorOnPrimary)
++    val windowColor = context.getColor(com.android.internal.R.color.materialColorSurfaceBright)
++    val cardTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
++    private val conversationColor =
++        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHighest)
++    val conversationTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
++    val conversationSubTextColor =
++        context.getColor(com.android.internal.R.color.materialColorOnSurfaceVariant)
++    private val placeholderColor =
++        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHigh)
++    private val menuColor =
++        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHigh)
++    private val menuTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
++    var outlineAlpha = OUTLINE_ALPHA
++        private set
++
++    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
++    private val menuPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
++    private val menuIcons: Array<Drawable?>
++    private val menuLabels: Array<CharSequence>
++
++    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
++    private var gesture: Gesture? = null
++    private var velocity: VelocityTracker? = null
++    private val tmpRect = Rect()
++    private val tmpRectF = RectF()
++
++    init {
++        clipChildren = false
++        clipToPadding = false
++        setWillNotDraw(false)
++        dismissView.setup()
++        dismissView.elevation = dp(DISMISS_Z)
++        addView(dismissView)
++        menuPaint.textSize = 14.5f * density * resources.configuration.fontScale
++        menuIcons =
++            arrayOf(
++                context.getDrawable(R.drawable.lujarch_small_window_fullscreen),
++                context.getDrawable(R.drawable.lujarch_small_window_dock),
++                context.getDrawable(R.drawable.lujarch_small_window_close),
++            )
++        menuLabels =
++            arrayOf(
++                context.getText(R.string.lujarch_small_window_fullscreen),
++                context.getText(R.string.lujarch_small_window_dock),
++                context.getText(R.string.lujarch_small_window_close),
++            )
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // The window's lifecycle
++
++    override fun onAttachedToWindow() {
++        super.onAttachedToWindow()
++        viewTreeObserver.addOnComputeInternalInsetsListener(this)
++        settings.register()
++    }
++
++    override fun onDetachedFromWindow() {
++        super.onDetachedFromWindow()
++        viewTreeObserver.removeOnComputeInternalInsetsListener(this)
++        settings.unregister()
++        touchMonitor.stop()
++    }
++
++    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
++        super.onLayout(changed, l, t, r, b)
++        if (changed) {
++            if (dockTopFraction.isNaN()) dockTopFraction = DOCK_TOP / (height / density)
++            dockTop = clampDockTop(dockTopFraction * height)
++            items.values.forEach {
++                fitWindow(it)
++                if (it.w.value == 0f) growIn(it)
++            }
++            place(animate = true, stagger = true)
++            ownSprings.forEach { it.snap(it.target.toFloat()) }
++            syncTasks()
++        } else {
++            items.values.forEach { placeView(it) }
++        }
++    }
++
++    /** The display's size or density changed. */
++    fun onDisplaySizeChanged() {
++        requestLayout()
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Bubbles, as BubbleController reports them
++
++    /** A bubble was added: its card goes on top of the dock (WIN-4). */
++    fun addBubble(bubble: Bubble) {
++        val existing = items[bubble.key]
++        if (existing != null) {
++            existing.bubble = bubble
++            existing.view.bind()
++            return
++        }
++        val item = LujarchSmallWindowItem(bubble, context, this)
++        item.view.tag = item
++        item.lastUsed = SystemClock.uptimeMillis()
++        item.lastMessage = bubble.flyoutMessage?.message
++        initWindow(item)
++        items[bubble.key] = item
++        dock.add(0, item)
++        item.view.elevation = dp(CARD_Z)
++        addView(item.view, LayoutParams(0, 0))
++        item.view.bind()
++        listen(item)
++        if (width > 0) growIn(item)
++        if (item.counts) enforceLimit(item)
++        place(animate = true, stagger = true)
++        syncTasks()
++    }
++
++    /** A new shape grows out of the top of the dock. */
++    private fun growIn(item: LujarchSmallWindowItem) {
++        snapItem(item, slotFrame(0), scale = cardScale(item))
++        item.alpha.snap(0f)
++        item.lift.snap(0.6f)
++    }
++
++    /**
++     * A bubble went away: its shape fades where it is while the dock closes up; then the bubble's
++     * task view is cleaned up, which ends its task unless it already left the bubble (full screen,
++     * Recents).
++     */
++    fun removeBubble(bubble: Bubble) {
++        val item = items.remove(bubble.key)
++        if (item == null) {
++            post { finishRemoval(bubble) }
++            return
++        }
++        dock.remove(item)
++        if (open === item) {
++            open = null
++            updateTouchMonitor()
++        }
++        if (menuFor === item) hideMenu()
++        item.leaving = true
++        item.alpha.to(0f)
++        item.lift.to(0.8f)
++        if (!LujarchSpring.animated()) item.alpha.snap(0f)
++        place(animate = true, stagger = true)
++    }
++
++    private fun gone(item: LujarchSmallWindowItem) {
++        detachTask(item)
++        removeView(item.view)
++        finishRemoval(item.bubble)
++        if (items.isEmpty()) controller.onAllBubblesAnimatedOut()
++    }
++
++    private fun finishRemoval(bubble: Bubble) {
++        val transition = bubble.currentTransition
++        if (transition != null) transition.continueCollapse() else bubble.cleanupViews()
++    }
++
++    /** The bubble's task view reports to its shape from the start, attached or not. */
++    private fun listen(item: LujarchSmallWindowItem) {
++        if (item.listener != null) return
++        val btv = item.bubble.bubbleTaskView ?: return
++        item.listener =
++            BubbleTaskViewListener(context, btv, item.view, manager,
++                object : BubbleTaskViewListener.Callback {
++                    override fun onTaskCreated() = onContentDrawn(item, true)
++
++                    override fun onContentVisibilityChanged(visible: Boolean) =
++                        onContentDrawn(item, visible)
++
++                    override fun onBackPressed() {
++                        if (item === open) controller.collapseStack()
++                    }
++
++                    override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {
++                        onTaskInfo(item, taskInfo)
++                    }
++                })
++        item.listener?.setBubble(item.bubble)
++    }
++
++    /** A bubble's notification or icon changed: a new message counts on its card (WIN-13). */
++    fun updateBubble(bubble: Bubble) {
++        val item = items[bubble.key] ?: return
++        item.bubble = bubble
++        val message = bubble.flyoutMessage?.message
++        if (item.isConversation && message != null && message != item.lastMessage) {
++            item.lastMessage = message
++            if (item !== open) item.unread++
++        }
++        item.view.bind()
++    }
++
++    fun setBubbleSuppressed(bubble: Bubble, suppressed: Boolean) {
++        val item = items[bubble.key] ?: return
++        item.view.visibility = if (suppressed) INVISIBLE else VISIBLE
++    }
++
++    /** Expansion or selection changed in BubbleData: the selected bubble's window opens. */
++    fun onStackChanged() {
++        val selected = data.selectedBubble as? Bubble
++        val wanted = if (data.isExpanded && selected != null) items[selected.key] else null
++        if (wanted === open) return
++        val previous = open
++        if (previous != null) {
++            // The window that was open becomes the top card (WIN-4).
++            dock.remove(previous)
++            dock.add(0, previous)
++            previous.view.elevation = dp(CARD_Z)
++        }
++        hideMenu()
++        open = wanted
++        if (wanted != null) {
++            dock.remove(wanted)
++            wanted.lastUsed = SystemClock.uptimeMillis()
++            wanted.unread = 0
++            wanted.view.elevation = dp(WINDOW_Z)
++            if (wanted.isConversation && !wanted.opened) {
++                wanted.opened = true
++                enforceLimit(wanted)
++            }
++        }
++        belowTouched = false
++        updateTouchMonitor()
++        place(animate = true, stagger = true)
++        syncTasks()
++    }
++
++    fun hasItems(): Boolean = items.isNotEmpty()
++
++    /** Whether another small window than [taskView]'s shows its app: the bubbles' root task stays. */
++    fun showsTaskOtherThan(taskView: TaskViewTaskController): Boolean =
++        items.values.any { it.taskView != null && it.taskView?.controller !== taskView }
++
++    // ---------------------------------------------------------------------------------------
++    // The limit (WIN-8)
++
++    private fun enforceLimit(newcomer: LujarchSmallWindowItem) {
++        val counted = items.values.filter { it.counts && !it.leaving }
++        var excess = counted.size - settings.maxWindows
++        if (excess <= 0) return
++        val candidates =
++            counted.filter { it !== newcomer && it !== open }.sortedBy { it.lastUsed }
++        for (item in candidates) {
++            if (excess <= 0) break
++            moveToRecents(item)
++            excess--
++        }
++    }
++
++    /**
++     * Makes the small window an ordinary task behind the app on screen, so that it is a card in
++     * Recents and its app keeps running.
++     */
++    private fun moveToRecents(item: LujarchSmallWindowItem) {
++        val bubble = item.bubble
++        val taskView = bubble.bubbleTaskView?.taskView
++        val task = taskView?.taskInfo
++        if (taskView == null || task == null) {
++            controller.dismissBubble(bubble, Bubbles.DISMISS_AGED)
++            return
++        }
++        Log.i(TAG, "moving ${bubble.key} (task ${task.taskId}) to Recents: over the limit")
++        val wct =
++            if (controller.bubbleHelper.isAppBubbleTask(task)) {
++                BubbleUtils.getExitBubbleTransaction(controller.bubbleHelper, task.token,
++                    taskView.captionInsetsOwner)
++            } else {
++                WindowContainerTransaction().apply {
++                    setWindowingMode(task.token, WindowConfiguration.WINDOWING_MODE_UNDEFINED)
++                    setAlwaysOnTop(task.token, false)
++                    setTaskForceExcludedFromRecents(task.token, false)
++                    setInterceptBackPressedOnTaskRoot(task.token, false)
++                    setDisablePip(task.token, false)
++                    setLaunchNextToBubble(task.token, false)
++                    setDisableLaunchAdjacent(task.token, false)
++                    setBounds(task.token, Rect())
++                }
++            }
++        wct.reorder(task.token, false /* onTop */)
++        taskView.controller.taskOrganizer.applyTransaction(wct)
++        taskView.controller.notifyTaskRemovalStarted(task)
++    }
++
++    private fun onSettingsChanged() {
++        if (!settings.enabled) {
++            // Off (WIN-1): the dock and its rail are gone; the apps stay in Recents.
++            items.values.filter { !it.isConversation }.forEach { moveToRecents(it) }
++            return
++        }
++        items.values.lastOrNull { it.counts }?.let { enforceLimit(it) }
++        updateTouchMonitor()
++        place(animate = true, stagger = true)
++        syncTasks()
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Geometry
++
++    private fun dp(v: Float): Float = v * density
++
++    val headerHeight: Float
++        get() = dp(HEADER)
++
++    private val margin: Float
++        get() = dp(MARGIN)
++
++    private val statusBar: Int
++        get() =
++            rootWindowInsets?.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars())?.top
++                ?: 0
++
++    private val topLimit: Float
++        get() = max(margin, statusBar.toFloat())
++
++    private val bottomLimit: Float
++        get() = min(height - margin, imeTop - margin)
++
++    private fun cardScale(item: LujarchSmallWindowItem): Float =
++        dp(CARD_W) / max(1, item.layoutW)
++
++    private fun initWindow(item: LujarchSmallWindowItem) {
++        val w = if (width > 0) width else resources.displayMetrics.widthPixels
++        val h = if (height > 0) height else resources.displayMetrics.heightPixels
++        item.layoutW = w
++        item.layoutH = h
++        item.taskW = w
++        item.taskH = h
++        item.winScale = dp(WINDOW_W) / w
++        item.winX = dp(WINDOW_X)
++        item.winY = dp(WINDOW_Y)
++        fitWindow(item)
++    }
++
++    /** Keeps the window at least 160 dp wide and 12 dp inside the screen's edges (WIN-2). */
++    private fun fitWindow(item: LujarchSmallWindowItem) {
++        if (width == 0 || height == 0 || item.layoutW == 0) return
++        val maxW = width - 2 * margin
++        val maxH = bottomLimit - topLimit
++        var s = item.winScale
++        s = min(s, maxW / item.layoutW)
++        s = min(s, (maxH - headerHeight) / item.layoutH)
++        s = max(s, dp(MIN_W) / item.layoutW)
++        item.winScale = s
++        val w = item.layoutW * s
++        val h = headerHeight + item.layoutH * s
++        item.winX = item.winX.coerceIn(margin, max(margin, width - margin - w))
++        item.winY = item.winY.coerceIn(topLimit, max(topLimit, bottomLimit - h))
++    }
++
++    private class Frame(
++        val x: Float,
++        val y: Float,
++        val w: Float,
++        val h: Float,
++        val radius: Float,
++        val turn: Float,
++        val window: Float,
++        val icon: Float,
++    )
++
++    private fun dockX(): Float = if (dockRight) width - dp(DOCK_MARGIN + CARD_W) else dp(DOCK_MARGIN)
++
++    private fun slotFrame(i: Int): Frame =
++        if (folded) {
++            val x =
++                if (dockRight) width - dp(RAIL_W) + dp((RAIL_W - RAIL_ICON) / 2)
++                else dp((RAIL_W - RAIL_ICON) / 2)
++            Frame(x, railTopFor(dockTop) + dp(RAIL_PAD) + i * dp(RAIL_STEP), dp(RAIL_ICON),
++                dp(RAIL_ICON), dp(RAIL_ICON / 2), 0f, 0f, 1f)
++        } else {
++            Frame(dockX(), dockTop + dp(CARD_FROM_HANDLE) + i * dp(CARD_STEP), dp(CARD_W),
++                dp(CARD_H), dp(CARD_RADIUS), 1f, 0f, 0f)
++        }
++
++    private fun windowFrame(item: LujarchSmallWindowItem): Frame {
++        val s = item.winScale
++        var y = item.winY
++        val h = headerHeight + item.layoutH * s
++        // Over the input method the window waits above it.
++        if (y + h > bottomLimit) y = max(topLimit, bottomLimit - h)
++        return Frame(item.winX, y, item.layoutW * s, h, dp(WINDOW_RADIUS), 0f, 1f, 0f)
++    }
++
++    private fun railTopFor(top: Float): Float = top + dp(RAIL_FROM_HANDLE)
++
++    private fun clampDockTop(top: Float): Float {
++        val cards = max(1, dock.size)
++        val span = dp(CARD_FROM_HANDLE) + (cards - 1) * dp(CARD_STEP) + dp(CARD_H)
++        return top.coerceIn(topLimit, max(topLimit, height - margin - span))
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Motion
++
++    private fun target(item: LujarchSmallWindowItem, f: Frame, scale: Float) {
++        item.x.to(f.x)
++        item.y.to(f.y)
++        item.w.to(f.w)
++        item.h.to(f.h)
++        item.radius.to(f.radius)
++        item.turn.to(f.turn)
++        item.window.to(f.window)
++        item.icon.to(f.icon)
++        item.scale.to(scale)
++        item.alpha.to(if (item.leaving) 0f else 1f)
++        if (gesture?.holds(item) != true) item.lift.to(if (item.leaving) 0.8f else 1f)
++        item.content.to(if (wantsContent(item) && item.contentDrawn) 1f else 0f)
++    }
++
++    private fun snapItem(item: LujarchSmallWindowItem, f: Frame, scale: Float) {
++        item.x.snap(f.x)
++        item.y.snap(f.y)
++        item.w.snap(f.w)
++        item.h.snap(f.h)
++        item.radius.snap(f.radius)
++        item.turn.snap(f.turn)
++        item.window.snap(f.window)
++        item.icon.snap(f.icon)
++        item.scale.snap(scale)
++    }
++
++    /** Sets every shape's target; [stagger]: the cards follow each other (WIN-9). */
++    private fun place(animate: Boolean, stagger: Boolean = false) {
++        if (width == 0) return
++        val now = SystemClock.uptimeMillis()
++        dockTop = clampDockTop(dockTop)
++        if (recentsShown) {
++            placeInRecents(now)
++            updateCompositionOrder()
++            if (!animate || !LujarchSpring.animated()) {
++                items.values.forEach { item -> item.springs.forEach { it.snap(it.target.toFloat()) } }
++                ownSprings.forEach { it.snap(it.target.toFloat()) }
++            }
++            clock.start()
++            invalidate()
++            return
++        }
++        dock.forEachIndexed { i, item ->
++            if (gesture?.holds(item) == true) return@forEachIndexed
++            val f = slotFrame(i)
++            target(item, f, if (folded) dp(RAIL_ICON) / max(1, item.layoutW) else cardScale(item))
++            item.startAt = if (stagger) now + i * LujarchSpring.STAGGER_MS else now
++            item.view.elevation = dp(CARD_Z) - i * dp(0.5f)
++        }
++        open?.let { item ->
++            if (gesture?.holds(item) != true) {
++                target(item, windowFrame(item), item.winScale)
++            }
++            item.startAt = now
++        }
++        val visibleDock = dock.isNotEmpty() && settings.enabled
++        if (gesture !is DockDrag) {
++            handleX.to(dockX() + dp((CARD_W - HANDLE_W) / 2))
++            handleY.to(dockTop)
++        }
++        handleAlpha.to(if (visibleDock && !folded) 1f else 0f)
++        if (gesture !is RailDrag) railTop.to(railTopFor(dockTop))
++        railHeight.to(dp(RAIL_PAD * 2) + max(0, dock.size - 1) * dp(RAIL_STEP) + dp(RAIL_ICON))
++        railAlpha.to(if (visibleDock && folded) 1f else 0f)
++        menuAlpha.to(if (menuFor != null) 1f else 0f)
++        updateCompositionOrder()
++        if (!animate || !LujarchSpring.animated()) {
++            items.values.forEach { item -> item.springs.forEach { it.snap(it.target.toFloat()) } }
++            ownSprings.forEach { it.snap(it.target.toFloat()) }
++        }
++        clock.start()
++        invalidate()
++    }
++
++    /**
++     * The open window first, then the cards in their order, side by side in the strip above
++     * Recents' cards where its Running layer shows what runs, each with its live screen.
++     */
++    private fun placeInRecents(now: Long) {
++        val shown = listOfNotNull(open) + dock
++        val h = dp(RECENTS_TILE_H)
++        val w = h * dp(CARD_W) / dp(CARD_H)
++        val gap = dp(RECENTS_GAP)
++        val total = shown.size * w + max(0, shown.size - 1) * gap
++        var x = (width - total) / 2f
++        val y = statusBar + dp(RECENTS_TOP)
++        shown.forEachIndexed { i, item ->
++            target(item, Frame(x, y, w, h, dp(CARD_RADIUS) * h / dp(CARD_H), 0f, 0f, 0f),
++                w / max(1, item.layoutW))
++            item.startAt = now + i * LujarchSpring.STAGGER_MS
++            x += w + gap
++        }
++        handleAlpha.to(0f)
++        railAlpha.to(0f)
++        menuAlpha.to(0f)
++    }
++
++    /** Recents opened or closed (Launcher reports it). */
++    fun setRecentsShown(shown: Boolean) {
++        if (shown == recentsShown) return
++        recentsShown = shown
++        if (shown) {
++            hideMenu()
++            gesture = null
++        }
++        updateTouchMonitor()
++        place(animate = true, stagger = true)
++        syncTasks()
++    }
++
++    private fun onFrame(ms: Long): Boolean {
++        val now = SystemClock.uptimeMillis()
++        var moving = false
++        val threshold = 0.5 / density
++        for (item in items.values.toList() + leavingItems()) {
++            if (now >= item.startAt) {
++                for (s in item.springs) s.step(ms, if (s === item.x || s === item.y ||
++                        s === item.w || s === item.h || s === item.radius) 0.5 else 0.002)
++            }
++            if (item.springs.any { !it.atRest }) moving = true
++            placeView(item)
++        }
++        for (s in ownSprings) {
++            s.step(ms, 0.5)
++            if (!s.atRest) moving = true
++        }
++        // Shapes that left are removed once they have faded.
++        for (item in leavingItems()) {
++            if (item.alpha.atRest) gone(item)
++        }
++        if (!moving) syncTasks()
++        invalidate()
++        return moving || gesture != null
++    }
++
++    private fun leavingItems(): List<LujarchSmallWindowItem> =
++        (0 until childCount).mapNotNull { (getChildAt(it) as? LujarchSmallWindowItemView)?.let {
++            v -> v.tag as? LujarchSmallWindowItem } }.filter { it.leaving }
++
++    private fun placeView(item: LujarchSmallWindowItem) {
++        val v = item.view
++        v.tag = item
++        val l = item.x.value.roundToInt()
++        val t = item.y.value.roundToInt()
++        val r = (item.x.value + item.w.value).roundToInt()
++        val b = (item.y.value + item.h.value).roundToInt()
++        if (v.measuredWidth != r - l || v.measuredHeight != b - t || v.isLayoutRequested) {
++            v.measure(
++                MeasureSpec.makeMeasureSpec(max(1, r - l), MeasureSpec.EXACTLY),
++                MeasureSpec.makeMeasureSpec(max(1, b - t), MeasureSpec.EXACTLY),
++            )
++        }
++        v.layout(l, t, max(l + 1, r), max(t + 1, b))
++        v.apply(headerHeight, dockRight)
++    }
++
++    /** The order the task views are composited in, as the shapes stack (WIN-4). */
++    private fun updateCompositionOrder() {
++        val order = ArrayList<LujarchSmallWindowItem>()
++        (gesture as? CardDrag)?.item?.let { order.add(it) }
++        open?.let { if (it !in order) order.add(it) }
++        dock.forEach { if (it !in order) order.add(it) }
++        order.forEachIndexed { i, item -> item.taskView?.setCompositionOrder(-1 - i) }
++        (gesture as? CardDrag)?.item?.view?.elevation = dp(DRAG_Z)
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // The apps' tasks: visible while their screen shows
++
++    /** Whether the app's live screen shows in the shape (WIN-6, WIN-7). */
++    private fun wantsContent(item: LujarchSmallWindowItem): Boolean {
++        if (item.leaving || !settings.enabled) return false
++        if (item === open) return true
++        if (recentsShown) return !item.isConversation
++        if (gesture?.holds(item) == true && item.taskView != null) return true
++        return !item.isConversation && !folded && settings.livePreviews
++    }
++
++    /**
++     * Attaches the task view of every shape that shows its app's screen and detaches the others
++     * once their screen has faded: a task is visible exactly while its view is attached, so apps
++     * in the rail or behind a card without a preview are in the background (WIN-6).
++     */
++    private fun syncTasks() {
++        for (item in items.values) {
++            val want = wantsContent(item)
++            if (want && item.taskView == null) {
++                attachTask(item)
++            } else if (!want && item.taskView != null && item.content.value <= 0.001f) {
++                detachTask(item)
++            }
++            item.content.to(if (want && item.contentDrawn) 1f else 0f)
++        }
++        updateCompositionOrder()
++        syncFocus()
++        clock.start()
++    }
++
++    private fun attachTask(item: LujarchSmallWindowItem) {
++        val btv = item.bubble.bubbleTaskView ?: return
++        val tv = btv.taskView
++        (tv.parent as? ViewGroup)?.let { if (it !== item.view) it.removeView(tv) }
++        listen(item)
++        tv.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_VISIBILITY)
++        tv.setCaptionInsets(null)
++        tv.setEnableSurfaceClipping(true)
++        tv.setZOrderedOnTop(false, true)
++        tv.visibility = VISIBLE
++        tv.alpha = 0f
++        if (tv.parent == null) {
++            item.view.addView(tv, 0, LayoutParams(item.taskW, item.taskH))
++        }
++        item.taskView = tv
++        item.view.onTaskViewChanged()
++        item.view.requestLayout()
++        updateCompositionOrder()
++    }
++
++    private fun detachTask(item: LujarchSmallWindowItem) {
++        val tv = item.taskView ?: return
++        item.taskView = null
++        item.contentDrawn = false
++        item.content.snap(0f)
++        if (tv.parent === item.view) item.view.removeView(tv)
++        item.view.onTaskViewChanged()
++    }
++
++    private fun onContentDrawn(item: LujarchSmallWindowItem, drawn: Boolean) {
++        item.contentDrawn = drawn
++        item.focusable = null
++        syncFocus()
++        item.content.to(if (drawn && wantsContent(item)) 1f else 0f)
++        clock.start()
++    }
++
++    private fun onTaskInfo(item: LujarchSmallWindowItem, info: ActivityManager.RunningTaskInfo) {
++        val d = info.taskDescription ?: return
++        val color =
++            when {
++                Color.alpha(d.statusBarColor) == 0xff -> d.statusBarColor
++                Color.alpha(d.backgroundColor) == 0xff -> d.backgroundColor
++                else -> 0
++            }
++        if (color != item.headerColor) {
++            item.headerColor = color
++            item.view.invalidate()
++        }
++    }
++
++    fun cardColor(item: LujarchSmallWindowItem): Int =
++        if (item.isConversation) conversationColor else placeholderColor
++
++    fun handleColor(item: LujarchSmallWindowItem): Int {
++        val bg = if (item.headerColor != 0) item.headerColor else windowColor
++        return if (Color.luminance(bg) > 0.5f) Color.argb(160, 0, 0, 0)
++        else Color.argb(170, 255, 255, 255)
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // What a person does with the windows, the cards, the dock and the rail
++
++    private fun openItem(item: LujarchSmallWindowItem) {
++        hideMenu()
++        if (item === open) return
++        controller.expandStackAndSelectBubble(item.bubble)
++    }
++
++    private fun moveToDock() {
++        hideMenu()
++        controller.collapseStack()
++    }
++
++    private fun close(item: LujarchSmallWindowItem) {
++        hideMenu()
++        controller.dismissBubble(item.bubble, Bubbles.DISMISS_USER_GESTURE)
++    }
++
++    /** Full screen (WIN-2): the small window becomes an ordinary app in Recents. */
++    private fun fullScreen(item: LujarchSmallWindowItem) {
++        hideMenu()
++        val tv = item.bubble.bubbleTaskView?.taskView ?: return
++        if (tv.taskInfo == null) return
++        tv.moveToFullscreen()
++    }
++
++    /**
++     * A touch going down while a window is open: on the app below, it moves the window to the
++     * dock (WIN-3), or, with that switch off, gives the app below the focus; on the window, the
++     * window takes the focus back.
++     */
++    private fun onTouchBelow(x: Float, y: Float) {
++        val item = open ?: return
++        if (gesture != null) return
++        tmpRectF.set(item.x.value, item.y.value, item.x.value + item.w.value,
++            item.y.value + item.h.value)
++        tmpRectF.inset(-dp(EDGE_TOUCH), -dp(EDGE_TOUCH))
++        if (tmpRectF.contains(x, y)) {
++            belowTouched = false
++            syncFocus()
++            return
++        }
++        if (y < statusBar || y > height - dp(GESTURE_AREA) || y >= imeTop) return
++        if (ownRegionContains(x, y)) return
++        if (settings.dockOnTouch) {
++            moveToDock()
++        } else {
++            belowTouched = true
++            syncFocus()
++        }
++    }
++
++    /**
++     * Only the open window's task may take the focus, and not after a touch on the app below:
++     * Back, keys and the input method then go to the app being used.
++     */
++    private fun syncFocus() {
++        for (item in items.values) {
++            val want = item === open && !belowTouched && !recentsShown
++            if (item.focusable == want) continue
++            val task = item.bubble.bubbleTaskView?.taskView?.taskInfo ?: continue
++            item.focusable = want
++            val wct = WindowContainerTransaction()
++            wct.setFocusable(task.token, want)
++            controller.taskOrganizer.applyTransaction(wct)
++        }
++    }
++
++    private fun updateTouchMonitor() {
++        if (open != null && !recentsShown && isAttachedToWindow) {
++            touchMonitor.start(display?.displayId ?: 0)
++        } else {
++            touchMonitor.stop()
++        }
++    }
++
++    private fun showMenu(item: LujarchSmallWindowItem) {
++        menuFor = item
++        val w = dp(MENU_W)
++        val h = dp(MENU_ITEM_H) * 3 + dp(12f)
++        val cx = item.x.value + item.w.value / 2
++        val left = (cx - w / 2).coerceIn(dp(8f), width - dp(8f) - w)
++        var top = item.y.value + headerHeight + dp(6f)
++        if (top + h > height - margin) top = max(topLimit, item.y.value - h - dp(6f))
++        menuRect.set(left, top, left + w, top + h)
++        place(animate = true)
++    }
++
++    private fun hideMenu() {
++        if (menuFor == null) return
++        menuFor = null
++        menuAlpha.to(0f)
++        if (!LujarchSpring.animated()) menuAlpha.snap(0f)
++        clock.start()
++    }
++
++    override fun dispatchDraw(canvas: Canvas) {
++        drawRail(canvas)
++        drawHandle(canvas)
++        super.dispatchDraw(canvas)
++        drawMenu(canvas)
++    }
++
++    private fun drawHandle(canvas: Canvas) {
++        val a = handleAlpha.value
++        if (a <= 0.01f) return
++        val x = handleX.value + dp(HANDLE_W) / 2
++        val y = handleY.value + dp(HANDLE_H) / 2
++        val pw = dp(30f)
++        val ph = dp(5f)
++        tmpRectF.set(x - pw / 2, y - ph / 2, x + pw / 2, y + ph / 2)
++        paint.style = Paint.Style.FILL
++        paint.color = Color.argb((191 * a).roundToInt(), 60, 48, 44)
++        canvas.drawRoundRect(tmpRectF, ph / 2, ph / 2, paint)
++        paint.style = Paint.Style.STROKE
++        paint.strokeWidth = dp(1f)
++        paint.color = Color.argb((153 * a).roundToInt(), 255, 255, 255)
++        canvas.drawRoundRect(tmpRectF, ph / 2, ph / 2, paint)
++        paint.style = Paint.Style.FILL
++    }
++
++    private fun drawRail(canvas: Canvas) {
++        val a = railAlpha.value
++        if (a <= 0.01f) return
++        val w = dp(RAIL_W)
++        val left = if (dockRight) width - w else 0f
++        tmpRectF.set(left, railTop.value, left + w, railTop.value + railHeight.value)
++        val r = w / 2
++        paint.style = Paint.Style.FILL
++        paint.color = Color.argb((219 * a).roundToInt(), 40, 30, 27)
++        paint.setShadowLayer(dp(9f), 0f, dp(3f), Color.argb((71 * a).roundToInt(), 0, 0, 0))
++        // Rounded towards the middle of the screen, flat against the edge.
++        canvas.save()
++        canvas.clipRect(left, tmpRectF.top - dp(20f), left + w, tmpRectF.bottom + dp(20f))
++        val ext = if (dockRight) RectF(tmpRectF.left, tmpRectF.top, tmpRectF.right + r,
++            tmpRectF.bottom) else RectF(tmpRectF.left - r, tmpRectF.top, tmpRectF.right,
++            tmpRectF.bottom)
++        canvas.drawRoundRect(ext, r, r, paint)
++        canvas.restore()
++        paint.clearShadowLayer()
++    }
++
++    private fun drawMenu(canvas: Canvas) {
++        val a = menuAlpha.value
++        if (a <= 0.01f) return
++        val r = dp(16f)
++        paint.style = Paint.Style.FILL
++        paint.color = withAlpha(menuColor, a)
++        paint.setShadowLayer(dp(12f), 0f, dp(4f), Color.argb((115 * a).roundToInt(), 0, 0, 0))
++        canvas.drawRoundRect(menuRect, r, r, paint)
++        paint.clearShadowLayer()
++        menuPaint.color = withAlpha(menuTextColor, a)
++        val rowH = dp(MENU_ITEM_H)
++        for (i in 0..2) {
++            val top = menuRect.top + dp(6f) + i * rowH
++            val icon = menuIcons[i]
++            val size = dp(18f).roundToInt()
++            val il = (menuRect.left + dp(16f)).roundToInt()
++            val it = (top + (rowH - size) / 2).roundToInt()
++            icon?.setBounds(il, it, il + size, it + size)
++            icon?.setTint(withAlpha(conversationSubTextColor, a))
++            icon?.draw(canvas)
++            canvas.drawText(menuLabels[i], 0, menuLabels[i].length,
++                menuRect.left + dp(46f), top + rowH / 2 + menuPaint.textSize * 0.36f, menuPaint)
++        }
++    }
++
++    private fun withAlpha(color: Int, a: Float): Int =
++        Color.argb((Color.alpha(color) * a.coerceIn(0f, 1f)).roundToInt(), Color.red(color),
++            Color.green(color), Color.blue(color))
++
++    // ---------------------------------------------------------------------------------------
++    // Touches
++
++    private abstract inner class Gesture(val downX: Float, val downY: Float) {
++        var moved = false
++
++        open fun holds(item: LujarchSmallWindowItem): Boolean = false
++
++        fun move(ev: MotionEvent) {
++            if (!moved && hypot(ev.rawX - downX, ev.rawY - downY) < touchSlop) return
++            if (!moved) {
++                moved = true
++                hideMenu()
++                onStart()
++            }
++            onMove(ev.rawX - downX, ev.rawY - downY, ev.rawX, ev.rawY)
++        }
++
++        open fun onStart() {}
++
++        abstract fun onMove(dx: Float, dy: Float, x: Float, y: Float)
++
++        abstract fun onUp(vx: Float, vy: Float)
++
++        open fun onTap() {}
++
++        open fun onCancel() = onUp(0f, 0f)
++    }
++
++    /** The handle moves the window anywhere on the screen (WIN-2); a tap opens its menu. */
++    private inner class HeaderDrag(val item: LujarchSmallWindowItem, x: Float, y: Float) :
++        Gesture(x, y) {
++        private val startX = item.winX
++        private val startY = windowFrame(item).y
++
++        override fun holds(item: LujarchSmallWindowItem) = moved && item === this.item
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            val f = windowFrame(item)
++            item.winX = (startX + dx).coerceIn(margin, max(margin, width - margin - f.w))
++            item.winY = (startY + dy).coerceIn(topLimit, max(topLimit, bottomLimit - f.h))
++            item.x.snap(item.winX)
++            item.y.snap(item.winY)
++        }
++
++        override fun onUp(vx: Float, vy: Float) {
++            place(animate = true)
++        }
++
++        override fun onTap() {
++            if (menuFor === item) hideMenu() else showMenu(item)
++        }
++    }
++
++    /**
++     * The lower right corner scales the window and the app together, keeping its layout; the
++     * right and the bottom edge change its width or height, and the app lays itself out at the
++     * new size. Past the screen's limit, letting go shows the app full screen (WIN-2).
++     */
++    private inner class Resize(
++        val item: LujarchSmallWindowItem,
++        val corner: Boolean,
++        val right: Boolean,
++        x: Float,
++        y: Float,
++    ) : Gesture(x, y) {
++        private val start = windowFrame(item)
++        private val startScale = item.winScale
++        private val startLayoutW = item.layoutW
++        private val startLayoutH = item.layoutH
++        private var over = false
++
++        override fun holds(item: LujarchSmallWindowItem) = moved && item === this.item
++
++        override fun onStart() {
++            outlineAlpha = 1f
++        }
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            val maxW = width - margin - start.x
++            val maxH = bottomLimit - start.y
++            val minW = dp(MIN_W)
++            if (corner) {
++                val byWidth = start.w + dx
++                val heightFor = { w: Float -> headerHeight + startLayoutH * (w / startLayoutW) }
++                var limit = maxW
++                if (heightFor(limit) > maxH) {
++                    limit = (maxH - headerHeight) / startLayoutH * startLayoutW
++                }
++                over = byWidth > limit + dp(OVERSHOOT)
++                val w = byWidth.coerceIn(minW, limit + rubber(byWidth - limit))
++                item.winScale = w / startLayoutW
++            } else if (right) {
++                val byWidth = start.w + dx
++                over = byWidth > maxW + dp(OVERSHOOT)
++                val w = byWidth.coerceIn(minW, maxW + rubber(byWidth - maxW))
++                item.layoutW = (w / startScale).roundToInt()
++            } else {
++                val byHeight = start.h + dy
++                over = byHeight > maxH + dp(OVERSHOOT)
++                val h = byHeight.coerceIn(headerHeight + dp(MIN_H), maxH + rubber(byHeight - maxH))
++                item.layoutH = ((h - headerHeight) / startScale).roundToInt()
++            }
++            val f = windowFrame(item)
++            snapItem(item, f, item.winScale)
++            outlineAlpha = if (over) 1f else 0.95f
++            item.view.invalidate()
++        }
++
++        private fun rubber(past: Float): Float = if (past <= 0f) 0f else past * 0.2f
++
++        override fun onUp(vx: Float, vy: Float) {
++            outlineAlpha = OUTLINE_ALPHA
++            if (over) {
++                // The window goes back to its size as it was, then becomes the app full screen.
++                item.winScale = startScale
++                item.layoutW = startLayoutW
++                item.layoutH = startLayoutH
++                place(animate = true)
++                fullScreen(item)
++                return
++            }
++            fitWindow(item)
++            if (item.layoutW != item.taskW || item.layoutH != item.taskH) {
++                // The app lays itself out at the new size.
++                item.taskW = item.layoutW
++                item.taskH = item.layoutH
++                item.taskView?.layoutParams = LayoutParams(item.taskW, item.taskH)
++                item.view.requestLayout()
++            }
++            place(animate = true)
++        }
++    }
++
++    /**
++     * A card picked up: into the middle of the screen it opens there, onto the close circle it
++     * closes, back on the dock it takes that place in the stack (WIN-4).
++     */
++    private inner class CardDrag(val item: LujarchSmallWindowItem, x: Float, y: Float) :
++        Gesture(x, y) {
++        private val grabX = x - item.x.value
++        private val grabY = y - item.y.value
++        private var overClose = false
++
++        override fun holds(item: LujarchSmallWindowItem) = moved && item === this.item
++
++        override fun onStart() {
++            dismissView.show()
++            item.lift.to(DRAG_LIFT)
++            item.turn.to(0f)
++            updateCompositionOrder()
++        }
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            item.x.snap(x - grabX)
++            item.y.snap(y - grabY)
++            val circle = dismissView.circle
++            val cx = circle.x + dismissView.x + circle.width / 2f
++            val cy = circle.y + dismissView.y + circle.height / 2f
++            val near = hypot(x - cx, y - cy) < dp(CLOSE_RADIUS)
++            if (near != overClose) {
++                overClose = near
++                item.lift.to(if (near) CLOSE_LIFT else DRAG_LIFT)
++                circle.animate().scaleX(if (near) 1.15f else 1f).scaleY(if (near) 1.15f else 1f)
++                    .setDuration(200).start()
++            }
++            clock.start()
++        }
++
++        override fun onUp(vx: Float, vy: Float) {
++            dismissView.hide()
++            val x = item.x.value + grabX
++            val y = item.y.value + grabY
++            val edgeX = if (dockRight) width - dp(EDGE_COLUMN) else dp(EDGE_COLUMN)
++            when {
++                overClose -> close(item)
++                abs(x - edgeX) > dp(INTO_SCREEN) -> {
++                    // Opens where it was let go.
++                    val f = windowFrame(item)
++                    item.winX = x - f.w / 2
++                    item.winY = y - headerHeight
++                    fitWindow(item)
++                    if (folded) folded = false
++                    openItem(item)
++                }
++                else -> {
++                    val slot =
++                        ((y - grabY + dp(CARD_H) / 2 - dockTop - dp(CARD_FROM_HANDLE) -
++                            dp(CARD_H) / 2) / dp(CARD_STEP)).roundToInt()
++                    dock.remove(item)
++                    dock.add(slot.coerceIn(0, dock.size), item)
++                }
++            }
++            gesture = null
++            item.lift.to(1f)
++            place(animate = true, stagger = false)
++        }
++
++        override fun onTap() {
++            if (folded) {
++                folded = false
++                place(animate = true, stagger = true)
++                syncTasks()
++            } else {
++                openItem(item)
++            }
++        }
++    }
++
++    /**
++     * The handle above the top card: up and down along the edge, past the middle to the other
++     * edge, past the screen's edge into the rail (WIN-5, WIN-6).
++     */
++    private inner class DockDrag(x: Float, y: Float) : Gesture(x, y) {
++        private val startTop = dockTop
++        private val startHandleX = handleX.value
++        private var dx = 0f
++        private var dy = 0f
++
++        override fun holds(item: LujarchSmallWindowItem) = moved && item in dock
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            this.dx = dx
++            this.dy = dy
++            handleX.snap(startHandleX + dx)
++            handleY.snap(startTop + dy)
++            dock.forEachIndexed { i, item ->
++                val f = slotFrame(i)
++                item.x.snap(f.x + dx)
++                item.y.snap(f.y - dockTop + startTop + dy)
++            }
++            clock.start()
++        }
++
++        override fun onUp(vx: Float, vy: Float) {
++            val outward = if (dockRight) dx else -dx
++            val centre = dockX() + dx + dp(CARD_W) / 2
++            dockTop = clampDockTop(startTop + dy)
++            if (outward > dp(FOLD_PUSH)) {
++                folded = true
++            } else {
++                dockRight = centre >= width / 2f
++            }
++            saveDock()
++            gesture = null
++            place(animate = true, stagger = true)
++            syncTasks()
++        }
++
++        override fun onTap() {}
++    }
++
++    /** The rail: a tap unfolds the dock, a drag moves it along the edge (WIN-6). */
++    private inner class RailDrag(x: Float, y: Float) : Gesture(x, y) {
++        private val startTop = dockTop
++        private var dy = 0f
++
++        override fun holds(item: LujarchSmallWindowItem) = moved && item in dock
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            this.dy = dy
++            railTop.snap(railTopFor(startTop + dy))
++            dock.forEachIndexed { i, item ->
++                val f = slotFrame(i)
++                item.y.snap(f.y + dy)
++            }
++            clock.start()
++        }
++
++        override fun onUp(vx: Float, vy: Float) {
++            dockTop = clampDockTop(startTop + dy)
++            saveDock()
++            gesture = null
++            place(animate = true)
++        }
++
++        override fun onTap() {
++            folded = false
++            place(animate = true, stagger = true)
++            syncTasks()
++        }
++    }
++
++    private inner class MenuTap(val index: Int, val item: LujarchSmallWindowItem, x: Float,
++        y: Float) : Gesture(x, y) {
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {}
++
++        override fun onUp(vx: Float, vy: Float) {}
++
++        override fun onTap() {
++            when (index) {
++                0 -> fullScreen(item)
++                1 -> moveToDock()
++                else -> close(item)
++            }
++        }
++    }
++
++    private inner class Outside(x: Float, y: Float) : Gesture(x, y) {
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {}
++
++        override fun onUp(vx: Float, vy: Float) {}
++
++        override fun onTap() = hideMenu()
++    }
++
++    private fun saveDock() {
++        dockTopFraction = dockTop / max(1, height)
++        prefs.edit().putBoolean(KEY_RIGHT, dockRight).putFloat(KEY_TOP, dockTopFraction).apply()
++    }
++
++    private fun hit(x: Float, y: Float): Gesture? {
++        menuFor?.let { item ->
++            if (menuRect.contains(x, y)) {
++                val i = ((y - menuRect.top - dp(6f)) / dp(MENU_ITEM_H)).toInt().coerceIn(0, 2)
++                return MenuTap(i, item, x, y)
++            }
++            return Outside(x, y)
++        }
++        open?.let { item ->
++            val f = windowFrame(item)
++            val right = f.x + f.w
++            val bottom = f.y + f.h
++            val e = dp(EDGE_TOUCH)
++            val c = dp(CORNER_TOUCH)
++            if (x in right - c..right + e && y in bottom - c..bottom + e) {
++                return Resize(item, corner = true, right = false, x, y)
++            }
++            if (x in right - e..right + e && y in f.y + dp(EDGE_INSET)..bottom - c) {
++                return Resize(item, corner = false, right = true, x, y)
++            }
++            if (y in bottom - e..bottom + e && x in f.x + dp(EDGE_INSET)..right - c) {
++                return Resize(item, corner = false, right = false, x, y)
++            }
++            if (x in f.x..right && y in f.y..f.y + headerHeight + dp(4f)) {
++                return HeaderDrag(item, x, y)
++            }
++            if (x in f.x..right && y in f.y..bottom) return null
++        }
++        if (!folded) {
++            for (item in dock) {
++                if (itemRect(item).contains(x, y)) return CardDrag(item, x, y)
++            }
++            if (dock.isNotEmpty() && handleRect().contains(x, y)) return DockDrag(x, y)
++        } else if (dock.isNotEmpty() && railRect().contains(x, y)) {
++            return RailDrag(x, y)
++        }
++        return null
++    }
++
++    private fun itemRect(item: LujarchSmallWindowItem): RectF =
++        RectF(item.x.value, item.y.value, item.x.value + item.w.value, item.y.value + item.h.value)
++
++    private fun handleRect(): RectF {
++        val extra = dp(8f)
++        return RectF(handleX.value, handleY.value - extra, handleX.value + dp(HANDLE_W),
++            handleY.value + dp(HANDLE_H))
++    }
++
++    private fun railRect(): RectF {
++        val w = dp(RAIL_W)
++        val left = if (dockRight) width - w else 0f
++        return RectF(left, railTop.value, left + w, railTop.value + railHeight.value)
++    }
++
++    private fun ownRegionContains(x: Float, y: Float): Boolean {
++        if (!folded) {
++            if (dock.any { itemRect(it).contains(x, y) }) return true
++            if (dock.isNotEmpty() && handleRect().contains(x, y)) return true
++        } else if (dock.isNotEmpty() && railRect().contains(x, y)) {
++            return true
++        }
++        return menuFor != null && menuRect.contains(x, y)
++    }
++
++    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
++        when (ev.actionMasked) {
++            MotionEvent.ACTION_DOWN -> {
++                gesture = hit(ev.x, ev.y)
++                if (gesture == null) return super.dispatchTouchEvent(ev)
++                velocity?.recycle()
++                velocity = VelocityTracker.obtain()
++                velocity?.addMovement(ev)
++                // While a finger holds a shape, the whole screen follows it.
++                requestApplyTouchRegion()
++                clock.start()
++                return true
++            }
++            MotionEvent.ACTION_MOVE -> {
++                velocity?.addMovement(ev)
++                gesture?.move(ev) ?: return super.dispatchTouchEvent(ev)
++                return true
++            }
++            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
++                val g = gesture ?: return super.dispatchTouchEvent(ev)
++                velocity?.addMovement(ev)
++                velocity?.computeCurrentVelocity(1000)
++                val vx = velocity?.xVelocity ?: 0f
++                val vy = velocity?.yVelocity ?: 0f
++                velocity?.recycle()
++                velocity = null
++                if (ev.actionMasked == MotionEvent.ACTION_CANCEL) {
++                    if (g.moved) g.onCancel()
++                } else if (g.moved) {
++                    g.onUp(vx, vy)
++                } else {
++                    g.onTap()
++                }
++                if (gesture === g) gesture = null
++                requestApplyTouchRegion()
++                place(animate = true)
++                return true
++            }
++        }
++        return gesture != null || super.dispatchTouchEvent(ev)
++    }
++
++    /** The touchable region is computed again on the traversal an invalidation brings. */
++    private fun requestApplyTouchRegion() {
++        invalidate()
++    }
++
++    /** The window takes touches on the handle, the corner, the edges, the cards and the rail. */
++    override fun onComputeInternalInsets(info: ViewTreeObserver.InternalInsetsInfo) {
++        info.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
++        val region = info.touchableRegion
++        region.setEmpty()
++        if (visibility != VISIBLE || items.isEmpty() || recentsShown) return
++        if (gesture != null || menuFor != null) {
++            region.set(0, 0, width, height)
++            return
++        }
++        if (!folded) {
++            for (item in dock) region.op(rect(itemRect(item)), Region.Op.UNION)
++            if (dock.isNotEmpty()) region.op(rect(handleRect()), Region.Op.UNION)
++        } else if (dock.isNotEmpty()) {
++            region.op(rect(railRect()), Region.Op.UNION)
++        }
++        open?.let { item ->
++            val f = windowFrame(item)
++            val right = (f.x + f.w).roundToInt()
++            val bottom = (f.y + f.h).roundToInt()
++            val e = dp(EDGE_TOUCH).roundToInt()
++            val c = dp(CORNER_TOUCH).roundToInt()
++            // The app's screen takes its own touches...
++            region.op(f.x.roundToInt(), f.y.roundToInt(), right, bottom, Region.Op.DIFFERENCE)
++            // ...apart from the handle, the corner and the edges.
++            region.op(f.x.roundToInt(), f.y.roundToInt(), right,
++                (f.y + headerHeight).roundToInt() + dp(4f).roundToInt(), Region.Op.UNION)
++            region.op(right - c, bottom - c, right + e, bottom + e, Region.Op.UNION)
++            region.op(right - e, (f.y + dp(EDGE_INSET)).roundToInt(), right + e, bottom - c,
++                Region.Op.UNION)
++            region.op((f.x + dp(EDGE_INSET)).roundToInt(), bottom - e, right - c, bottom + e,
++                Region.Op.UNION)
++        }
++    }
++
++    private fun rect(r: RectF): Rect {
++        r.roundOut(tmpRect)
++        return Rect(tmpRect)
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // The input method
++
++    fun setImeVisible(visible: Boolean, imeHeight: Int) {
++        imeTop = if (visible && imeHeight > 0) height - imeHeight else Int.MAX_VALUE
++        place(animate = true)
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Transitions into a small window (BubbleTransitions)
++
++    override fun isExpanded(): Boolean = open != null
++
++    override fun canExpandView(bubble: BubbleViewProvider): Boolean =
++        (bubble as? Bubble)?.bubbleTaskView != null
++
++    override fun prepareConvertedView(bubble: BubbleViewProvider): BubbleViewProvider? {
++        val b = bubble as? Bubble ?: return null
++        val item = items[b.key] ?: return null
++        val prior = open?.bubble?.takeIf { it !== b }
++        if (open !== item) {
++            open?.let { dock.add(0, it) }
++            dock.remove(item)
++            open = item
++            item.view.elevation = dp(WINDOW_Z)
++            updateTouchMonitor()
++        }
++        attachTask(item)
++        return prior
++    }
++
++    override fun animateConvert(
++        startT: SurfaceControl.Transaction,
++        startBounds: Rect,
++        startScale: Float,
++        snapshot: SurfaceControl,
++        taskLeash: SurfaceControl?,
++        animFinish: Runnable,
++    ) {
++        startT.apply()
++        val item = open
++        if (item == null) {
++            removeSnapshot(snapshot)
++            animFinish.run()
++            return
++        }
++        // The app's full screen shrinks into the window: one shape changing its place and size.
++        val scale = startBounds.width() * startScale / max(1, item.layoutW)
++        snapItem(item,
++            Frame(startBounds.left.toFloat(), startBounds.top.toFloat() - headerHeight,
++                startBounds.width() * startScale, startBounds.height() * startScale +
++                headerHeight, 0f, 0f, 1f, 0f), scale)
++        item.alpha.snap(1f)
++        item.lift.snap(1f)
++        item.contentDrawn = true
++        item.content.snap(1f)
++        place(animate = true)
++        postDelayed({ removeSnapshot(snapshot) }, SNAPSHOT_MS)
++        whenAtRest(item) { animFinish.run() }
++    }
++
++    override fun animateExpand(previousBubble: BubbleViewProvider?, animFinish: Runnable?) {
++        val item = open
++        if (item == null) {
++            animFinish?.run()
++            return
++        }
++        place(animate = true, stagger = true)
++        syncTasks()
++        if (animFinish != null) whenAtRest(item) { animFinish.run() }
++    }
++
++    override fun removeViewFromTransition(view: View?) {}
++
++    override fun cancelAnimation(): WindowAnimationState? = null
++
++    private fun removeSnapshot(snapshot: SurfaceControl) {
++        if (!snapshot.isValid) return
++        SurfaceControl.Transaction().remove(snapshot).apply()
++    }
++
++    private fun whenAtRest(item: LujarchSmallWindowItem, action: () -> Unit) {
++        val check =
++            object : Runnable {
++                override fun run() {
++                    if (item.springs.all { it.atRest } || !isAttachedToWindow) action()
++                    else postDelayed(this, 16)
++                }
++            }
++        post(check)
++    }
++
++    /**
++     * Full screen (WIN-2): the task leaves the window, and its surface grows from where the
++     * window shows it to the whole screen along the same spring.
++     */
++    fun animateToFullscreen(
++        bubble: Bubble,
++        change: TransitionInfo.Change,
++        info: TransitionInfo,
++        startT: SurfaceControl.Transaction,
++        onPlucked: Runnable,
++        finish: Runnable,
++    ) {
++        val item = items[bubble.key]
++        val leash = change.leash
++        val root = info.getRoot(0).leash
++        if (item == null || !leash.isValid) {
++            startT.apply()
++            onPlucked.run()
++            finish.run()
++            return
++        }
++        val f = windowFrame(item)
++        val s = item.winScale
++        val end = change.endAbsBounds
++        val offset = info.getRoot(0).offset
++        val x = LujarchSpring(f.x)
++        val y = LujarchSpring(f.y + headerHeight)
++        val scale = LujarchSpring(s)
++        val radius = LujarchSpring(dp(WINDOW_RADIUS))
++        x.to((end.left - offset.x).toFloat())
++        y.to((end.top - offset.y).toFloat())
++        scale.to(end.width().toFloat() / max(1, item.layoutW))
++        radius.to(0f)
++        startT.reparent(leash, root)
++            .setPosition(leash, x.value, y.value)
++            .setMatrix(leash, s, 0f, 0f, s)
++            .setWindowCrop(leash, item.layoutW, item.layoutH)
++            .setCornerRadius(leash, dp(WINDOW_RADIUS) / s)
++            .setAlpha(leash, 1f)
++            .setLayer(leash, Int.MAX_VALUE)
++            .show(leash)
++            .apply()
++        item.view.visibility = INVISIBLE
++        onPlucked.run()
++        val springs = arrayOf(x, y, scale, radius)
++        if (!LujarchSpring.animated()) springs.forEach { it.snap(it.target.toFloat()) }
++        val t = SurfaceControl.Transaction()
++        LujarchFrameClock { ms ->
++            springs.forEach { it.step(ms, 0.002) }
++            if (!leash.isValid) {
++                finish.run()
++                return@LujarchFrameClock false
++            }
++            val k = scale.value
++            t.setPosition(leash, x.value, y.value)
++                .setMatrix(leash, k, 0f, 0f, k)
++                .setWindowCrop(leash, end.width(), end.height())
++                .setCornerRadius(leash, radius.value / max(k, 0.01f))
++                .apply()
++            val moving = springs.any { !it.atRest }
++            if (!moving) {
++                t.setMatrix(leash, 1f, 0f, 0f, 1f).setCornerRadius(leash, 0f).apply()
++                finish.run()
++            }
++            moving
++        }.start()
++    }
++
++    fun dump(pw: java.io.PrintWriter, prefix: String) {
++        pw.println("${prefix}LujarchSmallWindows:")
++        pw.println("$prefix  open=${open?.bubble?.key} folded=$folded right=$dockRight " +
++            "top=$dockTop limit=${settings.maxWindows} live=${settings.livePreviews}")
++        for (item in items.values) {
++            pw.println("$prefix  ${item.bubble.key} dock=${dock.indexOf(item)} " +
++                "frame=${item.x.value.roundToInt()},${item.y.value.roundToInt()} " +
++                "${item.w.value.roundToInt()}x${item.h.value.roundToInt()} " +
++                "layout=${item.layoutW}x${item.layoutH} scale=${item.winScale} " +
++                "task=${item.taskView?.taskInfo?.taskId} drawn=${item.contentDrawn} " +
++                "unread=${item.unread} counts=${item.counts}")
++        }
++    }
++
++    companion object {
++        private const val TAG = "lujarch_windows"
++        private const val PREFS = "lujarch_small_windows"
++        private const val KEY_RIGHT = "dock_right"
++        private const val KEY_TOP = "dock_top"
++
++        // dp, from the design of target/windows.md
++        const val CARD_W = 108f
++        const val CARD_H = 150f
++        const val CARD_RADIUS = 20f
++        const val CARD_STEP = 142f
++        const val CARD_FROM_HANDLE = 30f
++        const val DOCK_MARGIN = 10f
++        const val DOCK_TOP = 200f
++        const val HANDLE_W = 56f
++        const val HANDLE_H = 26f
++        const val HEADER = 22f
++        const val WINDOW_RADIUS = 22f
++        const val WINDOW_W = 258f
++        const val WINDOW_X = 12f
++        const val WINDOW_Y = 124f
++        const val MIN_W = 160f
++        const val MIN_H = 120f
++        const val MARGIN = 12f
++        const val OVERSHOOT = 30f
++        const val RAIL_W = 34f
++        const val RAIL_ICON = 22f
++        const val RAIL_STEP = 32f
++        const val RAIL_PAD = 16f
++        const val RAIL_FROM_HANDLE = 20f
++        const val FOLD_PUSH = 40f
++        const val EDGE_COLUMN = 118f
++        const val INTO_SCREEN = 120f
++        const val CLOSE_RADIUS = 60f
++        const val EDGE_TOUCH = 10f
++        const val EDGE_INSET = 40f
++        const val CORNER_TOUCH = 32f
++        const val GESTURE_AREA = 24f
++        const val MENU_W = 176f
++        const val MENU_ITEM_H = 48f
++        const val CARD_Z = 8f
++        const val WINDOW_Z = 16f
++        const val DISMISS_Z = 20f
++        const val DRAG_Z = 24f
++        const val DRAG_LIFT = 1.06f
++        const val CLOSE_LIFT = 0.82f
++        const val OUTLINE_ALPHA = 0.85f
++        const val SNAPSHOT_MS = 150L
++        const val RECENTS_TILE_H = 104f
++        const val RECENTS_GAP = 10f
++        const val RECENTS_TOP = 16f
++        /** A card's turn of 16 degrees, as the width a turned card shows. */
++        const val TURN_SCALE = 0.92f
++    }
++}
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
+index 244a25c7e6fa4d1199dc262826f1f57c76c6cff5..b6bceb12d0492aa5a544c0d62b69dd283c40ad7d 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
+@@ -77,6 +77,8 @@ import com.android.wm.shell.bubbles.BubbleData;
+ import com.android.wm.shell.bubbles.BubbleExpandedView;
+ import com.android.wm.shell.bubbles.BubbleExpandedViewManager;
+ import com.android.wm.shell.bubbles.BubbleExpandedViewTransitionAnimator;
++import com.android.wm.shell.bubbles.LujarchSmallWindowsMode;
++import com.android.wm.shell.bubbles.LujarchSmallWindowsView;
+ import com.android.wm.shell.bubbles.BubbleHelper;
+ import com.android.wm.shell.bubbles.BubblePositioner;
+ import com.android.wm.shell.bubbles.BubbleStackView;
+@@ -171,6 +173,18 @@ public class BubbleTransitions {
+         mBubbleController = controller;
+     }
+ 
++    /** The view that shows a bubble opening: the bubble bar's, the stack's or the small windows'. */
++    private BubbleExpandedViewTransitionAnimator expandedViewAnimator(
++            @Nullable BubbleStackView stackView, @Nullable BubbleBarLayerView layerView) {
++        if (layerView != null) {
++            return layerView;
++        }
++        if (stackView != null) {
++            return stackView;
++        }
++        return mBubbleController.getSmallWindows();
++    }
++
+     /**
+      * Returns whether there is a pending transition for the given request.
+      */
+@@ -593,11 +607,7 @@ public class BubbleTransitions {
+                 BubbleStackView stackView, BubbleBarLayerView layerView,
+                 BubbleIconFactory iconFactory, boolean inflateSync, IBinder transition,
+                 Consumer<TransitionHandler> onInflatedCallback) {
+-            if (layerView != null) {
+-                mExpandedViewAnimator = layerView;
+-            } else {
+-                mExpandedViewAnimator = stackView;
+-            }
++            mExpandedViewAnimator = expandedViewAnimator(stackView, layerView);
+             BubbleLog.d("LaunchNewTaskBubbleForExistingTransition() expanded=%b",
+                     mExpandedViewAnimator.isExpanded());
+             mBubble = bubble;
+@@ -888,11 +898,7 @@ public class BubbleTransitions {
+                 BubbleStackView stackView, BubbleBarLayerView layerView,
+                 BubbleIconFactory iconFactory, boolean inflateSync, IBinder transition,
+                 Consumer<TransitionHandler> onInflatedCallback) {
+-            if (layerView != null) {
+-                mExpandedViewAnimator = layerView;
+-            } else {
+-                mExpandedViewAnimator = stackView;
+-            }
++            mExpandedViewAnimator = expandedViewAnimator(stackView, layerView);
+             BubbleLog.d("JumpcutBubbleSwitchTransition() closing=%s, opening=%s",
+                     closingBubble.getKey(), openingBubble.getKey());
+             mOpeningBubble = openingBubble;
+@@ -1159,11 +1165,7 @@ public class BubbleTransitions {
+                 BubblePositioner positioner, BubbleStackView stackView,
+                 BubbleBarLayerView layerView, BubbleIconFactory iconFactory,
+                 boolean inflateSync, @Nullable BubbleBarLocation bubbleBarLocation) {
+-            if (layerView != null) {
+-                mExpandedViewAnimator = layerView;
+-            } else {
+-                mExpandedViewAnimator = stackView;
+-            }
++            mExpandedViewAnimator = expandedViewAnimator(stackView, layerView);
+             BubbleLog.d("LaunchOrConvertToBubble() key=%s expanded=%b",
+                     bubble.getKey(), mExpandedViewAnimator.isExpanded());
+             mBubble = bubble;
+@@ -1288,7 +1290,8 @@ public class BubbleTransitions {
+             mPositioner.getTaskViewRestBounds(bounds);
+             final WindowContainerToken bubbleRootTask =
+                     Objects.requireNonNull(mBubbleHelper.getAppBubbleRootTaskToken());
+-            wct.setBounds(bubbleRootTask, bounds);
++            // Each of Lujarch's small windows sets the bounds of its own task.
++            wct.setBounds(bubbleRootTask, LujarchSmallWindowsMode.getActive() ? new Rect() : bounds);
+             wct.setAlwaysOnTop(bubbleRootTask, true);
+ 
+             BubbleLog.d("LaunchOrConvertToBubble.handleRequest(), set root bounds %s", bounds);
+@@ -1695,11 +1698,7 @@ public class BubbleTransitions {
+                 BubbleBarLayerView layerView, BubbleIconFactory iconFactory,
+                 HomeIntentProvider homeIntentProvider, @Nullable DragData dragData,
+                 boolean inflateSync) {
+-            if (layerView != null) {
+-                mExpandedViewAnimator = layerView;
+-            } else {
+-                mExpandedViewAnimator = stackView;
+-            }
++            mExpandedViewAnimator = expandedViewAnimator(stackView, layerView);
+             BubbleLog.d("ConvertToBubble() expanded=%b",
+                     mExpandedViewAnimator.isExpanded());
+             mBubble = bubble;
+@@ -1740,7 +1739,8 @@ public class BubbleTransitions {
+                     mTaskInfo.userId);
+ 
+             final WindowContainerToken rootToken = mBubbleHelper.getAppBubbleRootTaskToken();
+-            wct.setBounds(rootToken != null ? rootToken : mTaskInfo.token, launchBounds);
++            wct.setBounds(rootToken != null && !LujarchSmallWindowsMode.getActive()
++                    ? rootToken : mTaskInfo.token, launchBounds);
+ 
+             final TaskView tv = b.getTaskView();
+             tv.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT);
+@@ -2051,6 +2051,22 @@ public class BubbleTransitions {
+             mRootLeash = info.getRoot(0).getLeash();
+             mFinishCb = finishCallback;
+ 
++            final LujarchSmallWindowsView smallWindows = mBubbleController.getSmallWindows();
++            if (smallWindows != null) {
++                smallWindows.animateToFullscreen(mBubble, taskChg, info, startTransaction,
++                        () -> {
++                            tv.notifyTaskRemovalStarted(tv.getTaskInfo());
++                            mBubbleData.setExpanded(false /* expanded */);
++                        },
++                        () -> {
++                            mFinishWct = null;
++                            cleanup();
++                        });
++                mTaskViewTransitions.onExternalDone(mTransition);
++                mTransition = null;
++                return true;
++            }
++
+             SurfaceControl dest = null;
+             final View expandedView = getExpandedView(mBubble);
+             if (expandedView != null) {
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
+index c671e6ce782154f63e8615b7a2c159a8d14ef0b8..a0b1ab3a6c188e4e92246960b74e3bb613f2339e 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
+@@ -27,6 +27,7 @@ import android.window.WindowContainerTransaction
+ import com.android.wm.shell.Flags
+ import com.android.wm.shell.bubbles.Bubble
+ import com.android.wm.shell.bubbles.BubbleHelper
++import com.android.wm.shell.bubbles.LujarchSmallWindowsMode
+ import com.android.wm.shell.shared.bubbles.BubbleFlagHelper
+ 
+ object BubbleUtils {
+@@ -52,10 +53,18 @@ object BubbleUtils {
+                     wct.setWindowingMode(token, WindowConfiguration.WINDOWING_MODE_UNDEFINED)
+                 }
+                 wct.reparent(token, rootToken, true /* onTop */)
+-                if (bounds != null) {
+-                    wct.setBounds(rootToken, bounds)
++                if (LujarchSmallWindowsMode.active) {
++                    // Each small window lays its app out at a size of its own.
++                    wct.setBounds(rootToken, Rect())
++                    if (bounds != null) {
++                        wct.setBounds(token, bounds)
++                    }
++                } else {
++                    if (bounds != null) {
++                        wct.setBounds(rootToken, bounds)
++                    }
++                    wct.setBounds(token, Rect())
+                 }
+-                wct.setBounds(token, Rect())
+                 wct.setAlwaysOnTop(rootToken, true /* alwaysOnTop */)
+             } else if (reparentToTda) {
+                 wct.reparent(token, null, true /* onTop */)
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java b/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java
+index 3368ab9c457d04b4f0216fb71d48c25a7cd7e11d..09e3e97cdd8e5eb607656ad6e86ec0a5312a7679 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java
+@@ -60,6 +60,7 @@ import com.android.internal.protolog.ProtoLog;
+ import com.android.wm.shell.Flags;
+ import com.android.wm.shell.ShellTaskOrganizer;
+ import com.android.wm.shell.bubbles.BubbleHelper;
++import com.android.wm.shell.bubbles.LujarchSmallWindowsMode;
+ import com.android.wm.shell.common.ShellExecutor;
+ import com.android.wm.shell.shared.TransitionUtil;
+ import com.android.wm.shell.shared.bubbles.BubbleFlagHelper;
+@@ -1238,7 +1239,8 @@ public class TaskViewTransitions implements Transitions.TransitionHandler, TaskV
+         final WindowContainerToken token;
+         final ActivityManager.RunningTaskInfo rootTaskInfo = getRootTaskInfo();
+         if (!taskInfo.hasParentTask() || rootTaskInfo == null
+-                || taskInfo.parentTaskId != rootTaskInfo.taskId) {
++                || taskInfo.parentTaskId != rootTaskInfo.taskId
++                || LujarchSmallWindowsMode.getActive()) {
+             token = taskInfo.token;
+         } else {
+             token = rootTaskInfo.token;
+diff --git a/packages/SystemUI/res/values-ja/lujarch_windows_strings.xml b/packages/SystemUI/res/values-ja/lujarch_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..afc02a8b79ae1b1b3990c5ddd2bd7b205519f188
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_windows_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window_pull_hint">指を離すと小ウィンドウで開きます</string>
++    <string name="lujarch_open_in_small_window">小ウィンドウで開く</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_windows_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2481c78fc7208c75b09b977176e996c44014af5
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_windows_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window_pull_hint">松手即在小窗中打开</string>
++    <string name="lujarch_open_in_small_window">在小窗中打开</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_windows_strings.xml b/packages/SystemUI/res/values/lujarch_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..c488515429a696127a04f0566eabaee5a3c09f4a
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_windows_strings.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- Under a heads-up pulled down far enough (target/windows.md, WIN-12) -->
++    <string name="lujarch_small_window_pull_hint">Release to open in a small window</string>
++    <!-- The small-window button of a notification -->
++    <string name="lujarch_open_in_small_window">Open in small window</string>
++</resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/shade/NotificationPanelViewController.java b/packages/SystemUI/src/com/android/systemui/shade/NotificationPanelViewController.java
+index 90f9eeb1868ef5f056fcdaede1ea9440077a4fbf..73e8508a298d7363fc2f168b38886f366dda23d3 100644
+--- a/packages/SystemUI/src/com/android/systemui/shade/NotificationPanelViewController.java
++++ b/packages/SystemUI/src/com/android/systemui/shade/NotificationPanelViewController.java
+@@ -4003,6 +4003,11 @@ public final class NotificationPanelViewController implements
+                 return false;
+             }
+ 
++            if (mHeadsUpTouchHelper.isPullingToSmallWindow()) {
++                // A heads-up pulled toward a small window takes the rest of the gesture.
++                return mHeadsUpTouchHelper.onTouchEvent(event);
++            }
++
+             if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                 if (event.getDownTime() == mLastTouchDownTime) {
+                     // An issue can occur when swiping down after unlock, where multiple down
+@@ -4067,6 +4072,9 @@ public final class NotificationPanelViewController implements
+                 mMetricsLogger.count(COUNTER_PANEL_OPEN_PEEK, 1);
+             }
+             boolean handled = mHeadsUpTouchHelper.onTouchEvent(event);
++            if (mHeadsUpTouchHelper.isPullingToSmallWindow()) {
++                return true;
++            }
+ 
+             // This touch session has already resulted in shade expansion. Ignore everything else.
+             if (event.getActionMasked() != MotionEvent.ACTION_DOWN
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
+index 5360582dd640aafb261c625180521233d55f9697..8b6f406716e09cfe82e6e4f0a85d0bd5865dd010 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
+@@ -25,6 +25,7 @@ import com.android.systemui.statusbar.notification.collection.PipelineDumper
+ import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
+ import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifSectioner
+ import com.android.systemui.statusbar.notification.collection.provider.SectionStyleProvider
++import com.android.systemui.statusbar.notification.lujarch.smallwindow.LujarchSmallWindowsNotifications
+ import com.android.systemui.statusbar.notification.shared.NotificationMinimalism
+ import javax.inject.Inject
+ 
+@@ -72,6 +73,7 @@ constructor(
+     highlightsCoordinator: HighlightsCoordinator,
+     hsuCoordinator: HsuCoordinator,
+     lujarchFoldCoordinator: LujarchFoldCoordinator,
++    smallWindowsNotifications: LujarchSmallWindowsNotifications,
+ ) : NotifCoordinators {
+ 
+     private val mCoreCoordinators: MutableList<CoreCoordinator> = ArrayList()
+@@ -113,6 +115,7 @@ constructor(
+         mCoordinators.add(bundleCoordinator)
+         mCoordinators.add(summarizationCoordinator)
+         mCoordinators.add(statsLoggerCoordinator)
++        mCoordinators.add(smallWindowsNotifications)
+         mCoordinators.add(lujarchFoldCoordinator)
+         if (NmContextualDisplayLaunch.isEnabled) {
+             mCoordinators.add(highlightsCoordinator)
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java
+index be7b65e1302883f98424275b1462fdd8c6334417..a31eb2dad43751a8f5453bfcb6909cbaa28f33c5 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java
+@@ -26,6 +26,8 @@ import com.android.internal.statusbar.IStatusBarService;
+ import com.android.systemui.Gefingerpoken;
+ import com.android.systemui.scene.shared.flag.SceneContainerFlag;
+ import com.android.systemui.statusbar.notification.collection.NotificationEntry;
++import com.android.systemui.statusbar.notification.lujarch.smallwindow.HeadsUpSmallWindowPull;
++import com.android.systemui.statusbar.notification.lujarch.smallwindow.LujarchSmallWindowsNotifications;
+ import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
+ import com.android.systemui.statusbar.notification.row.ExpandableView;
+ 
+@@ -48,6 +50,7 @@ public class HeadsUpTouchHelper implements Gefingerpoken {
+     private final HeadsUpNotificationViewController mPanel;
+     private ExpandableNotificationRow mPickedChild;
+     private String mPickedReason;
++    @Nullable private HeadsUpSmallWindowPull mSmallWindowPull;
+ 
+     public static final Boolean DEBUG = false;
+ 
+@@ -81,6 +84,11 @@ public class HeadsUpTouchHelper implements Gefingerpoken {
+         return mTrackingHeadsUp;
+     }
+ 
++    /** Whether the gesture became a pull toward a small window; it takes the rest of it. */
++    public boolean isPullingToSmallWindow() {
++        return mSmallWindowPull != null && mSmallWindowPull.isActive();
++    }
++
+     @Override
+     public boolean onInterceptTouchEvent(MotionEvent event) {
+         if (!mTouchingHeadsUpView && event.getActionMasked() != MotionEvent.ACTION_DOWN) {
+@@ -144,6 +152,17 @@ public class HeadsUpTouchHelper implements Gefingerpoken {
+                         + " downward:" + downward;
+                 if (mTouchingHeadsUpView && movedEnough && downward) {
+                     if (!SceneContainerFlag.isEnabled()) {
++                        final HeadsUpSmallWindowPull pull =
++                                LujarchSmallWindowsNotifications.headsUpPull();
++                        if (h > 0 && pull != null && pull.start(mPickedChild, y,
++                                mTrackingPointer)) {
++                            // Pulled down, the heads-up heads for a small window instead of
++                            // expanding the shade.
++                            mSmallWindowPull = pull;
++                            clearNotificationEffects();
++                            endMotion();
++                            return true;
++                        }
+                         setTrackingHeadsUp(true, "Intercept MOVE");
+                         mCollapseSnoozes = h < 0;
+                         mInitialTouchX = x;
+@@ -287,6 +306,9 @@ public class HeadsUpTouchHelper implements Gefingerpoken {
+             debugLog("Touch => " + eventStr + " => FALSE");
+             return false;
+         } else {
++            if (isPullingToSmallWindow()) {
++                return mSmallWindowPull.onTouchEvent(event);
++            }
+             if (!mTrackingHeadsUp) {
+                 debugLog("Touch => notTrackingHun => FALSE");
+                 return false;
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/HeadsUpSmallWindowPull.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/HeadsUpSmallWindowPull.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6005d10274c4d0d182fadca15b3d90709fce4cbc
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/HeadsUpSmallWindowPull.java
+@@ -0,0 +1,329 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.notification.lujarch.smallwindow;
++
++import android.animation.Animator;
++import android.animation.AnimatorListenerAdapter;
++import android.animation.ValueAnimator;
++import android.util.Log;
++import android.view.HapticFeedbackConstants;
++import android.view.MotionEvent;
++import android.view.ViewParent;
++import android.view.animation.Interpolator;
++import android.view.animation.PathInterpolator;
++
++import androidx.annotation.Nullable;
++
++import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
++import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout;
++import com.android.systemui.statusbar.notification.stack.ViewState;
++
++/**
++ * Pulling a heads-up down (target/windows.md, WIN-12): the heads-up follows the finger; past
++ * 48 dp the hint "Release to open in a small window" shows under it (with a threshold haptic);
++ * released there, the heads-up fades where it is while what a tap on it would open opens in a
++ * small window; released before it, the heads-up settles back. Pushing it up stays Android's
++ * gesture.
++ *
++ * <p>The heads-up's own touch helper hands the gesture over once it is a downward drag past the
++ * touch slop, in place of expanding the shade from it. The row is moved by its translation, which
++ * the notification stack sets again on its next layout, so the pull leaves nothing behind.
++ */
++public final class HeadsUpSmallWindowPull {
++    private static final String TAG = LujarchSmallWindowsNotifications.TAG;
++
++    /** How far the heads-up is pulled before letting go opens the small window. */
++    private static final float THRESHOLD_DP = 48f;
++    /** Past the threshold the heads-up follows with resistance, up to this much further. */
++    private static final float OVERPULL_DP = 80f;
++    private static final float OVERPULL_FACTOR = 0.4f;
++    private static final float HINT_GAP_DP = 16f;
++
++    private static final Interpolator EMPHASIZED_DECELERATE =
++            new PathInterpolator(0.05f, 0.7f, 0.1f, 1f);
++    private static final Interpolator EMPHASIZED_ACCELERATE =
++            new PathInterpolator(0.3f, 0f, 0.8f, 0.15f);
++    private static final long SETTLE_MS = 350;
++    private static final long HINT_IN_MS = 200;
++    private static final long FADE_MS = 150;
++
++    private final LujarchSmallWindowsNotifications mHost;
++
++    private boolean mActive;
++    /** The heads-up stopped being one during the pull: the rest of the gesture does nothing. */
++    private boolean mAbandoned;
++    /** The row the finger picked (a group's child, or a notification on its own). */
++    @Nullable private ExpandableNotificationRow mPicked;
++    /** The row the stack places, which is moved. */
++    @Nullable private ExpandableNotificationRow mRow;
++    @Nullable private NotificationStackScrollLayout mStack;
++    @Nullable private SmallWindowPullHint mHint;
++    @Nullable private String mKey;
++    private int mPointerId;
++    private float mStartY;
++    private float mBaseY;
++    private float mOffset;
++    private boolean mPast;
++    @Nullable private ValueAnimator mSettle;
++    @Nullable private ValueAnimator mHintAnimator;
++
++    HeadsUpSmallWindowPull(LujarchSmallWindowsNotifications host) {
++        mHost = host;
++    }
++
++    public boolean isActive() {
++        return mActive;
++    }
++
++    /**
++     * Starts the pull of {@code picked} from {@code y} (the touch's coordinates) when it is a
++     * pinned heads-up that may open in a small window; false leaves the gesture to the shade.
++     */
++    public boolean start(@Nullable ExpandableNotificationRow picked, float y, int pointerId) {
++        if (picked == null || mActive || !picked.isPinned()) return false;
++        final ExpandableNotificationRow row = picked.getNotificationParent() != null
++                ? picked.getNotificationParent() : picked;
++        final ViewParent parent = row.getParent();
++        if (!(parent instanceof NotificationStackScrollLayout stack)) return false;
++        // A heads-up still sliding in is placed by its own animation: leave it to the shade.
++        if (ViewState.isAnimatingY(row)) return false;
++        final String key = picked.getKey();
++        if (!mHost.canOpen(key)) return false;
++        finishPrevious();
++        mActive = true;
++        mAbandoned = false;
++        mPicked = picked;
++        mRow = row;
++        mStack = stack;
++        mKey = key;
++        mPointerId = pointerId;
++        mStartY = y;
++        mBaseY = row.getTranslationY();
++        mOffset = 0f;
++        mPast = false;
++        mHint = new SmallWindowPullHint(stack.getContext());
++        stack.getOverlay().add(mHint);
++        placeHint();
++        Log.d(TAG, "Pulling " + key + " toward a small window");
++        return true;
++    }
++
++    /** The rest of the gesture once it is a pull; true while it consumes the events. */
++    public boolean onTouchEvent(MotionEvent event) {
++        if (!mActive) return false;
++        int index = event.findPointerIndex(mPointerId);
++        switch (event.getActionMasked()) {
++            case MotionEvent.ACTION_POINTER_UP: {
++                if (event.getPointerId(event.getActionIndex()) == mPointerId) {
++                    // Another finger carries on from where this one left the heads-up.
++                    final int next = event.getActionIndex() == 0 ? 1 : 0;
++                    if (next < event.getPointerCount()) {
++                        final float y = event.getY(next);
++                        mStartY = y - pulledDistance();
++                        mPointerId = event.getPointerId(next);
++                    }
++                }
++                break;
++            }
++            case MotionEvent.ACTION_MOVE:
++                if (index < 0) index = 0;
++                move(event.getY(index));
++                break;
++            case MotionEvent.ACTION_UP:
++                release();
++                break;
++            case MotionEvent.ACTION_CANCEL:
++                settle();
++                break;
++            default:
++                break;
++        }
++        return true;
++    }
++
++    private float px(float dp) {
++        return mRow != null ? dp * mRow.getResources().getDisplayMetrics().density : dp;
++    }
++
++    /** The finger's travel that gives the current offset (the inverse of the resistance). */
++    private float pulledDistance() {
++        final float threshold = px(THRESHOLD_DP);
++        return mOffset <= threshold ? mOffset : threshold + (mOffset - threshold) / OVERPULL_FACTOR;
++    }
++
++    private void move(float y) {
++        if (mAbandoned) return;
++        final float dy = Math.max(0f, y - mStartY);
++        final float threshold = px(THRESHOLD_DP);
++        final float offset = dy <= threshold ? dy
++                : threshold + Math.min((dy - threshold) * OVERPULL_FACTOR, px(OVERPULL_DP));
++        apply(offset);
++        final boolean past = dy >= threshold;
++        if (past != mPast && !mAbandoned) {
++            mPast = past;
++            if (mRow != null) {
++                mRow.performHapticFeedback(past
++                        ? HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE
++                        : HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE);
++            }
++            animateHint(past);
++        }
++    }
++
++    private boolean stillHeadsUp() {
++        return mRow != null && mPicked != null && mRow.isAttachedToWindow()
++                && mPicked.isPinned();
++    }
++
++    private void apply(float offset) {
++        mOffset = offset;
++        if (!stillHeadsUp()) {
++            // Timed out or replaced under the finger: the stack animates it; let it.
++            Log.d(TAG, "Heads-up " + mKey + " left during the pull");
++            mAbandoned = true;
++            animateHint(false);
++            return;
++        }
++        mRow.setTranslationY(mBaseY + offset);
++        placeHint();
++    }
++
++    private void placeHint() {
++        if (mHint == null || mRow == null || mStack == null) return;
++        final float bottom = mRow.getTop() + mRow.getTranslationY() + mRow.getActualHeight()
++                - mRow.getClipBottomAmount();
++        mHint.setAnchor(mStack.getWidth() / 2f, bottom + px(HINT_GAP_DP), mStack.getWidth());
++    }
++
++    private void animateHint(boolean show) {
++        final SmallWindowPullHint hint = mHint;
++        if (hint == null) return;
++        if (mHintAnimator != null) mHintAnimator.cancel();
++        final ValueAnimator animator = ValueAnimator.ofFloat(hint.getShown(), show ? 1f : 0f);
++        animator.setDuration(show ? HINT_IN_MS : FADE_MS);
++        animator.setInterpolator(show ? EMPHASIZED_DECELERATE : EMPHASIZED_ACCELERATE);
++        animator.addUpdateListener(a -> hint.setShown((float) a.getAnimatedValue()));
++        animator.start();
++        mHintAnimator = animator;
++    }
++
++    private void release() {
++        if (!mActive) return;
++        if (mAbandoned) {
++            finish();
++            return;
++        }
++        if (mPast && mHost.openFromHeadsUp(mKey)) {
++            leave();
++        } else {
++            settle();
++        }
++    }
++
++    /**
++     * Released past the threshold: the heads-up fades where it is while the small window opens,
++     * then leaves the heads-up slot without an exit of its own; the stack gives the row its place
++     * and opacity back when it next lays it out.
++     */
++    private void leave() {
++        mActive = false;
++        animateHint(false);
++        final ExpandableNotificationRow row = mRow;
++        final String key = mKey;
++        final ValueAnimator fade = ValueAnimator.ofFloat(1f, 0f);
++        fade.setDuration(FADE_MS);
++        fade.setInterpolator(EMPHASIZED_ACCELERATE);
++        fade.addUpdateListener(a -> {
++            if (row != null && stillHeadsUp()) row.setAlpha((float) a.getAnimatedValue());
++        });
++        fade.addListener(new AnimatorListenerAdapter() {
++            @Override
++            public void onAnimationEnd(Animator animation) {
++                if (key != null) mHost.removeHeadsUp(key);
++                cleanUp();
++            }
++        });
++        mSettle = fade;
++        fade.start();
++    }
++
++    /** Released before the threshold (or the gesture was cancelled): it settles back. */
++    private void settle() {
++        mActive = false;
++        animateHint(false);
++        if (mAbandoned || mOffset == 0f) {
++            cleanUp();
++            return;
++        }
++        final ValueAnimator back = ValueAnimator.ofFloat(mOffset, 0f);
++        back.setDuration(SETTLE_MS);
++        back.setInterpolator(EMPHASIZED_DECELERATE);
++        back.addUpdateListener(a -> {
++            mOffset = (float) a.getAnimatedValue();
++            if (stillHeadsUp()) {
++                mRow.setTranslationY(mBaseY + mOffset);
++                placeHint();
++            }
++        });
++        back.addListener(new AnimatorListenerAdapter() {
++            @Override
++            public void onAnimationEnd(Animator animation) {
++                cleanUp();
++            }
++        });
++        mSettle = back;
++        back.start();
++    }
++
++    private void finish() {
++        mActive = false;
++        animateHint(false);
++        cleanUp();
++    }
++
++    /** A new pull ends what the last one left running. */
++    private void finishPrevious() {
++        if (mSettle != null) {
++            mSettle.end();
++            mSettle = null;
++        }
++        cleanUp();
++    }
++
++    private void cleanUp() {
++        if (mHintAnimator != null && mHintAnimator.isRunning()) {
++            // The hint fades out first; it is removed when that ends.
++            final SmallWindowPullHint hint = mHint;
++            final NotificationStackScrollLayout stack = mStack;
++            mHintAnimator.addListener(new AnimatorListenerAdapter() {
++                @Override
++                public void onAnimationEnd(Animator animation) {
++                    if (stack != null && hint != null) stack.getOverlay().remove(hint);
++                }
++            });
++        } else if (mStack != null && mHint != null) {
++            mStack.getOverlay().remove(mHint);
++        }
++        mHint = null;
++        mHintAnimator = null;
++        mSettle = null;
++        mPicked = null;
++        mRow = null;
++        mStack = null;
++        mKey = null;
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..73ccc0add01922467512322854365517f602d82d
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java
+@@ -0,0 +1,213 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.notification.lujarch.smallwindow;
++
++import android.app.Notification;
++import android.app.PendingIntent;
++import android.os.RemoteException;
++import android.os.UserHandle;
++import android.provider.Settings;
++import android.util.Log;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++
++import com.android.internal.statusbar.IStatusBarService;
++import com.android.internal.statusbar.NotificationVisibility;
++import com.android.systemui.dagger.SysUISingleton;
++import com.android.systemui.plugins.ActivityStarter;
++import com.android.systemui.settings.UserTracker;
++import com.android.systemui.shade.ShadeController;
++import com.android.systemui.statusbar.notification.collection.NotifPipeline;
++import com.android.systemui.statusbar.notification.collection.NotificationEntry;
++import com.android.systemui.statusbar.notification.collection.coordinator.Coordinator;
++import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
++import com.android.systemui.statusbar.policy.KeyguardStateController;
++import com.android.systemui.util.settings.SecureSettings;
++import com.android.systemui.wmshell.BubblesManager;
++import com.android.wm.shell.bubbles.Bubbles;
++
++import dagger.Lazy;
++
++import java.util.Optional;
++
++import javax.inject.Inject;
++
++/**
++ * Small windows from notifications (target/windows.md, WIN-12, WIN-13): pulling a heads-up down
++ * ({@link HeadsUpSmallWindowPull}) and the small-window button of a notification in the shade
++ * open what a tap on the notification would open, in a small window. A conversation that offers
++ * itself as a bubble becomes that bubble, which makes it a selected conversation of its app.
++ * Both are there while Use small windows and Notifications in Settings > Display > Small windows
++ * are on.
++ */
++@SysUISingleton
++public class LujarchSmallWindowsNotifications implements Coordinator {
++    static final String TAG = "lujarch_windows";
++    private static final String KEY_NOTIFICATIONS = "lujarch_windows_notifications";
++
++    @Nullable private static volatile LujarchSmallWindowsNotifications sInstance;
++
++    private final Optional<Bubbles> mBubbles;
++    private final Optional<BubblesManager> mBubblesManager;
++    private final SecureSettings mSecureSettings;
++    private final UserTracker mUserTracker;
++    private final IStatusBarService mStatusBarService;
++    private final Lazy<ActivityStarter> mActivityStarter;
++    private final Lazy<ShadeController> mShadeController;
++    private final Lazy<HeadsUpManager> mHeadsUpManager;
++    private final Lazy<KeyguardStateController> mKeyguardState;
++    private final HeadsUpSmallWindowPull mPull;
++    @Nullable private NotifPipeline mPipeline;
++
++    @Inject
++    public LujarchSmallWindowsNotifications(
++            Optional<Bubbles> bubbles,
++            Optional<BubblesManager> bubblesManager,
++            SecureSettings secureSettings,
++            UserTracker userTracker,
++            IStatusBarService statusBarService,
++            Lazy<ActivityStarter> activityStarter,
++            Lazy<ShadeController> shadeController,
++            Lazy<HeadsUpManager> headsUpManager,
++            Lazy<KeyguardStateController> keyguardState) {
++        mBubbles = bubbles;
++        mBubblesManager = bubblesManager;
++        mSecureSettings = secureSettings;
++        mUserTracker = userTracker;
++        mStatusBarService = statusBarService;
++        mActivityStarter = activityStarter;
++        mShadeController = shadeController;
++        mHeadsUpManager = headsUpManager;
++        mKeyguardState = keyguardState;
++        mPull = new HeadsUpSmallWindowPull(this);
++        sInstance = this;
++    }
++
++    @Override
++    public void attach(@NonNull NotifPipeline pipeline) {
++        mPipeline = pipeline;
++    }
++
++    /** The pull of a heads-up toward a small window, once notifications are set up. */
++    @Nullable
++    public static HeadsUpSmallWindowPull headsUpPull() {
++        final LujarchSmallWindowsNotifications instance = sInstance;
++        return instance != null ? instance.mPull : null;
++    }
++
++    /** The small windows of notifications, once they are set up. */
++    @Nullable
++    public static LujarchSmallWindowsNotifications get() {
++        return sInstance;
++    }
++
++    private boolean switchesOn() {
++        final int user = mUserTracker.getUserId();
++        return mSecureSettings.getIntForUser(Settings.Secure.NOTIFICATION_BUBBLES, 1, user) != 0
++                && mSecureSettings.getIntForUser(KEY_NOTIFICATIONS, 1, user) != 0;
++    }
++
++    /** A conversation that offers itself as a bubble (WIN-13). */
++    private static boolean offersBubble(@NonNull NotificationEntry entry) {
++        final Notification.BubbleMetadata metadata = entry.getBubbleMetadata();
++        return metadata != null && entry.getRanking() != null
++                && entry.getRanking().getConversationShortcutInfo() != null;
++    }
++
++    /**
++     * Whether the notification can open in a small window now: the switches are on, and a tap on
++     * it opens an activity, or it is a conversation that offers itself as a bubble.
++     */
++    public boolean canOpen(@Nullable NotificationEntry entry) {
++        if (entry == null || mBubbles.isEmpty() || !switchesOn() || entry.isBubble()) {
++            return false;
++        }
++        if (offersBubble(entry) && mBubblesManager.isPresent()) return true;
++        final PendingIntent intent = entry.getSbn().getNotification().contentIntent;
++        return intent != null && intent.isActivity();
++    }
++
++    /** {@link #canOpen(NotificationEntry)} for the notification with this key. */
++    public boolean canOpen(@Nullable String key) {
++        return key != null && mPipeline != null && canOpen(mPipeline.getEntry(key));
++    }
++
++    /** The small-window button of the notification with this key. */
++    public void open(@NonNull String key) {
++        final NotificationEntry entry = mPipeline != null ? mPipeline.getEntry(key) : null;
++        if (canOpen(entry)) open(entry);
++    }
++
++    /** The heads-up let go past its threshold. */
++    boolean openFromHeadsUp(@Nullable String key) {
++        final NotificationEntry entry =
++                key != null && mPipeline != null ? mPipeline.getEntry(key) : null;
++        if (!canOpen(entry)) return false;
++        open(entry);
++        return true;
++    }
++
++    /** The heads-up that opened leaves its slot. */
++    void removeHeadsUp(@NonNull String key) {
++        mHeadsUpManager.get().removeNotification(key, true /* releaseImmediately */,
++                "lujarch small window");
++    }
++
++    /**
++     * Opens the notification in a small window as a tap would open it, after unlocking when the
++     * phone is locked: its content intent as an app's small window, or, for a conversation that
++     * offers a bubble, that bubble.
++     */
++    public void open(@NonNull NotificationEntry entry) {
++        final String key = entry.getKey();
++        final Runnable action = () -> {
++            if (offersBubble(entry) && mBubblesManager.isPresent()) {
++                Log.i(TAG, "conversation " + key + " opens in a small window");
++                mBubblesManager.get().onUserChangedBubble(entry, true /* shouldBubble */);
++            } else {
++                final PendingIntent intent = entry.getSbn().getNotification().contentIntent;
++                final UserHandle user = entry.getSbn().getUser().getIdentifier()
++                        == UserHandle.USER_ALL ? mUserTracker.getUserHandle()
++                        : entry.getSbn().getUser();
++                Log.i(TAG, "notification " + key + " opens in a small window");
++                mBubbles.get().showPendingIntentInSmallWindow(intent, user);
++                countAsTap(entry);
++            }
++            mShadeController.get().animateCollapseShade();
++        };
++        if (mKeyguardState.get().isShowing()) {
++            mActivityStarter.get().dismissKeyguardThenExecute(() -> {
++                action.run();
++                return false;
++            }, null, true /* afterKeyguardGone */);
++        } else {
++            action.run();
++        }
++    }
++
++    /** As a tap: the system clears a notification that cancels itself when tapped. */
++    private void countAsTap(@NonNull NotificationEntry entry) {
++        try {
++            mStatusBarService.onNotificationClick(entry.getKey(),
++                    NotificationVisibility.obtain(entry.getKey(), entry.getRanking().getRank(),
++                            mPipeline != null ? mPipeline.getAllNotifs().size() : 1, true));
++        } catch (RemoteException e) {
++            Log.w(TAG, "the tap on " + entry.getKey() + " was not reported", e);
++        }
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/SmallWindowPullHint.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/SmallWindowPullHint.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..022d7ebe5ea49ba33213b909f403156b8d6b8ccb
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/SmallWindowPullHint.java
+@@ -0,0 +1,162 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.statusbar.notification.lujarch.smallwindow;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.ColorFilter;
++import android.graphics.Paint;
++import android.graphics.PixelFormat;
++import android.graphics.RectF;
++import android.graphics.Typeface;
++import android.graphics.drawable.Drawable;
++import android.text.TextPaint;
++import android.text.TextUtils;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++
++import com.android.systemui.res.R;
++
++/**
++ * The hint under a heads-up pulled past the threshold: the system's bubble icon and "Release to
++ * open in a small window" on an accent pill, centred under the heads-up. Drawn in the
++ * notification stack's overlay, so it needs no window of its own; it rises into place as it
++ * fades in.
++ */
++final class SmallWindowPullHint extends Drawable {
++    private static final float HEIGHT_DP = 40f;
++    private static final float PAD_START_DP = 14f;
++    private static final float PAD_END_DP = 18f;
++    private static final float ICON_DP = 18f;
++    private static final float GAP_DP = 8f;
++    private static final float TEXT_SP = 14f;
++    private static final float RISE_DP = 10f;
++    private static final float SHADOW_RADIUS_DP = 12f;
++    private static final float SHADOW_DY_DP = 8f;
++    private static final float EDGE_DP = 16f;
++
++    private final float mDensity;
++    private final int mAccent;
++    private final TextPaint mText = new TextPaint(Paint.ANTI_ALIAS_FLAG);
++    private final Paint mFill = new Paint(Paint.ANTI_ALIAS_FLAG);
++    @Nullable private final Drawable mIcon;
++    private final String mLabel;
++    private final RectF mPill = new RectF();
++
++    private float mCenterX;
++    private float mTop;
++    private float mMaxWidth = Float.MAX_VALUE;
++    /** 0 hidden, 1 shown: its alpha, and how far it has risen into place. */
++    private float mShown;
++    private CharSequence mShownLabel;
++
++    SmallWindowPullHint(Context context) {
++        mDensity = context.getResources().getDisplayMetrics().density;
++        final float fontScale = context.getResources().getConfiguration().fontScale;
++        mAccent = context.getColor(com.android.internal.R.color.materialColorPrimary);
++        final int onAccent = context.getColor(com.android.internal.R.color.materialColorOnPrimary);
++        mText.setColor(onAccent);
++        mText.setTextSize(TEXT_SP * mDensity * (fontScale > 0 ? fontScale : 1f));
++        mText.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
++        mFill.setStyle(Paint.Style.FILL);
++        mLabel = context.getString(R.string.lujarch_small_window_pull_hint);
++        mShownLabel = mLabel;
++        final Drawable icon = context.getDrawable(
++                com.android.wm.shell.R.drawable.bubble_ic_create_bubble);
++        if (icon != null) {
++            mIcon = icon.mutate();
++            mIcon.setTint(onAccent);
++        } else {
++            mIcon = null;
++        }
++    }
++
++    private float px(float dp) {
++        return dp * mDensity;
++    }
++
++    /** Centres the hint at {@code centerX}, its top at {@code top} (the stack's coordinates). */
++    void setAnchor(float centerX, float top, float stackWidth) {
++        mCenterX = centerX;
++        mTop = top;
++        mMaxWidth = stackWidth > 0 ? stackWidth - 2 * px(EDGE_DP) : Float.MAX_VALUE;
++        update();
++    }
++
++    void setShown(float shown) {
++        mShown = Math.max(0f, Math.min(1f, shown));
++        update();
++    }
++
++    float getShown() {
++        return mShown;
++    }
++
++    private void update() {
++        final float chrome = px(PAD_START_DP) + px(ICON_DP) + px(GAP_DP) + px(PAD_END_DP);
++        final float available = Math.max(0f, mMaxWidth - chrome);
++        mShownLabel = TextUtils.ellipsize(mLabel, mText, available, TextUtils.TruncateAt.END);
++        final float width = chrome + mText.measureText(mShownLabel, 0, mShownLabel.length());
++        final float top = mTop + px(RISE_DP) * (1f - mShown);
++        mPill.set(mCenterX - width / 2f, top, mCenterX + width / 2f, top + px(HEIGHT_DP));
++        final float shadow = px(SHADOW_RADIUS_DP) + px(SHADOW_DY_DP);
++        setBounds(Math.round(mPill.left - shadow), Math.round(mPill.top - shadow),
++                Math.round(mPill.right + shadow), Math.round(mPill.bottom + shadow));
++        invalidateSelf();
++    }
++
++    @Override
++    public void draw(@NonNull Canvas canvas) {
++        if (mShown <= 0f) return;
++        final int alpha = Math.round(255 * mShown);
++        final float radius = mPill.height() / 2f;
++        mFill.setColor(mAccent);
++        mFill.setAlpha(alpha);
++        mFill.setShadowLayer(px(SHADOW_RADIUS_DP), 0f, px(SHADOW_DY_DP),
++                Color.argb(Math.round(128 * mShown), 0, 0, 0));
++        canvas.drawRoundRect(mPill, radius, radius, mFill);
++        float x = mPill.left + px(PAD_START_DP);
++        if (mIcon != null) {
++            final int size = Math.round(px(ICON_DP));
++            final int iconTop = Math.round(mPill.centerY() - size / 2f);
++            mIcon.setBounds(Math.round(x), iconTop, Math.round(x) + size, iconTop + size);
++            mIcon.setAlpha(alpha);
++            mIcon.draw(canvas);
++        }
++        x += px(ICON_DP) + px(GAP_DP);
++        mText.setAlpha(alpha);
++        final Paint.FontMetrics fm = mText.getFontMetrics();
++        final float baseline = mPill.centerY() - (fm.ascent + fm.descent) / 2f;
++        canvas.drawText(mShownLabel, 0, mShownLabel.length(), x, baseline, mText);
++    }
++
++    @Override
++    public void setAlpha(int alpha) {
++        // Its alpha is its shown fraction.
++    }
++
++    @Override
++    public void setColorFilter(@Nullable ColorFilter colorFilter) {
++    }
++
++    @Override
++    public int getOpacity() {
++        return PixelFormat.TRANSLUCENT;
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
+index 3c4032f156efef1d3eb049f764e053f99dd82be0..5c69d6a440ee92b77014c5257d82e6e6a8463090 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
+@@ -55,6 +55,7 @@ import com.android.systemui.statusbar.TransformableView;
+ import com.android.systemui.statusbar.notification.NotificationFadeAware;
+ import com.android.systemui.statusbar.notification.NotificationUtils;
+ import com.android.systemui.statusbar.notification.collection.RemoteInputEntryAdapter;
++import com.android.systemui.statusbar.notification.lujarch.smallwindow.LujarchSmallWindowsNotifications;
+ import com.android.systemui.statusbar.notification.collection.render.GroupMembershipManager;
+ import com.android.systemui.statusbar.notification.people.PeopleNotificationIdentifier;
+ import com.android.systemui.statusbar.notification.row.wrapper.NotificationCompactHeadsUpTemplateViewWrapper;
+@@ -1591,7 +1592,19 @@ public class NotificationContentView extends FrameLayout implements Notification
+             return;
+         }
+ 
+-        if (shouldShowBubbleButton()) {
++        final LujarchSmallWindowsNotifications smallWindows =
++                LujarchSmallWindowsNotifications.get();
++        final String key = mContainingNotification.getEntryAdapter().getKey();
++        if (!shouldShowBubbleButton() && smallWindows != null && smallWindows.canOpen(key)) {
++            // A notification that opens in a small window: the system's bubble icon.
++            bubbleButton.setContentDescription(
++                    mContext.getString(R.string.lujarch_open_in_small_window));
++            bubbleButton.setImageDrawable(
++                    mContext.getDrawable(com.android.wm.shell.R.drawable.bubble_ic_create_bubble));
++            bubbleButton.setOnClickListener(v -> smallWindows.open(key));
++            bubbleButton.setVisibility(VISIBLE);
++            actionsContainerForVisibilityChange.setVisibility(VISIBLE);
++        } else if (shouldShowBubbleButton()) {
+             boolean isBubble = mContainingNotification.getEntryAdapter().isBubble();
+             // explicitly resolve drawable resource using SystemUI's theme
+             Drawable d = mContext.getDrawable(isBubble

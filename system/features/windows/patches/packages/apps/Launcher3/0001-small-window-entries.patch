@@ -1,0 +1,326 @@
+diff --git a/quickstep/src/com/android/launcher3/dagger/Modules.kt b/quickstep/src/com/android/launcher3/dagger/Modules.kt
+index 577777013ad3306cfd8362fc973af33f0965e567..59cc56fba38b96f4349c129558071d90a0650825 100644
+--- a/quickstep/src/com/android/launcher3/dagger/Modules.kt
++++ b/quickstep/src/com/android/launcher3/dagger/Modules.kt
+@@ -337,6 +337,7 @@ object TaskOverlayModule {
+         listOf(
+             TaskShortcutFactory.APP_INFO,
+             TaskShortcutFactory.SPLIT_SELECT,
++            TaskShortcutFactory.SMALL_WINDOW,
+             TaskShortcutFactory.PIN,
+             TaskShortcutFactory.INSTALL,
+             TaskShortcutFactory.FREE_FORM,
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dcc39bbda2 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
++++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+@@ -196,6 +196,7 @@ import com.android.launcher3.util.WindowBlurState;
+ import com.android.launcher3.views.FloatingIconView;
+ import com.android.quickstep.BaseContainerInterface;
+ import com.android.quickstep.LauncherActivityInterface;
++import com.android.quickstep.LujarchSmallWindows;
+ import com.android.quickstep.OverviewComponentObserver;
+ import com.android.quickstep.OverviewComponentObserver.OverviewChangeListener;
+ import com.android.quickstep.RecentsAnimationDeviceState;
+@@ -345,6 +346,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+         mActionsView = findViewById(R.id.overview_actions_view);
+         RecentsView<?, LauncherState> overviewPanel = getOverviewPanel();
+         SystemUiProxy systemUiProxy = SystemUiProxy.INSTANCE.get(this);
++        LujarchSmallWindows.followRecents(this);
+         mSplitSelectStateController =
+                 new SplitSelectStateController(this, getStateManager(),
+                         getDepthController(), getStatsLogManager(),
+@@ -558,12 +560,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+         if (Flags.enablePrivateSpace()) {
+             shortcuts.add(UNINSTALL_APP);
+         }
+-        if (mBubbleFeatureConfig.areAppBubblesSupported()) {
+-            shortcuts.add(BUBBLE_SHORTCUT);
+-        }
+         if (android.security.Flags.appLockApis() && Flags.enableAppLockShortcut()) {
+             shortcuts.add(APP_LOCK);
+         }
++        // Small window comes after the system's other items.
++        if (mBubbleFeatureConfig.areAppBubblesSupported()
++                && LujarchSmallWindows.isHomeEntryOn(this)) {
++            shortcuts.add(BUBBLE_SHORTCUT);
++        }
+         return shortcuts.stream();
+     }
+ 
+@@ -935,6 +939,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+     @Override
+     protected void onStop() {
+         super.onStop();
++        LujarchSmallWindows.onLauncherStopped(this);
+         TaskbarInteractor ti = mTaskbarInteractor;
+         if (ti != null) {
+             ti.onLauncherStop();
+diff --git a/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b009c56c022
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
+@@ -0,0 +1,89 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep
++
++import android.content.Context
++import android.provider.Settings
++import android.util.Log
++import com.android.launcher3.LauncherState
++import com.android.launcher3.statemanager.StateManager
++import com.android.launcher3.uioverrides.QuickstepLauncher
++import com.android.quickstep.views.TaskView
++
++/**
++ * The home screen's and Recents' entries to small windows (target/windows.md): their switches in
++ * Settings > Display > Small windows, and opening a Recents task in a small window.
++ */
++object LujarchSmallWindows {
++    private const val TAG = "lujarch_windows"
++    private const val KEY_HOME = "lujarch_windows_home"
++    private const val KEY_RECENTS = "lujarch_windows_recents"
++
++    private fun on(context: Context, key: String): Boolean {
++        val resolver = context.contentResolver
++        return Settings.Secure.getInt(resolver, Settings.Secure.NOTIFICATION_BUBBLES, 1) != 0 &&
++            Settings.Secure.getInt(resolver, key, 1) != 0
++    }
++
++    /** Small window in an app's menu on the home screen and in the app drawer (WIN-10). */
++    @JvmStatic fun isHomeEntryOn(context: Context): Boolean = on(context, KEY_HOME)
++
++    /** Open in small window in a Recents card's menu, and dropping a card on Running (WIN-11). */
++    @JvmStatic fun isRecentsEntryOn(context: Context): Boolean = on(context, KEY_RECENTS)
++
++    private var recentsShown = false
++
++    private fun reportRecents(context: Context, shown: Boolean) {
++        if (shown == recentsShown) return
++        recentsShown = shown
++        SystemUiProxy.INSTANCE.get(context).setSmallWindowsRecentsShown(shown)
++    }
++
++    /** While Recents shows, the small windows wait in its Running layer (WIN-11). */
++    @JvmStatic
++    fun followRecents(launcher: QuickstepLauncher) {
++        launcher.stateManager.addStateListener(
++            object : StateManager.StateListener<LauncherState> {
++                override fun onStateTransitionStart(toState: LauncherState) =
++                    reportRecents(launcher, toState.isRecentsViewVisible)
++
++                override fun onStateTransitionComplete(finalState: LauncherState) =
++                    reportRecents(launcher, finalState.isRecentsViewVisible)
++            }
++        )
++    }
++
++    /** The home screen and Recents are no longer on the screen. */
++    @JvmStatic
++    fun onLauncherStopped(launcher: QuickstepLauncher) = reportRecents(launcher, false)
++
++    /**
++     * Opens the task of a Recents card in a small window: the task comes forward as a tap on its
++     * card brings it, then the Shell turns it into a small window.
++     */
++    @JvmStatic
++    fun openTask(taskView: TaskView, taskId: Int) {
++        val proxy = SystemUiProxy.INSTANCE.get(taskView.context)
++        val launched = taskView.launchWithAnimation()
++        if (launched == null) {
++            Log.w(TAG, "task $taskId did not launch; it opens in a small window as it is")
++            proxy.showTaskInSmallWindow(taskId)
++            return
++        }
++        launched.add { proxy.showTaskInSmallWindow(taskId) }
++    }
++}
+diff --git a/quickstep/src/com/android/quickstep/SystemUiProxy.kt b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
+index 097c61f47a235d8b0118244e1d323d7c01eb4223..b6f7cb7918e865cd14475a06d701d5c687d43792 100644
+--- a/quickstep/src/com/android/quickstep/SystemUiProxy.kt
++++ b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
+@@ -785,6 +785,18 @@ constructor(
+             bubbles?.showAppBubble(intent, user, entryPoint, bubbleBarLocation)
+         }
+ 
++    /** Tells the Shell whether Recents shows, for the small windows to wait in it. */
++    fun setSmallWindowsRecentsShown(shown: Boolean) =
++        executeWithErrorLog({ "Failed call setRecentsShown" }) {
++            bubbles?.setRecentsShown(shown)
++        }
++
++    /** Tells the Shell to show a running task in a small window. */
++    fun showTaskInSmallWindow(taskId: Int) =
++        executeWithErrorLog({ "Failed call showTaskInSmallWindow" }) {
++            bubbles?.showTaskInSmallWindow(taskId)
++        }
++
+     /** Tells SysUI to show the expanded view. */
+     fun showExpandedView() =
+         executeWithErrorLog({ "Failed call showExpandedView" }) { bubbles?.showExpandedView() }
+diff --git a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
+index a8ac4e021d9af5498e918b9232569482864ce4bf..db73ab1879d59b741ddc625ffcca6c0605aa560d 100644
+--- a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
++++ b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
+@@ -396,6 +396,40 @@ public interface TaskShortcutFactory {
+         }
+     };
+ 
++    /** Open in small window. */
++    TaskShortcutFactory SMALL_WINDOW = new TaskShortcutFactory() {
++        @Override
++        public List<SystemShortcut> getShortcuts(RecentsViewContainer container,
++                TaskContainer taskContainer) {
++            if (!LujarchSmallWindows.isRecentsEntryOn(container.asContext())) {
++                return null;
++            }
++            final Task task = taskContainer.getTask();
++            if ((task.key.baseIntent.getFlags() & FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) != 0) {
++                return null;
++            }
++            return Collections.singletonList(new SmallWindowSystemShortcut(container,
++                    taskContainer));
++        }
++    };
++
++    class SmallWindowSystemShortcut extends SystemShortcut<RecentsViewContainer> {
++        private final TaskContainer mTaskContainer;
++
++        SmallWindowSystemShortcut(RecentsViewContainer container, TaskContainer taskContainer) {
++            super(R.drawable.ic_bubble_button, R.string.lujarch_open_in_small_window, container,
++                    taskContainer.getItemInfo(), taskContainer.getTaskView());
++            mTaskContainer = taskContainer;
++        }
++
++        @Override
++        public void onClick(View view) {
++            dismissTaskMenuView();
++            LujarchSmallWindows.openTask(mTaskContainer.getTaskView(),
++                    mTaskContainer.getTask().key.id);
++        }
++    }
++
+     TaskShortcutFactory PIN = new TaskShortcutFactory() {
+         @Override
+         public List<SystemShortcut> getShortcuts(RecentsViewContainer container,
+diff --git a/res/values-ja/lujarch_small_windows_strings.xml b/res/values-ja/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..77a54f7894f846a2a1d81def4f43305f51a287fd
+--- /dev/null
++++ b/res/values-ja/lujarch_small_windows_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window">小ウィンドウ</string>
++    <string name="lujarch_open_in_small_window">小ウィンドウで開く</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_small_windows_strings.xml b/res/values-zh-rCN/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..524dd333bb089ef6e5f4f98a25b126153c16d5b9
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_small_windows_strings.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_small_window">小窗</string>
++    <string name="lujarch_open_in_small_window">在小窗中打开</string>
++</resources>
+diff --git a/res/values/lujarch_small_windows_strings.xml b/res/values/lujarch_small_windows_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb808b46432ec05d34d24aa2ec795d8918229710
+--- /dev/null
++++ b/res/values/lujarch_small_windows_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <!-- An app's menu on the home screen and a Recents card's menu (target/windows.md) -->
++    <string name="lujarch_small_window">Small window</string>
++    <string name="lujarch_open_in_small_window">Open in small window</string>
++</resources>
+diff --git a/src/com/android/launcher3/popup/PopupDataSource.kt b/src/com/android/launcher3/popup/PopupDataSource.kt
+index 113dc68e1e09e0e888581971853de0c5e433f560..e38376c5420f064a4a9872e48ddd05d775dfb446 100644
+--- a/src/com/android/launcher3/popup/PopupDataSource.kt
++++ b/src/com/android/launcher3/popup/PopupDataSource.kt
+@@ -399,7 +399,7 @@ object UnusedShortcuts {
+     val bubblePopupData =
+         PopupData(
+             iconResId = R.drawable.ic_bubble_button,
+-            labelResId = R.string.bubble,
++            labelResId = R.string.lujarch_small_window,
+             category = PopupCategory.SYSTEM_SHORTCUT,
+             popupAction = handleBubbleShortcut,
+         )
+diff --git a/src/com/android/launcher3/popup/SystemShortcut.java b/src/com/android/launcher3/popup/SystemShortcut.java
+index 2bfa140d89fd8890b2c7b0beb2524b53211e2fef..657a00f790da4ccf8b9bc0f16f0329aad6effb54 100644
+--- a/src/com/android/launcher3/popup/SystemShortcut.java
++++ b/src/com/android/launcher3/popup/SystemShortcut.java
+@@ -571,7 +571,7 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
+         private final boolean mInTaskbar;
+ 
+         public BubbleShortcut(T target, ItemInfo itemInfo, View originalView) {
+-            super(R.drawable.ic_bubble_button, R.string.bubble, target,
++            super(R.drawable.ic_bubble_button, R.string.lujarch_small_window, target,
+                     itemInfo, originalView);
+             if (target instanceof BubbleActivityStarter) {
+                 mStarter = (BubbleActivityStarter) target;
