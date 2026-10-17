@@ -33,22 +33,14 @@
     <string name="desktop_failed">The connection to the Linux desktop ended.</string>
     <string name="desktop_silent">The Linux desktop does not draw. Its service, desktop, and its log are under Services in Settings.</string>
     <!-- The keys row above the keyboard -->
-    <string name="key_esc" translatable="false">ESC</string>
-    <string name="key_tab" translatable="false">TAB</string>
-    <string name="key_ctrl" translatable="false">CTRL</string>
-    <string name="key_alt" translatable="false">ALT</string>
+    <string name="key_esc" translatable="false">Esc</string>
+    <string name="key_tab" translatable="false">Tab</string>
+    <string name="key_ctrl" translatable="false">Ctrl</string>
+    <string name="key_alt" translatable="false">Alt</string>
     <string name="key_left" translatable="false">←</string>
     <string name="key_down" translatable="false">↓</string>
     <string name="key_up" translatable="false">↑</string>
     <string name="key_right" translatable="false">→</string>
-    <string name="key_home" translatable="false">HOME</string>
-    <string name="key_end" translatable="false">END</string>
-    <string name="key_page_up" translatable="false">PGUP</string>
-    <string name="key_page_down" translatable="false">PGDN</string>
-    <string name="key_dash" translatable="false">-</string>
-    <string name="key_slash" translatable="false">/</string>
-    <string name="key_pipe" translatable="false">|</string>
-    <string name="key_tilde" translatable="false">~</string>
     <string name="remote_access">Remote access</string>
     <string name="remote_charging">While charging</string>
     <string name="remote_always">Always</string>

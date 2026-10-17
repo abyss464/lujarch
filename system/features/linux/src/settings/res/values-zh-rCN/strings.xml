@@ -52,7 +52,7 @@
     <string name="lnx_colors_classic">经典</string>
     <string name="lnx_colors_own">我的配色</string>
     <string name="lnx_keys_row">键盘上方的按键行</string>
-    <string name="lnx_keys_row_summary">ESC、TAB、CTRL、ALT、方向键等</string>
+    <string name="lnx_keys_row_summary">Esc、Tab、Ctrl、Alt 和方向键</string>
     <string name="lnx_root_sessions">Root 会话</string>
     <string name="lnx_root_sessions_summary">在 Arch Linux 或 Android 中以 root 身份运行的会话。关闭后这些会话会结束。</string>
     <string name="lnx_root_sessions_auth">允许 Root 会话</string>

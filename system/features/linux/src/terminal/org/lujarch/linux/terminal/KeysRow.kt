@@ -16,70 +16,106 @@
 
 package org.lujarch.linux.terminal
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
-import android.view.KeyEvent
-import android.view.ViewGroup
-import android.widget.HorizontalScrollView
+import android.view.Gravity
+import android.view.MotionEvent
 import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * The keys row above the keyboard (LNX-3): the keys a phone's keyboard lacks for a shell. CTRL
- * and ALT hold for the next key.
+ * The keys row on the keyboard's top edge (LNX-3): Esc, Tab, Ctrl, Alt and the four arrows. A key
+ * acts as it is touched; Ctrl and Alt hold for the next key and show in the accent color while
+ * they hold; the arrows repeat while held. The keys never take focus, so touching one leaves the
+ * keyboard on the terminal.
  */
-class KeysRow(context: Context, private val onKey: (Key) -> Unit) : HorizontalScrollView(context) {
-    enum class Key(val label: Int, val keyCode: Int = 0, val text: String? = null) {
-        ESC(R.string.key_esc, text = "\u001b"),
-        TAB(R.string.key_tab, text = "\t"),
-        CTRL(R.string.key_ctrl),
-        ALT(R.string.key_alt),
-        LEFT(R.string.key_left, KeyEvent.KEYCODE_DPAD_LEFT),
-        DOWN(R.string.key_down, KeyEvent.KEYCODE_DPAD_DOWN),
-        UP(R.string.key_up, KeyEvent.KEYCODE_DPAD_UP),
-        RIGHT(R.string.key_right, KeyEvent.KEYCODE_DPAD_RIGHT),
-        HOME(R.string.key_home, KeyEvent.KEYCODE_MOVE_HOME),
-        END(R.string.key_end, KeyEvent.KEYCODE_MOVE_END),
-        PAGE_UP(R.string.key_page_up, KeyEvent.KEYCODE_PAGE_UP),
-        PAGE_DOWN(R.string.key_page_down, KeyEvent.KEYCODE_PAGE_DOWN),
-        DASH(R.string.key_dash, text = "-"),
-        SLASH(R.string.key_slash, text = "/"),
-        PIPE(R.string.key_pipe, text = "|"),
-        TILDE(R.string.key_tilde, text = "~"),
-    }
-
-    private val ctrlView: TextView
-    private val altView: TextView
+class KeysRow(context: Context, private val model: InputModel) : LinearLayout(context) {
+    private val ctrl: TextView
+    private val alt: TextView
+    private val handler = Handler(Looper.getMainLooper())
+    private val normal = context.getColor(R.color.on_surface)
+    private val latched = context.getColor(R.color.primary)
 
     init {
-        isHorizontalScrollBarEnabled = false
-        val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-        val views = Key.values().associateWith { key ->
-            TextView(context).apply {
-                setText(key.label)
-                minWidth = dp(44)
-                gravity = android.view.Gravity.CENTER
-                setPadding(dp(10), dp(10), dp(10), dp(10))
-                setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Small)
-                val outValue = TypedValue()
-                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-                setBackgroundResource(outValue.resourceId)
-                isClickable = true
-                setOnClickListener { onKey(key) }
-                row.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
+        orientation = HORIZONTAL
+        background = GradientDrawable().apply {
+            setColor(context.getColor(R.color.strip_surface))
+            val r = dp(20).toFloat()
+            cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
         }
-        ctrlView = views.getValue(Key.CTRL)
-        altView = views.getValue(Key.ALT)
-        addView(row)
+        setPadding(dp(6), 0, dp(6), 0)
+        isFocusable = false
+        isFocusableInTouchMode = false
+        addKey(R.string.key_esc) { model.key(Key.ESC) }
+        addKey(R.string.key_tab) { model.key(Key.TAB) }
+        ctrl = addKey(R.string.key_ctrl) { model.toggleCtrl() }
+        alt = addKey(R.string.key_alt) { model.toggleAlt() }
+        addKey(R.string.key_left, repeat = true) { model.key(Key.LEFT) }
+        addKey(R.string.key_down, repeat = true) { model.key(Key.DOWN) }
+        addKey(R.string.key_up, repeat = true) { model.key(Key.UP) }
+        addKey(R.string.key_right, repeat = true) { model.key(Key.RIGHT) }
     }
 
-    fun setSticky(ctrl: Boolean, alt: Boolean) {
-        ctrlView.isActivated = ctrl
-        altView.isActivated = alt
-        ctrlView.alpha = if (ctrl) 1f else 0.7f
-        altView.alpha = if (alt) 1f else 0.7f
+    /** The latches changed. */
+    fun refresh() {
+        ctrl.setTextColor(if (model.ctrlLatched) latched else normal)
+        alt.setTextColor(if (model.altLatched) latched else normal)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun addKey(label: Int, repeat: Boolean = false, action: () -> Unit): TextView {
+        val v = TextView(context).apply {
+            setText(label)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
+            setTextColor(normal)
+            includeFontPadding = false
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            gravity = Gravity.CENTER
+            isFocusable = false
+            isFocusableInTouchMode = false
+            contentDescription = text
+        }
+        val ta = context.obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackgroundBorderless))
+        v.background = ta.getDrawable(0)
+        ta.recycle()
+        val repeater = object : Runnable {
+            override fun run() {
+                action()
+                handler.postDelayed(this, REPEAT_MS)
+            }
+        }
+        v.setOnTouchListener { view, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.isPressed = true
+                    action()
+                    if (repeat) handler.postDelayed(repeater, REPEAT_DELAY_MS)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    view.isPressed = false
+                    handler.removeCallbacks(repeater)
+                }
+            }
+            true
+        }
+        addView(v, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        return v
+    }
+
+    override fun onDetachedFromWindow() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDetachedFromWindow()
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    private companion object {
+        const val REPEAT_DELAY_MS = 400L
+        const val REPEAT_MS = 60L
+    }
 }

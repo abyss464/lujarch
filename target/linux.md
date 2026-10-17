@@ -56,7 +56,8 @@ chooses so. The page holds the colors (follow the system, classic, the owner's o
 above the keyboard; the terminal draws with the owner's own font when there is one.
 The phone's keyboard types into the terminal as into a text field, composing, gliding and writing
 pinyin; what it composes is drawn at the cursor, underlined, and reaches the shell when committed.
-Ctrl and Alt on the keys row hold for the next key, from the row or the keyboard.
+The keys row on the keyboard's top edge holds Esc, Tab, Ctrl, Alt and the arrows: Ctrl and Alt hold
+for the next key, from the row or the keyboard, and the arrows repeat while held.
 
 ### LNX-4 Root sessions only while the owner allows them
 

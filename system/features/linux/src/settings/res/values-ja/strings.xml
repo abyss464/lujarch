@@ -52,7 +52,7 @@
     <string name="lnx_colors_classic">クラシック</string>
     <string name="lnx_colors_own">自分の配色</string>
     <string name="lnx_keys_row">キーボードの上のキー列</string>
-    <string name="lnx_keys_row_summary">ESC、TAB、CTRL、ALT、矢印キーなど</string>
+    <string name="lnx_keys_row_summary">Esc、Tab、Ctrl、Alt と矢印キー</string>
     <string name="lnx_root_sessions">Root セッション</string>
     <string name="lnx_root_sessions_summary">Arch Linux または Android で root として実行するセッションです。オフにすると終了します。</string>
     <string name="lnx_root_sessions_auth">Root セッションを許可</string>

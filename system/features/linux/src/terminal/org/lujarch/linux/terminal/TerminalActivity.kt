@@ -26,11 +26,13 @@ import android.os.Vibrator
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowInsetsAnimation
 import android.window.OnBackInvokedDispatcher
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -80,6 +82,8 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private var refreshing: Job? = null
     private var textSize = 0
     private var imeShown = false
+    private var imeAnimating = false
+    private var appliedImeBottom = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,7 +104,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         super.onStart()
         opened = false
         statusLine.start()
-        keys.visibility = if (Linux.keysRow(this) && imeShown) View.VISIBLE else View.GONE
+        updateKeys()
         scope.launch {
             val choice = Linux.colors(this@TerminalActivity)
             val own = if (choice == "own") {
@@ -199,7 +203,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         }
         model.onChanged = {
             terminal.invalidate()
-            keys.setSticky(model.ctrlLatched, model.altLatched)
+            keys.refresh()
         }
         frame.addView(terminal, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         empty = LinearLayout(this).apply {
@@ -224,8 +228,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             bottomMargin = dp(8)
         })
 
-        keys = KeysRow(this) { key -> onKeysRow(key) }
-        root.addView(keys)
+        keys = KeysRow(this, model)
+        root.addView(keys, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(KEYS_ROW_DP)))
+        // The layout takes the keyboard's final height at once, so the terminal resizes once; the
+        // keys row glides with the keyboard's animation and stays on its top edge.
         root.setOnApplyWindowInsetsListener { v, insets ->
             // Android's bars are hidden: the status line stands in the band of the camera cutout
             // and of Android's status bar, as tall as that bar.
@@ -237,10 +243,29 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             if (statusLine.layoutParams.height != line) {
                 statusLine.layoutParams = statusLine.layoutParams.apply { height = line }
             }
+            appliedImeBottom = ime.bottom
             imeShown = insets.isVisible(WindowInsets.Type.ime())
-            keys.visibility = if (Linux.keysRow(this) && imeShown) View.VISIBLE else View.GONE
+            updateKeys()
             WindowInsets.CONSUMED
         }
+        root.setWindowInsetsAnimationCallback(object : WindowInsetsAnimation.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+            override fun onPrepare(animation: WindowInsetsAnimation) {
+                if (animation.typeMask and WindowInsets.Type.ime() != 0) imeAnimating = true
+            }
+
+            override fun onProgress(insets: WindowInsets, running: List<WindowInsetsAnimation>): WindowInsets {
+                if (running.none { it.typeMask and WindowInsets.Type.ime() != 0 }) return insets
+                keys.translationY = (appliedImeBottom - insets.getInsets(WindowInsets.Type.ime()).bottom).toFloat()
+                return insets
+            }
+
+            override fun onEnd(animation: WindowInsetsAnimation) {
+                if (animation.typeMask and WindowInsets.Type.ime() == 0) return
+                imeAnimating = false
+                keys.translationY = 0f
+                updateKeys()
+            }
+        })
         setContentView(root)
     }
 
@@ -479,34 +504,16 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     // ---- the keys row ----
 
-    // Ctrl and Alt are the input model's latches, held for the next key from the row or the
-    // keyboard; the keys go through the model, so a composition is honoured.
-    private fun onKeysRow(key: KeysRow.Key) {
-        val session = current?.session ?: return
-        when (key) {
-            KeysRow.Key.CTRL -> model.toggleCtrl()
-            KeysRow.Key.ALT -> model.toggleAlt()
-            KeysRow.Key.ESC -> model.key(Key.ESC)
-            KeysRow.Key.TAB -> model.key(Key.TAB)
-            KeysRow.Key.LEFT -> model.key(Key.LEFT)
-            KeysRow.Key.DOWN -> model.key(Key.DOWN)
-            KeysRow.Key.UP -> model.key(Key.UP)
-            KeysRow.Key.RIGHT -> model.key(Key.RIGHT)
-            else -> {
-                if (key.text != null) {
-                    model.finishComposingText()
-                    model.commitText(key.text)
-                } else {
-                    model.finishComposingText()
-                    var mod = 0
-                    if (model.ctrlLatched) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_CTRL
-                    if (model.altLatched) mod = mod or com.termux.terminal.KeyHandler.KEYMOD_ALT
-                    terminal.handleKeyCode(key.keyCode, mod)
-                    model.clearLatches()
-                }
-            }
-        }
-        if (session.emulator != null) terminal.onScreenUpdated()
+    /** The keys row is up while the on-screen keyboard is, with no hardware keyboard, when the owner chooses so. */
+    private fun updateKeys() {
+        val wanted = Linux.keysRow(this) && !hasHardwareKeyboard() && (imeShown || imeAnimating)
+        keys.visibility = if (wanted) View.VISIBLE else View.GONE
+    }
+
+    private fun hasHardwareKeyboard(): Boolean = InputDevice.getDeviceIds().any { id ->
+        val d = InputDevice.getDevice(id) ?: return@any false
+        !d.isVirtual && d.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC &&
+            (d.sources and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
     }
 
     // ---- TerminalViewClient ----
@@ -614,5 +621,6 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         const val DEFAULT_ROWS = 24
         const val REFRESH_DELAY_MS = 300L
         const val STATUS_LINE_DP = 28
+        const val KEYS_ROW_DP = 40
     }
 }

@@ -61,7 +61,7 @@
     <string name="lnx_colors_classic">Classic</string>
     <string name="lnx_colors_own">Your own colors</string>
     <string name="lnx_keys_row">Keys row above the keyboard</string>
-    <string name="lnx_keys_row_summary">ESC, TAB, CTRL, ALT, arrows and more</string>
+    <string name="lnx_keys_row_summary">Esc, Tab, Ctrl, Alt and the arrows</string>
     <string name="lnx_root_sessions">Root sessions</string>
     <string name="lnx_root_sessions_summary">Sessions as root in Arch Linux or in Android. Turning it off ends them.</string>
     <string name="lnx_root_sessions_auth">Allow Root sessions</string>
