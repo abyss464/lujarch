@@ -13,6 +13,10 @@ on post-fs-data
     # in its group desktop, frozen while the desktop is not on screen (LNX-6).
     mkdir /sys/fs/cgroup/lujarch_linux 0755 root root
     mkdir /sys/fs/cgroup/lujarch_linux/desktop 0755 root root
+    # USB devices are lent as /dev/bus/usb (LNX-7), which ueventd makes only while the phone's
+    # port is a host; Linux binds it before that and sees the devices ueventd adds.
+    mkdir /dev/bus 0755 root root
+    mkdir /dev/bus/usb 0755 root root
 
 service lujarch_linux /system_ext/bin/lujarch_linux
     class main
