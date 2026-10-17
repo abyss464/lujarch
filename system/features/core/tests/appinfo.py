@@ -15,7 +15,8 @@ ROWS = {
     "Icon": "Redrawn",
     "Proxy": "Probe",
     "Mobile data & Wi-Fi": "Allow network access",
-    "App battery usage": "Autostart",
+    "App battery usage": "Background usage, Keep and Autostart",
+    "Background": "Background usage",
 }
 
 

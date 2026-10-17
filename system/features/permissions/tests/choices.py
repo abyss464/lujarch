@@ -95,7 +95,7 @@ def main():
 
         step("Autostart, a background control, from the same set")
         d.start(f"-f 0x10008000 -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:{p.PACKAGE}")
-        d.tap(d.scroll_to(text="App battery usage"))
+        d.tap(d.scroll_to(text="Background"))
         d.tap(d.scroll_to(text="Autostart"))
         time.sleep(1.5)
         got = page_choices(d)

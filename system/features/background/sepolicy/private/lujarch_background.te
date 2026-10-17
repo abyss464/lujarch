@@ -1,0 +1,11 @@
+# Lujarch's Background (target/background.md): system_server's API, read by Settings, the shade
+# and Recents (each checked for android.permission.LUJARCH_BACKGROUND), and its record.
+type lujarch_background_service, app_api_service, system_server_service, service_manager_type;
+type lujarch_background_data_file, file_type, data_file_type, core_data_file_type;
+
+allow system_server lujarch_background_data_file:dir create_dir_perms;
+allow system_server lujarch_background_data_file:file create_file_perms;
+
+# Messages only (BG-4): the established connections of each app, to find the process that holds
+# its connection for messages.
+allow system_server proc_net_tcp_udp:file r_file_perms;

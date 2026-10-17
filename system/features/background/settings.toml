@@ -1,0 +1,17 @@
+[show_system_processes]
+table = "secure"
+type = "bool"
+default = false
+item = "BG-2"
+
+[recents_running]
+table = "secure"
+type = "bool"
+default = true
+item = "BG-11"
+
+[recents_memory]
+table = "secure"
+type = "bool"
+default = true
+item = "BG-12"

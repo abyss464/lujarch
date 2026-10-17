@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Recents reads where every app is in the background (BG-11, BG-12). A missing entry stops
+    system_server at boot.
+-->
+<permissions>
+    <privapp-permissions package="com.android.launcher3">
+        <permission name="android.permission.LUJARCH_BACKGROUND" />
+    </privapp-permissions>
+</permissions>

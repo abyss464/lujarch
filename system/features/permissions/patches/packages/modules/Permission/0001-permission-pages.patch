@@ -2138,7 +2138,7 @@ index 0000000000000000000000000000000000000000..26565c6f6c1ed272fd09fccc2a398c26
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..07ac39bf94b6f5c5e24bf81c1717cd78b2deba51
+index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568cfdd100da
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 @@ -0,0 +1,365 @@
@@ -2295,8 +2295,8 @@ index 0000000000000000000000000000000000000000..07ac39bf94b6f5c5e24bf81c1717cd78
 +        )
 +
 +    /**
-+     * Autostart, the system starting an app that is not running, for a broadcast; its page is in
-+     * the app's battery usage, and Ask every time asks here.
++     * Autostart, the system starting an app that is not running, for a broadcast; its page is
++     * the app's Background page, and Ask every time asks here.
 +     */
 +    val AUTOSTART =
 +        LujarchPermission(

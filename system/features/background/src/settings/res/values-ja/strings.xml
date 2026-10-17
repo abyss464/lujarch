@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="background_title">"バックグラウンド"</string>
+    <string name="background_summary">"画面外の各アプリの状態とその理由"</string>
+    <string name="background_keywords">"バックグラウンド, 実行中, 一時停止, メモリ, プロセス, 実行中のサービス, background, memory"</string>
+    <string name="background_system">"システム"</string>
+    <string name="background_memory">"メモリ"</string>
+    <string name="background_memory_free_of">"空き %1$s / %2$s"</string>
+    <string name="background_memory_part">"%1$s\n%2$s"</string>
+    <string name="background_sort_depth">"深さ順"</string>
+    <string name="background_sort_memory">"メモリ順"</string>
+    <string name="background_sort_battery">"電池使用量順"</string>
+    <string name="background_sort_wakeups">"復帰回数順"</string>
+    <string name="background_note_on_screen">"使用中"</string>
+    <string name="background_note_running">"画面外でも動作中"</string>
+    <string name="background_note_messages">"メッセージのプロセスのみ実行"</string>
+    <string name="background_note_paused">"凍結、元の状態で戻ります"</string>
+    <string name="background_note_reclaimed">"終了済み、開くと再起動"</string>
+    <string name="background_note_stopped">"開くまで何も起動できません"</string>
+    <string name="background_none">"実行中のアプリはありません"</string>
+    <string name="background_show_system">"システム プロセスを表示"</string>
+    <string name="background_show_system_keywords">"システム プロセス, システム サービス, system processes"</string>
+    <string name="background_unknown">"不明"</string>
+    <string name="background_not_installed">"このアプリはインストールされていません"</string>
+    <string name="background_after">"画面から離れた後"</string>
+    <string name="background_usage">"バックグラウンドでの使用"</string>
+    <string name="background_usage_note">"とどまる最も浅い深さ"</string>
+    <string name="background_usage_messages_summary">"メッセージの接続を保持するプロセスだけが実行され、他のプロセスはメッセージで復帰するまで一時停止します。"</string>
+    <string name="background_usage_fixed">"このアプリは制限なしのままです。システムに必要です。"</string>
+    <string name="background_keep">"保持"</string>
+    <string name="background_keep_note">"沈む最も深い深さ"</string>
+    <string name="background_keep_on">"オン\u30fb回収されません"</string>
+    <string name="background_keep_off">"オフ\u30fb回収されることがあります"</string>
+    <string name="background_autostart">"自動起動"</string>
+    <string name="background_autostart_note">"回収後に起動できるもの"</string>
+    <string name="background_autostart_allow">"許可する"</string>
+    <string name="background_autostart_ask">"毎回確認する"</string>
+    <string name="background_autostart_deny">"許可しない"</string>
+    <string name="background_autostart_summary_ask">"毎回確認する\u30fb回答するまで、アプリが閉じているときは起動されません"</string>
+    <string name="background_autostart_summary_deny">"許可しない\u30fbアプリが閉じているときは起動されず、その間に届いたプッシュ メッセージは失われることがあります"</string>
+    <string name="background_card_value">"%1$s \u203a"</string>
+    <string name="background_column_here">"%1$s（現在の状態）"</string>
+    <string name="background_column_note">"点は現在の位置です。システムは、あなたが決めた範囲内でのみ移動させます。"</string>
+    <string name="background_rung_running">"動作中"</string>
+    <string name="background_rung_messages">"メッセージのプロセスを保持"</string>
+    <string name="background_rung_paused">"凍結、元の状態で戻る"</string>
+    <string name="background_rung_reclaimed">"開くと再起動"</string>
+    <string name="background_rung_stopped">"何も起動できない"</string>
+    <string name="background_what_happened">"最近の出来事"</string>
+    <string name="background_nothing_happened">"過去 7 日間の出来事はありません"</string>
+    <string name="background_all">"すべて"</string>
+    <string name="background_all_summary">"過去 7 日間"</string>
+    <string name="background_all_footer">"最近の出来事は 7 日間保存されます。"</string>
+    <string name="background_processes">"プロセス"</string>
+    <string name="background_processes_count">"プロセス\u30fb%1$d"</string>
+    <string name="background_no_processes">"実行中のプロセスはありません"</string>
+    <string name="background_process_summary">"%1$s\u30fb%2$s\u30fb%3$s"</string>
+    <string name="background_last_day">"過去 24 時間"</string>
+    <string name="background_day_on_screen">"画面に表示"</string>
+    <string name="background_day_running">"バックグラウンドで実行"</string>
+    <string name="background_day_woken">"復帰"</string>
+    <string name="background_end_background">"バックグラウンド プロセスを終了"</string>
+    <string name="background_force_stop">"強制停止"</string>
+    <string name="background_process_title">"プロセス"</string>
+    <string name="background_process_id">"pid %1$d\u30fbuid %2$d\u30fb実行時間 %3$s"</string>
+    <string name="background_now">"現在"</string>
+    <string name="background_process_why">"この状態の理由"</string>
+    <string name="background_process_use">"使用量"</string>
+    <string name="background_process_threads">"スレッド（CPU 時間順）"</string>
+    <string name="background_process_gone">"このプロセスは終了しました。"</string>
+    <string name="background_process_footer">"一時停止や終了は一度だけです。その後プロセスは %1$s の設定に従います。"</string>
+    <string name="background_process_footer_link">"%1$s のバックグラウンドのページで変更"</string>
+    <string name="background_pause_process">"このプロセスを一時停止"</string>
+    <string name="background_end_process">"このプロセスを終了"</string>
+    <string name="background_use_memory">"メモリ"</string>
+    <string name="background_use_swap">"スワップ"</string>
+    <string name="background_use_cpu">"CPU\u30fb24 時間"</string>
+    <string name="background_use_wakeups">"復帰\u30fb24 時間"</string>
+    <string name="background_use_network">"ネットワーク\u30fb24 時間（アプリ）"</string>
+    <string name="background_use_threads">"スレッド"</string>
+    <string name="background_duration_seconds">"%1$d 秒"</string>
+    <string name="background_duration_minutes">"%1$d 分"</string>
+    <string name="background_duration_hours">"%1$d 時間 %2$d 分"</string>
+    <string name="background_duration_less_minute">"1 分未満"</string>
+    <string name="background_error_unavailable">"バックグラウンドに接続できません。起動中の可能性があります。"</string>
+    <string name="background_error_load">"バックグラウンドの状態を読み込めませんでした"</string>
+    <string name="background_error_keep">"保持を変更できませんでした"</string>
+    <string name="background_error_usage">"バックグラウンドでの使用を変更できませんでした"</string>
+    <string name="background_error_autostart">"自動起動を変更できませんでした"</string>
+    <string name="background_error_end">"終了できませんでした"</string>
+    <string name="background_error_pause">"このプロセスを一時停止できませんでした"</string>
+    <string name="background_error_force_stop">"強制停止できませんでした"</string>
+    <plurals name="background_system_count">
+        <item quantity="other">"%1$d 個のシステム プロセス"</item>
+    </plurals>
+    <plurals name="background_times">
+        <item quantity="other">"%1$d 回"</item>
+    </plurals>
+</resources>

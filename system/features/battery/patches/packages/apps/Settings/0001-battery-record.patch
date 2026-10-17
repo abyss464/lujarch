@@ -697,10 +697,10 @@ index 0000000000000000000000000000000000000000..889e33b50b26e0a595e11e1ca82ac147
 +</resources>
 diff --git a/res/xml/lujarch_battery_app.xml b/res/xml/lujarch_battery_app.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..9307a019486af01aff3a0a7f703c34d05eb7aff5
+index 0000000000000000000000000000000000000000..eba7f9bda3b269059f46d177eff38b6a44babf1a
 --- /dev/null
 +++ b/res/xml/lujarch_battery_app.xml
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,62 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Copyright (C) 2026 The Lujarch Project
 +
@@ -759,13 +759,6 @@ index 0000000000000000000000000000000000000000..9307a019486af01aff3a0a7f703c34d0
 +        <com.android.settingslib.PrimarySwitchPreference
 +            android:key="background_usage_allowability_switch"
 +            android:title="@string/manager_battery_usage_allow_background_usage_title"/>
-+
-+        <!-- PERM-15 -->
-+        <ListPreference
-+            android:key="lujarch_autostart"
-+            android:title="@string/lujarch_autostart"
-+            android:dialogTitle="@string/lujarch_autostart"
-+            android:persistent="false"/>
 +
 +    </PreferenceCategory>
 +
@@ -838,7 +831,7 @@ index 0000000000000000000000000000000000000000..a3c62e04a5fa565698e483637c84711a
 +    </PreferenceCategory>
 +</PreferenceScreen>
 diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-index 5fd1a2e4cf496965036352212371abc792b1490b..cab765cb37c0bbd07688ea0c6e4eba8e11d256b5 100644
+index 5f2089559f3ee77e8a2f713b5771d3147031d5fd..b76a5a80f93b35fdc986b872a1448addf1fff09b 100644
 --- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
 +++ b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
 @@ -41,6 +41,7 @@ import com.android.settings.fuelgauge.BatteryOptimizeHistoricalLogEntry.Action;

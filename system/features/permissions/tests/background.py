@@ -19,7 +19,7 @@ def app_info(d, package):
 
 def autostart_choice(d, p, choice):
     app_info(d, p.PACKAGE)
-    d.tap(d.scroll_to(text="App battery usage"))
+    d.tap(d.scroll_to(text="Background"))
     d.tap(d.scroll_to(text="Autostart"))
     d.tap(d.wait(text=choice))
     time.sleep(1)

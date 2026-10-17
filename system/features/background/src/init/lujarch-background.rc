@@ -1,0 +1,4 @@
+# The record of Lujarch's Background (BG-6), written by system_server.
+on post-fs-data
+    mkdir /data/lujarch 0711 root root
+    mkdir /data/lujarch/background 0700 system system

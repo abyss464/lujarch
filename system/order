@@ -16,3 +16,5 @@ features/apps
 features/files
 features/linux
 features/motion
+features/background
+features/windows

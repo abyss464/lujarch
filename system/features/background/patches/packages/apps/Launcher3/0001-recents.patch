@@ -1,0 +1,1184 @@
+diff --git a/quickstep/AndroidManifest.xml b/quickstep/AndroidManifest.xml
+index e8d372c65f275842115fbccf8c3037c88fe81ae3..cf34d76d6ffcc19fc2bcadf2c64698ad6a72edf7 100644
+--- a/quickstep/AndroidManifest.xml
++++ b/quickstep/AndroidManifest.xml
+@@ -30,6 +30,8 @@
+     <uses-permission android:name="android.permission.REMOVE_TASKS"/>
+     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
+     <uses-permission android:name="android.permission.MANAGE_ACTIVITY_TASKS"/>
++    <!-- Lujarch's Background: the Running layer and the memory in Recents (BG-11, BG-12). -->
++    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
+     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"/>
+     <uses-permission android:name="android.permission.STATUS_BAR"/>
+     <uses-permission android:name="android.permission.STATUS_BAR_SERVICE"/>
+diff --git a/quickstep/res/values-ja/lujarch_background_strings.xml b/quickstep/res/values-ja/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..21e323c39fec663c6c5bb5fce8d853219c3213ff
+--- /dev/null
++++ b/quickstep/res/values-ja/lujarch_background_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_running">"実行中"</string>
++    <string name="lujarch_background_drop">"指を離すと小ウィンドウで開きます"</string>
++    <string name="lujarch_background_tile">"%1$s、%2$s"</string>
++    <string name="lujarch_background_end">"終了"</string>
++    <string name="lujarch_background_title">"バックグラウンド"</string>
++    <string name="lujarch_background_open">"%1$s ›"</string>
++    <string name="lujarch_background_free_of">"空き %1$s / %2$s"</string>
++    <string name="lujarch_background_opens_again">"再度開きます"</string>
++    <string name="lujarch_background_kept_toast">"保持中: アプリのバックグラウンドのページでオフにできます"</string>
++</resources>
+diff --git a/quickstep/res/values-zh-rCN/lujarch_background_strings.xml b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..e38614d9bd98b845774939422bded1e4f4ae2e9e
+--- /dev/null
++++ b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_running">"运行中"</string>
++    <string name="lujarch_background_drop">"松手即在小窗中打开"</string>
++    <string name="lujarch_background_tile">"%1$s，%2$s"</string>
++    <string name="lujarch_background_end">"结束"</string>
++    <string name="lujarch_background_title">"后台"</string>
++    <string name="lujarch_background_open">"%1$s ›"</string>
++    <string name="lujarch_background_free_of">"可用 %1$s / %2$s"</string>
++    <string name="lujarch_background_opens_again">"将重新打开"</string>
++    <string name="lujarch_background_kept_toast">"已保留：可在应用的后台页面中关闭"</string>
++</resources>
+diff --git a/quickstep/res/values/lujarch_background_ids.xml b/quickstep/res/values/lujarch_background_ids.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18a662b5f2
+--- /dev/null
++++ b/quickstep/res/values/lujarch_background_ids.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background in Recents: the tags its marks keep on a card. -->
++<resources>
++    <item type="id" name="lujarch_background_mark" />
++    <item type="id" name="lujarch_background_pickup" />
++</resources>
+diff --git a/quickstep/res/values/lujarch_background_strings.xml b/quickstep/res/values/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..74c01d51b0fac65b0cf6ca76beca738b55995cb3
+--- /dev/null
++++ b/quickstep/res/values/lujarch_background_strings.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_running">Running</string>
++    <string name="lujarch_background_drop">Release to open in a small window</string>
++    <string name="lujarch_background_tile">%1$s, %2$s</string>
++    <string name="lujarch_background_end">End</string>
++    <string name="lujarch_background_title">Background</string>
++    <string name="lujarch_background_open">%1$s ›</string>
++    <string name="lujarch_background_free_of">Free %1$s / %2$s</string>
++    <string name="lujarch_background_opens_again">Opens again</string>
++    <string name="lujarch_background_kept_toast">Kept: turn it off in the app’s Background page</string>
++</resources>
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
+index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19af6b25ee 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
++++ b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
+@@ -323,6 +323,11 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
+         isDismissing =
+             allowDetach && isFlingingTowardsDismiss ||
+                 (isBeyondDismissThreshold && !isFlingingTowardsRestState)
++        // Lujarch's Background (BG-5): a kept app's card springs back and says why.
++        if (!allowDetach && recentsView.mLujarchRecents?.isKept(taskBeingDragged) == true &&
++            (isBeyondDismissThreshold || isFlingingTowardsDismiss)) {
++            recentsView.mLujarchRecents?.onKeptCardHeld()
++        }
+         val dismissThreshold = (DISMISS_THRESHOLD_FRACTION * dismissLength * verticalFactor).toInt()
+         val finalPosition = if (isDismissing) (dismissLength * verticalFactor).toFloat() else 0f
+         springAnimation =
+diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f2362bbf2
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
+@@ -0,0 +1,301 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.lujarch
++
++import android.annotation.SuppressLint
++import android.content.Context
++import android.content.Intent
++import android.graphics.Rect
++import android.os.Handler
++import android.os.Looper
++import android.os.UserHandle
++import android.provider.Settings
++import android.util.Log
++import android.view.Gravity
++import android.view.MotionEvent
++import android.view.View
++import android.widget.FrameLayout
++import android.widget.Toast
++import com.android.internal.app.LujarchBackground
++import com.android.internal.app.LujarchBackgroundApp
++import com.android.internal.app.LujarchBackgroundMemory
++import com.android.launcher3.R
++import com.android.launcher3.dragndrop.DragLayer
++import com.android.launcher3.taskbar.bubbles.BubbleActivityStarter
++import com.android.launcher3.util.Executors.MAIN_EXECUTOR
++import com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR
++import com.android.quickstep.views.RecentsView
++import com.android.quickstep.views.TaskView
++import com.android.systemui.shared.system.ActivityManagerWrapper
++import com.android.wm.shell.shared.bubbles.logging.EntryPoint
++
++/**
++ * Lujarch's Background in Recents: the Running layer above the cards (BG-11), the memory below
++ * them (BG-12), the mark of a kept app's card, which cannot be swiped away and which Clear all
++ * skips (BG-5), the reclaimed card's look, and a card dropped on the Running layer opening in a
++ * small window (WIN-11). Everything comes from Background's one API.
++ */
++class LujarchRecents(
++    private val recentsView: RecentsView<*, *>,
++    private val dragLayer: DragLayer,
++    actionsSpace: () -> Int,
++) {
++    private val context: Context = recentsView.context
++    private val handler = Handler(Looper.getMainLooper())
++    val runningLayer = RunningLayerView(context, this)
++    val memoryRow = MemoryRowView(context, this, actionsSpace)
++    /** The apps by "userId:package". */
++    private var apps: Map<String, LujarchBackgroundApp> = emptyMap()
++    private var memory: LujarchBackgroundMemory? = null
++    private var overview = false
++    private var alpha = 0f
++    private var showRunning = true
++    private var showMemory = true
++    private var picked: Pickup? = null
++
++    init {
++        dragLayer.addView(runningLayer, FrameLayout.LayoutParams(
++            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
++        dragLayer.addView(memoryRow, FrameLayout.LayoutParams(
++            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
++        runningLayer.visibility = View.INVISIBLE
++        memoryRow.visibility = View.INVISIBLE
++    }
++
++    /** Recents opens or closes. */
++    fun onOverviewEnabled(enabled: Boolean) {
++        overview = enabled
++        if (enabled) refresh()
++        updateVisibility()
++    }
++
++    fun onContentAlpha(value: Float) {
++        alpha = value
++        updateVisibility()
++    }
++
++    private fun updateVisibility() {
++        val shown = overview && alpha > 0f
++        runningLayer.alpha = alpha
++        memoryRow.alpha = alpha
++        runningLayer.visibility = if (shown && showRunning && runningLayer.hasEntries) View.VISIBLE else View.INVISIBLE
++        memoryRow.visibility = if (shown && showMemory && memory != null) View.VISIBLE else View.INVISIBLE
++    }
++
++    /** Reads where every app is now, off the main thread, and shows it. */
++    fun refresh() {
++        val resolver = context.contentResolver
++        showRunning = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_RUNNING, 1) != 0
++        showMemory = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_MEMORY, 1) != 0
++        val user = UserHandle.myUserId()
++        UI_HELPER_EXECUTOR.execute {
++            try {
++                val service = LujarchBackground.get()
++                if (service == null) {
++                    Log.w(TAG, "Recents: Background is not available")
++                    return@execute
++                }
++                val list = service.getApps(user, false)
++                val mem = service.memory
++                MAIN_EXECUTOR.execute { show(list, mem) }
++            } catch (e: Exception) {
++                Log.e(TAG, "Recents: the background cannot be read", e)
++            }
++        }
++    }
++
++    private fun show(list: Array<LujarchBackgroundApp>, mem: LujarchBackgroundMemory) {
++        val byKey = HashMap<String, LujarchBackgroundApp>()
++        list.forEach { byKey["${UserHandle.getUserId(it.uid)}:${it.packageName}"] = it }
++        apps = byKey
++        memory = mem
++        val home = context.packageName
++        runningLayer.bind(list.filter {
++            it.packageName != home && !it.settling &&
++                (it.depth == LujarchBackground.DEPTH_RUNNING || it.depth == LujarchBackground.DEPTH_MESSAGES)
++        }.sortedWith(compareBy<LujarchBackgroundApp> { !it.smallWindow }.thenBy { it.depth }))
++        memoryRow.bind(mem)
++        markTaskViews()
++        updateVisibility()
++    }
++
++    /** The kept mark and the reclaimed look on each card. */
++    fun markTaskViews() {
++        try {
++            for (tv in recentsView.taskViews) {
++                val app = appOf(tv)
++                TaskMarks.mark(tv, kept = app?.kept == true,
++                    reclaimed = app?.depth == LujarchBackground.DEPTH_RECLAIMED)
++                installPickup(tv)
++            }
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "Recents: the cards are not marked", e)
++        }
++    }
++
++    private fun appOf(tv: TaskView): LujarchBackgroundApp? {
++        val task = tv.taskContainers.firstOrNull()?.task ?: return null
++        return apps["${task.key.userId}:${task.key.packageName}"]
++    }
++
++    /** A kept app's card stays (BG-5). */
++    fun isKept(tv: TaskView): Boolean = appOf(tv)?.kept == true
++
++    /** Says why a kept card sprang back. */
++    fun onKeptCardHeld() {
++        Toast.makeText(context, R.string.lujarch_background_kept_toast, Toast.LENGTH_SHORT).show()
++    }
++
++    /**
++     * Clear all with kept cards: every other card is dismissed and the kept ones stay. Returns
++     * false when nothing is kept, and Clear all goes on as Android's.
++     */
++    fun clearAllButKept(): Boolean {
++        val views = recentsView.taskViews.toList()
++        if (views.none { isKept(it) }) return false
++        views.filter { !isKept(it) }.forEachIndexed { i, tv ->
++            handler.postDelayed({ recentsView.dismissTaskView(tv, true) }, i * CLEAR_STEP_MS)
++        }
++        return true
++    }
++
++    /** Opens the Background page of an app, or Settings > System > Background. */
++    fun openBackground(packageName: String?, uid: Int) {
++        val intent = if (packageName == null) Intent(LujarchBackground.ACTION_BACKGROUND)
++        else Intent(LujarchBackground.ACTION_APP)
++            .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
++            .putExtra(Intent.EXTRA_USER, UserHandle.getUserHandleForUid(uid))
++        intent.setPackage(LujarchBackground.SETTINGS_PACKAGE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
++        try {
++            context.startActivityAsUser(intent, UserHandle.getUserHandleForUid(maxOf(uid, 0)))
++        } catch (e: Exception) {
++            Log.e(TAG, "Recents: the Background page cannot be opened", e)
++        }
++    }
++
++    /** End: stops what the app runs of its own. */
++    fun end(app: LujarchBackgroundApp) {
++        UI_HELPER_EXECUTOR.execute {
++            try {
++                LujarchBackground.get()?.endForegroundServices(app.packageName, UserHandle.getUserId(app.uid))
++            } catch (e: Exception) {
++                Log.e(TAG, "Recents: End for ${app.packageName} failed", e)
++            }
++            MAIN_EXECUTOR.execute { handler.postDelayed({ refresh() }, 800) }
++        }
++    }
++
++    /** A tap on the Running layer opens the app: its card's task, or the app itself. */
++    fun open(app: LujarchBackgroundApp) {
++        val user = UserHandle.getUserHandleForUid(app.uid)
++        if (app.smallWindow) {
++            launchIntent(app)?.let {
++                BubbleActivityStarter.INSTANCE.get(context).showAppBubble(it, user, EntryPoint.LAUNCHER_ICON_MENU)
++            }
++            return
++        }
++        if (app.hasTask && app.taskId >= 0 &&
++            ActivityManagerWrapper.getInstance().startActivityFromRecents(app.taskId, null)) {
++            return
++        }
++        launchIntent(app)?.let {
++            try {
++                context.startActivityAsUser(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), user)
++            } catch (e: Exception) {
++                Log.e(TAG, "Recents: ${app.packageName} cannot be opened", e)
++            }
++        }
++    }
++
++    private fun launchIntent(app: LujarchBackgroundApp): Intent? =
++        context.packageManager.getLaunchIntentForPackage(app.packageName)
++            ?: run {
++                Log.w(TAG, "Recents: ${app.packageName} has no launcher activity")
++                null
++            }
++
++    // -------------------------------------------------------------------------------------
++    // A card dropped on the Running layer opens in a small window (WIN-11).
++
++    private class Pickup(val view: TaskView, val x: Float, val y: Float, val tx: Float, val ty: Float)
++
++    @SuppressLint("ClickableViewAccessibility")
++    private fun installPickup(tv: TaskView) {
++        if (tv.getTag(R.id.lujarch_background_pickup) != null) return
++        tv.setTag(R.id.lujarch_background_pickup, true)
++        var downX = 0f
++        var downY = 0f
++        tv.setOnTouchListener { v, ev ->
++            val p = picked
++            when (ev.actionMasked) {
++                MotionEvent.ACTION_DOWN -> {
++                    downX = ev.rawX
++                    downY = ev.rawY
++                    false
++                }
++                MotionEvent.ACTION_MOVE -> {
++                    if (p == null || p.view != v) return@setOnTouchListener false
++                    v.translationX = p.tx + ev.rawX - p.x
++                    v.translationY = p.ty + ev.rawY - p.y
++                    runningLayer.setDropTarget(isOverLayer(ev))
++                    true
++                }
++                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
++                    if (p == null || p.view != v) return@setOnTouchListener false
++                    val drop = ev.actionMasked == MotionEvent.ACTION_UP && isOverLayer(ev)
++                    picked = null
++                    runningLayer.setDropTarget(false)
++                    v.animate().translationX(p.tx).translationY(p.ty).scaleX(1f).scaleY(1f).setDuration(220).start()
++                    if (drop) openInSmallWindow(tv)
++                    true
++                }
++                else -> false
++            }
++        }
++        tv.setOnLongClickListener { v ->
++            picked = Pickup(tv, downX, downY, v.translationX, v.translationY)
++            v.parent?.requestDisallowInterceptTouchEvent(true)
++            v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(150).start()
++            runningLayer.showDropSlot(true)
++            true
++        }
++    }
++
++    private fun isOverLayer(ev: MotionEvent): Boolean {
++        val r = Rect()
++        runningLayer.getGlobalVisibleRect(r)
++        // The layer's strip and the space just under it take the drop.
++        r.bottom += (24 * context.resources.displayMetrics.density).toInt()
++        return r.contains(ev.rawX.toInt(), ev.rawY.toInt())
++    }
++
++    private fun openInSmallWindow(tv: TaskView) {
++        runningLayer.showDropSlot(false)
++        val task = tv.taskContainers.firstOrNull()?.task ?: return
++        val component = task.key.component ?: return
++        val intent = Intent(Intent.ACTION_MAIN).setComponent(component)
++            .addCategory(Intent.CATEGORY_LAUNCHER).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
++        BubbleActivityStarter.INSTANCE.get(context)
++            .showAppBubble(intent, UserHandle.of(task.key.userId), EntryPoint.LAUNCHER_ICON_MENU)
++        Log.i(TAG, "Recents: ${component.packageName} opens in a small window")
++    }
++
++    private companion object {
++        const val TAG = "lujarch_background"
++        const val CLEAR_STEP_MS = 90L
++    }
++}
+diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b5829707072450
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
+@@ -0,0 +1,113 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.lujarch
++
++import android.content.Context
++import android.graphics.Canvas
++import android.graphics.Paint
++import android.graphics.Rect
++import android.graphics.RectF
++import android.graphics.Typeface
++import android.text.format.Formatter
++import android.util.TypedValue
++import android.view.Gravity
++import android.view.View
++import android.view.ViewGroup
++import android.widget.LinearLayout
++import android.widget.TextView
++import com.android.internal.app.LujarchBackground
++import com.android.internal.app.LujarchBackgroundMemory
++import com.android.launcher3.Insettable
++import com.android.launcher3.R
++
++/**
++ * The memory below the cards in Recents (BG-12): the same four parts as Settings > System >
++ * Background, with Background, which opens that page.
++ */
++class MemoryRowView(
++    context: Context,
++    private val recents: LujarchRecents,
++    private val actionsSpace: () -> Int,
++) :
++    LinearLayout(context), Insettable {
++    private val free = TextView(context)
++    private val bar = Bar(context)
++
++    init {
++        orientation = VERTICAL
++        val side = dp(16)
++        setPadding(side, 0, side, dp(4))
++        val top = LinearLayout(context).apply {
++            orientation = HORIZONTAL
++            gravity = Gravity.CENTER_VERTICAL
++        }
++        free.typeface = Typeface.MONOSPACE
++        free.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
++        free.setTextColor(context.getColor(android.R.color.system_neutral1_100))
++        top.addView(free, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
++        top.addView(TextView(context).apply {
++            text = context.getString(R.string.lujarch_background_open, context.getString(R.string.lujarch_background_title))
++            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
++            setTextColor(context.getColor(android.R.color.system_accent1_200))
++            val p = dp(10)
++            setPadding(p, dp(6), p, dp(6))
++            isClickable = true
++            setOnClickListener { recents.openBackground(null, -1) }
++        })
++        addView(top)
++        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(8)).apply { topMargin = dp(4) })
++    }
++
++    override fun setInsets(insets: Rect) {
++        (layoutParams as? ViewGroup.MarginLayoutParams)?.let {
++            it.bottomMargin = actionsSpace()
++            layoutParams = it
++        }
++    }
++
++    fun bind(m: LujarchBackgroundMemory) {
++        free.text = context.getString(R.string.lujarch_background_free_of,
++            Formatter.formatShortFileSize(context, m.freeBytes),
++            Formatter.formatShortFileSize(context, m.totalBytes))
++        bar.memory = m
++        bar.invalidate()
++    }
++
++    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
++
++    private class Bar(context: Context) : View(context) {
++        var memory: LujarchBackgroundMemory? = null
++        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
++        private val rect = RectF()
++
++        override fun onDraw(canvas: Canvas) {
++            val m = memory ?: return
++            val parts = longArrayOf(m.systemBytes, m.appsBytes, m.keptBytes, m.freeBytes)
++            val total = parts.sum().coerceAtLeast(1)
++            val gap = 2 * resources.displayMetrics.density
++            var x = 0f
++            for (i in parts.indices) {
++                val w = width.toFloat() * parts[i] / total
++                if (w <= 0f) continue
++                paint.color = LujarchBackground.memoryColor(context, i)
++                rect.set(x, 0f, (x + w - gap).coerceAtLeast(x + 1f), height.toFloat())
++                canvas.drawRoundRect(rect, height / 2f, height / 2f, paint)
++                x += w
++            }
++        }
++    }
++}
+diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef17966ee28
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
+@@ -0,0 +1,200 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.lujarch
++
++import android.content.Context
++import android.graphics.Rect
++import android.graphics.drawable.GradientDrawable
++import android.graphics.drawable.LayerDrawable
++import android.os.UserHandle
++import android.util.TypedValue
++import android.view.Gravity
++import android.view.View
++import android.view.ViewGroup
++import android.widget.FrameLayout
++import android.widget.HorizontalScrollView
++import android.widget.ImageView
++import android.widget.LinearLayout
++import android.widget.PopupMenu
++import android.widget.TextView
++import com.android.internal.app.LujarchBackground
++import com.android.internal.app.LujarchBackgroundApp
++import com.android.launcher3.Insettable
++import com.android.launcher3.R
++
++/**
++ * The Running layer above the cards in Recents (BG-11): every app running off screen, with its
++ * depth's color and one word. A tap opens the app; touching and holding shows End for what the
++ * app started itself, and Background. Open small windows come first, in [smallWindows] (WIN-11).
++ */
++class RunningLayerView(context: Context, private val recents: LujarchRecents) :
++    LinearLayout(context), Insettable {
++    private val title = TextView(context)
++    private val scroller = HorizontalScrollView(context)
++    private val row = LinearLayout(context)
++
++    /**
++     * The open small windows, first in the layer: the small windows feature puts their live
++     * screens here (WIN-11); without them, a tile with the app's icon stands for each.
++     */
++    val smallWindows = LinearLayout(context)
++    private val apps = LinearLayout(context)
++    private val dropSlot = FrameLayout(context)
++    var hasEntries = false
++        private set
++
++    init {
++        orientation = VERTICAL
++        val side = dp(16)
++        setPadding(side, 0, side, 0)
++        clipToPadding = false
++        title.setText(R.string.lujarch_background_running)
++        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
++        title.setTextColor(context.getColor(android.R.color.system_accent1_200))
++        title.paint.isFakeBoldText = true
++        addView(title)
++        scroller.isHorizontalScrollBarEnabled = false
++        scroller.clipToPadding = false
++        row.orientation = HORIZONTAL
++        smallWindows.orientation = HORIZONTAL
++        apps.orientation = HORIZONTAL
++        row.addView(smallWindows)
++        row.addView(apps)
++        dropSlot.background = GradientDrawable().apply {
++            cornerRadius = dp(18).toFloat()
++            setStroke(dp(2), context.getColor(android.R.color.system_accent1_200), dp(6).toFloat(), dp(4).toFloat())
++        }
++        dropSlot.addView(TextView(context).apply {
++            setText(R.string.lujarch_background_drop)
++            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
++            setTextColor(context.getColor(android.R.color.system_accent1_100))
++            gravity = Gravity.CENTER
++            val p = dp(6)
++            setPadding(p, p, p, p)
++        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
++        dropSlot.visibility = GONE
++        row.addView(dropSlot, LayoutParams(dp(108), dp(92)).apply { marginStart = dp(8) })
++        scroller.addView(row)
++        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
++            topMargin = dp(6)
++        })
++    }
++
++    override fun setInsets(insets: Rect) {
++        (layoutParams as? ViewGroup.MarginLayoutParams)?.let {
++            it.topMargin = insets.top + dp(8)
++            layoutParams = it
++        }
++    }
++
++    fun bind(list: List<LujarchBackgroundApp>) {
++        smallWindows.removeAllViews()
++        apps.removeAllViews()
++        for (app in list) {
++            (if (app.smallWindow) smallWindows else apps).addView(tile(app),
++                LayoutParams(dp(if (app.smallWindow) 108 else 72), dp(92)).apply { marginEnd = dp(8) })
++        }
++        hasEntries = list.isNotEmpty()
++    }
++
++    /** While a card is held: the layer offers its place for it, last in the row. */
++    fun showDropSlot(show: Boolean) {
++        dropSlot.visibility = if (show) VISIBLE else GONE
++        if (show) {
++            visibility = VISIBLE
++            alpha = 1f
++            post { scroller.fullScroll(FOCUS_RIGHT) }
++        } else if (!hasEntries) {
++            visibility = INVISIBLE
++        }
++    }
++
++    fun setDropTarget(over: Boolean) {
++        dropSlot.alpha = if (over) 1f else 0.6f
++        dropSlot.scaleX = if (over) 1.06f else 1f
++        dropSlot.scaleY = dropSlot.scaleX
++    }
++
++    private fun tile(app: LujarchBackgroundApp): View {
++        val color = LujarchBackground.depthColor(context, app.depth, app.smallWindow)
++        return LinearLayout(context).apply {
++            orientation = VERTICAL
++            gravity = Gravity.CENTER
++            background = LayerDrawable(arrayOf(
++                GradientDrawable().apply {
++                    cornerRadius = dp(18).toFloat()
++                    setColor(context.getColor(android.R.color.system_neutral1_800))
++                },
++                GradientDrawable().apply {
++                    setColor(color)
++                    cornerRadii = floatArrayOf(dp(18).toFloat(), dp(18).toFloat(), dp(18).toFloat(),
++                        dp(18).toFloat(), 0f, 0f, 0f, 0f)
++                },
++            )).apply {
++                setLayerHeight(1, dp(3))
++                setLayerGravity(1, Gravity.TOP)
++            }
++            clipToOutline = true
++            addView(ImageView(context).apply {
++                setImageDrawable(icon(app))
++                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
++            }, LayoutParams(dp(34), dp(34)))
++            addView(TextView(context).apply {
++                text = app.word
++                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
++                setTextColor(context.getColor(android.R.color.system_neutral1_100))
++                isSingleLine = true
++                setPadding(dp(4), dp(6), dp(4), 0)
++            })
++            contentDescription = context.getString(R.string.lujarch_background_tile, app.label, app.word)
++            setOnClickListener { recents.open(app) }
++            setOnLongClickListener { v ->
++                menu(v, app)
++                true
++            }
++        }
++    }
++
++    private fun menu(anchor: View, app: LujarchBackgroundApp) {
++        val popup = PopupMenu(context, anchor)
++        if (app.ownService) popup.menu.add(0, END, 0, R.string.lujarch_background_end)
++        popup.menu.add(0, BACKGROUND, 1, R.string.lujarch_background_title)
++        popup.setOnMenuItemClickListener {
++            when (it.itemId) {
++                END -> recents.end(app)
++                else -> recents.openBackground(app.packageName, app.uid)
++            }
++            true
++        }
++        popup.show()
++    }
++
++    private fun icon(app: LujarchBackgroundApp) = try {
++        val pm = context.packageManager
++        val info = pm.getApplicationInfoAsUser(app.packageName, 0, UserHandle.getUserId(app.uid))
++        pm.getUserBadgedIcon(info.loadIcon(pm), UserHandle.getUserHandleForUid(app.uid))
++    } catch (e: Exception) {
++        context.packageManager.defaultActivityIcon
++    }
++
++    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
++
++    private companion object {
++        const val END = 1
++        const val BACKGROUND = 2
++    }
++}
+diff --git a/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c24963a2141ed8a86b0ed87d2efcc0ae50c196fd
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
+@@ -0,0 +1,106 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.lujarch
++
++import android.graphics.Canvas
++import android.graphics.ColorFilter
++import android.graphics.DashPathEffect
++import android.graphics.Paint
++import android.graphics.PixelFormat
++import android.graphics.Rect
++import android.graphics.RectF
++import android.graphics.drawable.Drawable
++import com.android.internal.app.LujarchBackground
++import com.android.launcher3.R
++import com.android.quickstep.views.TaskView
++
++/**
++ * The marks of Background on a card in Recents: a short mark at the top corner of a kept app's
++ * card (BG-5), and a reclaimed app's card dimmed with a dashed outline and Opens again (BG-11).
++ * Drawn over the card, which keeps its place, size and order.
++ */
++object TaskMarks {
++    fun mark(tv: TaskView, kept: Boolean, reclaimed: Boolean) {
++        val old = tv.getTag(R.id.lujarch_background_mark) as? Mark
++        if (!kept && !reclaimed) {
++            if (old != null) {
++                tv.overlay.remove(old)
++                tv.setTag(R.id.lujarch_background_mark, null)
++            }
++            return
++        }
++        val m = old ?: Mark(tv).also {
++            tv.overlay.add(it)
++            tv.setTag(R.id.lujarch_background_mark, it)
++        }
++        m.kept = kept
++        m.reclaimed = reclaimed
++        m.setBounds(0, 0, tv.width, tv.height)
++        m.invalidateSelf()
++    }
++
++    private class Mark(private val tv: TaskView) : Drawable() {
++        var kept = false
++        var reclaimed = false
++        private val context = tv.context
++        private val density = context.resources.displayMetrics.density
++        private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
++        private val dashed = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            style = Paint.Style.STROKE
++            strokeWidth = 1.5f * density
++            pathEffect = DashPathEffect(floatArrayOf(6 * density, 4 * density), 0f)
++        }
++        private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            textAlign = Paint.Align.CENTER
++            textSize = 11f * context.resources.displayMetrics.scaledDensity
++        }
++        private val card = Rect()
++        private val r = RectF()
++
++        override fun draw(canvas: Canvas) {
++            // The card's picture, inside the task view.
++            val snapshot = tv.taskContainers.firstOrNull()?.taskContentView ?: return
++            card.set(snapshot.left, snapshot.top, snapshot.right, snapshot.bottom)
++            if (card.isEmpty) return
++            val radius = 14 * density
++            if (reclaimed) {
++                fill.color = 0x8C000000.toInt()
++                r.set(card)
++                canvas.drawRoundRect(r, radius, radius, fill)
++                dashed.color = LujarchBackground.depthColor(context, LujarchBackground.DEPTH_PAUSED, false)
++                r.inset(dashed.strokeWidth / 2, dashed.strokeWidth / 2)
++                canvas.drawRoundRect(r, radius, radius, dashed)
++                text.color = context.getColor(android.R.color.system_accent1_100)
++                canvas.drawText(context.getString(R.string.lujarch_background_opens_again),
++                    card.exactCenterX(), card.bottom - 14 * density, text)
++            }
++            if (kept) {
++                fill.color = context.getColor(android.R.color.system_accent1_200)
++                val w = 4 * density
++                r.set(card.right - w, card.top + radius, card.right.toFloat(), card.top + radius + 40 * density)
++                canvas.drawRoundRect(r, w / 2, w / 2, fill)
++            }
++        }
++
++        override fun setAlpha(alpha: Int) {}
++
++        override fun setColorFilter(colorFilter: ColorFilter?) {}
++
++        @Deprecated("Deprecated in Java")
++        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
++    }
++}
+diff --git a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
+index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..90ea02d97dd4db23157116b9cd45ef53c0558cdc 100644
+--- a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
++++ b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
+@@ -86,6 +86,15 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
+             @Nullable ViewGroup emptyRecentsMessageView) {
+         super.init(actionsView, splitPlaceholderView, desktopRecentsTransitionController,
+                 surfaceTransactionApplier, emptyRecentsMessageView);
++        if (mLujarchRecents == null) {
++            try {
++                mLujarchRecents = new com.android.quickstep.lujarch.LujarchRecents(this,
++                        mContainer.getDragLayer(),
++                        () -> mContainer.getDeviceProfile().getOverviewActionsClaimedSpace());
++            } catch (RuntimeException e) {
++                android.util.Log.e("lujarch_background", "Recents shows no Background", e);
++            }
++        }
+         setContentAlpha(0);
+     }
+ 
+@@ -192,6 +201,9 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
+     @Override
+     public void setOverviewStateEnabled(boolean enabled) {
+         super.setOverviewStateEnabled(enabled);
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onOverviewEnabled(enabled);
++        }
+         if (enabled) {
+             LauncherState state = getStateManager().getState();
+             boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
+diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..3bed633553c62849e0708a4084b03439adf7850a 100644
+--- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
++++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
+@@ -333,6 +333,10 @@ constructor(
+ 
+     /** Dismisses all */
+     fun dismissAllTasks() {
++        // Lujarch's Background (BG-5): Clear all skips the kept apps' cards.
++        if (recentsView.mLujarchRecents?.clearAllButKept() == true) {
++            return
++        }
+         val allDismissSprings =
+             recentsView.mUtils.taskViews
+                 .reversed()
+diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..62fdafb64297466fc903cdfd1b8a0505c99814c8 100644
+--- a/quickstep/src/com/android/quickstep/views/RecentsView.java
++++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
+@@ -2000,6 +2000,9 @@ public abstract class RecentsView<
+         mAppliedTaskListChangeId = taskListChangeId;
+         resetTaskVisuals();
+         onTaskStackUpdated();
++        if (mLujarchRecents != null) {
++            mLujarchRecents.markTaskViews();
++        }
+         updateEnabledOverlays();
+         if (isPageScrollsInitialized()) {
+             onPageScrollsInitialized();
+@@ -3641,6 +3644,9 @@ public abstract class RecentsView<
+             mEmptyIcon.setAlpha(alphaInt);
+         }
+         mActionsView.getContentAlpha().updateValue(mContentAlpha);
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onContentAlpha(mContentAlpha);
++        }
+ 
+         if (alpha > 0) {
+             setVisibility(VISIBLE);
+@@ -3759,9 +3765,15 @@ public abstract class RecentsView<
+      * returns true.
+      */
+     public boolean canRemoveTaskView(TaskView taskView) {
+-        return mUtils.canRemoveTaskView(taskView);
++        // Lujarch's Background (BG-5): a kept app's card cannot be swiped away.
++        return mUtils.canRemoveTaskView(taskView)
++                && (mLujarchRecents == null || !mLujarchRecents.isKept(taskView));
+     }
+ 
++    /** Lujarch's Background in Recents (BG-5, BG-11, BG-12); null outside the home app. */
++    @Nullable
++    public com.android.quickstep.lujarch.LujarchRecents mLujarchRecents;
++
+     @Override
+     public int getNextPage() {
+         int nextPage = super.getNextPage();
+diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..32b9b43c91bf654415ca56cc2a4b07b248e9b3ad
+--- /dev/null
++++ b/res/values-ja/lujarch_background_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Home settings > Recents (BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_recents">"最近使ったアプリ"</string>
++    <string name="lujarch_background_recents_running">"実行中のアプリを表示"</string>
++    <string name="lujarch_background_recents_running_summary">"カードの上に、画面外で実行中のアプリを表示"</string>
++    <string name="lujarch_background_recents_memory">"メモリを表示"</string>
++    <string name="lujarch_background_recents_memory_summary">"カードの下に、使用中のメモリを表示"</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_background_strings.xml b/res/values-zh-rCN/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ac127becfc9b881748bda2f71d4e41fda96dbdf
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_background_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Home settings > Recents (BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_recents">"最近用过的应用"</string>
++    <string name="lujarch_background_recents_running">"显示运行中的应用"</string>
++    <string name="lujarch_background_recents_running_summary">"在卡片上方显示离开屏幕后仍在运行的应用"</string>
++    <string name="lujarch_background_recents_memory">"显示内存"</string>
++    <string name="lujarch_background_recents_memory_summary">"在卡片下方显示内存使用情况"</string>
++</resources>
+diff --git a/res/values/lujarch_background_strings.xml b/res/values/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ba8e35eb7b6e94af54bb431939ef4bba02ab5aa
+--- /dev/null
++++ b/res/values/lujarch_background_strings.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Home settings > Recents (BG-11, BG-12). -->
++<resources>
++    <string name="lujarch_background_recents">Recents</string>
++    <string name="lujarch_background_recents_running">Show running apps</string>
++    <string name="lujarch_background_recents_running_summary">Above the cards, the apps running off screen</string>
++    <string name="lujarch_background_recents_memory">Show memory</string>
++    <string name="lujarch_background_recents_memory_summary">Below the cards, the memory in use</string>
++</resources>
+diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
+index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..a9f018ac23bef142ee815f37bef0603736855518 100644
+--- a/res/xml/launcher_preferences.xml
++++ b/res/xml/launcher_preferences.xml
+@@ -116,6 +116,27 @@
+         android:persistent="false"
+         launcher:useSimpleSummaryProvider="true" />
+ 
++    <!-- Lujarch's Background (BG-11, BG-12): Recents' Running layer and memory, kept in
++         Settings.Secure (RecentsSettings). -->
++    <androidx.preference.PreferenceScreen
++        android:key="pref_lujarch_recents"
++        android:title="@string/lujarch_background_recents"
++        android:persistent="false">
++
++        <SwitchPreferenceCompat
++            android:key="pref_lujarch_recents_running"
++            android:title="@string/lujarch_background_recents_running"
++            android:summary="@string/lujarch_background_recents_running_summary"
++            android:persistent="false" />
++
++        <SwitchPreferenceCompat
++            android:key="pref_lujarch_recents_memory"
++            android:title="@string/lujarch_background_recents_memory"
++            android:summary="@string/lujarch_background_recents_memory_summary"
++            android:persistent="false" />
++
++    </androidx.preference.PreferenceScreen>
++
+     <!-- Lujarch (LCH-1): the owner's drawer sections; the page is filled in code
+          (DrawerSectionsSettings). -->
+     <androidx.preference.PreferenceScreen
+diff --git a/src/com/android/launcher3/lujarch/RecentsSettings.java b/src/com/android/launcher3/lujarch/RecentsSettings.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6e1c9feecfc0105e993022042634a17615d42926
+--- /dev/null
++++ b/src/com/android/launcher3/lujarch/RecentsSettings.java
+@@ -0,0 +1,54 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.launcher3.lujarch;
++
++import android.content.Context;
++import android.provider.Settings;
++
++import androidx.preference.Preference;
++import androidx.preference.TwoStatePreference;
++
++/**
++ * Home settings > Recents: Show running apps (BG-11) and Show memory (BG-12), kept in
++ * Settings.Secure, where Recents reads them.
++ */
++public final class RecentsSettings {
++    public static final String KEY_RUNNING = "pref_lujarch_recents_running";
++    public static final String KEY_MEMORY = "pref_lujarch_recents_memory";
++    public static final String SETTING_RUNNING = "lujarch_background_recents_running";
++    public static final String SETTING_MEMORY = "lujarch_background_recents_memory";
++
++    private RecentsSettings() {
++    }
++
++    /** Binds the preference when it is one of Recents' switches; false otherwise. */
++    public static boolean bind(Context context, Preference preference) {
++        final String setting;
++        if (KEY_RUNNING.equals(preference.getKey())) {
++            setting = SETTING_RUNNING;
++        } else if (KEY_MEMORY.equals(preference.getKey())) {
++            setting = SETTING_MEMORY;
++        } else {
++            return false;
++        }
++        final TwoStatePreference toggle = (TwoStatePreference) preference;
++        toggle.setChecked(Settings.Secure.getInt(context.getContentResolver(), setting, 1) != 0);
++        toggle.setOnPreferenceChangeListener((pref, value) -> Settings.Secure.putInt(
++                context.getContentResolver(), setting, (Boolean) value ? 1 : 0));
++        return true;
++    }
++}
+diff --git a/src/com/android/launcher3/settings/SettingsActivity.java b/src/com/android/launcher3/settings/SettingsActivity.java
+index 3825c73b6fe4b17e6f8982e5c6b317b415e1c985..b928b384e080d9fad4b38a2895794b27159a80ed 100644
+--- a/src/com/android/launcher3/settings/SettingsActivity.java
++++ b/src/com/android/launcher3/settings/SettingsActivity.java
+@@ -336,6 +336,9 @@ public class SettingsActivity extends FragmentActivity
+          * will remove that preference from the list.
+          */
+         protected boolean initPreference(Preference preference) {
++            if (com.android.launcher3.lujarch.RecentsSettings.bind(getContext(), preference)) {
++                return true;
++            }
+             LauncherApps launcherApps = getContext().getSystemService(LauncherApps.class);
+             LauncherDisplayInfo info = DisplayController.INSTANCE.get(getContext()).getInfo();
+             switch (preference.getKey()) {

@@ -1,9 +1,9 @@
 diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..b8a8b4b07b6c70aaf059c1824cccb058eef5c2c6
+index 0000000000000000000000000000000000000000..993c57a52e7763cbf11dbd41f4c398d6b8c3eb7f
 --- /dev/null
 +++ b/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,27 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -21,12 +21,9 @@ index 0000000000000000000000000000000000000000..b8a8b4b07b6c70aaf059c1824cccb058
 +    limitations under the License.
 +-->
 +<resources>
-+    <string name="lujarch_autostart">"自動起動"</string>
 +    <string name="lujarch_choice_allow">"許可する"</string>
 +    <string name="lujarch_choice_ask">"毎回確認する"</string>
 +    <string name="lujarch_choice_deny">"許可しない"</string>
-+    <string name="lujarch_autostart_summary_ask">"毎回確認する・回答するまで、アプリが閉じているときは起動されません"</string>
-+    <string name="lujarch_autostart_summary_deny">"許可しない・アプリが閉じているときは起動されず、その間に届いたプッシュ メッセージは失われることがあります"</string>
 +    <string name="lujarch_new_app_defaults">"新しいアプリのデフォルト"</string>
 +    <string name="lujarch_new_app_defaults_summary">"インストールしたアプリが最初に使う設定"</string>
 +    <string name="lujarch_install_wait">"回答の待ち時間"</string>
@@ -36,9 +33,42 @@ index 0000000000000000000000000000000000000000..b8a8b4b07b6c70aaf059c1824cccb058
 +</resources>
 diff --git a/res/values-zh-rCN/lujarch_strings.xml b/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..2d9316eac67262a51883f6962185a9c9af95ea04
+index 0000000000000000000000000000000000000000..18f89dc6a498de2dcf58382b817948c852ad947a
 --- /dev/null
 +++ b/res/values-zh-rCN/lujarch_strings.xml
+@@ -0,0 +1,27 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_choice_allow">"允许"</string>
++    <string name="lujarch_choice_ask">"每次都询问"</string>
++    <string name="lujarch_choice_deny">"不允许"</string>
++    <string name="lujarch_new_app_defaults">"新应用的默认设置"</string>
++    <string name="lujarch_new_app_defaults_summary">"您安装的应用一开始采用的设置"</string>
++    <string name="lujarch_install_wait">"等待回答的时长"</string>
++    <string name="lujarch_install_wait_minutes">"{count,plural, =1{1 分钟}other{# 分钟}}"</string>
++    <string name="lujarch_restricted_decided_by_android">"由 Android 决定"</string>
++    <string name="lujarch_restricted_lock">"锁定"</string>
++</resources>
+diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..3dc2c5868ff2df8e97b0728a2f118c5674e37e36
+--- /dev/null
++++ b/res/values/lujarch_strings.xml
 @@ -0,0 +1,30 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
@@ -57,48 +87,9 @@ index 0000000000000000000000000000000000000000..2d9316eac67262a51883f6962185a9c9
 +    limitations under the License.
 +-->
 +<resources>
-+    <string name="lujarch_autostart">"自启动"</string>
-+    <string name="lujarch_choice_allow">"允许"</string>
-+    <string name="lujarch_choice_ask">"每次都询问"</string>
-+    <string name="lujarch_choice_deny">"不允许"</string>
-+    <string name="lujarch_autostart_summary_ask">"每次都询问 · 回答之前，应用关闭时不会被启动"</string>
-+    <string name="lujarch_autostart_summary_deny">"不允许 · 应用关闭时不会被启动，期间收到的推送消息可能会丢失"</string>
-+    <string name="lujarch_new_app_defaults">"新应用的默认设置"</string>
-+    <string name="lujarch_new_app_defaults_summary">"您安装的应用一开始采用的设置"</string>
-+    <string name="lujarch_install_wait">"等待回答的时长"</string>
-+    <string name="lujarch_install_wait_minutes">"{count,plural, =1{1 分钟}other{# 分钟}}"</string>
-+    <string name="lujarch_restricted_decided_by_android">"由 Android 决定"</string>
-+    <string name="lujarch_restricted_lock">"锁定"</string>
-+</resources>
-diff --git a/res/values/lujarch_strings.xml b/res/values/lujarch_strings.xml
-new file mode 100644
-index 0000000000000000000000000000000000000000..97d42c7da36a3d89f6485f13058218793cb35b44
---- /dev/null
-+++ b/res/values/lujarch_strings.xml
-@@ -0,0 +1,33 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!--
-+    Copyright (C) 2026 The Lujarch Project
-+
-+    Licensed under the Apache License, Version 2.0 (the "License");
-+    you may not use this file except in compliance with the License.
-+    You may obtain a copy of the License at
-+
-+         http://www.apache.org/licenses/LICENSE-2.0
-+
-+    Unless required by applicable law or agreed to in writing, software
-+    distributed under the License is distributed on an "AS IS" BASIS,
-+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+    See the License for the specific language governing permissions and
-+    limitations under the License.
-+-->
-+<resources>
-+    <string name="lujarch_autostart">Autostart</string>
 +    <string name="lujarch_choice_allow">Allow</string>
 +    <string name="lujarch_choice_ask">Ask every time</string>
 +    <string name="lujarch_choice_deny">Don\u2019t allow</string>
-+    <string name="lujarch_autostart_summary_ask">Ask every time \u00b7 Until you answer, the app is not started while it is closed</string>
-+    <string name="lujarch_autostart_summary_deny">Don\u2019t allow \u00b7 Not started while it is closed; push messages that arrive then can be lost</string>
 +    <string name="lujarch_new_app_defaults">Defaults for new apps</string>
 +    <string name="lujarch_new_app_defaults_summary">The choices an app you install starts with</string>
 +    <string name="lujarch_install_wait">Wait for an answer</string>
@@ -128,130 +119,3 @@ index b6874973b22129d17858690d1f4036580cfe0fbf..302bbeebf36d41556edb3072c8f6fa8b
      <Preference
          android:key="special_access"
          android:fragment="com.android.settings.applications.specialaccess.SpecialAccessSettings"
-diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-index 5f2089559f3ee77e8a2f713b5771d3147031d5fd..5fd1a2e4cf496965036352212371abc792b1490b 100644
---- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-+++ b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-@@ -361,8 +361,11 @@ public class AdvancedPowerUsageDetail extends DashboardFragment
-                         /* dashboardFragment= */ this,
-                         KEY_BACKGROUND_USAGE_ALLOWABILITY_CATEGORY,
-                         mBatteryOptimizeUtils));
-+        controllers.add(new LujarchAutostartPreferenceController(context, packageName,
-+                bundle.getInt(EXTRA_UID)));
- 
-         return controllers;
-+
-     }
- 
-     @Override
-diff --git a/src/com/android/settings/fuelgauge/LujarchAutostartPreferenceController.java b/src/com/android/settings/fuelgauge/LujarchAutostartPreferenceController.java
-new file mode 100644
-index 0000000000000000000000000000000000000000..50a7798ba0cf65d56842d542a82ae2eb289ef204
---- /dev/null
-+++ b/src/com/android/settings/fuelgauge/LujarchAutostartPreferenceController.java
-@@ -0,0 +1,105 @@
-+/*
-+ * Copyright (C) 2026 The Lujarch Project
-+ *
-+ * Licensed under the Apache License, Version 2.0 (the "License");
-+ * you may not use this file except in compliance with the License.
-+ * You may obtain a copy of the License at
-+ *
-+ *      http://www.apache.org/licenses/LICENSE-2.0
-+ *
-+ * Unless required by applicable law or agreed to in writing, software
-+ * distributed under the License is distributed on an "AS IS" BASIS,
-+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+ * See the License for the specific language governing permissions and
-+ * limitations under the License.
-+ */
-+
-+package com.android.settings.fuelgauge;
-+
-+import android.app.AppOpsManager;
-+import android.content.Context;
-+import android.os.Process;
-+import android.os.UserHandle;
-+import android.util.Log;
-+
-+import androidx.preference.ListPreference;
-+import androidx.preference.Preference;
-+
-+import com.android.settings.R;
-+import com.android.settings.core.BasePreferenceController;
-+
-+/**
-+ * App battery usage > Autostart: whether the system starts the app, while it is not running,
-+ * for a broadcast (at boot, for an alarm or a push message).
-+ */
-+public class LujarchAutostartPreferenceController extends BasePreferenceController
-+        implements Preference.OnPreferenceChangeListener {
-+    private static final String TAG = "lujarch_permissions";
-+    static final String KEY = "lujarch_autostart";
-+
-+    private final String mPackageName;
-+    private final int mUid;
-+    private final AppOpsManager mAppOps;
-+
-+    public LujarchAutostartPreferenceController(Context context, String packageName, int uid) {
-+        super(context, KEY);
-+        mPackageName = packageName;
-+        mUid = uid;
-+        mAppOps = context.getSystemService(AppOpsManager.class);
-+    }
-+
-+    @Override
-+    public int getAvailabilityStatus() {
-+        return mPackageName != null && UserHandle.getAppId(mUid) >= Process.FIRST_APPLICATION_UID
-+                ? AVAILABLE : UNSUPPORTED_ON_DEVICE;
-+    }
-+
-+    @Override
-+    public void updateState(Preference preference) {
-+        final ListPreference list = (ListPreference) preference;
-+        list.setEntries(new CharSequence[] {
-+                mContext.getString(R.string.lujarch_choice_allow),
-+                mContext.getString(R.string.lujarch_choice_ask),
-+                mContext.getString(R.string.lujarch_choice_deny)});
-+        list.setEntryValues(new CharSequence[] {
-+                String.valueOf(AppOpsManager.MODE_ALLOWED),
-+                String.valueOf(AppOpsManager.MODE_DEFAULT),
-+                String.valueOf(AppOpsManager.MODE_ERRORED)});
-+        final int mode = mode();
-+        list.setValue(String.valueOf(mode));
-+        list.setSummary(mode == AppOpsManager.MODE_ALLOWED
-+                ? mContext.getString(R.string.lujarch_choice_allow)
-+                : mContext.getString(mode == AppOpsManager.MODE_DEFAULT
-+                        ? R.string.lujarch_autostart_summary_ask
-+                        : R.string.lujarch_autostart_summary_deny));
-+    }
-+
-+    /** The stored choice; Return empty data refuses a start as Don't allow does. */
-+    private int mode() {
-+        try {
-+            final int mode = mAppOps.unsafeCheckOpRawNoThrow(
-+                    AppOpsManager.OPSTR_LUJARCH_AUTOSTART, mUid, mPackageName);
-+            if (mode == AppOpsManager.MODE_IGNORED) {
-+                return AppOpsManager.MODE_ERRORED;
-+            }
-+            return mode == AppOpsManager.MODE_DEFAULT || mode == AppOpsManager.MODE_ERRORED
-+                    ? mode : AppOpsManager.MODE_ALLOWED;
-+        } catch (RuntimeException e) {
-+            Log.e(TAG, "autostart of " + mPackageName + " not read", e);
-+            return AppOpsManager.MODE_ALLOWED;
-+        }
-+    }
-+
-+    @Override
-+    public boolean onPreferenceChange(Preference preference, Object newValue) {
-+        try {
-+            mAppOps.setMode(AppOpsManager.OP_LUJARCH_AUTOSTART, mUid, mPackageName,
-+                    Integer.parseInt((String) newValue));
-+        } catch (RuntimeException e) {
-+            Log.e(TAG, "autostart of " + mPackageName + " not set", e);
-+            return false;
-+        }
-+        updateState(preference);
-+        return true;
-+    }
-+}

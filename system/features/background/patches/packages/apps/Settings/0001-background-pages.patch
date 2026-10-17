@@ -1,0 +1,249 @@
+diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..6fdc2f63669cd2f7a2b4b4cf354e1e7b493b020e
+--- /dev/null
++++ b/res/values-ja/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<resources>
++    <string name="lujarch_background_title">"バックグラウンド"</string>
++    <string name="lujarch_background_link_summary">"バックグラウンドでの使用、保持、自動起動"</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_background_strings.xml b/res/values-zh-rCN/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..6faaa257dfe6c56403dec81febf66358b157ea3d
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<resources>
++    <string name="lujarch_background_title">"后台"</string>
++    <string name="lujarch_background_link_summary">"后台使用、保留和自启动"</string>
++</resources>
+diff --git a/res/values/lujarch_background_strings.xml b/res/values/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b564244b859df78c0503584426344b6898aad6b4
+--- /dev/null
++++ b/res/values/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<resources>
++    <string name="lujarch_background_title">Background</string>
++    <string name="lujarch_background_link_summary">Background usage, Keep and Autostart</string>
++</resources>
+diff --git a/res/xml/development_settings.xml b/res/xml/development_settings.xml
+index a04c5c779d63f797d0a51dbd8a38d5ef51cc14f0..6e7984a5c6be15cf6eaa619effd17f10255a3f2f 100644
+--- a/res/xml/development_settings.xml
++++ b/res/xml/development_settings.xml
+@@ -23,12 +23,6 @@
+         android:key="debug_misc_category"
+         android:order="100">
+ 
+-        <Preference
+-            android:key="memory"
+-            android:title="@string/memory_settings_title"
+-            android:summary="@string/summary_placeholder"
+-            android:fragment="com.android.settings.applications.ProcessStatsSummary" />
+-
+         <com.android.settings.BugreportPreference
+             android:key="bugreport"
+             android:title="@*android:string/bugreport_title"
+@@ -85,12 +79,6 @@
+             android:title="@string/enable_16k_pages"
+             android:summary="@string/enable_16k_pages_summary"/>
+ 
+-        <Preference
+-            android:key="running_apps"
+-            android:title="@string/runningservices_settings_title"
+-            android:summary="@string/runningservices_settings_summary"
+-            android:fragment="com.android.settings.applications.RunningServices" />
+-
+         <com.android.settings.development.ColorModePreference
+             android:key="picture_color_mode"
+             android:title="@string/picture_color_mode"
+diff --git a/res/xml/lujarch_battery_app.xml b/res/xml/lujarch_battery_app.xml
+index eba7f9bda3b269059f46d177eff38b6a44babf1a..7af95d4096df66d626a2fb9c734e2dfd8805e808 100644
+--- a/res/xml/lujarch_battery_app.xml
++++ b/res/xml/lujarch_battery_app.xml
+@@ -48,14 +48,15 @@
+     <PreferenceCategory
+         android:key="lujarch_app_timeline" />
+ 
++    <!-- Lujarch's Background (BG-3): its choices are on the app's Background page. -->
+     <PreferenceCategory
+         android:title="@string/manager_battery_usage_category_title"
+-        android:key="background_usage_allowability_category"
+-        settings:controller="com.android.settings.fuelgauge.BackgroundUsageAllowabilityPreferenceController">
++        android:key="lujarch_background_category">
+ 
+-        <com.android.settingslib.PrimarySwitchPreference
+-            android:key="background_usage_allowability_switch"
+-            android:title="@string/manager_battery_usage_allow_background_usage_title"/>
++        <Preference
++            android:key="lujarch_background"
++            android:title="@string/lujarch_background_title"
++            android:summary="@string/lujarch_background_link_summary" />
+ 
+     </PreferenceCategory>
+ 
+diff --git a/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java b/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java
+index 0d6ff75450c7f3b4b0be913be4838974df635a16..abc024fbb0407ff45ab901118cf83d7977c4a52c 100644
+--- a/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java
++++ b/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java
+@@ -510,7 +510,6 @@ public class DevelopmentSettingsDashboardFragment extends RestrictedDashboardFra
+             @Nullable Activity activity, @Nullable Lifecycle lifecycle,
+             @Nullable DevelopmentSettingsDashboardFragment fragment) {
+         final List<AbstractPreferenceController> controllers = new ArrayList<>();
+-        controllers.add(new MemoryUsagePreferenceController(context));
+         controllers.add(new EnableWebAppMinterPreferenceController(context));
+         controllers.add(new BugReportPreferenceController(context));
+         controllers.add(new BugReportHandlerPreferenceController(context));
+@@ -604,7 +603,6 @@ public class DevelopmentSettingsDashboardFragment extends RestrictedDashboardFra
+         controllers.add(new NonResizableMultiWindowPreferenceController(context));
+         controllers.add(new ShortcutManagerThrottlingPreferenceController(context));
+         controllers.add(new EnableGnssRawMeasFullTrackingPreferenceController(context));
+-        controllers.add(new DefaultLaunchPreferenceController(context, "running_apps"));
+         controllers.add(new DefaultLaunchPreferenceController(context, "demo_mode"));
+         controllers.add(new DefaultLaunchPreferenceController(context, "quick_settings_tiles"));
+         controllers.add(new DefaultLaunchPreferenceController(context, "feature_flags_dashboard"));
+diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
+index b76a5a80f93b35fdc986b872a1448addf1fff09b..e41a8d3a8221c23de80d927d1d05b5c4fa36a2e9 100644
+--- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
++++ b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
+@@ -352,12 +352,9 @@ public class AdvancedPowerUsageDetail extends DashboardFragment
+                         bundle,
+                         bundle.getInt(EXTRA_UID, 0),
+                         packageName));
+-        controllers.add(
+-                new BackgroundUsageAllowabilityPreferenceController(
+-                        context,
+-                        /* dashboardFragment= */ this,
+-                        KEY_BACKGROUND_USAGE_ALLOWABILITY_CATEGORY,
+-                        mBatteryOptimizeUtils));
++        // Lujarch's Background (BG-3): the choices of how the app runs off screen live on its
++        // Background page, which this row opens.
++        controllers.add(new LujarchBackgroundLinkController(context, packageName));
+ 
+         return controllers;
+     }
+diff --git a/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java b/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..b85cca300a642c45ef000241856b99603de61d9a
+--- /dev/null
++++ b/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java
+@@ -0,0 +1,67 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.fuelgauge;
++
++import android.content.ActivityNotFoundException;
++import android.content.Context;
++import android.content.Intent;
++import android.os.UserHandle;
++import android.text.TextUtils;
++import android.util.Log;
++
++import androidx.preference.Preference;
++
++import com.android.internal.app.LujarchBackground;
++import com.android.settings.core.BasePreferenceController;
++
++/**
++ * App battery usage > Background: the app's battery figures stay here, its choices of how it runs
++ * off screen are on its Background page, which this row opens (BG-3).
++ */
++public class LujarchBackgroundLinkController extends BasePreferenceController {
++    private static final String TAG = "lujarch_background";
++    static final String KEY = "lujarch_background";
++
++    private final String mPackageName;
++
++    public LujarchBackgroundLinkController(Context context, String packageName) {
++        super(context, KEY);
++        mPackageName = packageName;
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return mPackageName != null ? AVAILABLE : UNSUPPORTED_ON_DEVICE;
++    }
++
++    @Override
++    public boolean handlePreferenceTreeClick(Preference preference) {
++        if (!TextUtils.equals(preference.getKey(), KEY)) {
++            return false;
++        }
++        final Intent intent = new Intent(LujarchBackground.ACTION_APP)
++                .setPackage(LujarchBackground.SETTINGS_PACKAGE)
++                .putExtra(Intent.EXTRA_PACKAGE_NAME, mPackageName)
++                .putExtra(Intent.EXTRA_USER, UserHandle.of(UserHandle.myUserId()));
++        try {
++            mContext.startActivity(intent);
++        } catch (ActivityNotFoundException e) {
++            Log.e(TAG, "no Background page for " + mPackageName, e);
++        }
++        return true;
++    }
++}

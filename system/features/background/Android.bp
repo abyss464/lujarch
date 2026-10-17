@@ -1,0 +1,28 @@
+// The directory of Background's record (BG-6).
+prebuilt_etc {
+    name: "lujarch-background.rc",
+    src: "src/init/lujarch-background.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+// Recents reads Background (BG-11, BG-12).
+prebuilt_etc {
+    name: "lujarch_background_privapp_permissions",
+    filename_from_src: true,
+    src: "src/configs/privapp-permissions-lujarch-background.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+// Background's pages in Lujarch Settings: Settings > System > Background, an app's Background
+// page with its choices, a process's page, what happened.
+android_library {
+    name: "LujarchBackgroundSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+    static_libs: ["LujarchSettingsPages"],
+}

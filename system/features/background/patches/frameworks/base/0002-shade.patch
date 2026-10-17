@@ -1,0 +1,487 @@
+diff --git a/packages/SystemUI/AndroidManifest.xml b/packages/SystemUI/AndroidManifest.xml
+index a83e306e053c9057aab10ffea49a47e9e24b1a90..a23b0fc047c674c0473667ea96392b0fa649dc62 100644
+--- a/packages/SystemUI/AndroidManifest.xml
++++ b/packages/SystemUI/AndroidManifest.xml
+@@ -308,6 +308,8 @@
+ 
+     <!-- Listen app op changes -->
+     <uses-permission android:name="android.permission.WATCH_APPOPS" />
++    <!-- Lujarch's Background: Fold into Background (BG-9). -->
++    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
+     <uses-permission android:name="android.permission.OBSERVE_GRANT_REVOKE_PERMISSIONS" />
+     <!-- For handling silent audio recordings -->
+     <uses-permission android:name="android.permission.MODIFY_AUDIO_ROUTING" />
+diff --git a/packages/SystemUI/res/layout/lujarch_background_fold_row.xml b/packages/SystemUI/res/layout/lujarch_background_fold_row.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b75cf974922770c51b7910222abeff5d7223177
+--- /dev/null
++++ b/packages/SystemUI/res/layout/lujarch_background_fold_row.xml
+@@ -0,0 +1,56 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Fold into Background (BG-9), in a running notification's long-press menu. -->
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/lujarch_background_fold"
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:minHeight="56dp"
++    android:layout_marginTop="8dp"
++    android:paddingStart="16dp"
++    android:paddingEnd="8dp"
++    android:gravity="center_vertical"
++    android:orientation="horizontal"
++    android:background="@drawable/ripple_drawable">
++
++    <LinearLayout
++        android:layout_width="0dp"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++
++        <TextView
++            android:id="@+id/lujarch_background_fold_title"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:text="@string/lujarch_background_fold"
++            android:textAppearance="@style/TextAppearance.NotificationImportanceButton" />
++
++        <TextView
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:text="@string/lujarch_background_fold_summary"
++            android:textAppearance="@style/TextAppearance.NotificationImportanceDetail" />
++    </LinearLayout>
++
++    <Switch
++        android:id="@+id/lujarch_background_fold_switch"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_marginStart="12dp"
++        android:contentDescription="@string/lujarch_background_fold" />
++</LinearLayout>
+diff --git a/packages/SystemUI/res/values-ja/lujarch_background_strings.xml b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..d5af7930401967ff4582d8c2fd6f573bedd8ff2e
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<resources>
++    <string name="lujarch_background_fold">"バックグラウンドにまとめる"</string>
++    <string name="lujarch_background_fold_summary">"「バックグラウンド」の通知の 1 行として表示します。サービスは実行を続けます"</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..32fd7dc8d68206aef577a48997c670e73b988b75
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<resources>
++    <string name="lujarch_background_fold">"收进后台"</string>
++    <string name="lujarch_background_fold_summary">"在“后台”通知里显示为一行，服务照常运行"</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_background_strings.xml b/packages/SystemUI/res/values/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..53b75b4c8f60e371369a575219df1f3d24f6f103
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_background_strings.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<resources>
++    <string name="lujarch_background_fold">Fold into Background</string>
++    <string name="lujarch_background_fold_summary">Show it as a line in the Background notification; its service keeps running</string>
++</resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..26ea39d63cd4787c3288ebef6363604c02963eab
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt
+@@ -0,0 +1,118 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.lujarch.background
++
++import android.app.AppOpsManager
++import android.app.Notification
++import android.content.Context
++import android.content.pm.PackageManager
++import android.os.AsyncTask
++import android.os.UserHandle
++import android.service.notification.StatusBarNotification
++import android.util.Log
++import android.view.LayoutInflater
++import android.view.View
++import android.view.ViewGroup
++import android.widget.Switch
++import android.widget.TextView
++import com.android.internal.app.LujarchBackground
++import com.android.systemui.res.R
++import com.android.systemui.statusbar.phone.SystemUIDialog
++
++/**
++ * Fold into Background (BG-9): an app's ongoing notification of a foreground service shows as a
++ * line inside the Background notification instead of on its own, by the owner's choice per app.
++ * The choice is in the notification's long-press menu, and in the same menu on its line.
++ */
++object LujarchFold {
++    private const val TAG = "lujarch_background"
++
++    /** An ongoing notification of a foreground service: what folds. */
++    fun isFoldable(sbn: StatusBarNotification): Boolean {
++        val n = sbn.notification
++        return sbn.packageName != "android" &&
++            n.flags and Notification.FLAG_FOREGROUND_SERVICE != 0 &&
++            n.flags and Notification.FLAG_ONGOING_EVENT != 0
++    }
++
++    fun isFolded(context: Context, uid: Int, packageName: String): Boolean =
++        context.getSystemService(AppOpsManager::class.java)!!
++            .unsafeCheckOpRawNoThrow(AppOpsManager.OPSTR_LUJARCH_FOLD, uid, packageName) ==
++            AppOpsManager.MODE_ALLOWED
++
++    /** Sets the choice through Background, off the main thread; failures are logged. */
++    fun setFolded(packageName: String, uid: Int, folded: Boolean) {
++        AsyncTask.THREAD_POOL_EXECUTOR.execute {
++            try {
++                val service = LujarchBackground.get()
++                if (service == null) {
++                    Log.e(TAG, "Fold into Background for $packageName: Background is not available")
++                } else {
++                    service.setFolded(packageName, UserHandle.getUserId(uid), folded)
++                }
++            } catch (e: Exception) {
++                Log.e(TAG, "Fold into Background for $packageName failed", e)
++            }
++        }
++    }
++
++    /** Adds the Fold into Background row to a notification's long-press menu, for what folds. */
++    fun bindGuts(info: ViewGroup, sbn: StatusBarNotification) {
++        val controls = info.findViewById<ViewGroup>(R.id.inline_controls) ?: return
++        var row = controls.findViewById<View>(R.id.lujarch_background_fold)
++        if (!isFoldable(sbn)) {
++            row?.visibility = View.GONE
++            return
++        }
++        if (row == null) {
++            row = LayoutInflater.from(info.context)
++                .inflate(R.layout.lujarch_background_fold_row, controls, false)
++            controls.addView(row, controls.indexOfChild(controls.findViewById(R.id.bottom_buttons)))
++        }
++        bindRow(row!!, sbn.packageName, sbn.uid)
++    }
++
++    private fun bindRow(row: View, packageName: String, uid: Int) {
++        row.visibility = View.VISIBLE
++        val toggle = row.findViewById<Switch>(R.id.lujarch_background_fold_switch)
++        toggle.setOnCheckedChangeListener(null)
++        toggle.isChecked = isFolded(row.context, uid, packageName)
++        toggle.setOnCheckedChangeListener { _, on -> setFolded(packageName, uid, on) }
++        row.setOnClickListener { toggle.toggle() }
++    }
++
++    /** The menu of a folded line in the Background notification: the same choice. */
++    fun showMenu(context: Context, packageName: String, uid: Int) {
++        val label = try {
++            val pm = context.packageManager
++            pm.getApplicationInfoAsUser(packageName, 0, UserHandle.getUserId(uid)).loadLabel(pm)
++        } catch (e: PackageManager.NameNotFoundException) {
++            Log.w(TAG, "$packageName is not installed", e)
++            return
++        }
++        val dialog = SystemUIDialog(context)
++        val row = LayoutInflater.from(dialog.context).inflate(R.layout.lujarch_background_fold_row, null)
++        bindRow(row, packageName, uid)
++        row.findViewById<TextView>(R.id.lujarch_background_fold_title).text =
++            context.getString(R.string.lujarch_background_fold)
++        dialog.setTitle(label)
++        dialog.setView(row)
++        dialog.setPositiveButton(R.string.inline_done_button, null)
++        dialog.setShowForAllUsers(true)
++        dialog.show()
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..cba2d432a7076201ac08e26c4543c7f95a1484db
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt
+@@ -0,0 +1,112 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.lujarch.background
++
++import android.app.AppOpsManager
++import android.content.BroadcastReceiver
++import android.content.Context
++import android.content.Intent
++import android.content.IntentFilter
++import android.os.Handler
++import android.util.ArraySet
++import android.util.Log
++import com.android.internal.app.LujarchBackground
++import com.android.systemui.dagger.qualifiers.Main
++import com.android.systemui.statusbar.notification.collection.NotifPipeline
++import com.android.systemui.statusbar.notification.collection.NotificationEntry
++import com.android.systemui.statusbar.notification.collection.coordinator.Coordinator
++import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
++import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifFilter
++import javax.inject.Inject
++
++/**
++ * Fold into Background (BG-9): the running notifications of the apps folded into Background are
++ * not shown on their own; the Background notification shows them as lines, and the menu of a
++ * line comes here.
++ */
++@CoordinatorScope
++class LujarchFoldCoordinator
++@Inject
++constructor(
++    private val context: Context,
++    @Main private val mainHandler: Handler,
++) : Coordinator {
++    private val folded = ArraySet<String>()
++    private val appOps = context.getSystemService(AppOpsManager::class.java)!!
++
++    private val filter =
++        object : NotifFilter("LujarchFoldFilter") {
++            override fun shouldFilterOut(entry: NotificationEntry, now: Long): Boolean {
++                val sbn = entry.sbn
++                return LujarchFold.isFoldable(sbn) &&
++                    synchronized(folded) { folded.contains("${sbn.uid}:${sbn.packageName}") }
++            }
++        }
++
++    override fun attach(pipeline: NotifPipeline) {
++        pipeline.addPreGroupFilter(filter)
++        try {
++            watch()
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "Fold into Background is not watched", e)
++        }
++    }
++
++    private fun watch() {
++        read()
++        appOps.startWatchingMode(AppOpsManager.OPSTR_LUJARCH_FOLD, null) { _, _ ->
++            mainHandler.post {
++                read()
++                filter.invalidateList("lujarch fold changed")
++            }
++        }
++        context.registerReceiverForAllUsers(
++            object : BroadcastReceiver() {
++                override fun onReceive(c: Context, intent: Intent) {
++                    val pkg = intent.getStringExtra(Intent.EXTRA_PACKAGE_NAME) ?: return
++                    LujarchFold.showMenu(context, pkg, intent.getIntExtra("uid", -1))
++                }
++            },
++            IntentFilter(ACTION_FOLD_MENU),
++            LujarchBackground.PERMISSION,
++            mainHandler,
++            Context.RECEIVER_EXPORTED,
++        )
++    }
++
++    private fun read() {
++        val now = ArraySet<String>()
++        try {
++            appOps.getPackagesForOps(intArrayOf(AppOpsManager.OP_LUJARCH_FOLD))?.forEach { p ->
++                if (p.ops.any { it.mode == AppOpsManager.MODE_ALLOWED }) {
++                    now.add("${p.uid}:${p.packageName}")
++                }
++            }
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "the apps folded into Background cannot be read", e)
++        }
++        synchronized(folded) {
++            folded.clear()
++            folded.addAll(now)
++        }
++    }
++
++    private companion object {
++        const val TAG = "lujarch_background"
++        const val ACTION_FOLD_MENU = "org.lujarch.background.action.FOLD_MENU"
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
+index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..8af2321766c6b1634e013036149cd6adac61850b 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
+@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.combine
++import kotlinx.coroutines.flow.flowOf
+ import kotlinx.coroutines.flow.distinctUntilChanged
+ import kotlinx.coroutines.flow.map
+ import kotlinx.coroutines.isActive
+@@ -264,27 +265,9 @@ fun createFooterActionsViewModel(
+             }
+             .distinctUntilChanged()
+ 
+-    val foregroundServices =
+-        combine(
+-                footerActionsInteractor.foregroundServicesCount,
+-                footerActionsInteractor.hasNewForegroundServices,
+-                security,
+-                textFeedbackInteractor.textFeedback,
+-            ) { foregroundServicesCount, hasNewChanges, securityModel, textFeedbackModel ->
+-                if (foregroundServicesCount <= 0) {
+-                    return@combine null
+-                }
+-
+-                foregroundServicesButtonViewModel(
+-                    qsThemedContext,
+-                    foregroundServicesCount,
+-                    securityModel,
+-                    textFeedbackModel,
+-                    hasNewChanges,
+-                    ::onForegroundServiceButtonClicked,
+-                )
+-            }
+-            .distinctUntilChanged()
++    // Lujarch's Background (BG-8): the Background notification lists the active apps; the
++    // footer has no button for them.
++    val foregroundServices: Flow<FooterActionsForegroundServicesButtonViewModel?> = flowOf(null)
+ 
+     val userSwitcher =
+         userSwitcherViewModel(qsThemedContext, footerActionsInteractor, ::onUserSwitcherClicked)
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
+index 7295df17c64bbea7fde88629c22f26edadbf2390..5360582dd640aafb261c625180521233d55f9697 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
+@@ -17,6 +17,7 @@ package com.android.systemui.statusbar.notification.collection.coordinator
+ 
+ import android.multiuser.Flags
+ import android.os.UserManager
++import com.android.systemui.lujarch.background.LujarchFoldCoordinator
+ import com.android.systemui.notifications.intelligence.rules.shared.NmContextualDisplayLaunch
+ import com.android.systemui.statusbar.notification.collection.NotifPipeline
+ import com.android.systemui.statusbar.notification.collection.PipelineDumpable
+@@ -70,6 +71,7 @@ constructor(
+     summarizationCoordinator: SummarizationCoordinator,
+     highlightsCoordinator: HighlightsCoordinator,
+     hsuCoordinator: HsuCoordinator,
++    lujarchFoldCoordinator: LujarchFoldCoordinator,
+ ) : NotifCoordinators {
+ 
+     private val mCoreCoordinators: MutableList<CoreCoordinator> = ArrayList()
+@@ -111,6 +113,7 @@ constructor(
+         mCoordinators.add(bundleCoordinator)
+         mCoordinators.add(summarizationCoordinator)
+         mCoordinators.add(statsLoggerCoordinator)
++        mCoordinators.add(lujarchFoldCoordinator)
+         if (NmContextualDisplayLaunch.isEnabled) {
+             mCoordinators.add(highlightsCoordinator)
+         }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
+index a8998e2a8c632f3e6c50caa4d7214ef46d53afbc..a11b0db63ea823bec0b2f205e2c4a469ebc39b3a 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
+@@ -289,6 +289,13 @@ public class NotificationInfo extends LinearLayout implements NotificationGuts.G
+ 
+         int behavior = getAlertingBehavior();
+         applyAlertingBehavior(behavior, false /* userTriggered */);
++
++        // Lujarch's Background (BG-9): a running notification folds into Background.
++        try {
++            com.android.systemui.lujarch.background.LujarchFold.INSTANCE.bindGuts(this, mSbn);
++        } catch (RuntimeException e) {
++            android.util.Log.e("lujarch_background", "Fold into Background is not offered", e);
++        }
+     }
+ 
+     @SuppressLint("WrongThread")

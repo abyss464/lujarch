@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="background_title">Background</string>
+    <string name="background_summary">Where each app is off screen, and why</string>
+    <string name="background_keywords">background, running, paused, memory, processes, running services, freezer</string>
+    <string name="background_system">System</string>
+    <string name="background_memory">Memory</string>
+    <string name="background_memory_free_of">Free %1$s of %2$s</string>
+    <string name="background_memory_part">%1$s\n%2$s</string>
+    <string name="background_sort_depth">By depth</string>
+    <string name="background_sort_memory">By memory</string>
+    <string name="background_sort_battery">By battery use</string>
+    <string name="background_sort_wakeups">By wakeups</string>
+    <string name="background_note_on_screen">In use now</string>
+    <string name="background_note_running">Still working off screen</string>
+    <string name="background_note_messages">Only its message process runs</string>
+    <string name="background_note_paused">Frozen, back as it was</string>
+    <string name="background_note_reclaimed">Ended, starts again when opened</string>
+    <string name="background_note_stopped">Nothing wakes it until you open it</string>
+    <string name="background_none">No app is running</string>
+    <string name="background_show_system">Show system processes</string>
+    <string name="background_show_system_keywords">system processes, system services</string>
+    <string name="background_unknown">Not known</string>
+    <string name="background_not_installed">This app is not installed</string>
+    <string name="background_after">After it leaves the screen</string>
+    <string name="background_usage">Background usage</string>
+    <string name="background_usage_note">The highest depth it stays at</string>
+    <string name="background_usage_messages_summary">Only its process that holds the connection for its messages runs; the rest pause until a message wakes them.</string>
+    <string name="background_usage_fixed">This app stays Unrestricted: the system needs it.</string>
+    <string name="background_keep">Keep</string>
+    <string name="background_keep_note">The deepest it sinks</string>
+    <string name="background_keep_on">On \u00b7 never reclaimed</string>
+    <string name="background_keep_off">Off \u00b7 can be reclaimed</string>
+    <string name="background_autostart">Autostart</string>
+    <string name="background_autostart_note">Who may wake it once reclaimed</string>
+    <string name="background_autostart_allow">Allow</string>
+    <string name="background_autostart_ask">Ask every time</string>
+    <string name="background_autostart_deny">Don\u2019t allow</string>
+    <string name="background_autostart_summary_ask">Ask every time \u00b7 Until you answer, the app is not started while it is closed</string>
+    <string name="background_autostart_summary_deny">Don\u2019t allow \u00b7 Not started while it is closed; push messages that arrive then can be lost</string>
+    <string name="background_card_value">%1$s \u203a</string>
+    <string name="background_column_here">%1$s, where it is now</string>
+    <string name="background_column_note">The dot is where it is now. The system moves it only within the range you set.</string>
+    <string name="background_rung_running">Still works</string>
+    <string name="background_rung_messages">Keeps its message process</string>
+    <string name="background_rung_paused">Frozen, back as it was</string>
+    <string name="background_rung_reclaimed">Starts again when opened</string>
+    <string name="background_rung_stopped">Nothing wakes it</string>
+    <string name="background_what_happened">What happened</string>
+    <string name="background_nothing_happened">Nothing happened in the last 7 days</string>
+    <string name="background_all">All</string>
+    <string name="background_all_summary">The last 7 days</string>
+    <string name="background_all_footer">What happened is kept for 7 days.</string>
+    <string name="background_processes">Processes</string>
+    <string name="background_processes_count">Processes \u00b7 %1$d</string>
+    <string name="background_no_processes">No process runs</string>
+    <string name="background_process_summary">%1$s \u00b7 %2$s \u00b7 %3$s</string>
+    <string name="background_last_day">Last 24 hours</string>
+    <string name="background_day_on_screen">On screen</string>
+    <string name="background_day_running">Running in the background</string>
+    <string name="background_day_woken">Woken</string>
+    <string name="background_end_background">End background processes</string>
+    <string name="background_force_stop">Force stop</string>
+    <string name="background_process_title">Process</string>
+    <string name="background_process_id">pid %1$d \u00b7 uid %2$d \u00b7 running for %3$s</string>
+    <string name="background_now">Now</string>
+    <string name="background_process_why">Why it is here</string>
+    <string name="background_process_use">Use</string>
+    <string name="background_process_threads">Threads by CPU time</string>
+    <string name="background_process_gone">This process has ended.</string>
+    <string name="background_process_footer">Pausing or ending acts once; the process then follows %1$s\u2019s choices again.</string>
+    <string name="background_process_footer_link">Change them in %1$s\u2019s Background page</string>
+    <string name="background_pause_process">Pause this process</string>
+    <string name="background_end_process">End this process</string>
+    <string name="background_use_memory">Memory</string>
+    <string name="background_use_swap">Swap</string>
+    <string name="background_use_cpu">CPU \u00b7 24 h</string>
+    <string name="background_use_wakeups">Wakeups \u00b7 24 h</string>
+    <string name="background_use_network">Network \u00b7 24 h (app)</string>
+    <string name="background_use_threads">Threads</string>
+    <string name="background_duration_seconds">%1$d s</string>
+    <string name="background_duration_minutes">%1$d min</string>
+    <string name="background_duration_hours">%1$d h %2$d min</string>
+    <string name="background_duration_less_minute">Less than 1 min</string>
+    <string name="background_error_unavailable">Background cannot be reached. It may still be starting.</string>
+    <string name="background_error_load">Couldn\u2019t read the background</string>
+    <string name="background_error_keep">Couldn\u2019t change Keep</string>
+    <string name="background_error_usage">Couldn\u2019t change Background usage</string>
+    <string name="background_error_autostart">Couldn\u2019t change Autostart</string>
+    <string name="background_error_end">Couldn\u2019t end it</string>
+    <string name="background_error_pause">Couldn\u2019t pause this process</string>
+    <string name="background_error_force_stop">Couldn\u2019t force stop it</string>
+    <plurals name="background_system_count">
+        <item quantity="one">%1$d system process</item>
+        <item quantity="other">%1$d system processes</item>
+    </plurals>
+    <plurals name="background_times">
+        <item quantity="one">%1$d time</item>
+        <item quantity="other">%1$d times</item>
+    </plurals>
+</resources>
