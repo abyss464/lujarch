@@ -42,7 +42,8 @@ shows the root file system's state and the last action with its outcome.
 
 Linux is a mode of the phone beside the home screen, not an app: the terminal and the desktop are
 one screen in place of the home screen, in neither the app drawer nor recents. A double tap on an
-empty space of the home screen enters Linux at the terminal when the owner chooses so; Settings >
+empty space of the home screen enters Linux at the terminal, the screen growing from the tap
+point, when the owner chooses so; Settings >
 System > Linux development environment opens it too. In Linux, Android's bars are hidden and
 Linux's own status line (user@host, network, battery, time) stands where the status bar was; the
 session tabs carry + (new session), Display and Settings; the notification shade does not open and

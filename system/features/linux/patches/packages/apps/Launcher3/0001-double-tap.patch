@@ -1,3 +1,201 @@
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/SystemApiWrapper.kt b/quickstep/src/com/android/launcher3/uioverrides/SystemApiWrapper.kt
+index 2b7da939b650ea8ead56cd575cd3f68f75bdc7e4..ed343da8814521fcb7f0a0efe3bef28a87012b16 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/SystemApiWrapper.kt
++++ b/quickstep/src/com/android/launcher3/uioverrides/SystemApiWrapper.kt
+@@ -34,6 +34,7 @@ import android.os.UserHandle
+ import android.view.DragAndDropPermissions
+ import android.view.DragEvent
+ import android.view.SurfaceControlViewHost
++import android.view.View
+ import android.widget.Toast
+ import android.window.RemoteTransition
+ import android.window.ScreenCapture.ScreenCaptureParams
+@@ -49,6 +50,7 @@ import com.android.launcher3.uioverrides.touchcontrollers.StatusBarTouchControll
+ import com.android.launcher3.util.ApiWrapper
+ import com.android.launcher3.util.Executors
+ import com.android.launcher3.util.StartActivityParams
++import com.android.quickstep.util.ClipRevealRemoteTransition
+ import com.android.quickstep.util.FadeOutRemoteTransition
+ import java.util.function.Supplier
+ import javax.inject.Inject
+@@ -68,6 +70,21 @@ open class SystemApiWrapper @Inject constructor(@ApplicationContext context: Con
+             remoteTransition = RemoteTransition(FadeOutRemoteTransition(), "FadeOut")
+         }
+ 
++    // Lujarch: the clip reveal played by the launcher, so a task that opens gets it too.
++    override fun createClipRevealOptions(source: View, x: Int, y: Int): ActivityOptions {
++        val location = IntArray(2)
++        source.getLocationOnScreen(location)
++        val reveal =
++            ClipRevealRemoteTransition(
++                location[0] + x,
++                location[1] + y,
++                source.resources.displayMetrics.density,
++            )
++        return ActivityOptions.makeBasic().apply {
++            remoteTransition = RemoteTransition(reveal, "LujarchClipReveal")
++        }
++    }
++
+     override fun getAppMarketActivityIntent(packageName: String, user: UserHandle): Intent =
+         if (enablePrivateSpace())
+             ProxyActivityStarter.getLaunchIntent(
+diff --git a/quickstep/src/com/android/quickstep/util/ClipRevealRemoteTransition.kt b/quickstep/src/com/android/quickstep/util/ClipRevealRemoteTransition.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..9e0bb93b29a0595fc27d73f961a2150a63f05692
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/util/ClipRevealRemoteTransition.kt
+@@ -0,0 +1,150 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.util
++
++import android.animation.ValueAnimator
++import android.app.WindowConfiguration.ACTIVITY_TYPE_HOME
++import android.graphics.Rect
++import android.os.IBinder
++import android.os.RemoteException
++import android.util.Log
++import android.view.SurfaceControl
++import android.view.SurfaceControl.Transaction
++import android.view.animation.LinearInterpolator
++import android.view.animation.PathInterpolator
++import android.window.IRemoteTransitionFinishedCallback
++import android.window.RemoteTransitionStub
++import android.window.TransitionInfo
++import com.android.launcher3.anim.AnimatorListeners.forEndCallback
++import com.android.launcher3.util.Executors
++import com.android.wm.shell.shared.TransitionUtil
++
++/**
++ * Lujarch (Linux mode, docs/linux.md): the opening task grows out of the point ([x], [y]) on
++ * screen with the platform's clip reveal (TransitionAnimation#createClipRevealAnimationLocked):
++ * the visible rect widens quickly and grows tall over the whole motion while the window settles
++ * up from a little below, fading in from half opacity. Android 16 applies a launch's clip reveal
++ * option only inside a task, never to a task opening, so the launcher plays it itself.
++ */
++class ClipRevealRemoteTransition(
++    private val x: Int,
++    private val y: Int,
++    private val density: Float,
++) : RemoteTransitionStub() {
++
++    override fun startAnimation(
++        transition: IBinder,
++        info: TransitionInfo,
++        startT: Transaction,
++        finishCB: IRemoteTransitionFinishedCallback,
++    ) {
++        var leash: SurfaceControl? = null
++        val frame = Rect()
++        for (chg in info.changes) {
++            startT.show(chg.leash)
++            val taskInfo = chg.taskInfo ?: continue
++            if (
++                leash == null &&
++                    TransitionUtil.isOpeningMode(chg.mode) &&
++                    taskInfo.activityType != ACTIVITY_TYPE_HOME &&
++                    chg.parent == null
++            ) {
++                leash = chg.leash
++                frame.set(chg.endAbsBounds)
++            }
++        }
++        val target = leash
++        if (target == null || frame.isEmpty) {
++            Log.w(TAG, "Nothing opens in $info: no reveal")
++            startT.apply()
++            finish(finishCB)
++            return
++        }
++
++        // Where the reveal starts, as the platform's: at the point, the window 8 dp plus a
++        // seventh of the point's height lower, so it rises into place.
++        val startX = (x - frame.left).coerceIn(0, frame.width()).toFloat()
++        val startY = (y - frame.top).coerceIn(0, frame.height()).toFloat()
++        val translationY = 8f * density + frame.height() / 7f * (startY / frame.height())
++        apply(startT, target, frame, startX, startY, translationY, 0f)
++        startT.apply()
++
++        val anim = ValueAnimator.ofFloat(0f, 1f)
++        anim.duration = DURATION_MS
++        anim.interpolator = LinearInterpolator()
++        anim.addUpdateListener {
++            val t = Transaction()
++            apply(t, target, frame, startX, startY, translationY, it.animatedFraction)
++            t.apply()
++        }
++        anim.addListener(forEndCallback(Runnable { finish(finishCB) }))
++        Executors.MAIN_EXECUTOR.execute { anim.start() }
++    }
++
++    /** One frame [p] (0 to 1, linear time) of the reveal. */
++    private fun apply(
++        t: Transaction,
++        leash: SurfaceControl,
++        frame: Rect,
++        startX: Float,
++        startY: Float,
++        translationY: Float,
++        p: Float,
++    ) {
++        val w = frame.width().toFloat()
++        val h = frame.height().toFloat()
++        // Width first (in 40 % of the time), height over all of it.
++        val ph = CLIP_HORIZONTAL.getInterpolation((p * 2.5f).coerceAtMost(1f))
++        val pv = TOUCH_RESPONSE.getInterpolation(p)
++        val dy = translationY * (1f - LINEAR_OUT_SLOW_IN.getInterpolation(p))
++        // The visible rect is anchored to the screen; the content moves under it.
++        val left = startX * (1f - ph)
++        val right = startX + (w - startX) * ph
++        val top = startY * (1f - pv)
++        val bottom = startY + (h - startY) * pv
++        t.setPosition(leash, frame.left.toFloat(), frame.top + dy)
++        t.setWindowCrop(
++            leash,
++            Rect(
++                left.toInt(),
++                (top - dy).toInt(),
++                kotlin.math.ceil(right).toInt(),
++                kotlin.math.ceil(bottom - dy).toInt(),
++            ),
++        )
++        val pa = (p * 4f).coerceAtMost(1f)
++        t.setAlpha(leash, 0.5f + 0.5f * LINEAR_OUT_SLOW_IN.getInterpolation(pa))
++    }
++
++    private fun finish(finishCB: IRemoteTransitionFinishedCallback) {
++        try {
++            finishCB.onTransitionFinished(null, Transaction())
++        } catch (e: RemoteException) {
++            Log.w(TAG, "Could not finish the reveal", e)
++        }
++    }
++
++    companion object {
++        private const val TAG = "ClipRevealRemote"
++
++        /** The platform's clip reveal duration (DEFAULT_APP_TRANSITION_DURATION). */
++        private const val DURATION_MS = 336L
++        private val CLIP_HORIZONTAL = PathInterpolator(0f, 0f, 0.4f, 1f)
++        private val TOUCH_RESPONSE = PathInterpolator(0.3f, 0f, 0.1f, 1f)
++        private val LINEAR_OUT_SLOW_IN = PathInterpolator(0f, 0f, 0.2f, 1f)
++    }
++}
 diff --git a/res/values-ja/lujarch_strings.xml b/res/values-ja/lujarch_strings.xml
 index a5854ade5e96e757aa033da2490798fe5f4565ed..4576d758c01b91a341c4f17cfdeaa9be88b8555d 100644
 --- a/res/values-ja/lujarch_strings.xml
@@ -108,7 +306,7 @@ index 5dc38d6c4c0b2a45da021eec3e1469b5de3f72b0..3825c73b6fe4b17e6f8982e5c6b317b4
                      // Lujarch (LCH-2): the drawer's order lives in Settings.Secure.
                      ListPreference list = (ListPreference) preference;
 diff --git a/src/com/android/launcher3/touch/WorkspaceTouchListener.java b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
-index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da7f369e23 100644
+index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..9797a75fe5d94b682132243ea8a0af0cba449e45 100644
 --- a/src/com/android/launcher3/touch/WorkspaceTouchListener.java
 +++ b/src/com/android/launcher3/touch/WorkspaceTouchListener.java
 @@ -29,8 +29,13 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
@@ -125,7 +323,7 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da
  import android.view.GestureDetector;
  import android.view.HapticFeedbackConstants;
  import android.view.InputDevice;
-@@ -44,7 +49,6 @@ import com.android.launcher3.BoxSelectionHelper;
+@@ -44,12 +49,12 @@ import com.android.launcher3.BoxSelectionHelper;
  import com.android.launcher3.CellLayout;
  import com.android.launcher3.DeviceProfile;
  import com.android.launcher3.Launcher;
@@ -133,7 +331,13 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da
  import com.android.launcher3.Workspace;
  import com.android.launcher3.dragndrop.DragLayer;
  import com.android.launcher3.logger.LauncherAtom;
-@@ -234,12 +238,35 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
+ import com.android.launcher3.testing.TestLogging;
+ import com.android.launcher3.testing.shared.TestProtocol;
++import com.android.launcher3.util.ApiWrapper;
+ import com.android.launcher3.util.TouchUtil;
+ 
+ /**
+@@ -234,12 +239,40 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
          }
      }
  
@@ -161,8 +365,13 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da
 +                return true;
 +            case DOUBLE_TAP_LINUX:
 +                try {
++                    // The launcher plays the reveal from the tap point itself (quickstep): the
++                    // window manager's clip reveal reaches only activities inside a task, and
++                    // Linux opens its own task.
 +                    mLauncher.startActivity(new Intent(ACTION_LINUX_TERMINAL)
-+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
++                            ApiWrapper.INSTANCE.get(mLauncher).createClipRevealOptions(mWorkspace,
++                                    (int) event.getX(), (int) event.getY()).toBundle());
 +                } catch (ActivityNotFoundException e) {
 +                    Log.e("WorkspaceTouchListener", "no terminal", e);
 +                }
@@ -173,3 +382,32 @@ index b2a5e3d1bb53ab7c8249721ccdb785fd9e86cca8..0b8168e46af12c4726c2a2755a0279da
 -        return false;
      }
  }
+diff --git a/src/com/android/launcher3/util/ApiWrapper.java b/src/com/android/launcher3/util/ApiWrapper.java
+index b80fe12837d65503eddaadc5b86ef43b29754eba..53330ae60ad76c36881f5d4b26b6930104990367 100644
+--- a/src/com/android/launcher3/util/ApiWrapper.java
++++ b/src/com/android/launcher3/util/ApiWrapper.java
+@@ -33,6 +33,7 @@ import android.os.UserHandle;
+ import android.view.DragAndDropPermissions;
+ import android.view.DragEvent;
+ import android.view.SurfaceControlViewHost;
++import android.view.View;
+ 
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+@@ -89,6 +90,16 @@ public class ApiWrapper {
+         return ActivityOptions.makeCustomAnimation(mContext, 0, android.R.anim.fade_out);
+     }
+ 
++    /**
++     * Lujarch: options for a launch whose window opens with a clip reveal from ({@code x},
++     * {@code y}) in {@code source}'s coordinates (Linux mode from a double tap on home). This is
++     * the window manager's clip reveal, which Android 16 plays only inside a task; the quickstep
++     * launcher plays it itself, so it also reaches a task that opens.
++     */
++    public ActivityOptions createClipRevealOptions(View source, int x, int y) {
++        return ActivityOptions.makeClipRevealAnimation(source, x, y, 0, 0);
++    }
++
+     /**
+      * Returns an intent which can be used to start the App Market activity (Installer
+      * Activity).
