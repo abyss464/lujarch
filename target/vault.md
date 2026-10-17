@@ -1,8 +1,9 @@
 # Vault
 
-Lujarch Vault shows the passwords of the owner's KeePass database and the 2FA codes of the owner's
-Aegis vault, and fills them into apps and websites. It opens only while the phone is unlocked and
-keeps nothing decrypted when no page shows it. It is the phone's autofill service.
+Lujarch Vault shows the passwords of the owner's password file and the 2FA codes of the owner's
+authenticator accounts, and fills them into apps and websites. It reads the files of the common
+password managers and authenticator apps. It opens only while the phone is unlocked and keeps
+nothing decrypted when no page shows it. It is the phone's autofill service.
 
 ## Unlocking
 
@@ -13,9 +14,10 @@ keeps nothing decrypted when no page shows it. It is the phone's autofill servic
 - Default: none
 - Verify: vm
 
-The keys that open the KeePass database and the Aegis vault are stored only wrapped by a key of the
-phone's keystore that works only while the phone is unlocked. Nothing decrypted is kept once no
-vault page is visible and no autofill request runs. No vault page can be captured in a screenshot
+The keys that open the passwords and the 2FA codes are stored only wrapped by a key of the phone's
+keystore that works only while the phone is unlocked; a password file without a password of its
+own is read only after such a key was released. Nothing decrypted is kept once no vault page is
+visible and no autofill request runs. No vault page can be captured in a screenshot
 or a recording. A page shown while the phone is locked says so and opens once it is unlocked.
 
 ### VLT-2 The sources are set up once
@@ -25,11 +27,27 @@ or a recording. A page shown while the phone is locked says so and opens once it
 - Default: on once set up
 - Verify: vm
 
-The KeePass database comes from a synced folder (SYN-8), listed with its folder, size and time, or
-from any file chosen in the document picker. It is set up once with its password and its key file,
-chosen in the document picker and never kept on the phone. The Aegis vault comes from a file and is
-set up with its password. A source turned off is not opened and not used for codes or autofill, and
-its keys are kept. A database the vault can no longer read says so, with Choose again.
+The two sources are Passwords and 2FA codes. Passwords come from one file in a synced folder
+(SYN-8), listed with its folder, size and time, or from any file chosen in the document picker.
+The vault tells the file's format from its content:
+
+- a KDBX 3.1 or 4.x database;
+- a Bitwarden JSON export, unencrypted or protected with a password;
+- a 1Password export (1PUX);
+- a CSV export of Chrome, Edge, Brave, Firefox, Safari, Bitwarden, LastPass, Proton Pass,
+  KeePassXC or Dashlane, by its header row.
+
+The file is set up once: one with a password with its password and, for a KDBX database, its key
+file if it has one, chosen in the document picker and never kept on the phone; one without a
+password as it is. About the vault shows the file's format.
+
+2FA codes come from a file chosen in the document picker: an export of Aegis, 2FAS, andOTP or
+Proton Authenticator (each plain or encrypted), FreeOTP+ (JSON or a list of links), Bitwarden or
+Bitwarden Authenticator (JSON or CSV), Ente Auth (plain text) or Steam Guard, Google
+Authenticator's export links, or any text file of otpauth links, one per line. The vault keeps the accounts in a
+file of its own, encrypted with a password: the picked file's own, or for a file without one a
+password chosen and repeated at setup. A source turned off is not opened and not used for codes or
+autofill, and its keys are kept. A file the vault can no longer read says so, with Choose again.
 
 ### VLT-3 Stored keys are forgotten on the owner's terms
 
@@ -38,8 +56,9 @@ its keys are kept. A database the vault can no longer read says so, with Choose 
 - Default: Never
 - Verify: vm
 
-Forget keys deletes the stored keys at once; the chosen files stay, so setting up again needs only
-the passwords and the key file. The chosen policy deletes them by itself.
+Forget keys deletes the stored keys at once; the chosen password file and the kept 2FA accounts
+stay, so setting up again needs only the passwords and the key file. The chosen policy deletes them
+by itself.
 
 ## Passwords and codes
 
@@ -50,8 +69,8 @@ the passwords and the key file. The chosen policy deletes them by itself.
 - Default: Verify to reveal: on; Verify to copy: off
 - Verify: vm
 
-Passwords lists the database's groups and entries and searches title, user name, URL, tags and
-group. An entry copies its user name, password and URL, and shows its notes and other fields. A
+Passwords lists the file's groups (KDBX groups, folders, vaults) and entries and searches title,
+user name, URL, tags and group. An entry copies its user name, password and URL, and shows its notes and other fields. A
 password is revealed, and with Verify to copy copied, only after a fingerprint or the screen lock.
 What a page showed is hidden again when the page stops.
 
@@ -62,12 +81,14 @@ What a page showed is hidden again when the page stops.
 - Default: none
 - Verify: vm
 
-2FA codes lists the Aegis accounts, then the KeePass entries that carry a code, each with its code
-and countdown; a tap copies it. An account is added to the Aegis vault from a QR code taken with the
+2FA codes lists the accounts of the 2FA codes, then the password entries that carry a code, each
+with its code and countdown; a tap copies it. An account is added from a QR code taken with the
 camera, a QR code in an image, a typed key, or an otpauth link, each shown for review first; the
-accounts of another Aegis file are imported. An Aegis account is renamed, starred, advanced (counter
-codes) or deleted after a confirmation. The Quick Settings tile 2FA codes opens the codes, after
-unlocking on a locked phone.
+QR code of a Google Authenticator export adds its accounts, listed for a confirmation first. Import
+from another file adds the accounts of a file in any format the 2FA codes are set up from, except
+those already there, and says how many it added and how many it could not read. An account is
+renamed, starred, advanced (counter codes) or deleted after a confirmation. The Quick Settings tile
+2FA codes opens the codes, after unlocking on a locked phone.
 
 ### VLT-6 Copied secrets leave the clipboard
 
@@ -91,7 +112,7 @@ the chosen time after the last copy.
 User name, password and one-time code fields are filled from the entries that match: an app by its
 package, a website by its domain or a parent domain, or with Same host only by its own host. The
 suggestions show in the dropdown and the keyboard's strip, which ends with Search the vault while
-that is on. Nothing is offered while the database is not set up or turned off or the phone is
+that is on. Nothing is offered while the passwords are not set up or turned off or the phone is
 locked, and never to Lujarch's own apps. When opening takes longer than the moment autofill waits,
 the suggestion says so and fills once tapped.
 

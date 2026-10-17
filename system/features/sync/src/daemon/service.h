@@ -18,7 +18,7 @@
 
 namespace lujarch::sync {
 
-// ISync for Lujarch Settings (the Sync pages) and Lujarch Vault (the databases).
+// ISync for Lujarch Settings (the Sync pages) and Lujarch Vault (the password files).
 class Service : public aidl::org::lujarch::sync::BnSync {
   public:
     ndk::ScopedAStatus getStatus(aidl::org::lujarch::sync::Status* status) override;

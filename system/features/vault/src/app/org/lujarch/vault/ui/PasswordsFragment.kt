@@ -28,21 +28,21 @@ import androidx.preference.PreferenceScreen
 import com.android.settingslib.widget.ZeroStatePreference
 import java.text.Collator
 import org.lujarch.vault.R
-import org.lujarch.vault.core.KpEntry
-import org.lujarch.vault.core.KpGroup
-import org.lujarch.vault.data.KeePassData
+import org.lujarch.vault.core.PasswordEntry
+import org.lujarch.vault.core.PasswordGroup
+import org.lujarch.vault.data.PasswordData
 import org.lujarch.vault.data.Source
 import org.lujarch.vault.data.VaultState
 
 /**
- * KeePass groups and entries, one group per page (the root group first);
+ * The passwords' groups and entries, one group per page (the root group first);
  * searching covers the whole database (title, user name, URL, tags, group).
  */
 class PasswordsFragment : BasePreferenceFragment(), MenuProvider {
     private lateinit var groupsCategory: PreferenceCategory
     private lateinit var entriesCategory: PreferenceCategory
     private lateinit var messagePref: ZeroStatePreference
-    private var shown: KeePassData? = null
+    private var shown: PasswordData? = null
     private var query = ""
 
     private val groupUuid: String?
@@ -71,14 +71,14 @@ class PasswordsFragment : BasePreferenceFragment(), MenuProvider {
     }
 
     override fun onVaultState(state: VaultState) {
-        val data = state.keepassData
+        val data = state.passwordsData
         if (data !== shown) {
             shown = data
             render()
         }
         if (data == null) {
             showMessage(
-                when (state.keepass) {
+                when (state.passwords) {
                     is Source.NotSetUp -> R.string.status_not_set_up
                     is Source.Off -> R.string.status_off
                     is Source.Loading -> R.string.status_unlocking
@@ -102,8 +102,8 @@ class PasswordsFragment : BasePreferenceFragment(), MenuProvider {
         val data = shown ?: return
         val collator = Collator.getInstance()
         val needle = query.trim().lowercase()
-        val entries: List<KpEntry>
-        val groups: List<KpGroup>
+        val entries: List<PasswordEntry>
+        val groups: List<PasswordGroup>
         if (needle.isNotEmpty()) {
             groups = emptyList()
             entries = data.db.entries.filter { matches(it, needle) }
@@ -151,12 +151,12 @@ class PasswordsFragment : BasePreferenceFragment(), MenuProvider {
         }
     }
 
-    private fun matches(e: KpEntry, needle: String): Boolean =
+    private fun matches(e: PasswordEntry, needle: String): Boolean =
         e.title.lowercase().contains(needle) || e.username.lowercase().contains(needle) ||
             e.url.lowercase().contains(needle) || e.tags.lowercase().contains(needle) ||
             e.path.any { it.lowercase().contains(needle) }
 
-    private fun findGroup(g: KpGroup, uuid: String): KpGroup? {
+    private fun findGroup(g: PasswordGroup, uuid: String): PasswordGroup? {
         if (g.uuid == uuid) return g
         for (c in g.groups) findGroup(c, uuid)?.let { return it }
         return null

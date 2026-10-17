@@ -7,13 +7,13 @@
     <string name="permission_open_description">Allows system apps to open the Lujarch Vault pages.</string>
 
     <!-- Home -->
-    <string name="home_intro_not_set_up">Passwords from your KeePass database and 2FA codes from your Aegis vault. Set them up once under Sources; after that the vault opens whenever the phone is unlocked.</string>
+    <string name="home_intro_not_set_up">Passwords from your password file and 2FA codes from the accounts of your authenticator. Set them up once under Sources; after that the vault opens whenever the phone is unlocked.</string>
     <string name="home_status">Status</string>
     <string name="status_not_set_up">Not set up</string>
     <string name="status_off">Turned off</string>
     <string name="status_locked">Locked. Unlock the phone to open it.</string>
     <string name="status_unlocking">Unlocking…</string>
-    <string name="status_reloading">Loading a newer database…</string>
+    <string name="status_reloading">Loading a newer file…</string>
     <string name="status_unlocked">Open, read at %1$s</string>
     <string name="status_failed">Couldn\'t open the vault</string>
     <string name="status_idle">Not loaded yet</string>
@@ -22,8 +22,8 @@
 
     <!-- 2FA codes -->
     <string name="codes_title">2FA codes</string>
-    <string name="codes_aegis">Aegis</string>
-    <string name="codes_keepass">KeePass</string>
+    <string name="codes_accounts">Accounts</string>
+    <string name="codes_passwords">Passwords</string>
     <string name="codes_none">No 2FA codes</string>
     <string name="codes_search_hint">Search accounts</string>
     <string name="code_unsupported">Type not supported</string>
@@ -34,14 +34,14 @@
     <string name="codes_add_scan">Scan QR code</string>
     <string name="codes_add_image">Scan QR code in an image</string>
     <string name="codes_add_manual">Enter key</string>
-    <string name="codes_add_import">Import from an Aegis file</string>
-    <string name="codes_import_message">Password of the picked file. Its accounts that this vault does not have yet are added; this vault keeps its own password.</string>
+    <string name="codes_add_import">Import from another file</string>
+    <string name="codes_import_message">Password of the picked file. Its accounts that the 2FA codes do not have yet are added; the 2FA codes keep their own password.</string>
     <string name="error_import_accounts">Importing the accounts failed</string>
     <plurals name="codes_imported">
         <item quantity="one">%1$d account added, %2$d already there</item>
         <item quantity="other">%1$d accounts added, %2$d already there</item>
     </plurals>
-    <string name="codes_add_needs_aegis">Accounts are kept in the Aegis vault: set it up and turn it on in Sources first.</string>
+    <string name="codes_add_needs_source">Accounts are kept in the 2FA codes: set them up and turn them on in Sources first.</string>
     <string name="codes_add_confirm">Add</string>
     <string name="codes_added">Account added</string>
     <string name="codes_edit">Edit account</string>
@@ -51,7 +51,7 @@
     <string name="codes_next">Next code</string>
     <string name="codes_delete">Delete</string>
     <string name="codes_delete_title">Delete this account?</string>
-    <string name="codes_delete_message">%1$s is removed from the Aegis vault. Without it you cannot get its codes: turn off two-step verification for it first, or keep another way to sign in.</string>
+    <string name="codes_delete_message">%1$s is removed from the 2FA codes. Without it you cannot get its codes: turn off two-step verification for it first, or keep another way to sign in.</string>
     <string name="codes_deleted">Account deleted</string>
     <string name="codes_field_issuer">Service</string>
     <string name="codes_field_account">Account</string>
@@ -89,7 +89,7 @@
     <!-- Entry -->
     <string name="entry_title">Entry</string>
     <string name="entry_untitled">(no title)</string>
-    <string name="entry_missing">This entry is no longer in the database</string>
+    <string name="entry_missing">This entry is no longer in the file</string>
     <string name="entry_other_fields">Other fields</string>
     <string name="entry_details">Details</string>
     <string name="entry_group">Group</string>
@@ -118,31 +118,31 @@
 
     <!-- Sources (first-time setup and later changes) -->
     <string name="sources_title">Sources</string>
-    <string name="sources_summary">KeePass: %1$s · Aegis: %2$s</string>
+    <string name="sources_summary">Passwords: %1$s · 2FA codes: %2$s</string>
     <string name="state_set_up">set up</string>
     <string name="state_not_set_up">not set up</string>
     <string name="state_off">off</string>
-    <string name="sources_keepass">KeePass database</string>
-    <string name="sources_keepass_use">Use the KeePass database</string>
-    <string name="sources_keepass_on">Passwords, autofill and the 2FA codes of its entries</string>
-    <string name="sources_keepass_off">Off: no passwords are shown or filled. The stored key stays.</string>
-    <string name="sources_database">Database</string>
-    <string name="sources_database_none">None chosen. Tap to choose one from a synced folder or another location.</string>
-    <string name="sources_database_synced">%1$s · synced folder %2$s</string>
-    <string name="sources_database_document">%1$s · %2$s</string>
-    <string name="sources_database_document_plain">%1$s · chosen file</string>
+    <string name="sources_passwords">Passwords</string>
+    <string name="sources_passwords_use">Use passwords</string>
+    <string name="sources_passwords_on">Passwords, autofill and the 2FA codes of its entries</string>
+    <string name="sources_passwords_off">Off: no passwords are shown or filled. The stored key stays.</string>
+    <string name="sources_file">File</string>
+    <string name="sources_file_none">None chosen. Tap to choose one from a synced folder or another location.</string>
+    <string name="sources_file_synced">%1$s · synced folder %2$s</string>
+    <string name="sources_file_document">%1$s · %2$s</string>
+    <string name="sources_file_document_plain">%1$s · chosen file</string>
     <string name="sources_modified">Modified %1$s</string>
-    <string name="sources_database_pending">Needs the password: tap Set up KeePass again</string>
-    <string name="sources_database_no_access">Access to this file was revoked. Tap to choose it again.</string>
-    <string name="sources_database_missing">This file no longer exists. Tap to choose another.</string>
-    <string name="sources_choose_database">Choose the database</string>
-    <string name="sources_change_database">Change the database</string>
+    <string name="sources_file_pending">Needs the password: tap Set up passwords again</string>
+    <string name="sources_file_no_access">Access to this file was revoked. Tap to choose it again.</string>
+    <string name="sources_file_missing">This file no longer exists. Tap to choose another.</string>
+    <string name="sources_choose_file">Choose the password file</string>
+    <string name="sources_change_file">Change the password file</string>
     <string name="sources_choose_other">Choose from another location…</string>
-    <string name="sources_found_none">The synced folders hold no KeePass database (.kdbx).</string>
+    <string name="sources_found_none">The synced folders hold no password file (.kdbx, .json, .1pux, .csv).</string>
     <string name="sources_found_item">%1$s · %2$s · %3$s</string>
-    <!-- A database in a synced folder that cannot be used: folder label, reason. -->
+    <!-- A file in a synced folder that cannot be used: folder label, reason. -->
     <string name="sources_skipped_item">%1$s · not available: %2$s</string>
-    <string name="sources_database_unavailable">Not available: %1$s</string>
+    <string name="sources_file_unavailable">Not available: %1$s</string>
     <string name="skip_reason_name">the file name is not valid UTF-8</string>
     <!-- File size, limit. -->
     <string name="skip_reason_too_large">%1$s, over the %2$s limit</string>
@@ -150,9 +150,9 @@
     <string name="skip_reason_symlink">a symbolic link</string>
     <string name="skip_reason_not_regular">not a regular file</string>
     <string name="skip_reason_other">cannot be read</string>
-    <string name="sources_found_truncated">Not every database is listed: the search stopped at its limit.</string>
-    <string name="sources_switching">Opening the chosen database with the stored key…</string>
-    <string name="sources_switch_needs_password">The stored key does not open this database. Enter its password.</string>
+    <string name="sources_found_truncated">Not every file is listed: the search stopped at its limit.</string>
+    <string name="sources_switching">Opening the chosen file with the stored key…</string>
+    <string name="sources_switch_needs_password">The stored key does not open this file. Enter its password.</string>
     <string name="sources_no_grant">This location does not allow lasting access. Choose the file from another location.</string>
     <string name="sources_key_file">Key file</string>
     <string name="key_file_none">No key file</string>
@@ -162,29 +162,30 @@
     <string name="key_file_summary_stored">Part of the stored key. Choose it again only to set up again.</string>
     <string name="key_file_summary_picked">%1$s (%2$s). Used for setup only; it is not saved on the phone.</string>
     <string name="key_file_summary_imported">Imported from a computer (%1$s). Deleted from the phone once setup succeeds.</string>
-    <string name="sources_keepass_setup">Set up KeePass</string>
-    <string name="sources_keepass_setup_again">Set up KeePass again</string>
-    <string name="sources_keepass_setup_summary">Enter the database password; it is checked, and only the key derived from it is kept</string>
-    <string name="sources_keepass_setup_again_summary">After the password or key file was changed on the computer</string>
-    <string name="sources_password_message">Database: %1$s\nKey file: %2$s</string>
+    <string name="sources_passwords_setup">Set up passwords</string>
+    <string name="sources_passwords_setup_again">Set up passwords again</string>
+    <string name="sources_passwords_setup_summary">Enter the file\'s password; it is checked, and only the key derived from it is kept</string>
+    <string name="sources_passwords_setup_again_summary">After the password or key file was changed on the computer</string>
+    <string name="sources_passwords_setup_again_encrypted_summary">After the file\'s password was changed</string>
+    <string name="sources_password_message">File: %1$s\nKey file: %2$s</string>
     <string name="setup_password">Password</string>
     <string name="setup_checking">Checking… this takes a few seconds</string>
-    <string name="setup_keepass_password">KeePass password</string>
-    <string name="setup_aegis_password">Aegis password</string>
-    <string name="sources_aegis">Aegis vault</string>
-    <string name="sources_aegis_use">Use the Aegis vault</string>
-    <string name="sources_aegis_on">2FA codes</string>
-    <string name="sources_aegis_off">Off: its codes are not shown. The stored key stays.</string>
-    <string name="sources_aegis_file">Vault file</string>
-    <string name="sources_aegis_file_present">%1$s · %2$s · imported %3$s. Tap to replace it.</string>
-    <string name="sources_aegis_file_unnamed">Aegis vault file</string>
-    <string name="sources_aegis_file_missing">Not imported yet. Tap to import an encrypted Aegis export.</string>
-    <string name="sources_aegis_setup">Set up Aegis</string>
-    <string name="sources_aegis_setup_again">Set up Aegis again</string>
-    <string name="sources_aegis_setup_summary">Enter the vault password; it is checked, and only the master key it unlocks is kept</string>
-    <string name="sources_aegis_new_password">Password of the new vault file</string>
-    <string name="sources_aegis_message">File: %1$s</string>
-    <string name="sources_aegis_pick_again">The picked vault file was not kept when the app restarted. Pick it again.</string>
+    <string name="setup_file_password">Password of the file</string>
+    <string name="setup_codes_password">Password of the 2FA codes</string>
+    <string name="sources_codes">2FA codes</string>
+    <string name="sources_codes_use">Use 2FA codes</string>
+    <string name="sources_codes_on">The codes of its accounts</string>
+    <string name="sources_codes_off">Off: its codes are not shown. The stored key stays.</string>
+    <string name="sources_accounts">Accounts</string>
+    <string name="sources_accounts_present">%1$s · imported %2$s. Tap to replace them with those of another file.</string>
+    <string name="sources_accounts_unnamed">Imported file</string>
+    <string name="sources_accounts_missing">None imported. Tap to import the accounts of an authenticator app from its export file.</string>
+    <string name="sources_codes_setup">Set up 2FA codes</string>
+    <string name="sources_codes_setup_again">Set up 2FA codes again</string>
+    <string name="sources_codes_setup_summary">Enter the password of the 2FA codes; it is checked, and only the master key it unlocks is kept</string>
+    <string name="sources_codes_file_password">Password of the picked file</string>
+    <string name="sources_codes_message">File: %1$s. Its password then protects the 2FA codes as well.</string>
+    <string name="sources_codes_pick_again">The picked file was not kept when the app restarted. Pick it again.</string>
     <string name="setup_footer">Your passwords are not stored. The vault keeps only the keys derived from them, locked by the phone\'s Keystore, which releases them only while the phone is unlocked. The screen lock is therefore the only barrier to all passwords and codes, and apps you granted root could read them while the phone is unlocked.</string>
 
     <!-- Settings -->
@@ -234,13 +235,13 @@
     <string name="settings_delete_keyfile">Delete imported key file</string>
     <string name="settings_delete_keyfile_summary">The key file imported from a computer (%1$s) is still on the phone</string>
     <string name="settings_delete_keyfile_none">No imported key file on the phone</string>
-    <string name="settings_delete_keyfile_confirm">The imported key file is deleted. To set up KeePass again, choose the key file under Sources or import it again.</string>
+    <string name="settings_delete_keyfile_confirm">The imported key file is deleted. To set up the passwords again, choose the key file under Sources or import it again.</string>
     <string name="settings_delete_keyfile_action">Delete</string>
-    <string name="settings_footer">Nothing is kept decrypted: the vault is opened for the pages you look at and for each autofill request, and wiped when you leave them. The phone\'s Keystore opens it only while the phone is unlocked. The KeePass database is edited in KeePassXC and arrives through sync or the chosen file.</string>
+    <string name="settings_footer">Nothing is kept decrypted: the vault is opened for the pages you look at and for each autofill request, and wiped when you leave them. The phone\'s Keystore opens it only while the phone is unlocked. The password file is edited in the app that made it and arrives through sync or the chosen file.</string>
 
     <!-- About the vault (state of the sources) -->
-    <string name="state_keepass">KeePass database</string>
-    <string name="state_aegis">Aegis vault</string>
+    <string name="state_passwords">Passwords</string>
+    <string name="state_codes">2FA codes</string>
     <string name="state_keystore">Keystore</string>
     <string name="state_keystore_key">Wrapping key</string>
     <string name="state_keystore_none">No key (nothing set up)</string>
@@ -286,10 +287,10 @@
     <string name="excluded_choose_app">Choose an app</string>
 
     <!-- Settings search -->
-    <string name="search_keywords_vault">password, passwords, password manager, KeePass, autofill, vault</string>
-    <string name="search_keywords_codes">2FA, two-factor, verification code, one-time password, OTP, TOTP, authenticator, Aegis</string>
-    <string name="search_keywords_passwords">password, login, account, KeePass</string>
-    <string name="search_keywords_sources">KeePass, Aegis, database, key file, kdbx, import</string>
+    <string name="search_keywords_vault">password, passwords, password manager, autofill, vault, KeePass, Bitwarden, 1Password</string>
+    <string name="search_keywords_codes">2FA, two-factor, verification code, one-time password, OTP, TOTP, authenticator, Aegis, 2FAS, Google Authenticator</string>
+    <string name="search_keywords_passwords">password, login, account, KeePass, Bitwarden</string>
+    <string name="search_keywords_sources">password file, 2FA, key file, import, kdbx, csv, KeePass, Bitwarden, 1Password, Aegis, 2FAS</string>
     <string name="search_keywords_settings">clipboard, autofill, forget keys, fingerprint</string>
     <string name="search_keywords_excluded">exclude, never fill, blocklist, scope, subdomains</string>
 
@@ -301,14 +302,14 @@
 
     <!-- Errors -->
     <string name="error_page">This page cannot be opened.</string>
-    <string name="error_load_keepass">Couldn\'t open the KeePass database</string>
-    <string name="error_load_aegis">Couldn\'t open the Aegis vault</string>
+    <string name="error_load_passwords">Couldn\'t open the passwords</string>
+    <string name="error_load_codes">Couldn\'t open the 2FA codes</string>
     <string name="error_list_folder">Couldn\'t search the synced folders</string>
-    <string name="error_setup_keepass">KeePass setup failed</string>
-    <string name="error_setup_aegis">Aegis setup failed</string>
-    <string name="error_import_aegis">Couldn\'t read the vault file</string>
-    <string name="error_switch_database">Couldn\'t change the database</string>
-    <string name="error_choose_database">Couldn\'t use the chosen file</string>
+    <string name="error_setup_passwords">Setting up the passwords failed</string>
+    <string name="error_setup_codes">Setting up the 2FA codes failed</string>
+    <string name="error_read_file">Couldn\'t read the file</string>
+    <string name="error_switch_file">Couldn\'t change the file</string>
+    <string name="error_choose_file">Couldn\'t use the chosen file</string>
     <string name="error_read_key_file">Couldn\'t read the key file</string>
     <string name="error_no_browser">No app can open this URL</string>
     <string name="error_no_settings">This page is not available on this phone</string>
@@ -319,21 +320,21 @@
     <string name="error_daemon_remote">The synced folders reported: %1$s</string>
     <string name="error_daemon_closed">The connection to the synced folders was closed.</string>
     <string name="error_source_permission">The chosen file cannot be read: access was revoked. Choose it again under Sources.</string>
-    <string name="error_source_missing">The chosen file no longer exists. Choose the database again under Sources.</string>
+    <string name="error_source_missing">The chosen file no longer exists. Choose it again under Sources.</string>
     <string name="error_source_too_large">The file is too large (%1$s).</string>
     <string name="error_keys_forgotten">The keys were forgotten as set in Settings. Set up again under Sources.</string>
-    <string name="error_kdbx_not_kdbx">The file is not a KeePass database.</string>
-    <string name="error_kdbx_kdb1">KeePass 1 databases (.kdb) are not supported.</string>
+    <string name="error_kdbx_not_kdbx">The file is not a KDBX database.</string>
+    <string name="error_kdbx_kdb1">KDB databases (.kdb) are not supported; convert the file to KDBX.</string>
     <string name="error_kdbx_version">This database version is not supported (%1$s).</string>
-    <string name="error_kdbx_cipher">This database uses a cipher that is not supported (%1$s). Switch it to AES-256 or ChaCha20 in KeePassXC.</string>
+    <string name="error_kdbx_cipher">This database uses a cipher that is not supported (%1$s). Switch it to AES-256 or ChaCha20 in the app that edits it.</string>
     <string name="error_kdbx_kdf">This key derivation is not supported (%1$s).</string>
     <string name="error_kdbx_wrong_key">Wrong password or key file.</string>
     <string name="error_kdbx_corrupt">The database file is damaged (%1$s).</string>
-    <string name="error_aegis_format">The file is not an Aegis vault this app can read (%1$s).</string>
-    <string name="error_aegis_no_slot">The Aegis vault has no password. Export an encrypted vault from Aegis.</string>
-    <string name="error_aegis_wrong_password">Wrong Aegis password.</string>
-    <string name="error_aegis_wrong_key">The stored key does not open this Aegis vault. Set it up again.</string>
-    <string name="error_aegis_missing">The file is missing.</string>
+    <string name="error_codes_format">The file holds no 2FA accounts the vault can read (%1$s).</string>
+    <string name="error_codes_no_slot">This file opens only with a fingerprint in the app that made it. Export it with a password, or without one.</string>
+    <string name="error_wrong_password">Wrong password.</string>
+    <string name="error_codes_wrong_key">The stored key does not open the 2FA codes. Set them up again.</string>
+    <string name="error_file_missing">The file is missing.</string>
     <string name="error_keystore">The phone\'s Keystore did not release the key. Unlock the phone and try again.</string>
     <string name="error_key_file">The key file is not valid (%1$s).</string>
     <string name="error_otp">These one-time code settings are not supported (%1$s).</string>
@@ -348,20 +349,40 @@
         <item quantity="one">%d entry</item>
         <item quantity="other">%d entries</item>
     </plurals>
-    <plurals name="setup_keepass_ok">
-        <item quantity="one">KeePass set up: %d entry</item>
-        <item quantity="other">KeePass set up: %d entries</item>
+    <plurals name="setup_passwords_ok">
+        <item quantity="one">Passwords set up: %d entry</item>
+        <item quantity="other">Passwords set up: %d entries</item>
     </plurals>
-    <plurals name="setup_aegis_ok">
-        <item quantity="one">Aegis set up: %d account</item>
-        <item quantity="other">Aegis set up: %d accounts</item>
+    <plurals name="setup_codes_ok">
+        <item quantity="one">2FA codes set up: %d account</item>
+        <item quantity="other">2FA codes set up: %d accounts</item>
     </plurals>
     <plurals name="sources_switched">
-        <item quantity="one">Database changed: %d entry</item>
-        <item quantity="other">Database changed: %d entries</item>
+        <item quantity="one">File changed: %d entry</item>
+        <item quantity="other">File changed: %d entries</item>
     </plurals>
     <plurals name="settings_excluded_count">
         <item quantity="one">%d app or site</item>
         <item quantity="other">%d apps and sites</item>
+    </plurals>
+    <string name="sources_passwords_setup_plain_summary">This file has no password: the vault reads it as it is, and only while the phone is unlocked</string>
+    <string name="sources_file_message">File: %1$s</string>
+    <string name="setup_password_again">Repeat the password</string>
+    <string name="setup_password_empty">Enter a password</string>
+    <string name="setup_password_mismatch">The passwords do not match</string>
+    <string name="sources_codes_new_password">Password for the 2FA codes</string>
+    <string name="sources_codes_new_password_message">File: %1$s. It has no password: the vault keeps its accounts encrypted with the one you choose here, and asks for it again only after the keys were forgotten.</string>
+    <string name="error_not_passwords">This file holds no passwords the vault can read. It reads KDBX databases, Bitwarden exports (JSON), 1Password exports (1PUX) and the CSV exports of browsers and password managers.</string>
+    <string name="error_not_codes">This file holds no 2FA accounts the vault can read. It reads the exports of Aegis, 2FAS, andOTP, FreeOTP+, Bitwarden Authenticator, Proton Authenticator, Ente Auth and Google Authenticator, and lists of otpauth links.</string>
+    <string name="error_account_key">This export is encrypted with the account\'s key. Export it again protected with a password, or unencrypted.</string>
+    <string name="error_file_damaged">The file is damaged (%1$s).</string>
+    <string name="error_needs_setup">The stored key is not for a file of this kind. Set up the passwords again.</string>
+    <plurals name="codes_not_readable">
+        <item quantity="one">%d account of the file could not be read</item>
+        <item quantity="other">%d accounts of the file could not be read</item>
+    </plurals>
+    <plurals name="codes_add_several">
+        <item quantity="one">Add %d account?</item>
+        <item quantity="other">Add %d accounts?</item>
     </plurals>
 </resources>

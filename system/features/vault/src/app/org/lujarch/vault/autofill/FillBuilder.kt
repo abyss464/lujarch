@@ -37,15 +37,15 @@ import java.text.Collator
 import java.util.concurrent.atomic.AtomicInteger
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
-import org.lujarch.vault.core.KpEntry
+import org.lujarch.vault.core.PasswordEntry
 import org.lujarch.vault.core.match.EntryMatcher
 import org.lujarch.vault.core.otp.Otp
-import org.lujarch.vault.data.KeePassData
+import org.lujarch.vault.data.PasswordData
 import org.lujarch.vault.data.Vault
 import org.lujarch.vault.ui.VaultActivity
 
 /**
- * Builds autofill responses: one dataset per matching KeePass entry, plus a
+ * Builds autofill responses: one dataset per matching password entry, plus a
  * "search" dataset that opens the entry picker; each with a dropdown
  * (RemoteViews) and, when the keyboard asks for them, an inline presentation.
  */
@@ -53,7 +53,7 @@ object FillBuilder {
     private val requestCodes = AtomicInteger(1)
 
     /** Entries for [form]: web pages by domain only, apps by package only. */
-    fun matches(form: ParsedForm, data: KeePassData): List<KpEntry> {
+    fun matches(form: ParsedForm, data: PasswordData): List<PasswordEntry> {
         val entries = data.db.entries
         val found = form.webDomain?.let { EntryMatcher.matchWeb(entries, it, Vault.prefs.autofillSubdomains) }
             ?: EntryMatcher.matchApp(entries, form.packageName)
@@ -64,7 +64,7 @@ object FillBuilder {
     fun response(
         context: Context,
         form: ParsedForm,
-        data: KeePassData,
+        data: PasswordData,
         inline: InlineSuggestionsRequest?,
         withPicker: Boolean,
     ): FillResponse? {
@@ -87,7 +87,7 @@ object FillBuilder {
     }
 
     /** A dataset filling [entry] into [form]; null when the entry has nothing for its fields. */
-    fun entryDataset(context: Context, form: ParsedForm, entry: KpEntry, inlineSpec: InlinePresentationSpec?): Dataset? {
+    fun entryDataset(context: Context, form: ParsedForm, entry: PasswordEntry, inlineSpec: InlinePresentationSpec?): Dataset? {
         val builder = Dataset.Builder(
             presentations(context, entry.title.ifEmpty { context.getString(R.string.entry_untitled) }, entry.username, inlineSpec, pinned = false),
         )

@@ -1,5 +1,6 @@
-"""The vault tests' helpers: a KeePass database with a key file and an Aegis vault, both made up for
-the tests in the test's output folder, and the steps on the vault's pages that several tests share.
+"""The vault tests' helpers: a KDBX database with a key file and an encrypted Aegis export, both made
+up for the tests in the test's output folder, and the steps on the vault's pages that several tests
+share.
 
 Every password, key file and 2FA secret here is made up for the tests.
 """
@@ -47,7 +48,7 @@ ACCOUNTS = [
 
 
 def keepass(name="vault.kdbx", entries=ENTRIES, password=KEEPASS_PASSWORD):
-    """A KeePass database with a key file: (database, key file)."""
+    """A KDBX database with a key file, as KeePassXC writes it: (database, key file)."""
     folder = OUT / "keepass"
     folder.mkdir(parents=True, exist_ok=True)
     db, key = folder / name, folder / (Path(name).stem + ".keyx")
@@ -174,11 +175,11 @@ def enter_password(d, password):
     d.tap(d.wait(text="OK", timeout=10))
 
 
-def set_up_keepass(d, db_name, key_name, synced=True):
-    """Sources: the database (from the synced folder or the document picker), its key file from
-    the document picker, and its password."""
+def set_up_passwords(d, db_name, key_name, synced=True):
+    """Sources: the password file (from the synced folder or the document picker), its key file
+    from the document picker, and its password."""
     vault_page(d, ("Lujarch Vault", "Sources"))
-    d.tap(d.scroll_to(text="Database"))
+    d.tap(d.scroll_to(text="File"))
     if synced:
         d.tap(d.wait(contains=db_name, timeout=20))
     else:
@@ -187,18 +188,18 @@ def set_up_keepass(d, db_name, key_name, synced=True):
     d.tap(d.scroll_to(text="Key file"))
     d.tap(d.wait(text="Choose a file…", timeout=10))
     pick(d, "Download", key_name)
-    d.tap(d.scroll_to(text="Set up KeePass"))
+    d.tap(d.scroll_to(text="Set up passwords"))
     enter_password(d, KEEPASS_PASSWORD)
-    check(d.wait(text="Set up KeePass again", timeout=90), "KeePass is set up")
+    check(d.wait(text="Set up passwords again", timeout=90), "the passwords are set up")
 
 
-def set_up_aegis(d, file_name):
+def set_up_codes(d, file_name):
     vault_page(d, ("Lujarch Vault", "Sources"))
-    d.tap(d.scroll_to(text="Vault file"))
+    d.tap(d.scroll_to(text="Accounts"))
     pick(d, "Download", file_name)
     # The picked file is set up at once with its password.
     enter_password(d, AEGIS_PASSWORD)
-    check(d.wait(text="Set up Aegis again", timeout=90), "Aegis is set up")
+    check(d.wait(text="Set up 2FA codes again", timeout=90), "the 2FA codes are set up")
 
 
 def reset(d):

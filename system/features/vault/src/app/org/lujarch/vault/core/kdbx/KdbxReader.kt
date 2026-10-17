@@ -22,9 +22,8 @@ import java.util.zip.GZIPInputStream
 import javax.crypto.BadPaddingException
 import org.lujarch.vault.core.ByteReader
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.KdbxDatabase
+import org.lujarch.vault.core.PasswordDatabase
 import org.lujarch.vault.core.KdbxFormatError
-import org.lujarch.vault.core.KdbxInfo
 import org.lujarch.vault.core.WipeableBuffer
 import org.lujarch.vault.core.crypto.Aes
 import org.lujarch.vault.core.crypto.Argon2
@@ -48,7 +47,7 @@ object KdbxReader {
     private const val STREAM_CHACHA20 = 3
 
     /** Timing of the last [open] step that dominates unlock time; for the state page. */
-    class Result(val database: KdbxDatabase, val kdfMillis: Long, val totalMillis: Long)
+    class Result(val database: PasswordDatabase, val kdfMillis: Long, val totalMillis: Long)
 
     /** Runs the KDF on [compositeKey] and decrypts [file]. */
     fun open(file: ByteArray, compositeKey: ByteArray): Result {
@@ -70,7 +69,7 @@ object KdbxReader {
      * [header]'s KDF parameters): no KDF runs. A key made for other
      * parameters fails like a wrong password (WRONG_KEY).
      */
-    fun openWithKey(file: ByteArray, header: KdbxHeader, transformedKey: ByteArray): KdbxDatabase =
+    fun openWithKey(file: ByteArray, header: KdbxHeader, transformedKey: ByteArray): PasswordDatabase =
         if (header.major == 4) readV4(file, header, transformedKey) else readV3(file, header, transformedKey)
 
     fun transformKey(kdf: Kdf, compositeKey: ByteArray): ByteArray = when (kdf) {
@@ -81,7 +80,7 @@ object KdbxReader {
         )
     }
 
-    private fun readV4(file: ByteArray, header: KdbxHeader, transformed: ByteArray): KdbxDatabase {
+    private fun readV4(file: ByteArray, header: KdbxHeader, transformed: ByteArray): PasswordDatabase {
         val r = ByteReader(file, header.headerEnd)
         val headerBytes = file.copyOfRange(0, header.headerEnd)
         val storedHash = guard { r.bytes(32) }
@@ -158,7 +157,7 @@ object KdbxReader {
         }
     }
 
-    private fun readV3(file: ByteArray, header: KdbxHeader, transformed: ByteArray): KdbxDatabase {
+    private fun readV3(file: ByteArray, header: KdbxHeader, transformed: ByteArray): PasswordDatabase {
         val cipherKey = Bytes.sha256(header.masterSeed, transformed)
         var plain: ByteArray? = null
         var xml: ByteArray? = null
@@ -266,12 +265,8 @@ object KdbxReader {
         }
     }
 
-    private fun info(header: KdbxHeader) = KdbxInfo(
-        version = header.versionLabel,
-        cipher = header.cipher.label,
-        kdf = header.kdf.summary,
-        compressed = header.compressed,
-    )
+    /** "KDBX 4.1 · AES-256 · Argon2d": the format line of the state page. */
+    private fun info(header: KdbxHeader) = "KDBX ${header.versionLabel} · ${header.cipher.label} · ${header.kdf.summary.name}"
 
     private inline fun <T> guard(block: () -> T): T = try {
         block()

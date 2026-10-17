@@ -51,15 +51,14 @@ import org.lujarch.settings.pages.showDialog
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.PendingAegisImport
-import org.lujarch.vault.core.aegis.AegisException
-import org.lujarch.vault.core.aegis.AegisVault
-import org.lujarch.vault.core.kdbx.KdbxException
+import org.lujarch.vault.core.PendingImport
+import org.lujarch.vault.core.formats.CodeFiles
 import org.lujarch.vault.data.SyncFiles
 import org.lujarch.vault.data.DbSource
 import org.lujarch.vault.data.DocumentInfo
 import org.lujarch.vault.data.FoundDatabases
 import org.lujarch.vault.data.KeyFileChoice
+import org.lujarch.vault.data.PasswordNeededException
 import org.lujarch.vault.data.SkippedDatabase
 import org.lujarch.vault.data.SourceUnavailableException
 import org.lujarch.vault.data.Sources
@@ -67,36 +66,42 @@ import org.lujarch.vault.data.Vault
 import org.lujarch.vault.data.VaultState
 
 /**
- * The vault's sources (VLT-2): the KeePass database (a file in a synced
- * folder or a document chosen with the system file picker), its key file
- * and password; the Aegis vault file and its password. Each source can be
- * turned off, replaced and set up again. A setup opens the source to check
- * the password, then only the derived key is stored, wrapped by the
- * Keystore (VLT-1). Passwords live in char arrays wiped
- * after use; a picked key file only as its derived key, in memory. The
- * dialogs are page dialogs: a recreation brings them back, the
- * password fields empty.
+ * The vault's sources (VLT-2): the passwords' file (in a synced folder or a
+ * document chosen with the system file picker; its format read from its
+ * content), with its password and, for a KDBX database, its key file; the
+ * 2FA accounts, taken from a file of an authenticator app into the vault's
+ * own file, with its password (the picked file's, or a new one for a file
+ * without). Each source can be turned off, replaced and set up again. A
+ * setup opens the source to check the password, then only the derived key
+ * is stored, wrapped by the Keystore (VLT-1). Passwords live in char arrays
+ * wiped after use; a picked key file only as its derived key, in memory.
+ * The dialogs are page dialogs: a recreation brings them back, the password
+ * fields empty.
  */
 class SourcesFragment : BasePreferenceFragment() {
-    private lateinit var kpUse: SwitchPreferenceCompat
-    private lateinit var kpDatabase: Preference
-    private lateinit var kpKeyFile: Preference
-    private lateinit var kpSetup: Preference
-    private lateinit var aeUse: SwitchPreferenceCompat
-    private lateinit var aeFile: Preference
-    private lateinit var aeSetup: Preference
+    private lateinit var pwUse: SwitchPreferenceCompat
+    private lateinit var pwFile: Preference
+    private lateinit var pwKeyFile: Preference
+    private lateinit var pwSetup: Preference
+    private lateinit var cdUse: SwitchPreferenceCompat
+    private lateinit var cdFile: Preference
+    private lateinit var cdSetup: Preference
 
     /** The databases in the synced folders, searched when the page resumes; null when the search failed. */
     private var found: FoundDatabases? = null
     /** Facts of the chosen document, or why it cannot be read. */
     private var documentInfo: DocumentInfo? = null
     private var documentProblem: SourceUnavailableException.Reason? = null
-    /** Chosen while KeePass is set up, and not opened by the stored key: waits for its password. */
+    /** Chosen while the passwords are set up, and not opened by the stored key: waits for its password. */
     private var pendingSource: DbSource? = null
+    /** What the chosen file that is not set up yet needs, read when the page resumes; null while unknown. */
+    private var fileKind: Vault.PasswordFileKind? = null
+    /** Why the chosen file that is not set up yet cannot be used. */
+    private var fileProblem: Throwable? = null
     /** The key file of the next setup; null: the imported one when present, else none. */
     private var keyFile: KeyFileChoice? = null
-    private var keepassBusy = 0
-    private var aegisBusy = false
+    private var passwordsBusy = 0
+    private var codesBusy = false
     /** Opened from the home page's "choose again": show the choice as soon as the page is ready. */
     private var rechoose = false
 
@@ -106,8 +111,8 @@ class SourcesFragment : BasePreferenceFragment() {
     private val pickKeyFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onKeyFilePicked(uri)
     }
-    private val pickAegis = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) onAegisPicked(uri)
+    private val pickCodes = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onCodesPicked(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -128,32 +133,32 @@ class SourcesFragment : BasePreferenceFragment() {
     }
 
     override fun buildScreen(screen: PreferenceScreen, savedInstanceState: Bundle?) {
-        val kp = screen.add(PreferenceCategory(prefContext)) {
-            key = "keepass"
-            setTitle(R.string.sources_keepass)
+        val pw = screen.add(PreferenceCategory(prefContext)) {
+            key = "passwords"
+            setTitle(R.string.sources_passwords)
         }
-        kpUse = kp.add(SwitchPreferenceCompat(prefContext)) {
-            key = "kp_use"
-            setTitle(R.string.sources_keepass_use)
+        pwUse = pw.add(SwitchPreferenceCompat(prefContext)) {
+            key = "pw_use"
+            setTitle(R.string.sources_passwords_use)
             setIcon(R.drawable.ic_key)
             isPersistent = false
             setOnPreferenceChangeListener { _, v ->
-                Vault.setKeePassEnabled(v as Boolean)
+                Vault.setPasswordsEnabled(v as Boolean)
                 render()
                 true
             }
         }
-        kpDatabase = kp.add(Preference(prefContext)) {
-            key = "kp_database"
-            setTitle(R.string.sources_database)
+        pwFile = pw.add(Preference(prefContext)) {
+            key = "pw_file"
+            setTitle(R.string.sources_file)
             setIcon(R.drawable.ic_folder)
             setOnPreferenceClickListener {
                 showDatabaseChooser()
                 true
             }
         }
-        kpKeyFile = kp.add(Preference(prefContext)) {
-            key = "kp_key_file"
+        pwKeyFile = pw.add(Preference(prefContext)) {
+            key = "pw_key_file"
             setTitle(R.string.sources_key_file)
             isIconSpaceReserved = true
             setOnPreferenceClickListener {
@@ -161,44 +166,44 @@ class SourcesFragment : BasePreferenceFragment() {
                 true
             }
         }
-        kpSetup = kp.add(Preference(prefContext)) {
-            key = "kp_setup"
+        pwSetup = pw.add(Preference(prefContext)) {
+            key = "pw_setup"
             setIcon(R.drawable.ic_check)
             setOnPreferenceClickListener {
-                askKeePassPassword()
+                setUpPasswords()
                 true
             }
         }
 
-        val ae = screen.add(PreferenceCategory(prefContext)) {
-            key = "aegis"
-            setTitle(R.string.sources_aegis)
+        val cd = screen.add(PreferenceCategory(prefContext)) {
+            key = "codes"
+            setTitle(R.string.sources_codes)
         }
-        aeUse = ae.add(SwitchPreferenceCompat(prefContext)) {
-            key = "ae_use"
-            setTitle(R.string.sources_aegis_use)
+        cdUse = cd.add(SwitchPreferenceCompat(prefContext)) {
+            key = "cd_use"
+            setTitle(R.string.sources_codes_use)
             setIcon(R.drawable.ic_codes)
             isPersistent = false
             setOnPreferenceChangeListener { _, v ->
-                Vault.setAegisEnabled(v as Boolean)
+                Vault.setCodesEnabled(v as Boolean)
                 render()
                 true
             }
         }
-        aeFile = ae.add(Preference(prefContext)) {
-            key = "ae_file"
-            setTitle(R.string.sources_aegis_file)
+        cdFile = cd.add(Preference(prefContext)) {
+            key = "cd_accounts"
+            setTitle(R.string.sources_accounts)
             setIcon(R.drawable.ic_folder)
             setOnPreferenceClickListener {
-                launchPicker { pickAegis.launch(AEGIS_TYPES) }
+                launchPicker { pickCodes.launch(CODE_FILE_TYPES) }
                 true
             }
         }
-        aeSetup = ae.add(Preference(prefContext)) {
-            key = "ae_setup"
+        cdSetup = cd.add(Preference(prefContext)) {
+            key = "cd_setup"
             setIcon(R.drawable.ic_check)
             setOnPreferenceClickListener {
-                askAegisPassword()
+                askCodesPassword()
                 true
             }
         }
@@ -225,16 +230,28 @@ class SourcesFragment : BasePreferenceFragment() {
     }
 
     override fun onDialogLost(key: String) {
-        if (key == DIALOG_AEGIS_IMPORT) {
+        if (key == DIALOG_CODES_IMPORT || key == DIALOG_CODES_NEW_PASSWORD) {
             // The picked file went with the restarted process before its password was given.
-            Log.i(TAG, "SourcesFragment: the Aegis import's password dialog was not restored (restarted process); the file must be picked again")
-            Toast.makeText(requireContext(), R.string.sources_aegis_pick_again, Toast.LENGTH_LONG).show()
+            Log.i(TAG, "SourcesFragment: the 2FA import's password dialog was not restored (restarted process); the file must be picked again")
+            Toast.makeText(requireContext(), R.string.sources_codes_pick_again, Toast.LENGTH_LONG).show()
         }
     }
 
     override fun onVaultState(state: VaultState) = render()
 
-    private fun currentSource(): DbSource? = pendingSource ?: Vault.prefs.keepassSource
+    private fun currentSource(): DbSource? = pendingSource ?: Vault.prefs.passwordsSource
+
+    /** What the current file needs: as read for a file not set up yet, as recorded for the one set up. */
+    private fun currentKind(): Vault.PasswordFileKind? =
+        if (pendingSource != null || !Vault.passwordsSetUp()) {
+            fileKind
+        } else {
+            when (Vault.prefs.passwordsKind) {
+                Vault.KIND_PLAIN -> Vault.PasswordFileKind.PLAIN
+                Vault.KIND_ENCRYPTED -> Vault.PasswordFileKind.ENCRYPTED
+                else -> Vault.PasswordFileKind.KDBX
+            }
+        }
 
     // ---- state of the page ----
 
@@ -274,6 +291,20 @@ class SourcesFragment : BasePreferenceFragment() {
                     ensureActive()
                 }
             }
+            fileKind = null
+            fileProblem = null
+            val chosen = currentSource()
+            if (chosen != null && (pendingSource != null || !Vault.passwordsSetUp()) && documentProblem == null) {
+                try {
+                    fileKind = Vault.passwordFileKind(chosen)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "the chosen password file cannot be used: ${e.javaClass.simpleName}: ${e.message}")
+                    ensureActive()
+                    fileProblem = e
+                }
+            }
             render()
             if (rechoose) {
                 rechoose = false
@@ -287,81 +318,87 @@ class SourcesFragment : BasePreferenceFragment() {
         val ctx = requireContext()
         val prefs = Vault.prefs
 
-        val kpSetUp = Vault.keePassSetUp()
-        kpUse.isVisible = kpSetUp
-        kpUse.isChecked = prefs.keepassEnabled
-        kpUse.setSummary(if (prefs.keepassEnabled) R.string.sources_keepass_on else R.string.sources_keepass_off)
-        kpUse.isEnabled = keepassBusy == 0
-        kpDatabase.summary = if (keepassBusy == R.string.sources_switching) getString(keepassBusy) else databaseSummary()
-        kpDatabase.isEnabled = keepassBusy == 0
-        kpKeyFile.summary = keyFileSummary()
-        kpKeyFile.isEnabled = keepassBusy == 0
-        kpSetup.setTitle(if (kpSetUp) R.string.sources_keepass_setup_again else R.string.sources_keepass_setup)
-        kpSetup.summary = when {
-            keepassBusy == R.string.setup_checking -> getString(R.string.setup_checking)
-            currentSource() == null -> getString(R.string.sources_database_none)
-            kpSetUp -> getString(R.string.sources_keepass_setup_again_summary)
-            else -> getString(R.string.sources_keepass_setup_summary)
+        val pwSetUp = Vault.passwordsSetUp()
+        pwUse.isVisible = pwSetUp
+        pwUse.isChecked = prefs.passwordsEnabled
+        pwUse.setSummary(if (prefs.passwordsEnabled) R.string.sources_passwords_on else R.string.sources_passwords_off)
+        pwUse.isEnabled = passwordsBusy == 0
+        pwFile.summary = if (passwordsBusy == R.string.sources_switching) getString(passwordsBusy) else databaseSummary()
+        pwFile.isEnabled = passwordsBusy == 0
+        val kind = currentKind()
+        pwKeyFile.summary = keyFileSummary()
+        pwKeyFile.isEnabled = passwordsBusy == 0
+        // A key file belongs to KDBX databases only.
+        pwKeyFile.isVisible = kind == null || kind == Vault.PasswordFileKind.KDBX
+        pwSetup.setTitle(if (pwSetUp) R.string.sources_passwords_setup_again else R.string.sources_passwords_setup)
+        pwSetup.summary = when {
+            passwordsBusy == R.string.setup_checking -> getString(R.string.setup_checking)
+            currentSource() == null -> getString(R.string.sources_file_none)
+            kind == Vault.PasswordFileKind.PLAIN -> getString(R.string.sources_passwords_setup_plain_summary)
+            pwSetUp && kind == Vault.PasswordFileKind.ENCRYPTED -> getString(R.string.sources_passwords_setup_again_encrypted_summary)
+            pwSetUp -> getString(R.string.sources_passwords_setup_again_summary)
+            else -> getString(R.string.sources_passwords_setup_summary)
         }
-        kpSetup.isEnabled = keepassBusy == 0 && currentSource() != null
+        pwSetup.isEnabled = passwordsBusy == 0 && currentSource() != null
 
-        val aeSetUp = Vault.aegisSetUp()
-        aeUse.isVisible = aeSetUp
-        aeUse.isChecked = prefs.aegisEnabled
-        aeUse.setSummary(if (prefs.aegisEnabled) R.string.sources_aegis_on else R.string.sources_aegis_off)
-        aeUse.isEnabled = !aegisBusy
-        val f = Vault.aegisFile
-        aeFile.summary = if (f.isFile) {
+        val cdSetUp = Vault.codesSetUp()
+        cdUse.isVisible = cdSetUp
+        cdUse.isChecked = prefs.codesEnabled
+        cdUse.setSummary(if (prefs.codesEnabled) R.string.sources_codes_on else R.string.sources_codes_off)
+        cdUse.isEnabled = !codesBusy
+        val f = Vault.codesFile
+        cdFile.summary = if (f.isFile) {
             getString(
-                R.string.sources_aegis_file_present,
-                prefs.aegisSourceName.ifEmpty { getString(R.string.sources_aegis_file_unnamed) },
-                Format.bytes(ctx, f.length()), Format.dateTime(ctx, f.lastModified()),
+                R.string.sources_accounts_present,
+                prefs.codesSourceName.ifEmpty { getString(R.string.sources_accounts_unnamed) },
+                Format.dateTime(ctx, f.lastModified()),
             )
         } else {
-            getString(R.string.sources_aegis_file_missing)
+            getString(R.string.sources_accounts_missing)
         }
-        aeFile.isEnabled = !aegisBusy
-        aeSetup.isVisible = f.isFile
-        aeSetup.setTitle(if (aeSetUp) R.string.sources_aegis_setup_again else R.string.sources_aegis_setup)
-        aeSetup.summary = getString(if (aegisBusy) R.string.setup_checking else R.string.sources_aegis_setup_summary)
-        aeSetup.isEnabled = !aegisBusy
+        cdFile.isEnabled = !codesBusy
+        cdSetup.isVisible = f.isFile
+        cdSetup.setTitle(if (cdSetUp) R.string.sources_codes_setup_again else R.string.sources_codes_setup)
+        cdSetup.summary = getString(if (codesBusy) R.string.setup_checking else R.string.sources_codes_setup_summary)
+        cdSetup.isEnabled = !codesBusy
     }
 
     private fun folderLabel(folder: String, result: FoundDatabases? = found): String = result?.labels?.get(folder) ?: folder
 
     private fun databaseSummary(): String {
-        val src = currentSource() ?: return getString(R.string.sources_database_none)
+        val src = currentSource() ?: return getString(R.string.sources_file_none)
         val ctx = requireContext()
         val lines = ArrayList<String>()
         when (src) {
             is DbSource.Synced -> {
-                lines += getString(R.string.sources_database_synced, src.path, folderLabel(src.folder))
+                lines += getString(R.string.sources_file_synced, src.path, folderLabel(src.folder))
                 val list = found
                 val file = list?.files?.firstOrNull { it.folder == src.folder && it.path == src.path }
                 val skipped = list?.skipped?.firstOrNull { it.folder == src.folder && it.path == src.path }
                 when {
                     file != null -> lines += getString(R.string.sources_modified, Format.dateTime(ctx, file.mtime))
-                    skipped != null -> lines += getString(R.string.sources_database_unavailable, skipReason(skipped))
-                    list != null -> lines += getString(R.string.sources_database_missing)
+                    skipped != null -> lines += getString(R.string.sources_file_unavailable, skipReason(skipped))
+                    list != null -> lines += getString(R.string.sources_file_missing)
                 }
             }
             is DbSource.Document -> {
                 val provider = Sources.providerLabel(ctx, src.uri)
                 lines += if (provider != null) {
-                    getString(R.string.sources_database_document, src.fileName, provider)
+                    getString(R.string.sources_file_document, src.fileName, provider)
                 } else {
-                    getString(R.string.sources_database_document_plain, src.fileName)
+                    getString(R.string.sources_file_document_plain, src.fileName)
                 }
                 when (documentProblem) {
-                    SourceUnavailableException.Reason.PERMISSION -> lines += getString(R.string.sources_database_no_access)
-                    SourceUnavailableException.Reason.MISSING -> lines += getString(R.string.sources_database_missing)
+                    SourceUnavailableException.Reason.PERMISSION -> lines += getString(R.string.sources_file_no_access)
+                    SourceUnavailableException.Reason.MISSING -> lines += getString(R.string.sources_file_missing)
                     else -> documentInfo?.takeIf { it.mtime > 0 }?.let {
                         lines += getString(R.string.sources_modified, Format.dateTime(ctx, it.mtime))
                     }
                 }
             }
         }
-        if (pendingSource != null) lines += getString(R.string.sources_database_pending)
+        fileProblem?.let { lines += Errors.describe(ctx, it) }
+        if (pendingSource != null) lines += getString(R.string.sources_file_pending)
         return lines.joinToString("\n")
     }
 
@@ -372,7 +409,7 @@ class SourcesFragment : BasePreferenceFragment() {
         val ctx = requireContext()
         return when (val k = effectiveKeyFile()) {
             KeyFileChoice.None -> getString(
-                if (Vault.keePassSetUp() && Vault.prefs.usesKeyFile) R.string.key_file_summary_stored else R.string.key_file_summary_none,
+                if (Vault.passwordsSetUp() && Vault.prefs.usesKeyFile) R.string.key_file_summary_stored else R.string.key_file_summary_none,
             )
             KeyFileChoice.Imported -> getString(R.string.key_file_summary_imported, Format.bytes(ctx, Vault.importedKeyFile.length()))
             is KeyFileChoice.Picked -> getString(R.string.key_file_summary_picked, k.name, Format.bytes(ctx, k.size))
@@ -420,7 +457,7 @@ class SourcesFragment : BasePreferenceFragment() {
         val ctx = d.context
         val list = result?.files.orEmpty()
         val skipped = result?.skipped.orEmpty()
-        val title = if (Vault.prefs.keepassSource != null) R.string.sources_change_database else R.string.sources_choose_database
+        val title = if (Vault.prefs.passwordsSource != null) R.string.sources_change_file else R.string.sources_choose_file
         if (list.isEmpty() && skipped.isEmpty() && result?.truncated != true) {
             return AlertDialog.Builder(ctx)
                 .setTitle(title)
@@ -516,43 +553,42 @@ class SourcesFragment : BasePreferenceFragment() {
      */
     private fun chooseSource(source: DbSource) {
         val ctx = requireContext()
-        if (!Vault.keePassSetUp()) {
-            Vault.prefs.keepassSource = source
+        if (!Vault.passwordsSetUp()) {
+            Vault.prefs.passwordsSource = source
             Sources.releaseGrantsExcept(ctx, (source as? DbSource.Document)?.uri)
             pendingSource = null
             refresh()
             return
         }
-        if (source == Vault.prefs.keepassSource) {
+        if (source == Vault.prefs.passwordsSource) {
             // Chosen again (a revoked grant taken anew): open it again.
             pendingSource = null
             Vault.requestLoad("database chosen again")
             refresh()
             return
         }
-        keepassBusy = R.string.sources_switching
+        passwordsBusy = R.string.sources_switching
         render()
         launchUi {
             var needsPassword = false
             try {
-                act(R.string.error_switch_database) {
+                act(R.string.error_switch_file) {
                     try {
-                        val r = Vault.switchKeePassSource(source)
+                        val r = Vault.switchPasswordsSource(source)
                         pendingSource = null
                         Toast.makeText(ctx, resources.getQuantityString(R.plurals.sources_switched, r.entries, r.entries), Toast.LENGTH_LONG).show()
-                    } catch (e: KdbxException) {
-                        if (e.reason != KdbxException.Reason.WRONG_KEY) throw e
+                    } catch (e: PasswordNeededException) {
                         pendingSource = source
                         needsPassword = true
                     }
                 }
             } finally {
-                keepassBusy = 0
+                passwordsBusy = 0
                 ifPageAlive { refresh() }
             }
             if (needsPassword) {
                 Toast.makeText(ctx, R.string.sources_switch_needs_password, Toast.LENGTH_LONG).show()
-                askKeePassPassword()
+                setUpPasswords()
             }
         }
     }
@@ -620,30 +656,55 @@ class SourcesFragment : BasePreferenceFragment() {
         }
     }
 
-    // ---- KeePass setup ----
+    // ---- setting up the passwords ----
 
-    private fun askKeePassPassword() {
+    /**
+     * Reads the chosen file for what it needs: a file without a password is
+     * set up at once, any other asks for its password (and names the key
+     * file of a KDBX database).
+     */
+    private fun setUpPasswords() {
         val source = currentSource() ?: return
-        showDialog("keepass-password") { d ->
-            passwordDialog(d, R.string.setup_keepass_password, getString(R.string.sources_password_message, source.fileName, keyFileName())) { chars ->
-                runKeePassSetup(source, chars)
+        passwordsBusy = R.string.setup_checking
+        render()
+        launchUi {
+            var kind: Vault.PasswordFileKind? = null
+            try {
+                act(R.string.error_setup_passwords) { kind = Vault.passwordFileKind(source) }
+            } finally {
+                passwordsBusy = 0
+                ifPageAlive { render() }
             }
+            val k = kind ?: return@launchUi
+            fileKind = k
+            if (k == Vault.PasswordFileKind.PLAIN) runPasswordsSetup(source, CharArray(0)) else askFilePassword(source, k)
         }
     }
 
-    private fun runKeePassSetup(source: DbSource, chars: CharArray) {
+    private fun askFilePassword(source: DbSource, kind: Vault.PasswordFileKind) {
+        showDialog("file-password") { d ->
+            val message = if (kind == Vault.PasswordFileKind.KDBX) {
+                getString(R.string.sources_password_message, source.fileName, keyFileName())
+            } else {
+                getString(R.string.sources_file_message, source.fileName)
+            }
+            passwordDialog(d, R.string.setup_file_password, message) { chars -> runPasswordsSetup(source, chars) }
+        }
+    }
+
+    private fun runPasswordsSetup(source: DbSource, chars: CharArray) {
         val password = utf8(chars)
         Bytes.wipe(chars)
-        val choice = effectiveKeyFile()
-        keepassBusy = R.string.setup_checking
+        val choice = if (currentKind() == Vault.PasswordFileKind.KDBX) effectiveKeyFile() else KeyFileChoice.None
+        passwordsBusy = R.string.setup_checking
         render()
         launchUi {
             try {
-                val ok = act(R.string.error_setup_keepass) {
-                    val r = Vault.setupKeePass(source, choice, password)
+                val ok = act(R.string.error_setup_passwords) {
+                    val r = Vault.setupPasswords(source, choice, password)
                     Toast.makeText(
                         requireContext(),
-                        resources.getQuantityString(R.plurals.setup_keepass_ok, r.entries, r.entries),
+                        resources.getQuantityString(R.plurals.setup_passwords_ok, r.entries, r.entries),
                         Toast.LENGTH_LONG,
                     ).show()
                 }
@@ -654,35 +715,39 @@ class SourcesFragment : BasePreferenceFragment() {
                 }
             } finally {
                 Bytes.wipe(password)
-                keepassBusy = 0
+                passwordsBusy = 0
                 ifPageAlive { refresh() }
             }
         }
     }
 
-    // ---- Aegis ----
+    // ---- 2FA codes ----
 
-    /** Sets up the vault file already imported again (its password changed). */
-    private fun askAegisPassword() = showDialog("aegis-password") { d ->
-        passwordDialog(d, R.string.setup_aegis_password, null) { chars -> runAegisSetup(chars, null, "") }
+    /** Sets up the vault's own file of 2FA accounts again (after the keys were forgotten). */
+    private fun askCodesPassword() = showDialog("codes-password") { d ->
+        passwordDialog(d, R.string.setup_codes_password, null) { chars -> runCodesSetup(chars, null, "", fromFile = false) }
     }
 
     /**
-     * A newly picked vault file replaces the current one only after its
-     * password has opened it; cancelling leaves everything as it was.
+     * A newly picked file of 2FA accounts replaces the current ones only
+     * after it has been opened: an encrypted one with its password, which
+     * then protects the accounts too; one without asks for a new password
+     * for them. Cancelling leaves everything as it was.
      */
-    private fun onAegisPicked(uri: Uri) {
+    private fun onCodesPicked(uri: Uri) {
         launchUi {
             val ctx = requireContext()
             val holder = arrayOfNulls<ByteArray>(1)
+            var encrypted = false
+            var store = false
             val name = try {
-                val ok = act(R.string.error_import_aegis) {
-                    val bytes = withContext(Dispatchers.IO) { Sources.readDocument(ctx, uri, MAX_AEGIS_BYTES) }
+                val ok = act(R.string.error_read_file) {
+                    val bytes = withContext(Dispatchers.IO) { Sources.readDocument(ctx, uri, MAX_CODE_FILE_BYTES) }
                     holder[0] = bytes
                     withContext(Dispatchers.Default) {
-                        if (!AegisVault.parse(bytes).encrypted) {
-                            throw AegisException(AegisException.Reason.NO_PASSWORD_SLOT, "the vault file is not encrypted")
-                        }
+                        val detected = CodeFiles.detect(bytes)
+                        encrypted = detected.encrypted
+                        store = detected.store
                     }
                 }
                 if (!ok) {
@@ -694,7 +759,7 @@ class SourcesFragment : BasePreferenceFragment() {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Log.w(TAG, "the chosen vault file has no readable name: ${e.javaClass.simpleName}")
+                    Log.w(TAG, "the chosen 2FA file has no readable name: ${e.javaClass.simpleName}")
                     ensureActive()
                     ""
                 }
@@ -703,45 +768,66 @@ class SourcesFragment : BasePreferenceFragment() {
                 holder[0]?.let { Bytes.wipe(it) }
                 throw e
             }
-            val pending = PendingAegisImport(holder[0] ?: return@launchUi)
+            val pending = PendingImport(holder[0] ?: return@launchUi)
+            val shownName = name.ifEmpty { getString(R.string.sources_accounts_unnamed) }
             // The bytes stay with the dialog (a recreation brings it back) and are wiped when it
-            // ends unanswered: cancelled, dismissed, or the page gone (PendingAegisImport).
-            showDialog(DIALOG_AEGIS_IMPORT, onEnd = { Log.i(TAG, "SourcesFragment: " + pending.end()) }) { d ->
-                passwordDialog(
-                    d, R.string.sources_aegis_new_password,
-                    getString(R.string.sources_aegis_message, name.ifEmpty { getString(R.string.sources_aegis_file_unnamed) }),
-                ) { chars ->
-                    val bytes = pending.take()
-                    if (bytes == null) {
-                        Bytes.wipe(chars)
-                        Log.w(TAG, "SourcesFragment: Aegis import answered after its file was wiped")
-                    } else {
-                        runAegisSetup(chars, bytes, name)
+            // ends unanswered: cancelled, dismissed, or the page gone (PendingImport).
+            if (encrypted) {
+                showDialog(DIALOG_CODES_IMPORT, onEnd = { Log.i(TAG, "SourcesFragment: " + pending.end()) }) { d ->
+                    passwordDialog(d, R.string.sources_codes_file_password, getString(R.string.sources_codes_message, shownName)) { chars ->
+                        val bytes = pending.take()
+                        if (bytes == null) {
+                            Bytes.wipe(chars)
+                            Log.w(TAG, "SourcesFragment: 2FA import answered after its file was wiped")
+                        } else {
+                            runCodesSetup(chars, bytes, name, fromFile = !store)
+                        }
+                    }
+                }
+            } else {
+                showDialog(DIALOG_CODES_NEW_PASSWORD, onEnd = { Log.i(TAG, "SourcesFragment: " + pending.end()) }) { d ->
+                    newPasswordDialog(d, R.string.sources_codes_new_password, getString(R.string.sources_codes_new_password_message, shownName)) { chars ->
+                        val bytes = pending.take()
+                        if (bytes == null) {
+                            Bytes.wipe(chars)
+                            Log.w(TAG, "SourcesFragment: 2FA import answered after its file was wiped")
+                        } else {
+                            runCodesSetup(chars, bytes, name, fromFile = true, plain = true)
+                        }
                     }
                 }
             }
         }
     }
 
-    private fun runAegisSetup(chars: CharArray, bytes: ByteArray?, name: String) {
+    /**
+     * [bytes] null: the vault's own file again with its password. [fromFile]:
+     * the accounts of another format are taken into a new file of the
+     * vault's own, protected with [chars] (the picked file's own password, or
+     * with [plain] the new one for a file without); otherwise [bytes] is an
+     * encrypted Aegis vault, which becomes the vault's own file as it is.
+     */
+    private fun runCodesSetup(chars: CharArray, bytes: ByteArray?, name: String, fromFile: Boolean, plain: Boolean = false) {
         val password = utf8(chars)
         Bytes.wipe(chars)
-        aegisBusy = true
+        codesBusy = true
         render()
         launchUi {
             try {
-                act(R.string.error_setup_aegis) {
-                    val r = Vault.setupAegis(password, bytes, name)
-                    Toast.makeText(
-                        requireContext(),
-                        resources.getQuantityString(R.plurals.setup_aegis_ok, r.entries, r.entries),
-                        Toast.LENGTH_LONG,
-                    ).show()
+                act(R.string.error_setup_codes) {
+                    val r = when {
+                        bytes == null -> Vault.setupCodes(password)
+                        fromFile -> Vault.setupCodesFrom(bytes, name, if (plain) null else password, password)
+                        else -> Vault.setupCodes(password, bytes, name)
+                    }
+                    var text = resources.getQuantityString(R.plurals.setup_codes_ok, r.entries, r.entries)
+                    if (r.skipped > 0) text += "\n" + resources.getQuantityString(R.plurals.codes_not_readable, r.skipped, r.skipped)
+                    Toast.makeText(requireContext(), text, Toast.LENGTH_LONG).show()
                 }
             } finally {
                 Bytes.wipe(password)
                 bytes?.let { Bytes.wipe(it) }
-                aegisBusy = false
+                codesBusy = false
                 ifPageAlive { render() }
             }
         }
@@ -751,7 +837,8 @@ class SourcesFragment : BasePreferenceFragment() {
         /** Open the database choice at once (the home page's one-tap fix for a lost file). */
         const val ARG_RECHOOSE = "rechoose"
 
-        private const val DIALOG_AEGIS_IMPORT = "aegis-import-password"
+        private const val DIALOG_CODES_IMPORT = "codes-import-password"
+        private const val DIALOG_CODES_NEW_PASSWORD = "codes-new-password"
         private const val STATE_KEY_FILE = "key_file"
 
         /** The picked key file a recreated page takes from the one before (by the token in its saved state). */
@@ -763,10 +850,10 @@ class SourcesFragment : BasePreferenceFragment() {
             return h.second
         }
 
-        private const val MAX_AEGIS_BYTES = 16 * 1024 * 1024
-        /** KeePass databases and key files have no registered type: any file. */
+        private const val MAX_CODE_FILE_BYTES = 16 * 1024 * 1024
+        /** Password files, key files and the files of authenticator apps have no one registered type: any file. */
         private val DATABASE_TYPES = arrayOf("*/*")
         private val ANY_TYPE = arrayOf("*/*")
-        private val AEGIS_TYPES = arrayOf("application/json", "application/octet-stream", "text/plain")
+        private val CODE_FILE_TYPES = arrayOf("*/*")
     }
 }

@@ -5,13 +5,13 @@
     <string name="permission_open_label">Lujarch 保管庫を開く</string>
     <string name="permission_open_description">システムアプリに Lujarch 保管庫のページを開くことを許可します。</string>
     <!-- Home -->
-    <string name="home_intro_not_set_up">KeePass データベースのパスワードと、Aegis 保管庫の 2FA コードを表示します。「ソース」で一度設定すると、以後はスマートフォンのロックが解除されている間いつでも保管庫が開きます。</string>
+    <string name="home_intro_not_set_up">パスワード ファイルのパスワードと、認証システムのアカウントの 2FA コードを表示します。「ソース」で一度設定すると、以後はスマートフォンのロックが解除されている間いつでも保管庫が開きます。</string>
     <string name="home_status">ステータス</string>
     <string name="status_not_set_up">未設定</string>
     <string name="status_off">オフ</string>
     <string name="status_locked">ロック中です。開くにはスマートフォンのロックを解除してください。</string>
     <string name="status_unlocking">ロックを解除しています…</string>
-    <string name="status_reloading">新しいデータベースを読み込んでいます…</string>
+    <string name="status_reloading">新しいファイルを読み込んでいます…</string>
     <string name="status_unlocked">開いています（%1$s に読み込み）</string>
     <string name="status_failed">保管庫を開けませんでした</string>
     <string name="status_idle">まだ読み込まれていません</string>
@@ -19,8 +19,8 @@
     <string name="action_rechoose">選び直す</string>
     <!-- 2FA codes -->
     <string name="codes_title">2FA コード</string>
-    <string name="codes_aegis">Aegis</string>
-    <string name="codes_keepass">KeePass</string>
+    <string name="codes_accounts">アカウント</string>
+    <string name="codes_passwords">パスワード</string>
     <string name="codes_none">2FA コードはありません</string>
     <string name="codes_search_hint">アカウントを検索</string>
     <string name="code_unsupported">サポートされていないタイプです</string>
@@ -37,7 +37,7 @@
     <!-- Entry -->
     <string name="entry_title">エントリ</string>
     <string name="entry_untitled">（タイトルなし）</string>
-    <string name="entry_missing">このエントリはデータベースにありません</string>
+    <string name="entry_missing">このエントリはファイルにありません</string>
     <string name="entry_other_fields">その他のフィールド</string>
     <string name="entry_details">詳細</string>
     <string name="entry_group">グループ</string>
@@ -65,31 +65,31 @@
     <string name="reveal_no_lock">指紋または画面ロックが必要です。設定するか、保管庫の設定でこの確認をオフにしてください。</string>
     <!-- Sources (first-time setup and later changes) -->
     <string name="sources_title">ソース</string>
-    <string name="sources_summary">KeePass: %1$s · Aegis: %2$s</string>
+    <string name="sources_summary">パスワード: %1$s · 2FA コード: %2$s</string>
     <string name="state_set_up">設定済み</string>
     <string name="state_not_set_up">未設定</string>
     <string name="state_off">オフ</string>
-    <string name="sources_keepass">KeePass データベース</string>
-    <string name="sources_keepass_use">KeePass データベースを使用</string>
-    <string name="sources_keepass_on">パスワード、自動入力、エントリ内の 2FA コード</string>
-    <string name="sources_keepass_off">オフ: パスワードの表示も入力も行いません。保存済みの鍵は残ります。</string>
-    <string name="sources_database">データベース</string>
-    <string name="sources_database_none">未選択です。タップして、同期フォルダまたは他の場所から選択してください。</string>
-    <string name="sources_database_synced">%1$s · 同期フォルダ %2$s</string>
-    <string name="sources_database_document">%1$s · %2$s</string>
-    <string name="sources_database_document_plain">%1$s · 選択したファイル</string>
+    <string name="sources_passwords">パスワード</string>
+    <string name="sources_passwords_use">パスワードを使用</string>
+    <string name="sources_passwords_on">パスワード、自動入力、エントリ内の 2FA コード</string>
+    <string name="sources_passwords_off">オフ: パスワードの表示も入力も行いません。保存済みの鍵は残ります。</string>
+    <string name="sources_file">ファイル</string>
+    <string name="sources_file_none">未選択です。タップして、同期フォルダまたは他の場所から選択してください。</string>
+    <string name="sources_file_synced">%1$s · 同期フォルダ %2$s</string>
+    <string name="sources_file_document">%1$s · %2$s</string>
+    <string name="sources_file_document_plain">%1$s · 選択したファイル</string>
     <string name="sources_modified">%1$s に変更</string>
-    <string name="sources_database_pending">パスワードが必要です。「KeePass を再設定」をタップしてください</string>
-    <string name="sources_database_no_access">このファイルへのアクセス権が取り消されました。タップしてもう一度選択してください。</string>
-    <string name="sources_database_missing">このファイルは存在しません。タップして別のファイルを選択してください。</string>
-    <string name="sources_choose_database">データベースを選択</string>
-    <string name="sources_change_database">データベースを変更</string>
+    <string name="sources_file_pending">パスワードが必要です。「パスワードのソースを再設定」をタップしてください</string>
+    <string name="sources_file_no_access">このファイルへのアクセス権が取り消されました。タップしてもう一度選択してください。</string>
+    <string name="sources_file_missing">このファイルは存在しません。タップして別のファイルを選択してください。</string>
+    <string name="sources_choose_file">パスワード ファイルを選択</string>
+    <string name="sources_change_file">パスワード ファイルを変更</string>
     <string name="sources_choose_other">他の場所から選択…</string>
-    <string name="sources_found_none">同期フォルダに KeePass データベース（.kdbx）がありません。</string>
+    <string name="sources_found_none">同期フォルダにパスワード ファイル（.kdbx、.json、.1pux、.csv）がありません。</string>
     <string name="sources_found_item">%1$s · %2$s · %3$s</string>
-    <!-- A database in a synced folder that cannot be used: folder label, reason. -->
+    <!-- A file in a synced folder that cannot be used: folder label, reason. -->
     <string name="sources_skipped_item">%1$s · 使用不可: %2$s</string>
-    <string name="sources_database_unavailable">使用不可: %1$s</string>
+    <string name="sources_file_unavailable">使用不可: %1$s</string>
     <string name="skip_reason_name">ファイル名が有効な UTF-8 ではありません</string>
     <!-- File size, limit. -->
     <string name="skip_reason_too_large">%1$s（上限の %2$s を超えています）</string>
@@ -97,9 +97,9 @@
     <string name="skip_reason_symlink">シンボリック リンクです</string>
     <string name="skip_reason_not_regular">通常のファイルではありません</string>
     <string name="skip_reason_other">読み取れません</string>
-    <string name="sources_found_truncated">一部のデータベースは表示されていません。検索が上限に達したため停止しました。</string>
-    <string name="sources_switching">保存済みの鍵で選択したデータベースを開いています…</string>
-    <string name="sources_switch_needs_password">保存済みの鍵ではこのデータベースを開けません。パスワードを入力してください。</string>
+    <string name="sources_found_truncated">一部のファイルは表示されていません。検索が上限に達したため停止しました。</string>
+    <string name="sources_switching">保存済みの鍵で選択したファイルを開いています…</string>
+    <string name="sources_switch_needs_password">保存済みの鍵ではこのファイルを開けません。パスワードを入力してください。</string>
     <string name="sources_no_grant">この場所では継続的なアクセスが許可されていません。別の場所からファイルを選択してください。</string>
     <string name="sources_key_file">キーファイル</string>
     <string name="key_file_none">キーファイルなし</string>
@@ -109,29 +109,30 @@
     <string name="key_file_summary_stored">保存済みの鍵の一部です。選び直すのは再設定するときだけにしてください。</string>
     <string name="key_file_summary_picked">%1$s（%2$s）。設定にのみ使用し、スマートフォンには保存しません。</string>
     <string name="key_file_summary_imported">パソコンからインポート（%1$s）。設定が完了するとスマートフォンから削除されます。</string>
-    <string name="sources_keepass_setup">KeePass を設定</string>
-    <string name="sources_keepass_setup_again">KeePass を再設定</string>
-    <string name="sources_keepass_setup_summary">データベースのパスワードを入力します。パスワードを確認し、そこから導出した鍵のみを保存します</string>
-    <string name="sources_keepass_setup_again_summary">パソコンでパスワードまたはキーファイルを変更した後に行います</string>
-    <string name="sources_password_message">データベース: %1$s\nキーファイル: %2$s</string>
+    <string name="sources_passwords_setup">パスワードのソースを設定</string>
+    <string name="sources_passwords_setup_again">パスワードのソースを再設定</string>
+    <string name="sources_passwords_setup_summary">ファイルのパスワードを入力します。パスワードを確認し、そこから導出した鍵のみを保存します</string>
+    <string name="sources_passwords_setup_again_summary">パソコンでパスワードまたはキーファイルを変更した後に行います</string>
+    <string name="sources_passwords_setup_again_encrypted_summary">ファイルのパスワードを変更した後に行います</string>
+    <string name="sources_password_message">ファイル: %1$s\nキーファイル: %2$s</string>
     <string name="setup_password">パスワード</string>
     <string name="setup_checking">確認しています…（数秒かかります）</string>
-    <string name="setup_keepass_password">KeePass のパスワード</string>
-    <string name="setup_aegis_password">Aegis のパスワード</string>
-    <string name="sources_aegis">Aegis 保管庫</string>
-    <string name="sources_aegis_use">Aegis 保管庫を使用</string>
-    <string name="sources_aegis_on">2FA コード</string>
-    <string name="sources_aegis_off">オフ: コードは表示されません。保存済みの鍵は残ります。</string>
-    <string name="sources_aegis_file">保管庫ファイル</string>
-    <string name="sources_aegis_file_present">%1$s · %2$s · %3$s にインポート。タップすると置き換えます。</string>
-    <string name="sources_aegis_file_unnamed">Aegis 保管庫ファイル</string>
-    <string name="sources_aegis_file_missing">まだインポートされていません。タップすると、暗号化された Aegis のエクスポート ファイルをインポートします。</string>
-    <string name="sources_aegis_setup">Aegis を設定</string>
-    <string name="sources_aegis_setup_again">Aegis を再設定</string>
-    <string name="sources_aegis_setup_summary">保管庫のパスワードを入力します。パスワードを確認し、それで解除されるマスターキーのみを保存します</string>
-    <string name="sources_aegis_new_password">新しい保管庫ファイルのパスワード</string>
-    <string name="sources_aegis_message">ファイル: %1$s</string>
-    <string name="sources_aegis_pick_again">アプリの再起動時に、選択した保管庫ファイルは保持されませんでした。もう一度選択してください。</string>
+    <string name="setup_file_password">ファイルのパスワード</string>
+    <string name="setup_codes_password">2FA コードのパスワード</string>
+    <string name="sources_codes">2FA コード</string>
+    <string name="sources_codes_use">2FA コードを使用</string>
+    <string name="sources_codes_on">アカウントのコード</string>
+    <string name="sources_codes_off">オフ: コードは表示されません。保存済みの鍵は残ります。</string>
+    <string name="sources_accounts">アカウント</string>
+    <string name="sources_accounts_present">%1$s · %2$s にインポート。タップすると、別のファイルのアカウントに置き換えます。</string>
+    <string name="sources_accounts_unnamed">インポートしたファイル</string>
+    <string name="sources_accounts_missing">まだインポートされていません。タップすると、認証システムのエクスポート ファイルからアカウントをインポートします。</string>
+    <string name="sources_codes_setup">2FA コードのソースを設定</string>
+    <string name="sources_codes_setup_again">2FA コードのソースを再設定</string>
+    <string name="sources_codes_setup_summary">2FA コードのパスワードを入力します。パスワードを確認し、それで解除されるマスターキーのみを保存します</string>
+    <string name="sources_codes_file_password">選択したファイルのパスワード</string>
+    <string name="sources_codes_message">ファイル: %1$s。以後、2FA コードもこのパスワードで保護されます。</string>
+    <string name="sources_codes_pick_again">アプリの再起動時に、選択したファイルは保持されませんでした。もう一度選択してください。</string>
     <string name="setup_footer">パスワード自体は保存されません。保管庫が保持するのはパスワードから導出した鍵のみで、鍵はスマートフォンの Keystore でロックされ、ロック解除中にしか取り出せません。そのため、すべてのパスワードとコードを守るのは画面ロックだけです。また、Root を許可したアプリは、ロック解除中にそれらを読み取れる可能性があります。</string>
     <!-- Settings -->
     <string name="settings_title">設定</string>
@@ -180,12 +181,12 @@
     <string name="settings_delete_keyfile">インポートしたキーファイルを削除</string>
     <string name="settings_delete_keyfile_summary">パソコンからインポートしたキーファイル（%1$s）がスマートフォンに残っています</string>
     <string name="settings_delete_keyfile_none">スマートフォンにインポートしたキーファイルはありません</string>
-    <string name="settings_delete_keyfile_confirm">インポートしたキーファイルを削除します。KeePass を再設定するには、「ソース」でキーファイルを選択するか、もう一度インポートしてください。</string>
+    <string name="settings_delete_keyfile_confirm">インポートしたキーファイルを削除します。パスワードのソースを再設定するには、「ソース」でキーファイルを選択するか、もう一度インポートしてください。</string>
     <string name="settings_delete_keyfile_action">削除</string>
-    <string name="settings_footer">復号した状態では何も保存されません。保管庫は表示中のページと自動入力のリクエストごとに開かれ、離れると消去されます。スマートフォンの Keystore が保管庫を開くのはロック解除中のみです。KeePass データベースは KeePassXC で編集し、同期または選択したファイルを通じて取り込まれます。</string>
+    <string name="settings_footer">復号した状態では何も保存されません。保管庫は表示中のページと自動入力のリクエストごとに開かれ、離れると消去されます。スマートフォンの Keystore が保管庫を開くのはロック解除中のみです。パスワード ファイルは作成したアプリで編集し、同期または選択したファイルを通じて取り込まれます。</string>
     <!-- About the vault (state of the sources) -->
-    <string name="state_keepass">KeePass データベース</string>
-    <string name="state_aegis">Aegis 保管庫</string>
+    <string name="state_passwords">パスワード</string>
+    <string name="state_codes">2FA コード</string>
     <string name="state_keystore">Keystore</string>
     <string name="state_keystore_key">ラップ鍵</string>
     <string name="state_keystore_none">鍵なし（未設定）</string>
@@ -229,10 +230,10 @@
     <string name="excluded_not_installed">インストールされていません</string>
     <string name="excluded_choose_app">アプリを選択</string>
     <!-- Settings search -->
-    <string name="search_keywords_vault">パスワード, パスワード マネージャー, 自動入力, 保管庫, KeePass, password, autofill</string>
-    <string name="search_keywords_codes">2FA, 2 段階認証, 確認コード, ワンタイム パスワード, OTP, TOTP, 認証システム, Aegis</string>
-    <string name="search_keywords_passwords">パスワード, ログイン, アカウント, KeePass</string>
-    <string name="search_keywords_sources">KeePass, Aegis, データベース, キーファイル, kdbx, インポート</string>
+    <string name="search_keywords_vault">パスワード, パスワード マネージャー, 自動入力, 保管庫, password, autofill, KeePass, Bitwarden, 1Password</string>
+    <string name="search_keywords_codes">2FA, 2 段階認証, 確認コード, ワンタイム パスワード, OTP, TOTP, 認証システム, Aegis, 2FAS, Google Authenticator</string>
+    <string name="search_keywords_passwords">パスワード, ログイン, アカウント, KeePass, Bitwarden</string>
+    <string name="search_keywords_sources">ソース, パスワード ファイル, 2FA, キーファイル, インポート, kdbx, csv, KeePass, Bitwarden, 1Password, Aegis, 2FAS</string>
     <string name="search_keywords_settings">クリップボード, 自動入力, 鍵を消去, 指紋</string>
     <string name="search_keywords_excluded">除外, 入力しない, ブロックリスト, 範囲, サブドメイン</string>
     <!-- Autofill -->
@@ -242,14 +243,14 @@
     <string name="autofill_nothing_to_fill">このエントリには、これらのフィールドに入力できる内容がありません</string>
     <!-- Errors -->
     <string name="error_page">このページを開けません。</string>
-    <string name="error_load_keepass">KeePass データベースを開けませんでした</string>
-    <string name="error_load_aegis">Aegis 保管庫を開けませんでした</string>
+    <string name="error_load_passwords">パスワードを開けませんでした</string>
+    <string name="error_load_codes">2FA コードを開けませんでした</string>
     <string name="error_list_folder">同期フォルダを検索できませんでした</string>
-    <string name="error_setup_keepass">KeePass の設定に失敗しました</string>
-    <string name="error_setup_aegis">Aegis の設定に失敗しました</string>
-    <string name="error_import_aegis">保管庫ファイルを読み取れませんでした</string>
-    <string name="error_switch_database">データベースを変更できませんでした</string>
-    <string name="error_choose_database">選択したファイルを使用できませんでした</string>
+    <string name="error_setup_passwords">パスワードのソースを設定できませんでした</string>
+    <string name="error_setup_codes">2FA コードのソースを設定できませんでした</string>
+    <string name="error_read_file">ファイルを読み取れませんでした</string>
+    <string name="error_switch_file">ファイルを変更できませんでした</string>
+    <string name="error_choose_file">選択したファイルを使用できませんでした</string>
     <string name="error_read_key_file">キーファイルを読み取れませんでした</string>
     <string name="error_no_browser">この URL を開けるアプリがありません</string>
     <string name="error_no_settings">このページはこのスマートフォンでは利用できません</string>
@@ -260,21 +261,21 @@
     <string name="error_daemon_remote">同期フォルダからの報告: %1$s</string>
     <string name="error_daemon_closed">同期フォルダへの接続が閉じられました。</string>
     <string name="error_source_permission">選択したファイルを読み取れません（アクセス権が取り消されました）。「ソース」でもう一度選択してください。</string>
-    <string name="error_source_missing">選択したファイルは存在しません。「ソース」でデータベースを選択し直してください。</string>
+    <string name="error_source_missing">選択したファイルは存在しません。「ソース」で選択し直してください。</string>
     <string name="error_source_too_large">ファイルが大きすぎます（%1$s）。</string>
     <string name="error_keys_forgotten">設定に従って鍵が消去されました。「ソース」で再設定してください。</string>
-    <string name="error_kdbx_not_kdbx">このファイルは KeePass データベースではありません。</string>
-    <string name="error_kdbx_kdb1">KeePass 1 のデータベース（.kdb）はサポートされていません。</string>
+    <string name="error_kdbx_not_kdbx">このファイルは KDBX データベースではありません。</string>
+    <string name="error_kdbx_kdb1">KDB データベース（.kdb）はサポートされていません。ファイルを KDBX に変換してください。</string>
     <string name="error_kdbx_version">このデータベースのバージョンはサポートされていません（%1$s）。</string>
-    <string name="error_kdbx_cipher">このデータベースはサポートされていない暗号方式を使用しています（%1$s）。KeePassXC で AES-256 または ChaCha20 に変更してください。</string>
+    <string name="error_kdbx_cipher">このデータベースはサポートされていない暗号方式を使用しています（%1$s）。編集に使うアプリで AES-256 または ChaCha20 に変更してください。</string>
     <string name="error_kdbx_kdf">この鍵導出方式はサポートされていません（%1$s）。</string>
     <string name="error_kdbx_wrong_key">パスワードまたはキーファイルが正しくありません。</string>
     <string name="error_kdbx_corrupt">データベース ファイルが破損しています（%1$s）。</string>
-    <string name="error_aegis_format">このファイルは、このアプリで読み取れる Aegis 保管庫ではありません（%1$s）。</string>
-    <string name="error_aegis_no_slot">この Aegis 保管庫にはパスワードが設定されていません。Aegis から暗号化された保管庫をエクスポートしてください。</string>
-    <string name="error_aegis_wrong_password">Aegis のパスワードが正しくありません。</string>
-    <string name="error_aegis_wrong_key">保存済みの鍵ではこの Aegis 保管庫を開けません。再設定してください。</string>
-    <string name="error_aegis_missing">ファイルが見つかりません。</string>
+    <string name="error_codes_format">このファイルには、保管庫で読み取れる 2FA アカウントがありません（%1$s）。</string>
+    <string name="error_codes_no_slot">このファイルは、作成したアプリで指紋を使ってのみ開けます。パスワード付き、またはパスワードなしでエクスポートしてください。</string>
+    <string name="error_wrong_password">パスワードが正しくありません。</string>
+    <string name="error_codes_wrong_key">保存済みの鍵では 2FA コードを開けません。再設定してください。</string>
+    <string name="error_file_missing">ファイルが見つかりません。</string>
     <string name="error_keystore">スマートフォンの Keystore が鍵を解放しませんでした。スマートフォンのロックを解除して、もう一度お試しください。</string>
     <string name="error_key_file">キーファイルが無効です（%1$s）。</string>
     <string name="error_otp">このワンタイム コードの設定はサポートされていません（%1$s）。</string>
@@ -286,14 +287,14 @@
     <plurals name="passwords_count">
         <item quantity="other">%d 件のエントリ</item>
     </plurals>
-    <plurals name="setup_keepass_ok">
-        <item quantity="other">KeePass を設定しました: %d 件のエントリ</item>
+    <plurals name="setup_passwords_ok">
+        <item quantity="other">パスワードのソースを設定しました: %d 件のエントリ</item>
     </plurals>
-    <plurals name="setup_aegis_ok">
-        <item quantity="other">Aegis を設定しました: %d 件のアカウント</item>
+    <plurals name="setup_codes_ok">
+        <item quantity="other">2FA コードのソースを設定しました: %d 件のアカウント</item>
     </plurals>
     <plurals name="sources_switched">
-        <item quantity="other">データベースを変更しました: %d 件のエントリ</item>
+        <item quantity="other">ファイルを変更しました: %d 件のエントリ</item>
     </plurals>
     <plurals name="settings_excluded_count">
         <item quantity="other">アプリとサイト %d 件</item>
@@ -302,13 +303,13 @@
     <string name="codes_add_scan">QR コードをスキャン</string>
     <string name="codes_add_image">画像内の QR コードをスキャン</string>
     <string name="codes_add_manual">キーを入力</string>
-    <string name="codes_add_import">Aegis ファイルからインポート</string>
-    <string name="codes_import_message">選択したファイルのパスワードです。この保管庫にまだないアカウントが追加されます。この保管庫のパスワードは変わりません。</string>
+    <string name="codes_add_import">他のファイルからインポート</string>
+    <string name="codes_import_message">選択したファイルのパスワードです。2FA コードにまだないアカウントが追加されます。2FA コードのパスワードは変わりません。</string>
     <string name="error_import_accounts">アカウントをインポートできませんでした</string>
     <plurals name="codes_imported">
         <item quantity="other">%1$d 件のアカウントを追加しました（%2$d 件は登録済み）</item>
     </plurals>
-    <string name="codes_add_needs_aegis">アカウントは Aegis 保管庫に保存されます。先に [ソース] で設定してオンにしてください。</string>
+    <string name="codes_add_needs_source">アカウントは 2FA コードに保存されます。先に [ソース] で設定してオンにしてください。</string>
     <string name="codes_add_confirm">追加</string>
     <string name="codes_added">アカウントを追加しました</string>
     <string name="codes_edit">アカウントを編集</string>
@@ -318,7 +319,7 @@
     <string name="codes_next">次のコード</string>
     <string name="codes_delete">削除</string>
     <string name="codes_delete_title">このアカウントを削除しますか？</string>
-    <string name="codes_delete_message">「%1$s」を Aegis 保管庫から削除します。削除するとコードを取得できなくなります。先に 2 段階認証をオフにするか、別のログイン方法を確保してください。</string>
+    <string name="codes_delete_message">「%1$s」を 2FA コードから削除します。削除するとコードを取得できなくなります。先に 2 段階認証をオフにするか、別のログイン方法を確保してください。</string>
     <string name="codes_deleted">アカウントを削除しました</string>
     <string name="codes_field_issuer">サービス</string>
     <string name="codes_field_account">アカウント</string>
@@ -334,4 +335,22 @@
     <string name="scan_no_permission">QR コードのスキャンにはカメラへのアクセス権限が必要です</string>
     <string name="error_change_codes">2FA アカウントを変更できませんでした</string>
     <string name="error_read_image">画像を読み込めませんでした</string>
+    <string name="sources_passwords_setup_plain_summary">このファイルにはパスワードがありません。保管庫はスマートフォンのロック解除中にのみ、そのまま読み取ります</string>
+    <string name="sources_file_message">ファイル: %1$s</string>
+    <string name="setup_password_again">パスワードをもう一度入力</string>
+    <string name="setup_password_empty">パスワードを入力してください</string>
+    <string name="setup_password_mismatch">パスワードが一致しません</string>
+    <string name="sources_codes_new_password">2FA コードのパスワードを設定</string>
+    <string name="sources_codes_new_password_message">ファイル: %1$s。このファイルにはパスワードがありません。保管庫はアカウントをここで設定するパスワードで暗号化して保存し、鍵を消去した後にだけもう一度入力を求めます。</string>
+    <string name="error_not_passwords">このファイルには、保管庫で読み取れるパスワードがありません。読み取れるのは、KDBX データベース、Bitwarden のエクスポート（JSON）、1Password のエクスポート（1PUX）、ブラウザやパスワード マネージャーの CSV エクスポートです。</string>
+    <string name="error_not_codes">このファイルには、保管庫で読み取れる 2FA アカウントがありません。読み取れるのは、Aegis、2FAS、andOTP、FreeOTP+、Bitwarden Authenticator、Proton Authenticator、Ente Auth、Google Authenticator のエクスポートと、otpauth リンクのリストです。</string>
+    <string name="error_account_key">このエクスポートはアカウントの鍵で暗号化されています。パスワードで保護するか、暗号化せずにもう一度エクスポートしてください。</string>
+    <string name="error_file_damaged">ファイルが破損しています（%1$s）。</string>
+    <string name="error_needs_setup">保存済みの鍵はこの種類のファイル用ではありません。パスワードのソースを再設定してください。</string>
+    <plurals name="codes_not_readable">
+        <item quantity="other">ファイルの %d 件のアカウントを読み取れませんでした</item>
+    </plurals>
+    <plurals name="codes_add_several">
+        <item quantity="other">%d 件のアカウントを追加しますか？</item>
+    </plurals>
 </resources>

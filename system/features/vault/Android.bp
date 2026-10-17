@@ -1,5 +1,6 @@
-// Lujarch Vault: the KeePass and Aegis reader, 2FA codes and autofill. An app of its own, so that
-// what it decrypts lives in its process and data only.
+// Lujarch Vault: passwords and 2FA codes from the owner's files (KDBX, the exports of other
+// password managers and authenticator apps), and autofill. An app of its own, so that what it
+// decrypts lives in its process and data only.
 android_app {
     name: "LujarchVault",
     srcs: ["src/app/org/**/*.kt"],
@@ -21,7 +22,7 @@ android_app {
     },
 }
 
-// Argon2, the key derivation of KeePass databases: the reference implementation (CC0 or
+// Argon2, the key derivation of KDBX databases and Bitwarden exports: the reference implementation (CC0 or
 // Apache 2.0, src/app/jni/argon2/LICENSE) behind the vault's JNI entry point.
 cc_library_shared {
     name: "liblujarch_vault_jni",

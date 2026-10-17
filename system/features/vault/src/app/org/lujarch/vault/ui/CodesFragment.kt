@@ -52,37 +52,40 @@ import org.lujarch.settings.pages.showDialog
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.PendingAegisImport
+import org.lujarch.vault.core.PendingImport
 import org.lujarch.vault.core.aegis.AegisVault
+import org.lujarch.vault.core.formats.CodeFiles
 import org.lujarch.vault.core.otp.Base32
 import org.lujarch.vault.core.otp.InvalidOtp
 import org.lujarch.vault.core.otp.Otp
 import org.lujarch.vault.core.otp.OtpParams
 import org.lujarch.vault.core.otp.OtpType
-import org.lujarch.vault.data.AegisData
+import org.lujarch.vault.data.CodesData
 import org.lujarch.vault.data.Clipboard
-import org.lujarch.vault.data.KeePassData
+import org.lujarch.vault.data.PasswordData
 import org.lujarch.vault.data.Source
 import org.lujarch.vault.data.Sources
 import org.lujarch.vault.data.Vault
 import org.lujarch.vault.data.VaultState
 
 /**
- * Every 2FA code with its countdown: Aegis accounts first (favorites on top),
- * then KeePass entries with OTP settings. Tap copies the code. Accounts are
- * added to the Aegis vault (a QR code from the camera or an image, a typed
- * key, an otpauth link, another Aegis vault file) and a long press on one edits, favors, advances or
- * deletes it; KeePass entries are changed in KeePass.
+ * Every 2FA code with its countdown: the accounts of the 2FA codes first
+ * (favorites on top), then the password entries with OTP settings. Tap
+ * copies the code. Accounts are added (a QR code from the camera or an
+ * image, a typed key, an otpauth link, a Google Authenticator export QR
+ * code, another file of an authenticator app) and a long press on one
+ * edits, favors, advances or deletes it; password entries are changed
+ * where their file is edited.
  */
 class CodesFragment : BasePreferenceFragment(), MenuProvider {
-    private lateinit var aegisCategory: PreferenceCategory
-    private lateinit var keepassCategory: PreferenceCategory
+    private lateinit var accountsCategory: PreferenceCategory
+    private lateinit var passwordsCategory: PreferenceCategory
     private lateinit var messagePref: ZeroStatePreference
 
-    private var shownAegis: AegisData? = null
-    private var shownKeePass: KeePassData? = null
-    /** OTP settings parsed from KeePass entries; wiped when the list is rebuilt. */
-    private val keepassParams = ArrayList<OtpParams>()
+    private var shownCodes: CodesData? = null
+    private var shownPasswords: PasswordData? = null
+    /** OTP settings parsed from password entries; wiped when the list is rebuilt. */
+    private val passwordParams = ArrayList<OtpParams>()
     private val codePrefs = ArrayList<CodePreference>()
     private var query = ""
 
@@ -92,8 +95,8 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
     private val pickImage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImagePicked(uri)
     }
-    private val pickAegis = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) onAegisPicked(uri)
+    private val pickCodes = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onCodesPicked(uri)
     }
 
     override fun buildScreen(screen: PreferenceScreen, savedInstanceState: Bundle?) {
@@ -103,14 +106,14 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
             setIcon(R.drawable.ic_codes)
             isVisible = false
         }
-        aegisCategory = screen.add(PreferenceCategory(prefContext)) {
-            key = "aegis"
-            setTitle(R.string.codes_aegis)
+        accountsCategory = screen.add(PreferenceCategory(prefContext)) {
+            key = "accounts"
+            setTitle(R.string.codes_accounts)
             isOrderingAsAdded = true
         }
-        keepassCategory = screen.add(PreferenceCategory(prefContext)) {
-            key = "keepass"
-            setTitle(R.string.codes_keepass)
+        passwordsCategory = screen.add(PreferenceCategory(prefContext)) {
+            key = "passwords"
+            setTitle(R.string.codes_passwords)
             isOrderingAsAdded = true
         }
     }
@@ -141,45 +144,45 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
     }
 
     private fun wipeParams() {
-        keepassParams.forEach { it.wipe() }
-        keepassParams.clear()
+        passwordParams.forEach { it.wipe() }
+        passwordParams.clear()
     }
 
     override fun onVaultState(state: VaultState) {
-        val aegis = state.aegisData
-        val keepass = state.keepassData
-        if (aegis !== shownAegis || keepass !== shownKeePass) rebuild(aegis, keepass)
+        val codes = state.codesData
+        val passwords = state.passwordsData
+        if (codes !== shownCodes || passwords !== shownPasswords) rebuild(codes, passwords)
         val message = when {
-            aegis != null || keepass != null -> if (codePrefs.isEmpty()) R.string.codes_none else 0
+            codes != null || passwords != null -> if (codePrefs.isEmpty()) R.string.codes_none else 0
             !state.anySetUp -> R.string.status_not_set_up
             !state.anyActive -> R.string.status_off
             state.loading -> R.string.status_unlocking
-            state.aegis is Source.Failed || state.keepass is Source.Failed -> R.string.status_failed
+            state.codes is Source.Failed || state.passwords is Source.Failed -> R.string.status_failed
             else -> R.string.status_locked
         }
         messagePref.isVisible = message != 0
         if (message != 0) messagePref.setTitle(message)
     }
 
-    private fun rebuild(aegis: AegisData?, keepass: KeePassData?) {
-        shownAegis = aegis
-        shownKeePass = keepass
-        aegisCategory.removeAll()
-        keepassCategory.removeAll()
+    private fun rebuild(codes: CodesData?, passwords: PasswordData?) {
+        shownCodes = codes
+        shownPasswords = passwords
+        accountsCategory.removeAll()
+        passwordsCategory.removeAll()
         codePrefs.clear()
         wipeParams()
         val collator = Collator.getInstance()
 
-        aegis?.entries
+        codes?.entries
             ?.sortedWith(compareBy<org.lujarch.vault.core.aegis.AegisEntry> { !it.favorite }
                 .thenComparator { a, b -> collator.compare(a.issuer.ifEmpty { a.name }, b.issuer.ifEmpty { b.name }) })
             ?.forEach { e ->
                 val label = listOf(e.issuer, e.name).filter { it.isNotEmpty() }.joinToString(" · ")
                 val account = AccountRef(e.uuid, e.issuer, e.name, label, e.favorite, e.otp?.type == OtpType.HOTP)
-                addCode(aegisCategory, e.otp, label, "aegis:${e.uuid}").onLongClick = { showActions(account) }
+                addCode(accountsCategory, e.otp, label, "accounts:${e.uuid}").onLongClick = { showActions(account) }
             }
 
-        keepass?.db?.entries
+        passwords?.db?.entries
             ?.filter { Otp.hasOtp(it) }
             ?.sortedWith { a, b -> collator.compare(a.title, b.title) }
             ?.forEach { e ->
@@ -187,12 +190,12 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
                     Otp.fromEntry(e)
                 } catch (ex: Exception) {
                     // A broken otp field is shown as unsupported; its content is never logged.
-                    Log.w(TAG, "OTP settings of a KeePass entry cannot be read: ${ex.message}")
+                    Log.w(TAG, "OTP settings of a password entry cannot be read: ${ex.message}")
                     null
                 }
-                params?.let { keepassParams.add(it) }
+                params?.let { passwordParams.add(it) }
                 val label = listOf(e.title, e.username).filter { it.isNotEmpty() }.joinToString(" · ")
-                addCode(keepassCategory, params, label, "keepass:${e.uuid}")
+                addCode(passwordsCategory, params, label, "passwords:${e.uuid}")
             }
         applyFilter()
     }
@@ -222,8 +225,8 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         codePrefs.forEach { p ->
             p.isVisible = needle.isEmpty() || p.summary?.toString()?.lowercase()?.contains(needle) == true
         }
-        aegisCategory.isVisible = codePrefs.any { it.parent == aegisCategory && it.isVisible }
-        keepassCategory.isVisible = codePrefs.any { it.parent == keepassCategory && it.isVisible }
+        accountsCategory.isVisible = codePrefs.any { it.parent == accountsCategory && it.isVisible }
+        passwordsCategory.isVisible = codePrefs.any { it.parent == passwordsCategory && it.isVisible }
     }
 
     // ---- menu ----
@@ -261,9 +264,9 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         return true
     }
 
-    // ---- adding and changing accounts (Aegis vault) ----
+    // ---- adding and changing accounts ----
 
-    /** What a long press needs of an Aegis account: plain names, never its key. */
+    /** What a long press needs of an account: plain names, never its key. */
     private class AccountRef(
         val uuid: String,
         val issuer: String,
@@ -274,8 +277,8 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
     )
 
     private fun showAddChoice() {
-        if (!Vault.aegisActive()) {
-            Toast.makeText(requireContext(), R.string.codes_add_needs_aegis, Toast.LENGTH_LONG).show()
+        if (!Vault.codesActive()) {
+            Toast.makeText(requireContext(), R.string.codes_add_needs_source, Toast.LENGTH_LONG).show()
             return
         }
         showDialog("code-add") { d ->
@@ -290,7 +293,7 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
                         0 -> scanCamera.launch(Intent(requireContext(), ScanActivity::class.java))
                         1 -> pickImage.launch(IMAGE_TYPES)
                         2 -> showEntryDialog(null)
-                        else -> pickAegis.launch(AEGIS_TYPES)
+                        else -> pickCodes.launch(CODE_FILE_TYPES)
                     }
                 }
                 .create()
@@ -298,21 +301,22 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
     }
 
     /**
-     * Another Aegis vault file (Aegis' export or its own file): its accounts
-     * that this vault does not hold yet are added after its password opened
-     * it; this vault keeps its own password. The picked bytes stay with the
-     * password dialog and are wiped when it ends unanswered.
+     * Another file of an authenticator app (any format CodeFiles reads): its
+     * accounts that the 2FA codes do not hold yet are added, after its
+     * password opened an encrypted one; the 2FA codes keep their own
+     * password. The picked bytes stay with the password dialog and are wiped
+     * when it ends unanswered.
      */
-    private fun onAegisPicked(uri: Uri) {
+    private fun onCodesPicked(uri: Uri) {
         launchUi {
             val ctx = requireContext()
             val holder = arrayOfNulls<ByteArray>(1)
             var encrypted = true
             try {
-                val ok = act(R.string.error_import_aegis) {
-                    val bytes = withContext(Dispatchers.IO) { Sources.readDocument(ctx, uri, MAX_AEGIS_BYTES) }
+                val ok = act(R.string.error_read_file) {
+                    val bytes = withContext(Dispatchers.IO) { Sources.readDocument(ctx, uri, MAX_CODE_FILE_BYTES) }
                     holder[0] = bytes
-                    encrypted = withContext(Dispatchers.Default) { AegisVault.parse(bytes).encrypted }
+                    encrypted = withContext(Dispatchers.Default) { CodeFiles.detect(bytes).encrypted }
                 }
                 if (!ok) {
                     holder[0]?.let { Bytes.wipe(it) }
@@ -327,15 +331,15 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
                 runMerge(bytes, null)
                 return@launchUi
             }
-            val pending = PendingAegisImport(bytes)
+            val pending = PendingImport(bytes)
             showDialog(DIALOG_IMPORT, onEnd = { Log.i(TAG, "CodesFragment: " + pending.end()) }) { d ->
-                passwordDialog(d, R.string.setup_aegis_password, getString(R.string.codes_import_message)) { chars ->
+                passwordDialog(d, R.string.setup_file_password, getString(R.string.codes_import_message)) { chars ->
                     val taken = pending.take()
                     val password = utf8(chars)
                     Bytes.wipe(chars)
                     if (taken == null) {
                         Bytes.wipe(password)
-                        Log.w(TAG, "CodesFragment: Aegis import answered after its file was wiped")
+                        Log.w(TAG, "CodesFragment: 2FA import answered after its file was wiped")
                     } else {
                         runMerge(taken, password)
                     }
@@ -348,20 +352,22 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         launchUi {
             try {
                 act(R.string.error_import_accounts) {
-                    val r = Vault.mergeAegis(bytes, password)
-                    Log.i(TAG, "CodesFragment: ${r.added} of ${r.total} accounts imported")
-                    ifPageAlive {
-                        Toast.makeText(
-                            requireContext(),
-                            resources.getQuantityString(R.plurals.codes_imported, r.added, r.added, r.total - r.added),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
+                    val r = Vault.importCodes(bytes, password)
+                    imported(r)
                 }
             } finally {
                 Bytes.wipe(bytes)
                 password?.let { Bytes.wipe(it) }
             }
+        }
+    }
+
+    private fun imported(r: Vault.MergeResult) {
+        Log.i(TAG, "CodesFragment: ${r.added} of ${r.total} accounts imported, ${r.skipped} not readable")
+        ifPageAlive {
+            var text = resources.getQuantityString(R.plurals.codes_imported, r.added, r.added, r.total - r.added)
+            if (r.skipped > 0) text += "\n" + resources.getQuantityString(R.plurals.codes_not_readable, r.skipped, r.skipped)
+            Toast.makeText(requireContext(), text, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -390,8 +396,26 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         }
     }
 
-    /** A scanned text: an otpauth link opens the account dialog filled in, anything else is refused. */
+    /**
+     * A scanned text: an otpauth link opens the account dialog filled in, a
+     * Google Authenticator export (otpauth-migration) lists its accounts to
+     * add, anything else is refused.
+     */
     private fun onScanned(text: String) {
+        if (CodeFiles.isMigration(text)) {
+            val accounts = try {
+                CodeFiles.migration(text)
+            } catch (e: Exception) {
+                toastError(R.string.codes_add, e)
+                return
+            }
+            if (accounts.entries.isEmpty()) {
+                toastError(R.string.codes_add, InvalidOtp("no account in the export"))
+                return
+            }
+            confirmAccounts(accounts)
+            return
+        }
         val params = try {
             Otp.parseUri(text)
         } catch (e: InvalidOtp) {
@@ -434,10 +458,28 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         }
     }
 
+    /** The accounts of an export QR code, by name, to add after a confirmation. */
+    private fun confirmAccounts(accounts: CodeFiles.Accounts) {
+        val names = accounts.entries.joinToString("\n") { e ->
+            listOf(e["issuer"] as? String, e["name"] as? String).filter { !it.isNullOrEmpty() }.joinToString(" · ")
+        }
+        val n = accounts.entries.size
+        showDialog("code-add-several") { d ->
+            AlertDialog.Builder(d.context)
+                .setTitle(resources.getQuantityString(R.plurals.codes_add_several, n, n))
+                .setMessage(names)
+                .setPositiveButton(R.string.codes_add_confirm) { _, _ ->
+                    launchUi { act(R.string.error_change_codes) { imported(Vault.addCodes(accounts)) } }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .create()
+        }
+    }
+
     private fun addAccount(params: OtpParams) {
         launchUi {
             try {
-                changeAegis(R.string.codes_added, "account added") { entries -> entries.add(AegisVault.newEntry(params)) }
+                changeCodes(R.string.codes_added, "account added") { entries -> entries.add(AegisVault.newEntry(params)) }
             } finally {
                 params.wipe()
             }
@@ -467,7 +509,7 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
                             { getString(R.string.codes_delete_message, a.label) }, R.string.codes_delete,
                         ) {
                             launchUi {
-                                changeAegis(R.string.codes_deleted, "account deleted") { entries ->
+                                changeCodes(R.string.codes_deleted, "account deleted") { entries ->
                                     if (!entries.removeAll { it["uuid"] == a.uuid }) throw IllegalStateException("the account is no longer in the vault")
                                 }
                             }
@@ -506,14 +548,14 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
 
     private fun changeEntry(uuid: String, @StringRes done: Int, what: String, change: (MutableMap<String, Any?>) -> Unit) {
         launchUi {
-            changeAegis(done, what) { entries ->
+            changeCodes(done, what) { entries ->
                 change(entries.firstOrNull { it["uuid"] == uuid } ?: throw IllegalStateException("the account is no longer in the vault"))
             }
         }
     }
 
-    private suspend fun changeAegis(@StringRes done: Int, what: String, change: (MutableList<MutableMap<String, Any?>>) -> Unit) {
-        if (act(R.string.error_change_codes) { Vault.changeAegis(what, change) } && done != 0) {
+    private suspend fun changeCodes(@StringRes done: Int, what: String, change: (MutableList<MutableMap<String, Any?>>) -> Unit) {
+        if (act(R.string.error_change_codes) { Vault.changeCodes(what, change) } && done != 0) {
             ifPageAlive { Toast.makeText(requireContext(), done, Toast.LENGTH_SHORT).show() }
         }
     }
@@ -526,8 +568,9 @@ class CodesFragment : BasePreferenceFragment(), MenuProvider {
         private const val MENU_SEARCH = 1
         private const val MENU_ADD = 2
         private val IMAGE_TYPES = arrayOf("image/*")
-        private val AEGIS_TYPES = arrayOf("application/json", "application/octet-stream", "text/plain")
-        private const val MAX_AEGIS_BYTES = 16 * 1024 * 1024
+        /** The files of authenticator apps have no one registered type: any file. */
+        private val CODE_FILE_TYPES = arrayOf("*/*")
+        private const val MAX_CODE_FILE_BYTES = 16 * 1024 * 1024
         private const val DIALOG_IMPORT = "code-import-password"
     }
 }

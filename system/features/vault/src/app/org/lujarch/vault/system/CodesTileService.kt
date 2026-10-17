@@ -42,15 +42,15 @@ class CodesTileService : TileService() {
         val tile = qsTile ?: return
         tile.state = Tile.STATE_INACTIVE
         tile.subtitle = when {
-            Vault.keePassActive() || Vault.aegisActive() -> null
-            Vault.keePassSetUp() || Vault.aegisSetUp() -> getString(R.string.status_off)
+            Vault.passwordsActive() || Vault.codesActive() -> null
+            Vault.passwordsSetUp() || Vault.codesSetUp() -> getString(R.string.status_off)
             else -> getString(R.string.status_not_set_up)
         }
         tile.updateTile()
     }
 
     override fun onClick() {
-        val target = if (Vault.keePassActive() || Vault.aegisActive()) {
+        val target = if (Vault.passwordsActive() || Vault.codesActive()) {
             Pages.intent(this, CodesFragment::class.java, R.string.codes_title)
         } else {
             Intent(this, VaultActivity::class.java)

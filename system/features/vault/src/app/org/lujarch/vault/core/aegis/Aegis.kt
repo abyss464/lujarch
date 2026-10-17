@@ -65,11 +65,12 @@ class AegisEntry(
 }
 
 /**
- * Aegis vault version 1 (aegis.json): password slots (scrypt, AES-256-GCM
- * wrapped master key) and the AES-256-GCM encrypted database. Only password
+ * Aegis vault version 1: password slots (scrypt, AES-256-GCM wrapped master
+ * key) and the AES-256-GCM encrypted database. It is the format of the
+ * vault's own file of 2FA accounts and of Aegis' exports. Only password
  * slots are used; biometric slots are bound to Aegis' own Keystore key.
- * [edit] writes the database back the way Aegis does, so the file stays
- * one that Aegis can import.
+ * [edit] and [create] write the file the way Aegis does, so it stays one
+ * that Aegis can import.
  */
 class AegisVault private constructor(private val root: Map<String, Any?>) {
     private val header = root.obj("header") ?: throw format("no header")
@@ -210,6 +211,9 @@ class AegisVault private constructor(private val root: Map<String, Any?>) {
         private const val SLOT_PASSWORD = 1L
         private const val NONCE_SIZE = 12
         private const val TAG_SIZE = 16
+        private const val SCRYPT_N = 1 shl 15
+        private const val SCRYPT_R = 8
+        private const val SCRYPT_P = 1
 
         /**
          * Adds the [incoming] entries that [entries] does not hold yet (the
@@ -271,6 +275,62 @@ class AegisVault private constructor(private val root: Map<String, Any?>) {
             e["info"] = info
             e["groups"] = ArrayList<Any?>()
             return e
+        }
+
+        /**
+         * A new encrypted vault file holding [entries]: a random master key, wrapped by one
+         * password slot (scrypt N 2^15, r 8, p 1, AES-256-GCM) for [password], and the database
+         * (version 3) encrypted under it. Returns the file and the master key; the caller wipes
+         * the key.
+         */
+        fun create(password: ByteArray, entries: List<MutableMap<String, Any?>>): Pair<ByteArray, ByteArray> {
+            val random = SecureRandom()
+            val master = ByteArray(32).also { random.nextBytes(it) }
+            val salt = ByteArray(32).also { random.nextBytes(it) }
+            val keyNonce = ByteArray(NONCE_SIZE).also { random.nextBytes(it) }
+            val dbNonce = ByteArray(NONCE_SIZE).also { random.nextBytes(it) }
+            val derived = Scrypt.derive(password, salt, SCRYPT_N, SCRYPT_R, SCRYPT_P, 32)
+            val sealedKey = try {
+                Aes.gcmEncrypt(derived, keyNonce, master)
+            } finally {
+                Bytes.wipe(derived)
+            }
+            val db = LinkedHashMap<String, Any?>()
+            db["version"] = 3L
+            db["entries"] = ArrayList<Any?>(entries)
+            db["groups"] = ArrayList<Any?>()
+            db["icons_optimized"] = true
+            val plain = Json.write(db).toByteArray(Charsets.UTF_8)
+            val sealed = try {
+                Aes.gcmEncrypt(master, dbNonce, plain)
+            } finally {
+                Bytes.wipe(plain)
+            }
+            val keyParams = LinkedHashMap<String, Any?>()
+            keyParams["nonce"] = Bytes.hex(keyNonce)
+            keyParams["tag"] = Bytes.hex(sealedKey.copyOfRange(sealedKey.size - TAG_SIZE, sealedKey.size))
+            val slot = LinkedHashMap<String, Any?>()
+            slot["type"] = SLOT_PASSWORD
+            slot["uuid"] = UUID.randomUUID().toString()
+            slot["key"] = Bytes.hex(sealedKey.copyOfRange(0, sealedKey.size - TAG_SIZE))
+            slot["key_params"] = keyParams
+            slot["n"] = SCRYPT_N.toLong()
+            slot["r"] = SCRYPT_R.toLong()
+            slot["p"] = SCRYPT_P.toLong()
+            slot["salt"] = Bytes.hex(salt)
+            slot["repaired"] = true
+            slot["is_backup"] = false
+            val params = LinkedHashMap<String, Any?>()
+            params["nonce"] = Bytes.hex(dbNonce)
+            params["tag"] = Bytes.hex(sealed.copyOfRange(sealed.size - TAG_SIZE, sealed.size))
+            val header = LinkedHashMap<String, Any?>()
+            header["slots"] = arrayListOf<Any?>(slot)
+            header["params"] = params
+            val root = LinkedHashMap<String, Any?>()
+            root["version"] = 1L
+            root["header"] = header
+            root["db"] = Base64.getEncoder().encodeToString(sealed.copyOfRange(0, sealed.size - TAG_SIZE))
+            return Json.write(root).toByteArray(Charsets.UTF_8) to master
         }
 
         fun parse(file: ByteArray): AegisVault {

@@ -45,8 +45,8 @@ class Secret(bytes: ByteArray) {
     }
 }
 
-/** One string field of a KeePass entry; protected fields hold their value in [secret]. */
-class KpField(val name: String, val plain: String?, val secret: Secret?) {
+/** One string field of an entry; protected fields hold their value in [secret]. */
+class PasswordField(val name: String, val plain: String?, val secret: Secret?) {
     val isProtected: Boolean
         get() = secret != null
 
@@ -61,17 +61,17 @@ class KpField(val name: String, val plain: String?, val secret: Secret?) {
     }
 }
 
-class KpEntry(
+class PasswordEntry(
     val uuid: String,
     /** Group names from the root group (excluded) down to the entry's group. */
     val path: List<String>,
-    val fields: List<KpField>,
+    val fields: List<PasswordField>,
     val tags: String,
     val expires: Boolean,
     /** Expiry time in epoch milliseconds, meaningful when [expires]. */
     val expiryMillis: Long,
 ) {
-    private fun field(name: String): KpField? = fields.firstOrNull { it.name == name }
+    private fun field(name: String): PasswordField? = fields.firstOrNull { it.name == name }
 
     val title: String
         get() = field(TITLE)?.value().orEmpty()
@@ -85,14 +85,14 @@ class KpEntry(
     val notes: String
         get() = field(NOTES)?.value().orEmpty()
 
-    val password: KpField?
+    val password: PasswordField?
         get() = field(PASSWORD)
 
     /** Every field that is not one of the five standard ones. */
-    val customFields: List<KpField>
+    val customFields: List<PasswordField>
         get() = fields.filter { it.name !in STANDARD }
 
-    fun get(name: String): KpField? = field(name)
+    fun get(name: String): PasswordField? = field(name)
 
     fun wipe() {
         fields.forEach { it.wipe() }
@@ -108,16 +108,16 @@ class KpEntry(
     }
 }
 
-class KpGroup(
+class PasswordGroup(
     val uuid: String,
     val name: String,
-    val groups: List<KpGroup>,
-    val entries: List<KpEntry>,
+    val groups: List<PasswordGroup>,
+    val entries: List<PasswordEntry>,
 ) {
     /** Entries of this group and every subgroup. */
-    fun allEntries(): List<KpEntry> {
-        val out = ArrayList<KpEntry>()
-        fun walk(g: KpGroup) {
+    fun allEntries(): List<PasswordEntry> {
+        val out = ArrayList<PasswordEntry>()
+        fun walk(g: PasswordGroup) {
             out.addAll(g.entries)
             g.groups.forEach { walk(it) }
         }
@@ -126,23 +126,20 @@ class KpGroup(
     }
 }
 
-/** A decrypted KeePass database, recycle bin and history already removed. */
-class KdbxDatabase(
+/**
+ * The decrypted passwords of one file, in KeePass' shape whatever the file's format: groups and
+ * entries with the five standard fields and named custom fields (a KDBX database without its
+ * recycle bin and history, or an export of another password manager). [format] names the file's
+ * format and its encryption for the state page; it never contains key material.
+ */
+class PasswordDatabase(
     val name: String,
-    val root: KpGroup,
-    val info: KdbxInfo,
+    val root: PasswordGroup,
+    val format: String,
 ) {
-    val entries: List<KpEntry> by lazy { root.allEntries() }
+    val entries: List<PasswordEntry> by lazy { root.allEntries() }
 
     fun wipe() {
         entries.forEach { it.wipe() }
     }
 }
-
-/** Format facts shown on the state page; never contains key material. */
-data class KdbxInfo(
-    val version: String,
-    val cipher: String,
-    val kdf: org.lujarch.vault.core.kdbx.KdfSummary,
-    val compressed: Boolean,
-)

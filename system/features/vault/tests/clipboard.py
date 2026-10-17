@@ -7,7 +7,7 @@ timeout: 1200
 """
 import time
 
-from _vault import (SYNCED, keepass, no_screen_lock, reset, screen_lock, set_up_keepass,
+from _vault import (SYNCED, keepass, no_screen_lock, reset, screen_lock, set_up_passwords,
                     summary_of, vault_page)
 from lujarch_test import AppProbe, check, device, note, run, step
 
@@ -46,7 +46,7 @@ def main():
         d.push(str(db), f"{SYNCED}/{DB}")
         d.sh(f"chown -R 5100:5100 {SYNCED}")
         d.push(str(key), f"/sdcard/Download/{KEY}")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("Clear the clipboard: After 30 seconds by default, with its choices")
         vault_page(d, ("Lujarch Vault", "Settings"))

@@ -19,8 +19,8 @@ import org.lujarch.sync.Reply;
 import org.lujarch.sync.Status;
 
 /**
- * Sync (lujarch_sync): its state, the engine's REST API, its device identity, and the KeePass
- * databases of the synced folders for Lujarch Vault. Methods that return text return JSON. A
+ * Sync (lujarch_sync): its state, the engine's REST API, its device identity, and the password
+ * files of the synced folders for Lujarch Vault. Methods that return text return JSON. A
  * refused or failed call throws a ServiceSpecificException with one of the ERROR_ constants and
  * the reason.
  */
@@ -79,7 +79,7 @@ interface ISync {
     String generateIdentity(boolean keepConfig);
     String restoreIdentity(String backup);
 
-    /** The KeePass databases of the synced folders, for Lujarch Vault (VLT-2). */
+    /** The password files of the synced folders (vault_files.h), for Lujarch Vault (VLT-2). */
     String vaultFind();
     /** One of them, open for reading. */
     ParcelFileDescriptor vaultOpen(String folder, String path);

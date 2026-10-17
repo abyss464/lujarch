@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Read access to the KeePass databases in the synced folders for Lujarch Vault (VLT-2). Every
-// directory under kFoldersRoot is one synced folder; the vault finds the databases (.kdbx files)
-// in them and opens the one the owner chose. No writes, no other files.
+// Read access to the password files in the synced folders for Lujarch Vault (VLT-2). Every
+// directory under kFoldersRoot is one synced folder; the vault finds the files that may hold
+// passwords (by name: KDBX databases and the JSON, 1PUX and CSV exports of password managers;
+// the vault reads their content) and opens the one the owner chose. No writes, no other files.
+// "Database" below is any such file.
 #pragma once
 
 #include <stdint.h>
@@ -61,7 +63,7 @@ bool IsUtf8(std::string_view text);
 inline constexpr size_t kMaxPathSize = 4096;
 bool IsRelativePath(std::string_view path);
 
-// A KeePass database by name: ends in ".kdbx", any case.
+// A password file by name: ends in ".kdbx", ".json", ".1pux" or ".csv", any case.
 bool IsDatabaseName(std::string_view name);
 
 // Absolute path of folder under root; folder must pass IsFileName.

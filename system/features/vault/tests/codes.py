@@ -1,8 +1,8 @@
-"""2FA codes lists the Aegis accounts, then the KeePass entries that carry a code, each with its
-code and countdown; a tap copies it. An account is added from a QR code in an image, a typed key or
-an otpauth link, each shown for review first, and the accounts of another Aegis file are imported.
-An Aegis account is renamed, starred, advanced (counter codes) or deleted after a confirmation. The
-Quick Settings tile 2FA codes opens the codes, after unlocking on a locked phone.
+"""2FA codes lists the accounts of the 2FA codes, then the password entries that carry a code, each
+with its code and countdown; a tap copies it. An account is added from a QR code in an image, a typed
+key or an otpauth link, each shown for review first, and the accounts of another file are imported.
+An account is renamed, starred, advanced (counter codes) or deleted after a confirmation. The Quick
+Settings tile 2FA codes opens the codes, after unlocking on a locked phone.
 
 verifies: VLT-5
 timeout: 2400
@@ -16,7 +16,7 @@ import time
 
 from _vault import (ACCOUNTS, AEGIS_PASSWORD, OUT, SYNCED, aegis, appears, confirm_credential,
                     enter_password, keepass, no_screen_lock, pick, pin_pad, reset, screen_lock,
-                    set_up_aegis, set_up_keepass, vault_page)
+                    set_up_codes, set_up_passwords, vault_page)
 from lujarch_test import AppProbe, check, device, note, run, step
 
 DB, KEY, AEGIS, OTHER = ("lujarch-test-vault.kdbx", "lujarch-test-vault.keyx",
@@ -81,7 +81,7 @@ def add_tile(d):
 
 def codes_page(d):
     vault_page(d, ("Lujarch Vault", "2FA codes"))
-    check(d.wait(text="Aegis", timeout=30), "2FA codes shows")
+    check(d.wait(text="Accounts", timeout=30), "2FA codes shows")
 
 
 def add(d, how):
@@ -110,19 +110,19 @@ def main():
         subprocess.run(["qrencode", "-s", "8", "-o", str(OUT / QR),
                         "otpauth://totp/Chat:erin?secret=MFRGGZDFMZTWQ2LK&issuer=Chat"], check=True)
         d.push(str(OUT / QR), f"/sdcard/Download/{QR}")
-        set_up_keepass(d, DB, KEY)
-        set_up_aegis(d, AEGIS)
+        set_up_passwords(d, DB, KEY)
+        set_up_codes(d, AEGIS)
 
-        step("the Aegis accounts, then the KeePass entries with a code, each with its code")
+        step("the accounts, then the password entries with a code, each with its code")
         codes_page(d)
-        check(d.find(text="KeePass"), "the KeePass section follows")
+        check(d.find(text="Passwords"), "the passwords' section follows")
         forge = shown_code(d, "Forge · alice")
         mail = shown_code(d, "Example mail · alice@example.com")
         note(f"Forge {forge}, Example mail {mail}")
         check(forge in (totp(ACCOUNTS[0][3]), totp(ACCOUNTS[0][3], time.time() - 30)),
-              "an Aegis account's code is right")
+              "an account's code is right")
         check(mail in (totp("JBSWY3DPEHPK3PXP"), totp("JBSWY3DPEHPK3PXP", time.time() - 30)),
-              "a KeePass entry's code is right")
+              "a password entry's code is right")
         check(shown_code(d, "Bank · alice · counter 3") == hotp(ACCOUNTS[1][3], 3),
               "a counter account shows its counter's code")
         d.shot("codes")
@@ -166,8 +166,8 @@ def main():
         codes_page(d)
         check(d.wait(contains="Mail · dave", timeout=20), "the linked account is added")
 
-        step("the accounts of another Aegis file are imported")
-        add(d, "Import from an Aegis file")
+        step("the accounts of another file are imported")
+        add(d, "Import from another file")
         pick(d, "Download", OTHER)
         enter_password(d, AEGIS_PASSWORD)
         codes_page(d)
@@ -213,7 +213,7 @@ def main():
         d.shot("tile")
         # A tap on the tile: SystemUI's click, which runs the tile's own onClick.
         d.sh(f"cmd statusbar click-tile {TILE}")
-        check(d.wait(text="Aegis", timeout=20), "the tile opens the codes")
+        check(d.wait(text="Accounts", timeout=20), "the tile opens the codes")
         d.key("KEYCODE_POWER")
         time.sleep(2)
         d.key("KEYCODE_WAKEUP")
@@ -231,7 +231,7 @@ def main():
         d.tap_xy(tile.x, tile.y, wait=2)
         d.shot("tile-locked")
         pin_pad(d)
-        check(d.wait(text="Aegis", timeout=20), "after unlocking it opens the codes")
+        check(d.wait(text="Accounts", timeout=20), "after unlocking it opens the codes")
         d.shot("tile-unlocked")
     finally:
         d.sh(f"cmd statusbar remove-tile '{TILE}'", check=False)

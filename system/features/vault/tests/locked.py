@@ -9,7 +9,7 @@ import subprocess
 import time
 
 from _vault import (OUT, PACKAGE, SYNCED, keepass, keyguard_showing, no_screen_lock, reset,
-                    screen_lock, set_up_keepass, summary_of, unlock_with_pin, vault_page)
+                    screen_lock, set_up_passwords, summary_of, unlock_with_pin, vault_page)
 from lujarch_test import ADB, SERIAL, check, device, note, run, step
 
 DB, KEY = "lujarch-test-vault.kdbx", "lujarch-test-vault.keyx"
@@ -17,7 +17,7 @@ SECRETS = ("mail-pass-1", "probe-pass-2", "shop-pass-3")
 
 
 def held_secrets(d):
-    """The database's passwords found in the vault's memory, after a collection."""
+    """The passwords of the file found in the vault's memory, after a collection."""
     pid = d.sh(f"pidof {PACKAGE}", check=False).strip()
     note(f"the vault's process: {pid or 'ended'}")
     if not pid:
@@ -42,7 +42,7 @@ def main():
         d.push(str(db), f"{SYNCED}/{DB}")
         d.sh(f"chown -R 5100:5100 {SYNCED}")
         d.push(str(key), f"/sdcard/Download/{KEY}")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("the keys are wrapped by a Keystore key that works only while unlocked")
         vault_page(d, ("Lujarch Vault", "Settings", "About the vault"))

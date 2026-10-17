@@ -19,11 +19,10 @@ package org.lujarch.vault.core.kdbx
 import java.io.ByteArrayInputStream
 import java.util.Base64
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.KdbxDatabase
-import org.lujarch.vault.core.KdbxInfo
-import org.lujarch.vault.core.KpEntry
-import org.lujarch.vault.core.KpField
-import org.lujarch.vault.core.KpGroup
+import org.lujarch.vault.core.PasswordDatabase
+import org.lujarch.vault.core.PasswordEntry
+import org.lujarch.vault.core.PasswordField
+import org.lujarch.vault.core.PasswordGroup
 import org.lujarch.vault.core.Secret
 import org.lujarch.vault.core.crypto.StreamCipher
 import org.xml.sax.Attributes
@@ -47,10 +46,10 @@ internal object KdbxXml {
         val root: GroupBuilder?,
         val recycleBinUuid: String?,
     ) {
-        fun toDatabase(info: KdbxInfo): KdbxDatabase {
+        fun toDatabase(format: String): PasswordDatabase {
             val rootGroup = root ?: throw KdbxException(KdbxException.Reason.CORRUPT, "no root group")
             val recycle = recycleBinUuid?.takeIf { it.isNotEmpty() && it.any { c -> c != '0' } }
-            return KdbxDatabase(name, rootGroup.build(emptyList(), recycle, isRoot = true)!!, info)
+            return PasswordDatabase(name, rootGroup.build(emptyList(), recycle, isRoot = true)!!, format)
         }
     }
 
@@ -61,13 +60,13 @@ internal object KdbxXml {
         val entries = ArrayList<EntryBuilder>()
 
         /** null for the recycle bin, whose entries are wiped. */
-        fun build(parentPath: List<String>, recycleBin: String?, isRoot: Boolean): KpGroup? {
+        fun build(parentPath: List<String>, recycleBin: String?, isRoot: Boolean): PasswordGroup? {
             if (!isRoot && recycleBin != null && uuid == recycleBin) {
                 wipeAll()
                 return null
             }
             val path = if (isRoot) emptyList() else parentPath + name
-            return KpGroup(
+            return PasswordGroup(
                 uuid = uuid,
                 name = name,
                 groups = groups.mapNotNull { it.build(path, recycleBin, isRoot = false) },
@@ -83,12 +82,12 @@ internal object KdbxXml {
 
     class EntryBuilder {
         var uuid = ""
-        val fields = ArrayList<KpField>()
+        val fields = ArrayList<PasswordField>()
         var tags = ""
         var expires = false
         var expiryMillis = 0L
 
-        fun build(path: List<String>) = KpEntry(uuid, path, fields, tags, expires, expiryMillis)
+        fun build(path: List<String>) = PasswordEntry(uuid, path, fields, tags, expires, expiryMillis)
     }
 
     fun parse(xml: ByteArray, stream: StreamCipher?, v3HeaderHash: ByteArray?): Parsed {
@@ -235,7 +234,7 @@ internal object KdbxXml {
                     "String" -> {
                         val key = fieldKey
                         if (key != null) {
-                            entry.fields.add(KpField(key, if (fieldSecret == null) fieldPlain ?: "" else null, fieldSecret))
+                            entry.fields.add(PasswordField(key, if (fieldSecret == null) fieldPlain ?: "" else null, fieldSecret))
                         } else {
                             fieldSecret?.wipe()
                         }

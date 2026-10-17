@@ -7,13 +7,13 @@
     <string name="permission_open_description">允许系统应用打开 Lujarch 保险库的页面。</string>
 
     <!-- Home -->
-    <string name="home_intro_not_set_up">来自 KeePass 数据库的密码和来自 Aegis 保险库的两步验证码。在“数据源”中设置一次，之后手机解锁时即可使用保险库。</string>
+    <string name="home_intro_not_set_up">来自密码文件的密码，以及来自身份验证器账号的两步验证码。在“数据源”中设置一次，之后手机解锁时即可使用保险库。</string>
     <string name="home_status">状态</string>
     <string name="status_not_set_up">尚未设置</string>
     <string name="status_off">已关闭</string>
     <string name="status_locked">已锁定。解锁手机后打开。</string>
     <string name="status_unlocking">正在解锁…</string>
-    <string name="status_reloading">正在加载更新的数据库…</string>
+    <string name="status_reloading">正在加载更新的文件…</string>
     <string name="status_unlocked">已打开，读取时间：%1$s</string>
     <string name="status_failed">无法打开保险库</string>
     <string name="status_idle">尚未加载</string>
@@ -22,8 +22,8 @@
 
     <!-- 2FA codes -->
     <string name="codes_title">两步验证码</string>
-    <string name="codes_aegis">Aegis</string>
-    <string name="codes_keepass">KeePass</string>
+    <string name="codes_accounts">账号</string>
+    <string name="codes_passwords">密码</string>
     <string name="codes_none">没有两步验证码</string>
     <string name="codes_search_hint">搜索账号</string>
     <string name="code_unsupported">不支持此类型</string>
@@ -34,13 +34,13 @@
     <string name="codes_add_scan">扫描二维码</string>
     <string name="codes_add_image">识别图片中的二维码</string>
     <string name="codes_add_manual">输入密钥</string>
-    <string name="codes_add_import">从 Aegis 文件导入</string>
-    <string name="codes_import_message">所选文件的密码。会添加其中本保险库还没有的账号；本保险库的密码不变。</string>
+    <string name="codes_add_import">从其他文件导入</string>
+    <string name="codes_import_message">所选文件的密码。会添加其中两步验证码还没有的账号；两步验证码的密码不变。</string>
     <string name="error_import_accounts">导入账号失败</string>
     <plurals name="codes_imported">
         <item quantity="other">已添加 %1$d 个账号，%2$d 个已存在</item>
     </plurals>
-    <string name="codes_add_needs_aegis">账号保存在 Aegis 保险库中：请先在“数据源”中设置并开启它。</string>
+    <string name="codes_add_needs_source">账号保存在两步验证码中：请先在“数据源”中设置并开启它。</string>
     <string name="codes_add_confirm">添加</string>
     <string name="codes_added">已添加账号</string>
     <string name="codes_edit">编辑账号</string>
@@ -50,7 +50,7 @@
     <string name="codes_next">下一个验证码</string>
     <string name="codes_delete">删除</string>
     <string name="codes_delete_title">要删除此账号吗？</string>
-    <string name="codes_delete_message">将从 Aegis 保险库中移除“%1$s”。删除后无法再获取它的验证码：请先关闭它的两步验证，或确保有其他登录方式。</string>
+    <string name="codes_delete_message">将从两步验证码中移除“%1$s”。删除后无法再获取它的验证码：请先关闭它的两步验证，或确保有其他登录方式。</string>
     <string name="codes_deleted">已删除账号</string>
     <string name="codes_field_issuer">服务</string>
     <string name="codes_field_account">账号</string>
@@ -78,7 +78,7 @@
     <!-- Entry -->
     <string name="entry_title">条目</string>
     <string name="entry_untitled">（无标题）</string>
-    <string name="entry_missing">此条目已不在数据库中</string>
+    <string name="entry_missing">此条目已不在文件中</string>
     <string name="entry_other_fields">其他字段</string>
     <string name="entry_details">详细信息</string>
     <string name="entry_group">分组</string>
@@ -107,39 +107,39 @@
 
     <!-- Sources (first-time setup and later changes) -->
     <string name="sources_title">数据源</string>
-    <string name="sources_summary">KeePass：%1$s · Aegis：%2$s</string>
+    <string name="sources_summary">密码：%1$s · 两步验证码：%2$s</string>
     <string name="state_set_up">已设置</string>
     <string name="state_not_set_up">未设置</string>
     <string name="state_off">已关闭</string>
-    <string name="sources_keepass">KeePass 数据库</string>
-    <string name="sources_keepass_use">使用 KeePass 数据库</string>
-    <string name="sources_keepass_on">用于密码、自动填充和条目中的两步验证码</string>
-    <string name="sources_keepass_off">已关闭：不显示密码，也不自动填充。已保存的密钥保留。</string>
-    <string name="sources_database">数据库</string>
-    <string name="sources_database_none">未选择。点按即可从同步文件夹或其他位置选择。</string>
-    <string name="sources_database_synced">%1$s · 同步文件夹“%2$s”</string>
-    <string name="sources_database_document">%1$s · %2$s</string>
-    <string name="sources_database_document_plain">%1$s · 所选文件</string>
+    <string name="sources_passwords">密码</string>
+    <string name="sources_passwords_use">使用密码</string>
+    <string name="sources_passwords_on">用于密码、自动填充和条目中的两步验证码</string>
+    <string name="sources_passwords_off">已关闭：不显示密码，也不自动填充。已保存的密钥保留。</string>
+    <string name="sources_file">文件</string>
+    <string name="sources_file_none">未选择。点按即可从同步文件夹或其他位置选择。</string>
+    <string name="sources_file_synced">%1$s · 同步文件夹“%2$s”</string>
+    <string name="sources_file_document">%1$s · %2$s</string>
+    <string name="sources_file_document_plain">%1$s · 所选文件</string>
     <string name="sources_modified">修改时间：%1$s</string>
-    <string name="sources_database_pending">需要密码：请点按“重新设置 KeePass”</string>
-    <string name="sources_database_no_access">此文件的访问权限已失效。点按即可重新选择。</string>
-    <string name="sources_database_missing">此文件已不存在。点按即可选择其他文件。</string>
-    <string name="sources_choose_database">选择数据库</string>
-    <string name="sources_change_database">更换数据库</string>
+    <string name="sources_file_pending">需要密码：请点按“重新设置密码数据源”</string>
+    <string name="sources_file_no_access">此文件的访问权限已失效。点按即可重新选择。</string>
+    <string name="sources_file_missing">此文件已不存在。点按即可选择其他文件。</string>
+    <string name="sources_choose_file">选择密码文件</string>
+    <string name="sources_change_file">更换密码文件</string>
     <string name="sources_choose_other">从其他位置选择…</string>
-    <string name="sources_found_none">同步文件夹中没有 KeePass 数据库（.kdbx）。</string>
+    <string name="sources_found_none">同步文件夹中没有密码文件（.kdbx、.json、.1pux、.csv）。</string>
     <string name="sources_found_item">%1$s · %2$s · %3$s</string>
     <string name="sources_skipped_item">%1$s · 无法使用：%2$s</string>
-    <string name="sources_database_unavailable">无法使用：%1$s</string>
+    <string name="sources_file_unavailable">无法使用：%1$s</string>
     <string name="skip_reason_name">文件名不是有效的 UTF-8 编码</string>
     <string name="skip_reason_too_large">%1$s，超过 %2$s 上限</string>
     <string name="skip_reason_too_deep">位于 %1$d 层以下的文件夹中</string>
     <string name="skip_reason_symlink">符号链接</string>
     <string name="skip_reason_not_regular">不是普通文件</string>
     <string name="skip_reason_other">无法读取</string>
-    <string name="sources_found_truncated">未列出全部数据库：搜索已达到上限。</string>
-    <string name="sources_switching">正在用已保存的密钥打开所选数据库…</string>
-    <string name="sources_switch_needs_password">已保存的密钥无法打开此数据库，请输入该数据库的密码。</string>
+    <string name="sources_found_truncated">未列出全部文件：搜索已达到上限。</string>
+    <string name="sources_switching">正在用已保存的密钥打开所选文件…</string>
+    <string name="sources_switch_needs_password">已保存的密钥无法打开此文件，请输入该文件的密码。</string>
     <string name="sources_no_grant">此位置不允许长期访问。请从其他位置选择文件。</string>
     <string name="sources_key_file">密钥文件</string>
     <string name="key_file_none">不使用密钥文件</string>
@@ -149,29 +149,30 @@
     <string name="key_file_summary_stored">已包含在已保存的密钥中。仅在重新设置时需要再次选择。</string>
     <string name="key_file_summary_picked">%1$s（%2$s）。仅用于设置，不会保存到手机上。</string>
     <string name="key_file_summary_imported">从电脑导入（%1$s）。设置成功后从手机上删除。</string>
-    <string name="sources_keepass_setup">设置 KeePass</string>
-    <string name="sources_keepass_setup_again">重新设置 KeePass</string>
-    <string name="sources_keepass_setup_summary">输入数据库密码；检查后仅保存由其派生的密钥</string>
-    <string name="sources_keepass_setup_again_summary">在电脑上更改密码或密钥文件后使用</string>
-    <string name="sources_password_message">数据库：%1$s\n密钥文件：%2$s</string>
+    <string name="sources_passwords_setup">设置密码数据源</string>
+    <string name="sources_passwords_setup_again">重新设置密码数据源</string>
+    <string name="sources_passwords_setup_summary">输入文件的密码；检查后仅保存由其派生的密钥</string>
+    <string name="sources_passwords_setup_again_summary">在电脑上更改密码或密钥文件后使用</string>
+    <string name="sources_passwords_setup_again_encrypted_summary">更改文件的密码后使用</string>
+    <string name="sources_password_message">文件：%1$s\n密钥文件：%2$s</string>
     <string name="setup_password">密码</string>
     <string name="setup_checking">正在检查…需要几秒钟</string>
-    <string name="setup_keepass_password">KeePass 密码</string>
-    <string name="setup_aegis_password">Aegis 密码</string>
-    <string name="sources_aegis">Aegis 保险库</string>
-    <string name="sources_aegis_use">使用 Aegis 保险库</string>
-    <string name="sources_aegis_on">用于两步验证码</string>
-    <string name="sources_aegis_off">已关闭：不显示其验证码。已保存的密钥保留。</string>
-    <string name="sources_aegis_file">保险库文件</string>
-    <string name="sources_aegis_file_present">%1$s · %2$s · 导入时间：%3$s。点按即可更换。</string>
-    <string name="sources_aegis_file_unnamed">Aegis 保险库文件</string>
-    <string name="sources_aegis_file_missing">尚未导入。点按即可导入加密的 Aegis 导出文件。</string>
-    <string name="sources_aegis_setup">设置 Aegis</string>
-    <string name="sources_aegis_setup_again">重新设置 Aegis</string>
-    <string name="sources_aegis_setup_summary">输入保险库密码；检查后仅保存由其解密的主密钥</string>
-    <string name="sources_aegis_new_password">新保险库文件的密码</string>
-    <string name="sources_aegis_message">文件：%1$s</string>
-    <string name="sources_aegis_pick_again">应用重启时未保留所选的保险库文件，请重新选择。</string>
+    <string name="setup_file_password">文件的密码</string>
+    <string name="setup_codes_password">两步验证码的密码</string>
+    <string name="sources_codes">两步验证码</string>
+    <string name="sources_codes_use">使用两步验证码</string>
+    <string name="sources_codes_on">用于其账号的验证码</string>
+    <string name="sources_codes_off">已关闭：不显示其验证码。已保存的密钥保留。</string>
+    <string name="sources_accounts">账号</string>
+    <string name="sources_accounts_present">%1$s · 导入时间：%2$s。点按即可换成其他文件中的账号。</string>
+    <string name="sources_accounts_unnamed">导入的文件</string>
+    <string name="sources_accounts_missing">尚未导入。点按即可从身份验证器的导出文件导入账号。</string>
+    <string name="sources_codes_setup">设置两步验证码数据源</string>
+    <string name="sources_codes_setup_again">重新设置两步验证码数据源</string>
+    <string name="sources_codes_setup_summary">输入两步验证码的密码；检查后仅保存由其解密的主密钥</string>
+    <string name="sources_codes_file_password">所选文件的密码</string>
+    <string name="sources_codes_message">文件：%1$s。之后两步验证码也由此密码保护。</string>
+    <string name="sources_codes_pick_again">应用重启时未保留所选的文件，请重新选择。</string>
     <string name="setup_footer">密码不会被保存。保险库只保存由密码派生的密钥，并由手机的 Keystore 加密，Keystore 仅在手机解锁时才会释放它们。因此屏幕锁是所有密码和验证码的唯一屏障；在手机解锁期间，您授予 Root 权限的应用也可以读取它们。</string>
 
     <!-- Settings -->
@@ -221,13 +222,13 @@
     <string name="settings_delete_keyfile">删除已导入的密钥文件</string>
     <string name="settings_delete_keyfile_summary">从电脑导入的密钥文件（%1$s）仍在手机上</string>
     <string name="settings_delete_keyfile_none">手机上没有已导入的密钥文件</string>
-    <string name="settings_delete_keyfile_confirm">已导入的密钥文件将被删除。若要重新设置 KeePass，请在“数据源”中选择密钥文件，或再次导入。</string>
+    <string name="settings_delete_keyfile_confirm">已导入的密钥文件将被删除。若要重新设置密码数据源，请在“数据源”中选择密钥文件，或再次导入。</string>
     <string name="settings_delete_keyfile_action">删除</string>
-    <string name="settings_footer">不保留任何解密数据：保险库只在您查看页面和每次自动填充时打开，离开后即清除。手机的 Keystore 只在手机解锁时才会打开它。KeePass 数据库在 KeePassXC 中编辑，通过同步或所选文件传到手机。</string>
+    <string name="settings_footer">不保留任何解密数据：保险库只在您查看页面和每次自动填充时打开，离开后即清除。手机的 Keystore 只在手机解锁时才会打开它。密码文件在创建它的应用中编辑，通过同步或所选文件传到手机。</string>
 
     <!-- About the vault (state of the sources) -->
-    <string name="state_keepass">KeePass 数据库</string>
-    <string name="state_aegis">Aegis 保险库</string>
+    <string name="state_passwords">密码</string>
+    <string name="state_codes">两步验证码</string>
     <string name="state_keystore">Keystore</string>
     <string name="state_keystore_key">封装密钥</string>
     <string name="state_keystore_none">无密钥（尚未设置）</string>
@@ -273,10 +274,10 @@
     <string name="excluded_choose_app">选择应用</string>
 
     <!-- Settings search -->
-    <string name="search_keywords_vault">保险库,密码,密码管理,密码管理器,KeePass,自动填充,自动填写,账号,Vault,password</string>
-    <string name="search_keywords_codes">验证码,两步验证,两步验证码,双重验证,二次验证,动态口令,动态密码,一次性密码,身份验证器,2FA,OTP,TOTP,Aegis</string>
-    <string name="search_keywords_passwords">密码,登录,账号,KeePass,password</string>
-    <string name="search_keywords_sources">数据源,KeePass,Aegis,数据库,密钥文件,导入,kdbx</string>
+    <string name="search_keywords_vault">保险库,密码,密码管理,密码管理器,自动填充,自动填写,账号,Vault,password,KeePass,Bitwarden,1Password</string>
+    <string name="search_keywords_codes">验证码,两步验证,两步验证码,双重验证,二次验证,动态口令,动态密码,一次性密码,身份验证器,2FA,OTP,TOTP,Aegis,2FAS,Google Authenticator</string>
+    <string name="search_keywords_passwords">密码,登录,账号,password,KeePass,Bitwarden</string>
+    <string name="search_keywords_sources">数据源,密码文件,两步验证,密钥文件,导入,kdbx,csv,KeePass,Bitwarden,1Password,Aegis,2FAS</string>
     <string name="search_keywords_settings">剪贴板,自动填充,忘记密钥,指纹,验证</string>
     <string name="search_keywords_excluded">排除,不填充,黑名单,范围,子域名</string>
 
@@ -288,14 +289,14 @@
 
     <!-- Errors -->
     <string name="error_page">无法打开此页面。</string>
-    <string name="error_load_keepass">无法打开 KeePass 数据库</string>
-    <string name="error_load_aegis">无法打开 Aegis 保险库</string>
+    <string name="error_load_passwords">无法打开密码</string>
+    <string name="error_load_codes">无法打开两步验证码</string>
     <string name="error_list_folder">无法查找同步文件夹</string>
-    <string name="error_setup_keepass">KeePass 设置失败</string>
-    <string name="error_setup_aegis">Aegis 设置失败</string>
-    <string name="error_import_aegis">无法读取保险库文件</string>
-    <string name="error_switch_database">无法更换数据库</string>
-    <string name="error_choose_database">无法使用所选文件</string>
+    <string name="error_setup_passwords">设置密码数据源失败</string>
+    <string name="error_setup_codes">设置两步验证码数据源失败</string>
+    <string name="error_read_file">无法读取文件</string>
+    <string name="error_switch_file">无法更换文件</string>
+    <string name="error_choose_file">无法使用所选文件</string>
     <string name="error_read_key_file">无法读取密钥文件</string>
     <string name="error_no_browser">没有应用可以打开此网址</string>
     <string name="error_no_settings">此手机上没有这个页面</string>
@@ -306,21 +307,21 @@
     <string name="error_daemon_remote">同步文件夹报告：%1$s</string>
     <string name="error_daemon_closed">与同步文件夹的连接已中断。</string>
     <string name="error_source_permission">无法读取所选文件：访问权限已失效。请在“数据源”中重新选择。</string>
-    <string name="error_source_missing">所选文件已不存在。请在“数据源”中重新选择数据库。</string>
+    <string name="error_source_missing">所选文件已不存在。请在“数据源”中重新选择。</string>
     <string name="error_source_too_large">文件过大（%1$s）。</string>
     <string name="error_keys_forgotten">已按设置自动忘记密钥。请在“数据源”中重新设置。</string>
-    <string name="error_kdbx_not_kdbx">此文件不是 KeePass 数据库。</string>
-    <string name="error_kdbx_kdb1">不支持 KeePass 1 数据库（.kdb）。</string>
+    <string name="error_kdbx_not_kdbx">此文件不是 KDBX 数据库。</string>
+    <string name="error_kdbx_kdb1">不支持 KDB 数据库（.kdb）；请将文件转换为 KDBX。</string>
     <string name="error_kdbx_version">不支持此数据库版本（%1$s）。</string>
-    <string name="error_kdbx_cipher">此数据库使用了不支持的加密算法（%1$s）。请在 KeePassXC 中改为 AES-256 或 ChaCha20。</string>
+    <string name="error_kdbx_cipher">此数据库使用了不支持的加密算法（%1$s）。请在编辑它的应用中改为 AES-256 或 ChaCha20。</string>
     <string name="error_kdbx_kdf">不支持此密钥派生方式（%1$s）。</string>
     <string name="error_kdbx_wrong_key">密码或密钥文件错误。</string>
     <string name="error_kdbx_corrupt">数据库文件已损坏（%1$s）。</string>
-    <string name="error_aegis_format">此文件不是可读取的 Aegis 保险库（%1$s）。</string>
-    <string name="error_aegis_no_slot">此 Aegis 保险库没有密码。请在 Aegis 中导出加密的保险库。</string>
-    <string name="error_aegis_wrong_password">Aegis 密码错误。</string>
-    <string name="error_aegis_wrong_key">已保存的密钥无法打开此 Aegis 保险库，请重新设置。</string>
-    <string name="error_aegis_missing">文件不存在。</string>
+    <string name="error_codes_format">此文件中没有保险库可读取的两步验证账号（%1$s）。</string>
+    <string name="error_codes_no_slot">此文件只能在创建它的应用中用指纹打开。请导出带密码或不带密码的文件。</string>
+    <string name="error_wrong_password">密码错误。</string>
+    <string name="error_codes_wrong_key">已保存的密钥无法打开两步验证码，请重新设置。</string>
+    <string name="error_file_missing">文件不存在。</string>
     <string name="error_keystore">手机的 Keystore 未释放密钥。请解锁手机后重试。</string>
     <string name="error_key_file">密钥文件无效（%1$s）。</string>
     <string name="error_otp">不支持这些一次性验证码设置（%1$s）。</string>
@@ -333,16 +334,34 @@
     <plurals name="passwords_count">
         <item quantity="other">%d 个条目</item>
     </plurals>
-    <plurals name="setup_keepass_ok">
-        <item quantity="other">KeePass 已设置：%d 个条目</item>
+    <plurals name="setup_passwords_ok">
+        <item quantity="other">密码数据源已设置：%d 个条目</item>
     </plurals>
-    <plurals name="setup_aegis_ok">
-        <item quantity="other">Aegis 已设置：%d 个账号</item>
+    <plurals name="setup_codes_ok">
+        <item quantity="other">两步验证码数据源已设置：%d 个账号</item>
     </plurals>
     <plurals name="sources_switched">
-        <item quantity="other">已更换数据库：%d 个条目</item>
+        <item quantity="other">文件已更换：%d 个条目</item>
     </plurals>
     <plurals name="settings_excluded_count">
         <item quantity="other">%d 个应用和网站</item>
+    </plurals>
+    <string name="sources_passwords_setup_plain_summary">此文件没有密码：保险库按原样读取它，且仅在手机解锁时读取</string>
+    <string name="sources_file_message">文件：%1$s</string>
+    <string name="setup_password_again">再次输入密码</string>
+    <string name="setup_password_empty">请输入密码</string>
+    <string name="setup_password_mismatch">两次输入的密码不一致</string>
+    <string name="sources_codes_new_password">为两步验证码设置密码</string>
+    <string name="sources_codes_new_password_message">文件：%1$s。此文件没有密码：保险库会用您在此设置的密码加密保存其中的账号，只有在忘记密钥后才会再次要求输入。</string>
+    <string name="error_not_passwords">此文件中没有保险库可读取的密码。保险库可读取 KDBX 数据库、Bitwarden 导出文件（JSON）、1Password 导出文件（1PUX），以及浏览器和密码管理器导出的 CSV 文件。</string>
+    <string name="error_not_codes">此文件中没有保险库可读取的两步验证账号。保险库可读取 Aegis、2FAS、andOTP、FreeOTP+、Bitwarden Authenticator、Proton Authenticator、Ente Auth 和 Google Authenticator 的导出文件，以及 otpauth 链接列表。</string>
+    <string name="error_account_key">此导出文件使用账号密钥加密。请重新导出为受密码保护或不加密的文件。</string>
+    <string name="error_file_damaged">文件已损坏（%1$s）。</string>
+    <string name="error_needs_setup">已保存的密钥不适用于此类文件。请重新设置密码数据源。</string>
+    <plurals name="codes_not_readable">
+        <item quantity="other">文件中有 %d 个账号无法读取</item>
+    </plurals>
+    <plurals name="codes_add_several">
+        <item quantity="other">要添加 %d 个账号吗？</item>
     </plurals>
 </resources>

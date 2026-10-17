@@ -8,7 +8,7 @@ timeout: 2400
 import time
 
 from _vault import (SYNCED, ShopProbe, appears, keepass, no_screen_lock, reset, screen_lock,
-                    set_up_keepass, summary_of, vault_page)
+                    set_up_passwords, summary_of, vault_page)
 from lujarch_test import check, device, note, run, step
 
 DB, KEY = "lujarch-test-vault.kdbx", "lujarch-test-vault.keyx"
@@ -50,7 +50,7 @@ def main():
         d.push(str(db), f"{SYNCED}/{DB}")
         d.sh(f"chown -R 5100:5100 {SYNCED}")
         d.push(str(key), f"/sdcard/Download/{KEY}")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("none listed, the default scope This host only")
         page(d)

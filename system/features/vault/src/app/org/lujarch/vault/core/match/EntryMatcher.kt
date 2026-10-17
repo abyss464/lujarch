@@ -18,10 +18,10 @@ package org.lujarch.vault.core.match
 
 import java.net.IDN
 import java.util.Locale
-import org.lujarch.vault.core.KpEntry
+import org.lujarch.vault.core.PasswordEntry
 
 /**
- * Which KeePass entries belong to an app or a web page.
+ * Which password entries belong to an app or a web page.
  *
  * Apps: `androidapp://<package>` in the URL field or in KeePass2Android's
  * `KP2A_URL*` fields, or the package in KeePassDX's `AndroidApp*` fields.
@@ -34,7 +34,7 @@ import org.lujarch.vault.core.KpEntry
 object EntryMatcher {
     private const val APP_SCHEME = "androidapp://"
 
-    fun appPackages(entry: KpEntry): Set<String> {
+    fun appPackages(entry: PasswordEntry): Set<String> {
         val out = LinkedHashSet<String>()
         for (url in urls(entry)) {
             if (url.startsWith(APP_SCHEME, ignoreCase = true)) {
@@ -51,7 +51,7 @@ object EntryMatcher {
         return out
     }
 
-    fun webHosts(entry: KpEntry): Set<String> {
+    fun webHosts(entry: PasswordEntry): Set<String> {
         val out = LinkedHashSet<String>()
         for (url in urls(entry)) {
             if (url.startsWith(APP_SCHEME, ignoreCase = true)) continue
@@ -60,10 +60,10 @@ object EntryMatcher {
         return out
     }
 
-    fun matchApp(entries: List<KpEntry>, packageName: String): List<KpEntry> =
+    fun matchApp(entries: List<PasswordEntry>, packageName: String): List<PasswordEntry> =
         entries.filter { packageName in appPackages(it) }
 
-    fun matchWeb(entries: List<KpEntry>, webDomain: String, subdomains: Boolean = true): List<KpEntry> {
+    fun matchWeb(entries: List<PasswordEntry>, webDomain: String, subdomains: Boolean = true): List<PasswordEntry> {
         val domain = normalizeHost(webDomain) ?: return emptyList()
         return entries.filter { e ->
             webHosts(e).any { if (subdomains) domainMatches(domain, it) else sameHost(domain, it) }
@@ -157,7 +157,7 @@ object EntryMatcher {
         }
     }
 
-    private fun urls(entry: KpEntry): List<String> {
+    private fun urls(entry: PasswordEntry): List<String> {
         val out = ArrayList<String>()
         entry.url.takeIf { it.isNotBlank() }?.let { out.add(it.trim()) }
         for (f in entry.fields) {

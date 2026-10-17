@@ -38,10 +38,10 @@ import org.lujarch.vault.data.KeystoreLockedException
 import org.lujarch.vault.data.Vault
 
 /**
- * Autofill for apps and browsers from the KeePass database.
+ * Autofill for apps and browsers from the passwords.
  * Each request opens the database for itself and wipes it once the response
  * is built; while the phone is locked the open fails at the Keystore and
- * nothing is offered. Offers nothing when KeePass is not set up or turned
+ * nothing is offered. Offers nothing when the passwords are not set up or turned
  * off, for apps and sites excluded in Settings, never fills our own
  * packages, and asks for no saves (phase 1). An open that takes
  * longer than 2.5 s (the KDF after a save on the PC) is answered with one
@@ -59,7 +59,7 @@ class VaultAutofillService : AutofillService() {
             return
         }
         val form = FormParser.parse(structure)
-        if (isOwnPackage(form.packageName) || form.isEmpty || !Vault.keePassActive() || isExcluded(form)) {
+        if (isOwnPackage(form.packageName) || form.isEmpty || !Vault.passwordsActive() || isExcluded(form)) {
             callback.onSuccess(null)
             return
         }
@@ -69,7 +69,7 @@ class VaultAutofillService : AutofillService() {
         val built = scope.async {
             try {
                 Built(
-                    Vault.withKeePass { data ->
+                    Vault.withPasswords { data ->
                         // Built only while someone waits for it; the data is wiped right after.
                         if (wanted.get()) {
                             FillBuilder.response(this@VaultAutofillService, form, data, inline, withPicker = Vault.prefs.autofillSearchItem)

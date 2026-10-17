@@ -81,7 +81,8 @@ data class FoundDatabases(
 class FileContent(val name: String, val data: ByteArray, val size: Long, val mtime: Long, val sha256: String)
 
 /**
- * The KeePass databases of the synced folders, through the sync service (lujarch_sync), which
+ * The password files of the synced folders (by name: .kdbx, .json, .1pux, .csv; the vault reads
+ * their content), through the sync service (lujarch_sync), which
  * lets only this app find them and hands it the one it asks for as an open file. Nothing read here
  * is logged.
  */
@@ -117,9 +118,12 @@ object SyncFiles {
             throw SyncFilesException(SyncFilesException.Kind.IO, command, e.toString(), e)
         }
 
-    fun isDatabaseName(name: String): Boolean = name.length > 5 && name.endsWith(".kdbx", ignoreCase = true)
+    private val EXTENSIONS = listOf(".kdbx", ".json", ".1pux", ".csv")
 
-    /** Every KeePass database in the synced folders, with the folders' labels. */
+    fun isDatabaseName(name: String): Boolean =
+        EXTENSIONS.any { name.length > it.length && name.endsWith(it, ignoreCase = true) }
+
+    /** Every password file in the synced folders, with the folders' labels. */
     suspend fun find(): FoundDatabases {
         val text = call("vaultFind") { it.vaultFind() }
         val reply = try {

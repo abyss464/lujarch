@@ -36,8 +36,10 @@ import org.lujarch.vault.core.Bytes
 class KeystoreLockedException(message: String, cause: Throwable?) : Exception(message, cause)
 
 /**
- * Wraps the KeePass composite key, the KeePass transformed key (Argon2
- * output) and the Aegis master key with one Android Keystore key
+ * Wraps the passwords' credential (a KDBX composite key, an export's
+ * password, or a random key for a file without a password), the derived
+ * key of the passwords' file (KDF output) and the master key of the 2FA
+ * codes with one Android Keystore key
  * (AES-256-GCM, setUnlockedDeviceRequired, StrongBox when the phone has it).
  * The Keystore enforces that the key only works while the phone is unlocked;
  * no user authentication per use (VLT-1). Every access to

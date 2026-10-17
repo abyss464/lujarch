@@ -120,6 +120,15 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | 2FA codes | 两步验证码 | 2FA コード |
 | Passwords | 密码 | パスワード |
 | Sources | 数据源 | ソース |
+| Use passwords | 使用密码 | パスワードを使用 |
+| Use 2FA codes | 使用两步验证码 | 2FA コードを使用 |
+| Set up passwords | 设置密码数据源 | パスワードのソースを設定 |
+| Set up 2FA codes | 设置两步验证码数据源 | 2FA コードのソースを設定 |
+| Password file | 密码文件 | パスワード ファイル |
+| File | 文件 | ファイル |
+| Key file | 密钥文件 | キーファイル |
+| Accounts | 账号 | アカウント |
+| Import from another file | 从其他文件导入 | 他のファイルからインポート |
 | Allow Root access | 允许 Root 权限 | Root アクセスを許可 |
 | Root profile | Root 配置 | Root プロファイル |
 | Allowed with a custom profile | 已允许（自定义配置） | 許可（カスタム プロファイル） |

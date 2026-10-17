@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Lujarch Vault: KeePass and Aegis reader, 2FA codes, autofill.
+    Lujarch Vault: passwords and 2FA codes from the owner's files, autofill.
     Platform-signed so that it may reach the sync service, not privileged, no launcher
     icon; its one dangerous permission is the camera, asked for when the QR
     scanner opens. Decrypted data lives only in this process.
@@ -32,14 +32,14 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- Document providers: the name of the app a chosen database comes from. -->
+        <!-- Document providers: the name of the app a chosen file comes from. -->
         <intent>
             <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
         </intent>
     </queries>
 
     <!--
-        largeHeap: databases of up to 64 MiB (the KDBX reader's limit) need the
+        largeHeap: password files of up to 64 MiB (the KDBX reader's limit) need the
         file, its decrypted payload and the decompressed XML in memory at once,
         more than the default 256 MB heap limit leaves; small databases use no more.
     -->
@@ -87,8 +87,9 @@
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
 
-        <!-- otpauth:// links (sites, other QR scanners): the codes page asks
-             before adding the account to the Aegis vault. -->
+        <!-- otpauth:// links (sites, other QR scanners) and Google Authenticator's
+             otpauth-migration:// export links: the codes page asks before adding
+             the accounts. -->
         <activity
             android:name=".ui.OtpLinkActivity"
             android:excludeFromRecents="true"
@@ -100,6 +101,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="otpauth" />
+                <data android:scheme="otpauth-migration" />
             </intent-filter>
         </activity>
 

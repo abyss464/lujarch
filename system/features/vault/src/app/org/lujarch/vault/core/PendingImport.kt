@@ -17,14 +17,14 @@
 package org.lujarch.vault.core
 
 /**
- * A picked Aegis vault file while its password is asked for: the
+ * A picked file of 2FA accounts while its password is asked for: the
  * password dialog's answer [take]s the bytes for the setup, which wipes
  * them when it is done; the dialog's end ([end], its onEnd) wipes whatever
  * was not taken: a cancel, a dismissal, and a page gone without an answer.
  * A recreation of the page keeps the dialog and so the bytes; a restarted
  * process has neither. Whichever comes first wins, once.
  */
-class PendingAegisImport(bytes: ByteArray) {
+class PendingImport(bytes: ByteArray) {
     private var bytes: ByteArray? = bytes
 
     /** The size held (0 once taken or wiped). */
@@ -43,9 +43,9 @@ class PendingAegisImport(bytes: ByteArray) {
     /** The dialog ended: overwrites the bytes unless the setup took them. Returns the log line. */
     @Synchronized
     fun end(): String {
-        val b = bytes ?: return "Aegis import: the password dialog ended; the picked file went to the setup"
+        val b = bytes ?: return "2FA import: the password dialog ended; the picked file went to the setup"
         Bytes.wipe(b)
         bytes = null
-        return "Aegis import: the password dialog ended unanswered; the picked file's ${b.size} bytes wiped"
+        return "2FA import: the password dialog ended unanswered; the picked file's ${b.size} bytes wiped"
     }
 }

@@ -35,18 +35,18 @@ import org.lujarch.vault.data.VaultState
  * keeps the wrapping key. Read-only.
  */
 class AboutFragment : BasePreferenceFragment() {
-    private lateinit var keepassState: PreferenceCategory
-    private lateinit var aegisState: PreferenceCategory
+    private lateinit var passwordsState: PreferenceCategory
+    private lateinit var codesState: PreferenceCategory
     private lateinit var keystorePref: Preference
 
     override fun buildScreen(screen: PreferenceScreen, savedInstanceState: Bundle?) {
-        keepassState = screen.add(PreferenceCategory(prefContext)) {
-            key = "state_keepass"
-            setTitle(R.string.state_keepass)
+        passwordsState = screen.add(PreferenceCategory(prefContext)) {
+            key = "state_passwords"
+            setTitle(R.string.state_passwords)
         }
-        aegisState = screen.add(PreferenceCategory(prefContext)) {
-            key = "state_aegis"
-            setTitle(R.string.state_aegis)
+        codesState = screen.add(PreferenceCategory(prefContext)) {
+            key = "state_codes"
+            setTitle(R.string.state_codes)
         }
         val keystore = screen.add(PreferenceCategory(prefContext)) {
             key = "state_keystore"
@@ -75,18 +75,18 @@ class AboutFragment : BasePreferenceFragment() {
 
     override fun onVaultState(state: VaultState) {
         // The facts come from the last load record, so they stay visible while the vault is locked.
-        renderStatus(keepassState, Vault.prefs.status(VaultPrefs.Source.KEEPASS), keepass = true)
-        renderStatus(aegisState, Vault.prefs.status(VaultPrefs.Source.AEGIS), keepass = false)
+        renderStatus(passwordsState, Vault.prefs.status(VaultPrefs.Source.PASSWORDS), passwords = true)
+        renderStatus(codesState, Vault.prefs.status(VaultPrefs.Source.CODES), passwords = false)
     }
 
     private fun sourceText(source: DbSource): String = when (source) {
-        is DbSource.Synced -> getString(R.string.sources_database_synced, source.path, source.folder)
+        is DbSource.Synced -> getString(R.string.sources_file_synced, source.path, source.folder)
         is DbSource.Document -> Sources.providerLabel(requireContext(), source.uri)
-            ?.let { getString(R.string.sources_database_document, source.fileName, it) }
-            ?: getString(R.string.sources_database_document_plain, source.fileName)
+            ?.let { getString(R.string.sources_file_document, source.fileName, it) }
+            ?: getString(R.string.sources_file_document_plain, source.fileName)
     }
 
-    private fun renderStatus(cat: PreferenceCategory, s: VaultPrefs.LoadStatus, keepass: Boolean) {
+    private fun renderStatus(cat: PreferenceCategory, s: VaultPrefs.LoadStatus, passwords: Boolean) {
         cat.removeAll()
         val ctx = requireContext()
         fun row(title: Int, value: String) = cat.addPreference(Preference(prefContext).apply {
@@ -96,8 +96,8 @@ class AboutFragment : BasePreferenceFragment() {
             isIconSpaceReserved = false
         })
         val prefs = Vault.prefs
-        val setUp = if (keepass) Vault.keePassSetUp() else Vault.aegisSetUp()
-        val enabled = if (keepass) prefs.keepassEnabled else prefs.aegisEnabled
+        val setUp = if (passwords) Vault.passwordsSetUp() else Vault.codesSetUp()
+        val enabled = if (passwords) prefs.passwordsEnabled else prefs.codesEnabled
         row(
             R.string.state_setup,
             getString(
@@ -108,21 +108,22 @@ class AboutFragment : BasePreferenceFragment() {
                 },
             ),
         )
-        if (keepass) {
-            prefs.keepassSource?.let { row(R.string.state_source, sourceText(it)) }
-        } else if (Vault.aegisFile.isFile) {
-            row(R.string.state_source, prefs.aegisSourceName.ifEmpty { getString(R.string.sources_aegis_file_unnamed) })
+        if (passwords) {
+            prefs.passwordsSource?.let { row(R.string.state_source, sourceText(it)) }
+        } else if (Vault.codesFile.isFile) {
+            row(R.string.state_source, prefs.codesSourceName.ifEmpty { getString(R.string.sources_accounts_unnamed) })
         }
         if (s.fileSize >= 0) {
             val mtime = if (s.fileMtime > 0) Format.dateTime(ctx, s.fileMtime) else "?"
             row(R.string.state_file, getString(R.string.state_file_value, Format.bytes(ctx, s.fileSize), mtime))
         }
-        if (s.format.isNotEmpty()) row(R.string.state_format, s.format)
-        if (keepass && setUp) {
+        // The format of the passwords' file; the 2FA accounts' file is the vault's own.
+        if (passwords && s.format.isNotEmpty()) row(R.string.state_format, s.format)
+        if (passwords && setUp && prefs.passwordsKind == Vault.KIND_KDBX) {
             row(R.string.state_key_file, getString(if (prefs.usesKeyFile) R.string.state_key_file_yes else R.string.state_key_file_no))
         }
         if (s.loadedAt > 0) {
-            val load = if (s.kdfMillis >= 0) {
+            val load = if (passwords && s.kdfMillis >= 0) {
                 getString(R.string.state_load_value_kdf, Format.dateTime(ctx, s.loadedAt), s.totalMillis, s.kdfMillis)
             } else {
                 Format.dateTime(ctx, s.loadedAt)

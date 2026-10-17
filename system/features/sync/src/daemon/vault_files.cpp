@@ -275,9 +275,13 @@ bool IsRelativePath(std::string_view path) {
 }
 
 bool IsDatabaseName(std::string_view name) {
-    constexpr std::string_view kSuffix = ".kdbx";
-    if (name.size() <= kSuffix.size()) return false;
-    return android::base::EqualsIgnoreCase(name.substr(name.size() - kSuffix.size()), kSuffix);
+    for (std::string_view suffix : {".kdbx", ".json", ".1pux", ".csv"}) {
+        if (name.size() > suffix.size() &&
+            android::base::EqualsIgnoreCase(name.substr(name.size() - suffix.size()), suffix)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::string FolderPath(std::string_view folder, const std::string& root) {

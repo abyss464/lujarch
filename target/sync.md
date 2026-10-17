@@ -108,5 +108,5 @@ the page says so, or says that sync uses it once it may run or is turned on.
 - Verify: vm
 
 The folders live in the phone's sync storage, a directory of the system that no app reaches; only
-the sync service and Lujarch's own services read it, and Lujarch Vault reads only its KeePass
-databases through them (VLT-2). When the storage's permissions are wrong, the Sync page says so.
+the sync service and Lujarch's own services read it, and Lujarch Vault reads only its password
+files through them (VLT-2). When the storage's permissions are wrong, the Sync page says so.

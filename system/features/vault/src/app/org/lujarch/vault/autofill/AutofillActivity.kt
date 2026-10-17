@@ -37,8 +37,8 @@ import com.android.settingslib.widget.ZeroStatePreference
 import java.text.Collator
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
-import org.lujarch.vault.core.KpEntry
-import org.lujarch.vault.data.KeePassData
+import org.lujarch.vault.core.PasswordEntry
+import org.lujarch.vault.data.PasswordData
 import org.lujarch.vault.data.Source
 import org.lujarch.vault.data.Vault
 import org.lujarch.vault.data.VaultState
@@ -70,7 +70,7 @@ class AutofillFragment : BasePreferenceFragment(), MenuProvider {
     private lateinit var entriesCategory: PreferenceCategory
     private var form: ParsedForm? = null
     private var inline: InlineSuggestionsRequest? = null
-    private var shown: KeePassData? = null
+    private var shown: PasswordData? = null
     private var query = ""
     private var done = false
 
@@ -101,16 +101,16 @@ class AutofillFragment : BasePreferenceFragment(), MenuProvider {
     override fun onVaultState(state: VaultState) {
         val f = form ?: return
         if (done) return
-        val data = state.keepassData
+        val data = state.passwordsData
         if (data == null) {
             shown = null
             entriesCategory.removeAll()
             messagePref.isVisible = true
             entriesCategory.isVisible = false
-            when (val k = state.keepass) {
+            when (val k = state.passwords) {
                 is Source.Failed -> {
                     messagePref.setTitle(R.string.status_failed)
-                    showBanner(getString(R.string.error_load_keepass), Errors.describe(requireContext(), k.error))
+                    showBanner(getString(R.string.error_load_passwords), Errors.describe(requireContext(), k.error))
                 }
                 is Source.NotSetUp -> messagePref.setTitle(R.string.status_not_set_up)
                 is Source.Off -> messagePref.setTitle(R.string.status_off)
@@ -157,7 +157,7 @@ class AutofillFragment : BasePreferenceFragment(), MenuProvider {
         if (list.isEmpty()) messagePref.setTitle(R.string.passwords_no_match)
     }
 
-    private fun choose(entry: KpEntry) {
+    private fun choose(entry: PasswordEntry) {
         val f = form ?: return
         val dataset = FillBuilder.entryDataset(requireContext(), f, entry, null)
         if (dataset == null) {

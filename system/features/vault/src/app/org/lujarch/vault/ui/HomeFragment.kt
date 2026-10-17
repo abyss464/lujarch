@@ -96,37 +96,37 @@ class HomeFragment : BasePreferenceFragment() {
         statusPref.summary = statusText(state)
 
         codesPref.isEnabled = state.anyActive
-        val aegisCount = state.aegisData?.entries?.size
-        val keepassOtp = state.keepassData?.let { d -> d.db.entries.count { Otp.hasOtp(it) } }
+        val accountsCount = state.codesData?.entries?.size
+        val passwordsOtp = state.passwordsData?.let { d -> d.db.entries.count { Otp.hasOtp(it) } }
         codesPref.summary = when {
-            aegisCount != null || keepassOtp != null -> {
-                val n = (aegisCount ?: 0) + (keepassOtp ?: 0)
+            accountsCount != null || passwordsOtp != null -> {
+                val n = (accountsCount ?: 0) + (passwordsOtp ?: 0)
                 resources.getQuantityString(R.plurals.codes_count, n, n)
             }
-            else -> sourceSummary(state.aegis.takeIf { it.active } ?: state.keepass)
+            else -> sourceSummary(state.codes.takeIf { it.active } ?: state.passwords)
         }
 
-        passwordsPref.isEnabled = state.keepass.active
-        passwordsPref.summary = state.keepassData?.let {
+        passwordsPref.isEnabled = state.passwords.active
+        passwordsPref.summary = state.passwordsData?.let {
             resources.getQuantityString(R.plurals.passwords_count, it.db.entries.size, it.db.entries.size)
-        } ?: sourceSummary(state.keepass)
+        } ?: sourceSummary(state.passwords)
 
-        sourcesPref.summary = getString(R.string.sources_summary, stateWord(state.keepass), stateWord(state.aegis))
+        sourcesPref.summary = getString(R.string.sources_summary, stateWord(state.passwords), stateWord(state.codes))
 
-        val keepassFailure = (state.keepass as? Source.Failed)?.error
-        val aegisFailure = (state.aegis as? Source.Failed)?.error
+        val passwordsFailure = (state.passwords as? Source.Failed)?.error
+        val codesFailure = (state.codes as? Source.Failed)?.error
         when {
-            keepassFailure is SourceUnavailableException &&
-                keepassFailure.reason != SourceUnavailableException.Reason.TOO_LARGE ->
+            passwordsFailure is SourceUnavailableException &&
+                passwordsFailure.reason != SourceUnavailableException.Reason.TOO_LARGE ->
                 // The chosen file went away or its grant was revoked: one tap to choose it again.
-                showBanner(getString(R.string.error_load_keepass), Errors.describe(ctx, keepassFailure), R.string.action_rechoose) {
+                showBanner(getString(R.string.error_load_passwords), Errors.describe(ctx, passwordsFailure), R.string.action_rechoose) {
                     Pages.open(
                         requireContext(), SourcesFragment::class.java, R.string.sources_title,
                         arguments = Bundle().apply { putBoolean(SourcesFragment.ARG_RECHOOSE, true) },
                     )
                 }
-            keepassFailure != null -> showBanner(getString(R.string.error_load_keepass), Errors.describe(ctx, keepassFailure))
-            aegisFailure != null -> showBanner(getString(R.string.error_load_aegis), Errors.describe(ctx, aegisFailure))
+            passwordsFailure != null -> showBanner(getString(R.string.error_load_passwords), Errors.describe(ctx, passwordsFailure))
+            codesFailure != null -> showBanner(getString(R.string.error_load_codes), Errors.describe(ctx, codesFailure))
             else -> showBanner(null, null)
         }
     }
@@ -145,11 +145,11 @@ class HomeFragment : BasePreferenceFragment() {
         Vault.deviceLocked -> getString(R.string.status_locked)
         state.loading -> getString(R.string.status_unlocking)
         state.reloading -> getString(R.string.status_reloading)
-        state.keepassData != null || state.aegisData != null -> {
-            val at = maxOf(state.keepassData?.loadedAt ?: 0, state.aegisData?.loadedAt ?: 0)
+        state.passwordsData != null || state.codesData != null -> {
+            val at = maxOf(state.passwordsData?.loadedAt ?: 0, state.codesData?.loadedAt ?: 0)
             getString(R.string.status_unlocked, Format.time(requireContext(), at))
         }
-        state.keepass is Source.Failed || state.aegis is Source.Failed -> getString(R.string.status_failed)
+        state.passwords is Source.Failed || state.codes is Source.Failed -> getString(R.string.status_failed)
         else -> getString(R.string.status_idle)
     }
 

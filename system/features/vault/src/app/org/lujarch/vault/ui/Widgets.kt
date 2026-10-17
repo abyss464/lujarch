@@ -101,7 +101,7 @@ class CodePreference(context: Context, val params: OtpParams?, private val label
                 true
             }
         } else {
-            // Views are recycled between rows: a KeePass row must not keep an Aegis row's action.
+            // Views are recycled between rows: a password entry's row must not keep an account row's action.
             holder.itemView.setOnLongClickListener(null)
             holder.itemView.isLongClickable = false
         }
@@ -132,7 +132,7 @@ class FieldPreference(
     var revealed = false
         private set
     /** Read only when shown, so a masked value is not turned into a String before it is revealed. */
-    private var field: org.lujarch.vault.core.KpField? = null
+    private var field: org.lujarch.vault.core.PasswordField? = null
 
     init {
         isPersistent = false
@@ -140,7 +140,7 @@ class FieldPreference(
         if (masked) widgetLayoutResource = R.layout.widget_reveal
     }
 
-    fun bindField(f: org.lujarch.vault.core.KpField?) {
+    fun bindField(f: org.lujarch.vault.core.PasswordField?) {
         field = f
         render()
     }

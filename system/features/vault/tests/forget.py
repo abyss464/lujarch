@@ -8,7 +8,7 @@ timeout: 1800
 import time
 
 from _vault import (KEEPASS_PASSWORD, SYNCED, appears, enter_password, keepass, no_screen_lock,
-                    pick, reset, screen_lock, seek, set_up_keepass, summary_of, unlock_with_pin,
+                    pick, reset, screen_lock, seek, set_up_passwords, summary_of, unlock_with_pin,
                     vault_page)
 from lujarch_test import check, device, note, restart, run, step
 
@@ -23,15 +23,15 @@ def opens(d):
 
 
 def set_up_again(d):
-    """Only the password and the key file: the database stays chosen."""
+    """Only the password and the key file: the password file stays chosen."""
     vault_page(d, ("Lujarch Vault", "Sources"))
-    check(DB in summary_of(d, "Database"), "the chosen database stays")
+    check(DB in summary_of(d, "File"), "the chosen file stays")
     d.tap(d.scroll_to(text="Key file"))
     d.tap(d.wait(text="Choose a file…", timeout=10))
     pick(d, "Download", KEY)
-    d.tap(seek(d, text="Set up KeePass again") or d.scroll_to(text="Set up KeePass"))
+    d.tap(seek(d, text="Set up passwords again") or d.scroll_to(text="Set up passwords"))
     enter_password(d, KEEPASS_PASSWORD)
-    check(d.wait(text="Set up KeePass again", timeout=90), "set up again")
+    check(d.wait(text="Set up passwords again", timeout=90), "set up again")
 
 
 def policy(d, choice):
@@ -51,7 +51,7 @@ def main():
         d.push(str(db), f"{SYNCED}/{DB}")
         d.sh(f"chown -R 5100:5100 {SYNCED}")
         d.push(str(key), f"/sdcard/Download/{KEY}")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("Forget keys automatically: Never by default, with its choices")
         vault_page(d, ("Lujarch Vault", "Settings"))

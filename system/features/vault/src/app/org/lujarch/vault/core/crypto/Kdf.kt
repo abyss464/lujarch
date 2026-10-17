@@ -169,6 +169,73 @@ object Scrypt {
     }
 }
 
+/**
+ * PBKDF2 (RFC 8018) over the password's own bytes with the platform's HMAC: the
+ * platform's PBKDF2 key factories take the password as characters and choose
+ * their own byte encoding, which the exports this reads do not share.
+ */
+object Pbkdf2 {
+    fun derive(macAlgorithm: String, password: ByteArray, salt: ByteArray, iterations: Int, dkLen: Int): ByteArray {
+        require(iterations in 1..10_000_000) { "PBKDF2 iterations out of range" }
+        val mac = Mac.getInstance(macAlgorithm)
+        // An empty key is not accepted by SecretKeySpec; HMAC pads the key with zeros anyway.
+        mac.init(SecretKeySpec(if (password.isEmpty()) ByteArray(1) else password, macAlgorithm))
+        val hLen = mac.macLength
+        val out = ByteArray(dkLen)
+        val u = ByteArray(hLen)
+        val t = ByteArray(hLen)
+        var block = 1
+        var pos = 0
+        try {
+            while (pos < dkLen) {
+                mac.update(salt)
+                mac.update(byteArrayOf((block ushr 24).toByte(), (block ushr 16).toByte(), (block ushr 8).toByte(), block.toByte()))
+                mac.doFinal(u, 0)
+                u.copyInto(t)
+                for (i in 1 until iterations) {
+                    mac.update(u)
+                    mac.doFinal(u, 0)
+                    for (k in 0 until hLen) t[k] = (t[k].toInt() xor u[k].toInt()).toByte()
+                }
+                val n = minOf(hLen, dkLen - pos)
+                System.arraycopy(t, 0, out, pos, n)
+                pos += n
+                block++
+            }
+            return out
+        } finally {
+            Bytes.wipe(u, t)
+        }
+    }
+}
+
+/** HKDF-Expand (RFC 5869) with HMAC-SHA256: [prk] is used as the pseudorandom key as it is. */
+object Hkdf {
+    fun expandSha256(prk: ByteArray, info: ByteArray, length: Int): ByteArray {
+        require(length in 1..255 * 32) { "HKDF length out of range" }
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(prk, "HmacSHA256"))
+        val out = ByteArray(length)
+        var prev = ByteArray(0)
+        var pos = 0
+        var counter = 1
+        while (pos < length) {
+            mac.update(prev)
+            mac.update(info)
+            mac.update(counter.toByte())
+            val t = mac.doFinal()
+            Bytes.wipe(prev)
+            val n = minOf(t.size, length - pos)
+            System.arraycopy(t, 0, out, pos, n)
+            pos += n
+            prev = t
+            counter++
+        }
+        Bytes.wipe(prev)
+        return out
+    }
+}
+
 /** AES operations of the readers, through the platform's JCA provider. */
 object Aes {
     fun cbcDecrypt(key: ByteArray, iv: ByteArray, data: ByteArray): ByteArray {

@@ -22,6 +22,7 @@ import android.provider.Settings
 import android.util.AtomicFile
 import android.util.Log
 import java.io.File
+import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
@@ -42,18 +43,21 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.lujarch.vault.TAG
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.KdbxDatabase
+import org.lujarch.vault.core.PasswordDatabase
 import org.lujarch.vault.core.KeystoreRefusal
 import org.lujarch.vault.core.aegis.AegisEntry
 import org.lujarch.vault.core.aegis.AegisException
 import org.lujarch.vault.core.aegis.AegisVault
+import org.lujarch.vault.core.formats.CodeFiles
+import org.lujarch.vault.core.formats.FileFormatException
+import org.lujarch.vault.core.formats.PasswordFiles
 import org.lujarch.vault.core.kdbx.KdbxException
 import org.lujarch.vault.core.kdbx.KdbxHeader
 import org.lujarch.vault.core.kdbx.KdbxReader
 import org.lujarch.vault.core.kdbx.KeyFile
 import org.lujarch.vault.ui.Errors
 
-/** Where the time of one KeePass open went, in milliseconds. */
+/** Where the time of one open of the passwords went, in milliseconds. */
 data class LoadTiming(
     /** Keystore unwrap of the cached transformed key. */
     val unwrapMs: Long,
@@ -69,12 +73,12 @@ data class LoadTiming(
 )
 
 /**
- * The decrypted KeePass database of one access and the facts of its file.
+ * The decrypted passwords of one access and the facts of their file.
  * Whoever opened it wipes it ([wipe] is idempotent); [Vault.liveCount]
  * counts those not wiped yet.
  */
-class KeePassData(
-    val db: KdbxDatabase,
+class PasswordData(
+    val db: PasswordDatabase,
     val source: DbSource,
     val fileName: String,
     val size: Long,
@@ -97,7 +101,7 @@ class KeePassData(
     }
 }
 
-class AegisData(val entries: List<AegisEntry>, val loadedAt: Long, val millis: Long) {
+class CodesData(val entries: List<AegisEntry>, val loadedAt: Long, val millis: Long) {
     private val wiped = AtomicBoolean(false)
 
     init {
@@ -112,10 +116,13 @@ class AegisData(val entries: List<AegisEntry>, val loadedAt: Long, val millis: L
     }
 }
 
-/** What a setup reports; the decrypted data itself goes to the page session or is wiped. */
-data class SetupResult(val entries: Int, val kdfMillis: Long, val totalMillis: Long)
+/** What a setup reports ([skipped]: accounts of the file that could not be read); the decrypted data itself goes to the page session or is wiped. */
+data class SetupResult(val entries: Int, val kdfMillis: Long, val totalMillis: Long, val skipped: Int = 0)
 
-/** State of one source (KeePass database or Aegis vault) in the page session. */
+/** The stored key does not open the chosen password file: its setup needs the password. */
+class PasswordNeededException(message: String) : Exception(message)
+
+/** State of one source (passwords or 2FA codes) in the page session. */
 sealed class Source<out T> {
     object NotSetUp : Source<Nothing>()
 
@@ -133,33 +140,33 @@ sealed class Source<out T> {
 }
 
 data class VaultState(
-    val keepass: Source<KeePassData>,
-    val aegis: Source<AegisData>,
+    val passwords: Source<PasswordData>,
+    val codes: Source<CodesData>,
     /** A changed database is being loaded while the previous one stays shown. */
     val reloading: Boolean = false,
 ) {
     val loading: Boolean
-        get() = keepass is Source.Loading || aegis is Source.Loading
+        get() = passwords is Source.Loading || codes is Source.Loading
 
-    val keepassData: KeePassData?
-        get() = (keepass as? Source.Ready)?.data
+    val passwordsData: PasswordData?
+        get() = (passwords as? Source.Ready)?.data
 
-    val aegisData: AegisData?
-        get() = (aegis as? Source.Ready)?.data
+    val codesData: CodesData?
+        get() = (codes as? Source.Ready)?.data
 
     val anySetUp: Boolean
-        get() = keepass !is Source.NotSetUp || aegis !is Source.NotSetUp
+        get() = passwords !is Source.NotSetUp || codes !is Source.NotSetUp
 
     /** A source set up and turned on. */
     val anyActive: Boolean
-        get() = keepass.active || aegis.active
+        get() = passwords.active || codes.active
 }
 
 /** Set up and turned on. */
 val Source<*>.active: Boolean
     get() = this !is Source.NotSetUp && this !is Source.Off
 
-/** The key file a KeePass setup uses (VLT-1). */
+/** The key file a KDBX setup uses (VLT-1). */
 sealed class KeyFileChoice {
     object None : KeyFileChoice()
 
@@ -184,20 +191,23 @@ class KeysForgottenException : Exception("keys forgotten by the forget policy")
  * Access to the vault (VLT-1). Nothing decrypted is kept at
  * rest; the lock guarantee is the Keystore's alone:
  *
- * - Every access unwraps a key first (the cached transformed key, the
- *   composite key, the Aegis master key). While the phone is locked the
- *   Keystore refuses, whatever state this process is in (frozen, cached,
- *   never told about the lock).
+ * - Every access unwraps a key first (the cached derived key, the stored
+ *   credential of the passwords, the master key of the 2FA codes); a
+ *   password file without a password of its own has a random key stored
+ *   for this alone. While the phone is locked the Keystore refuses,
+ *   whatever state this process is in (frozen, cached, never told about
+ *   the lock).
  * - Pages hold the decrypted vault in a session: the first visible page
  *   opens it ([acquire] from onStart), the last one to stop drops and wipes
  *   it ([release] from onStop), so leaving the app or turning the screen off
  *   wipes it through the activity lifecycle, not through broadcasts.
- * - An autofill request opens the database for itself ([withKeePass]) and
+ * - An autofill request opens the passwords for itself ([withPasswords]) and
  *   wipes it when its response is built.
- * - The Argon2 output is cached wrapped (slot TRANSFORMED, labeled with the
- *   KDF fingerprint): an access costs an unwrap, a read and a parse; the KDF
- *   runs again only after the seed or parameters changed (a save on the PC).
- * - The database is read from its source on every open: a synced folder
+ * - The KDF output (Argon2, AES-KDF, PBKDF2) is cached wrapped (slot
+ *   TRANSFORMED, labeled with the KDF fingerprint): an access costs an
+ *   unwrap, a read and a parse; the KDF runs again only after the salt or
+ *   parameters changed (a save or an export on the PC).
+ * - The passwords' file is read from its source on every open: a synced folder
  *   through the system service, or a picked document through its persisted
  *   read grant, so a file another app updated is picked up.
  * - Before any unwrap, the forget policy may delete the keys (after a
@@ -210,9 +220,20 @@ class KeysForgottenException : Exception("keys forgotten by the forget policy")
  * Session state changes happen on the main thread.
  */
 object Vault {
-    const val AEGIS_FILE = "aegis.json"
+    /** The vault's own file of 2FA accounts (Aegis' vault format). */
+    const val CODES_FILE = "aegis.json"
 
-    /** One-time import of the KeePass key file (`fos vault-keyfile`); deleted after a successful setup. */
+    /** What the stored passwords' key is, its label: what opens the file again. */
+    private val CREDENTIAL_KDBX = ByteArray(0)
+    private val CREDENTIAL_PASSWORD = "password".toByteArray()
+    private val CREDENTIAL_NONE = "none".toByteArray()
+
+    /** The kinds of password file (VaultPrefs.passwordsKind). */
+    const val KIND_KDBX = "kdbx"
+    const val KIND_ENCRYPTED = "encrypted"
+    const val KIND_PLAIN = "plain"
+
+    /** One-time import of the KDBX key file (`fos vault-keyfile`); deleted after a successful setup. */
     const val KEY_FILE_IMPORT = "keyfile.import"
     private const val CHANGE_CHECK_INTERVAL_MS = 10_000L
     private const val DAY_MS = 24 * 60 * 60 * 1000L
@@ -220,7 +241,7 @@ object Vault {
     /** Largest key file read from a document; KeePass hashes files of any other shape whole. */
     const val MAX_KEY_FILE_BYTES = 16 * 1024 * 1024
 
-    /** Decrypted KeePass and Aegis objects not wiped yet (module tests observe it). */
+    /** Decrypted passwords and 2FA codes not wiped yet (module tests observe it). */
     val live = AtomicInteger(0)
 
     val liveCount: Int
@@ -241,18 +262,18 @@ object Vault {
     private var holders = 0
 
     /** Bumped when the session is dropped or a source set up again; a load of an older epoch wipes its result. */
-    private var keepassEpoch = 0L
-    private var aegisEpoch = 0L
-    private var keepassJob: Job? = null
-    private var keepassJobEpoch = -1L
-    private var aegisJob: Job? = null
-    private var aegisJobEpoch = -1L
+    private var passwordsEpoch = 0L
+    private var codesEpoch = 0L
+    private var passwordsJob: Job? = null
+    private var passwordsJobEpoch = -1L
+    private var codesJob: Job? = null
+    private var codesJobEpoch = -1L
     private var lastChangeCheck = 0L
     private var initialized = false
 
     /** The source's last open was refused by the Keystore on an unlocked phone and is being retried. */
-    private var keepassRetried = false
-    private var aegisRetried = false
+    private var passwordsRetried = false
+    private var codesRetried = false
 
     /** Opens waiting sources again once the phone is unlocked ([waitForUnlock]). */
     private var unlockWatch: Job? = null
@@ -273,20 +294,20 @@ object Vault {
         initialized = true
     }
 
-    val aegisFile: File
-        get() = File(appContext.filesDir, AEGIS_FILE)
+    val codesFile: File
+        get() = File(appContext.filesDir, CODES_FILE)
 
     val importedKeyFile: File
         get() = File(appContext.filesDir, KEY_FILE_IMPORT)
 
-    fun keePassSetUp(): Boolean = keys.has(KeyWrapper.Slot.KEEPASS) && prefs.keepassSource != null
+    fun passwordsSetUp(): Boolean = keys.has(KeyWrapper.Slot.KEEPASS) && prefs.passwordsSource != null
 
-    fun aegisSetUp(): Boolean = keys.has(KeyWrapper.Slot.AEGIS) && aegisFile.isFile
+    fun codesSetUp(): Boolean = keys.has(KeyWrapper.Slot.AEGIS) && codesFile.isFile
 
     /** Set up and turned on: opened for pages, codes and autofill. */
-    fun keePassActive(): Boolean = keePassSetUp() && prefs.keepassEnabled
+    fun passwordsActive(): Boolean = passwordsSetUp() && prefs.passwordsEnabled
 
-    fun aegisActive(): Boolean = aegisSetUp() && prefs.aegisEnabled
+    fun codesActive(): Boolean = codesSetUp() && prefs.codesEnabled
 
     /** For status texts only; access control is the Keystore's. */
     val deviceLocked: Boolean
@@ -301,11 +322,11 @@ object Vault {
         else -> Source.Idle
     }
 
-    private fun keePassIdle() = idle(keePassSetUp(), prefs.keepassEnabled)
+    private fun passwordsIdle() = idle(passwordsSetUp(), prefs.passwordsEnabled)
 
-    private fun aegisIdle() = idle(aegisSetUp(), prefs.aegisEnabled)
+    private fun codesIdle() = idle(codesSetUp(), prefs.codesEnabled)
 
-    private fun idleState() = VaultState(keePassIdle(), aegisIdle())
+    private fun idleState() = VaultState(passwordsIdle(), codesIdle())
 
     /** The state pages show while they are stopped: nothing decrypted. */
     fun emptyState(): VaultState = idleState()
@@ -359,92 +380,79 @@ object Vault {
     // ---- one access ----
 
     /**
-     * Opens the KeePass database for one access; the caller wipes the result.
+     * Opens the passwords for one access; the caller wipes the result.
      * Order: the forget policy, the Keystore (a locked phone stops here), the
-     * file from its source, then the cached transformed key if its KDF
-     * fingerprint matches the file's, else the composite key and the KDF,
-     * whose output replaces the cache.
+     * file from its source, then the cached derived key if it was derived for
+     * the file's KDF parameters, else the stored credential and the KDF, whose
+     * output replaces the cache. A file without a password of its own is read
+     * once a key was unwrapped.
      */
-    suspend fun openKeePass(): KeePassData = withContext(Dispatchers.Default + NonCancellable) {
+    suspend fun openPasswords(): PasswordData = withContext(Dispatchers.Default + NonCancellable) {
         enforceForgetPolicy()
-        val source = prefs.keepassSource ?: throw IllegalStateException("KeePass is not set up")
+        val source = prefs.passwordsSource ?: throw IllegalStateException("the passwords are not set up")
         val t0 = System.nanoTime()
         val cached = if (keys.has(KeyWrapper.Slot.TRANSFORMED)) keys.loadLabeled(KeyWrapper.Slot.TRANSFORMED) else null
-        val composite = if (cached == null) keys.load(KeyWrapper.Slot.KEEPASS) else null
+        val credential = if (cached == null) keys.loadLabeled(KeyWrapper.Slot.KEEPASS) else null
         val t1 = System.nanoTime()
-        var transformed: ByteArray? = null
-        var compositeKey = composite
         try {
             val file = Sources.read(appContext, source)
             val t2 = System.nanoTime()
             try {
-                val header = KdbxHeader.parse(file.data)
-                val fingerprint = header.kdfFingerprint()
-                var kdfNs = 0L
-                var cold = false
-                var db: KdbxDatabase? = null
-                if (cached != null && Bytes.constantTimeEquals(cached.label, fingerprint)) {
-                    transformed = cached.secret
-                    try {
-                        db = KdbxReader.openWithKey(file.data, header, cached.secret)
-                    } catch (e: KdbxException) {
-                        // A cache left from an earlier composite key: derive again.
-                        if (e.reason != KdbxException.Reason.WRONG_KEY) throw e
-                        Log.w(TAG, "cached transformed key does not open the database; deriving it again")
-                    }
-                } else {
-                    cached?.secret?.let { Bytes.wipe(it) }
+                val opened = openFile(file, cached) {
+                    credential?.let { KeyWrapper.Labeled(it.label, it.secret.copyOf()) } ?: keys.loadLabeled(KeyWrapper.Slot.KEEPASS)
                 }
-                if (db == null) {
-                    Bytes.wipe(transformed)
-                    val c = compositeKey ?: keys.load(KeyWrapper.Slot.KEEPASS).also { compositeKey = it }
-                    val k0 = System.nanoTime()
-                    transformed = KdbxReader.transformKey(header.kdf, c)
-                    kdfNs = System.nanoTime() - k0
-                    cold = true
-                    db = KdbxReader.openWithKey(file.data, header, transformed!!)
-                    keys.store(KeyWrapper.Slot.TRANSFORMED, transformed!!, fingerprint)
-                    Log.i(TAG, "KDF ran (${kdfNs / 1_000_000} ms); transformed key cached for the new parameters")
+                try {
+                    if (opened.transformed != null && opened.fingerprint != null) {
+                        keys.store(KeyWrapper.Slot.TRANSFORMED, opened.transformed, opened.fingerprint)
+                        Log.i(TAG, "KDF ran (${opened.kdfMs} ms); derived key cached for the new parameters")
+                    }
+                } catch (e: Throwable) {
+                    opened.db.wipe()
+                    throw e
+                } finally {
+                    opened.wipeKey()
                 }
                 val t3 = System.nanoTime()
                 val timing = LoadTiming(
                     unwrapMs = (t1 - t0) / 1_000_000,
                     readMs = (t2 - t1) / 1_000_000,
-                    kdfMs = kdfNs / 1_000_000,
-                    openMs = (t3 - t2 - kdfNs) / 1_000_000,
+                    kdfMs = opened.kdfMs,
+                    openMs = (t3 - t2) / 1_000_000 - opened.kdfMs,
                     totalMs = (t3 - t0) / 1_000_000,
-                    cold = cold,
+                    cold = opened.transformed != null,
                 )
-                val data = KeePassData(db, source, file.name, file.size, file.mtime, file.sha256, timing, System.currentTimeMillis())
-                recordKeePass(data)
+                val data = PasswordData(opened.db, source, file.name, file.size, file.mtime, file.sha256, timing, System.currentTimeMillis())
+                prefs.passwordsKind = opened.kind
+                recordPasswords(data)
                 prefs.lastUsedAt = data.loadedAt
                 data
             } finally {
                 Bytes.wipe(file.data)
             }
         } catch (e: Throwable) {
-            recordFailure(VaultPrefs.Source.KEEPASS, "opening the KeePass database", e)
+            recordFailure(VaultPrefs.Source.PASSWORDS, "opening the passwords", e)
             throw e
         } finally {
-            Bytes.wipe(transformed, compositeKey)
+            cached?.let { Bytes.wipe(it.secret) }
+            credential?.let { Bytes.wipe(it.secret) }
         }
     }
 
-    /** Opens the Aegis vault for one access with the wrapped master key; the caller wipes the result. */
-    suspend fun openAegis(): AegisData = withContext(Dispatchers.Default + NonCancellable) {
+    /** Opens the 2FA codes for one access with the wrapped master key; the caller wipes the result. */
+    suspend fun openCodes(): CodesData = withContext(Dispatchers.Default + NonCancellable) {
         val t0 = System.nanoTime()
         try {
             enforceForgetPolicy()
             val master = keys.load(KeyWrapper.Slot.AEGIS)
             try {
-                val bytes = AtomicFile(aegisFile).readFully()
+                val bytes = AtomicFile(codesFile).readFully()
                 val entries = AegisVault.parse(bytes).open(master)
-                val data = AegisData(entries, System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
+                val data = CodesData(entries, System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
                 prefs.putStatus(
-                    VaultPrefs.Source.AEGIS,
+                    VaultPrefs.Source.CODES,
                     VaultPrefs.LoadStatus(
-                        loadedAt = data.loadedAt, fileSize = aegisFile.length(), fileMtime = aegisFile.lastModified(),
-                        entries = entries.size, format = "Aegis", totalMillis = data.millis,
+                        loadedAt = data.loadedAt, fileSize = codesFile.length(), fileMtime = codesFile.lastModified(),
+                        entries = entries.size, totalMillis = data.millis,
                     ),
                 )
                 prefs.lastUsedAt = data.loadedAt
@@ -453,7 +461,7 @@ object Vault {
                 Bytes.wipe(master)
             }
         } catch (e: Throwable) {
-            recordFailure(VaultPrefs.Source.AEGIS, "opening the Aegis vault", e)
+            recordFailure(VaultPrefs.Source.CODES, "opening the 2FA codes", e)
             throw e
         }
     }
@@ -463,8 +471,8 @@ object Vault {
      * request, one open). The open itself is not cancellable, so a cancelled
      * caller still wipes what was decrypted.
      */
-    suspend fun <T> withKeePass(block: suspend (KeePassData) -> T): T {
-        val data = openKeePass()
+    suspend fun <T> withPasswords(block: suspend (PasswordData) -> T): T {
+        val data = openPasswords()
         try {
             currentCoroutineContext().ensureActive()
             return block(data)
@@ -492,97 +500,97 @@ object Vault {
         if (holders == 0) return
         if (keysExpired()) forgetKeys("forget policy ${prefs.forgetPolicy.key}")
         val s = _state.value
-        if (keePassActive()) {
-            if (s.keepass !is Source.Ready && (keepassJob?.isActive != true || keepassJobEpoch != keepassEpoch)) {
-                startKeePass(reason, reload = false)
+        if (passwordsActive()) {
+            if (s.passwords !is Source.Ready && (passwordsJob?.isActive != true || passwordsJobEpoch != passwordsEpoch)) {
+                startPasswords(reason, reload = false)
             }
         } else {
-            settleKeePass()
+            settlePasswords()
         }
-        if (aegisActive()) {
-            if (s.aegis !is Source.Ready && (aegisJob?.isActive != true || aegisJobEpoch != aegisEpoch)) {
-                startAegis(reason)
+        if (codesActive()) {
+            if (s.codes !is Source.Ready && (codesJob?.isActive != true || codesJobEpoch != codesEpoch)) {
+                startCodes(reason)
             }
         } else {
-            settleAegis()
+            settleCodes()
         }
     }
 
-    /** KeePass is not active: its state becomes Off or NotSetUp, and whatever was shown is wiped. */
-    private fun settleKeePass() {
-        val want = keePassIdle()
+    /** The passwords are not active: their state becomes Off or NotSetUp, and whatever was shown is wiped. */
+    private fun settlePasswords() {
+        val want = passwordsIdle()
         val s = _state.value
-        if (s.keepass === want) return
-        keepassEpoch++
-        update { copy(keepass = want, reloading = false) }
-        s.keepassData?.wipe()
+        if (s.passwords === want) return
+        passwordsEpoch++
+        update { copy(passwords = want, reloading = false) }
+        s.passwordsData?.wipe()
     }
 
-    private fun settleAegis() {
-        val want = aegisIdle()
+    private fun settleCodes() {
+        val want = codesIdle()
         val s = _state.value
-        if (s.aegis === want) return
-        aegisEpoch++
-        update { copy(aegis = want) }
-        s.aegisData?.wipe()
+        if (s.codes === want) return
+        codesEpoch++
+        update { copy(codes = want) }
+        s.codesData?.wipe()
     }
 
-    /** Turns KeePass on or off; off wipes what the session shows. Main thread. */
-    fun setKeePassEnabled(on: Boolean) {
-        prefs.keepassEnabled = on
+    /** Turns the passwords on or off; off wipes what the session shows. Main thread. */
+    fun setPasswordsEnabled(on: Boolean) {
+        prefs.passwordsEnabled = on
         if (on) {
-            if (_state.value.keepass === Source.Off) update { copy(keepass = keePassIdle()) }
-            requestLoad("KeePass turned on")
+            if (_state.value.passwords === Source.Off) update { copy(passwords = passwordsIdle()) }
+            requestLoad("passwords turned on")
         } else {
-            settleKeePass()
+            settlePasswords()
         }
-        Log.i(TAG, "KeePass turned ${if (on) "on" else "off"}")
+        Log.i(TAG, "passwords turned ${if (on) "on" else "off"}")
     }
 
-    fun setAegisEnabled(on: Boolean) {
-        prefs.aegisEnabled = on
+    fun setCodesEnabled(on: Boolean) {
+        prefs.codesEnabled = on
         if (on) {
-            if (_state.value.aegis === Source.Off) update { copy(aegis = aegisIdle()) }
-            requestLoad("Aegis turned on")
+            if (_state.value.codes === Source.Off) update { copy(codes = codesIdle()) }
+            requestLoad("2FA codes turned on")
         } else {
-            settleAegis()
+            settleCodes()
         }
-        Log.i(TAG, "Aegis turned ${if (on) "on" else "off"}")
+        Log.i(TAG, "2FA codes turned ${if (on) "on" else "off"}")
     }
 
-    private fun startKeePass(reason: String, reload: Boolean) {
-        val epoch = keepassEpoch
-        Log.i(TAG, "opening the KeePass database ($reason)")
-        if (reload) update { copy(reloading = true) } else update { copy(keepass = Source.Loading) }
-        keepassJobEpoch = epoch
-        keepassJob = scope.launch {
+    private fun startPasswords(reason: String, reload: Boolean) {
+        val epoch = passwordsEpoch
+        Log.i(TAG, "opening the passwords ($reason)")
+        if (reload) update { copy(reloading = true) } else update { copy(passwords = Source.Loading) }
+        passwordsJobEpoch = epoch
+        passwordsJob = scope.launch {
             val result = try {
-                Result.success(openKeePass())
+                Result.success(openPasswords())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Result.failure(e)
             }
-            if (epoch != keepassEpoch || holders == 0) {
-                // The session was dropped (or KeePass set up again) meanwhile.
+            if (epoch != passwordsEpoch || holders == 0) {
+                // The session was dropped (or the passwords set up again) meanwhile.
                 result.getOrNull()?.wipe()
                 return@launch
             }
             result.fold(
                 onSuccess = {
-                    keepassRetried = false
-                    installKeePass(it)
+                    passwordsRetried = false
+                    installPasswords(it)
                 },
                 onFailure = { e ->
-                    val refusal = (e as? KeystoreLockedException)?.let { KeystoreRefusal.next(deviceLocked, keepassRetried) }
+                    val refusal = (e as? KeystoreLockedException)?.let { KeystoreRefusal.next(deviceLocked, passwordsRetried) }
                     when {
                         e is KeysForgottenException -> Unit // forgetKeys has set the state
                         reload -> update { copy(reloading = false) }
-                        refusal == null || refusal == KeystoreRefusal.Next.FAIL -> update { copy(keepass = Source.Failed(e)) }
+                        refusal == null || refusal == KeystoreRefusal.Next.FAIL -> update { copy(passwords = Source.Failed(e)) }
                         else -> {
                             // Locked: the source waits (pages say "Locked"); unlocked: one retry.
-                            keepassRetried = refusal == KeystoreRefusal.Next.RETRY
-                            update { copy(keepass = if (keepassRetried) Source.Loading else keePassIdle()) }
+                            passwordsRetried = refusal == KeystoreRefusal.Next.RETRY
+                            update { copy(passwords = if (passwordsRetried) Source.Loading else passwordsIdle()) }
                             waitForUnlock()
                         }
                     }
@@ -610,48 +618,48 @@ object Vault {
         }
     }
 
-    private fun installKeePass(data: KeePassData) {
-        val old = _state.value.keepassData
-        update { copy(keepass = Source.Ready(data), reloading = false) }
+    private fun installPasswords(data: PasswordData) {
+        val old = _state.value.passwordsData
+        update { copy(passwords = Source.Ready(data), reloading = false) }
         if (old != null && old !== data) old.wipe()
     }
 
-    private fun installAegis(data: AegisData) {
-        val old = _state.value.aegisData
-        update { copy(aegis = Source.Ready(data)) }
+    private fun installCodes(data: CodesData) {
+        val old = _state.value.codesData
+        update { copy(codes = Source.Ready(data)) }
         if (old != null && old !== data) old.wipe()
     }
 
-    private fun startAegis(reason: String) {
-        val epoch = aegisEpoch
-        Log.i(TAG, "opening the Aegis vault ($reason)")
-        update { copy(aegis = Source.Loading) }
-        aegisJobEpoch = epoch
-        aegisJob = scope.launch {
+    private fun startCodes(reason: String) {
+        val epoch = codesEpoch
+        Log.i(TAG, "opening the 2FA codes ($reason)")
+        update { copy(codes = Source.Loading) }
+        codesJobEpoch = epoch
+        codesJob = scope.launch {
             val result = try {
-                Result.success(openAegis())
+                Result.success(openCodes())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Result.failure(e)
             }
-            if (epoch != aegisEpoch || holders == 0) {
+            if (epoch != codesEpoch || holders == 0) {
                 result.getOrNull()?.wipe()
                 return@launch
             }
             result.fold(
                 onSuccess = {
-                    aegisRetried = false
-                    installAegis(it)
+                    codesRetried = false
+                    installCodes(it)
                 },
                 onFailure = { e ->
-                    val refusal = (e as? KeystoreLockedException)?.let { KeystoreRefusal.next(deviceLocked, aegisRetried) }
+                    val refusal = (e as? KeystoreLockedException)?.let { KeystoreRefusal.next(deviceLocked, codesRetried) }
                     when {
                         e is KeysForgottenException -> Unit
-                        refusal == null || refusal == KeystoreRefusal.Next.FAIL -> update { copy(aegis = Source.Failed(e)) }
+                        refusal == null || refusal == KeystoreRefusal.Next.FAIL -> update { copy(codes = Source.Failed(e)) }
                         else -> {
-                            aegisRetried = refusal == KeystoreRefusal.Next.RETRY
-                            update { copy(aegis = if (aegisRetried) Source.Loading else aegisIdle()) }
+                            codesRetried = refusal == KeystoreRefusal.Next.RETRY
+                            update { copy(codes = if (codesRetried) Source.Loading else codesIdle()) }
                             waitForUnlock()
                         }
                     }
@@ -665,43 +673,43 @@ object Vault {
      * opens the file again when they differ. At most every 10 s; main thread.
      */
     fun checkForChanges() {
-        val data = _state.value.keepassData ?: return
+        val data = _state.value.passwordsData ?: return
         val now = System.currentTimeMillis()
-        if (now - lastChangeCheck < CHANGE_CHECK_INTERVAL_MS || keepassJob?.isActive == true) return
+        if (now - lastChangeCheck < CHANGE_CHECK_INTERVAL_MS || passwordsJob?.isActive == true) return
         lastChangeCheck = now
-        val epoch = keepassEpoch
+        val epoch = passwordsEpoch
         scope.launch {
             val stat = try {
                 Sources.stat(appContext, data.source)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "checking the KeePass database for changes failed; keeping the shown copy: ${e.message}")
+                Log.w(TAG, "checking the passwords' file for changes failed; keeping the shown copy: ${e.message}")
                 return@launch
             }
-            if (epoch != keepassEpoch || _state.value.keepassData !== data) return@launch
+            if (epoch != passwordsEpoch || _state.value.passwordsData !== data) return@launch
             // A provider that reports no size or time leaves the check to the next open.
             val sizeChanged = stat.size >= 0 && stat.size != data.size
             val timeChanged = stat.mtime > 0 && stat.mtime != data.mtime
-            if ((sizeChanged || timeChanged) && keepassJob?.isActive != true) {
-                startKeePass("file changed", reload = true)
+            if ((sizeChanged || timeChanged) && passwordsJob?.isActive != true) {
+                startPasswords("file changed", reload = true)
             }
         }
     }
 
     /** Wipes the session's decrypted data; main thread. */
     private fun drop(reason: String) {
-        keepassEpoch++
-        aegisEpoch++
-        keepassRetried = false
-        aegisRetried = false
+        passwordsEpoch++
+        codesEpoch++
+        passwordsRetried = false
+        codesRetried = false
         unlockWatch?.cancel()
         unlockWatch = null
         val s = _state.value
-        val had = s.keepassData != null || s.aegisData != null
+        val had = s.passwordsData != null || s.codesData != null
         _state.value = idleState()
-        s.keepassData?.wipe()
-        s.aegisData?.wipe()
+        s.passwordsData?.wipe()
+        s.codesData?.wipe()
         if (had) Log.i(TAG, "decrypted vault dropped ($reason)")
     }
 
@@ -742,15 +750,87 @@ object Vault {
         }
     }
 
-    /** The database opened with [composite]; null when the key does not open it. The caller wipes both. */
-    private class Opened(val db: KdbxDatabase, val transformed: ByteArray, val kdfMs: Long)
+    /**
+     * A password file opened, and what of it a later open needs: its [kind], and when a key was
+     * derived ([transformed], to be cached under [fingerprint]) and how long that took.
+     */
+    private class Opened(
+        val db: PasswordDatabase,
+        val kind: String,
+        val transformed: ByteArray? = null,
+        val fingerprint: ByteArray? = null,
+        val kdfMs: Long = 0,
+    ) {
+        fun wipeKey() = Bytes.wipe(transformed)
+    }
 
-    private fun tryOpen(file: ByteArray, header: KdbxHeader, composite: ByteArray): Opened? {
+    private fun requireCredential(credential: KeyWrapper.Labeled, label: ByteArray) {
+        if (!credential.label.contentEquals(label)) {
+            throw FileFormatException(FileFormatException.Reason.NEEDS_SETUP, "the stored key is not one this file's format takes")
+        }
+    }
+
+    /**
+     * Opens [file] in its format: with [cached] when it was derived for the
+     * file's KDF parameters, else with the stored credential [credential]
+     * loads (the caller wipes [cached]; this wipes what [credential] returns).
+     */
+    private fun openFile(file: FileContent, cached: KeyWrapper.Labeled?, credential: () -> KeyWrapper.Labeled): Opened {
+        when (val kind = PasswordFiles.detect(file.data)) {
+            PasswordFiles.Kind.Kdbx -> {
+                val header = KdbxHeader.parse(file.data)
+                val fingerprint = header.kdfFingerprint()
+                if (cached != null && Bytes.constantTimeEquals(cached.label, fingerprint)) {
+                    try {
+                        return Opened(KdbxReader.openWithKey(file.data, header, cached.secret), KIND_KDBX)
+                    } catch (e: KdbxException) {
+                        // A cache left from an earlier composite key: derive again.
+                        if (e.reason != KdbxException.Reason.WRONG_KEY) throw e
+                        Log.w(TAG, "cached transformed key does not open the database; deriving it again")
+                    }
+                }
+                val c = credential()
+                try {
+                    requireCredential(c, CREDENTIAL_KDBX)
+                    return tryKdbx(file.data, header, c.secret)
+                        ?: throw KdbxException(KdbxException.Reason.WRONG_KEY, "the stored key does not open the database")
+                } finally {
+                    Bytes.wipe(c.secret)
+                }
+            }
+            is PasswordFiles.Kind.Encrypted -> {
+                val fingerprint = kind.export.fingerprint()
+                if (cached != null && Bytes.constantTimeEquals(cached.label, fingerprint)) {
+                    try {
+                        return Opened(kind.open(cached.secret, file.name), KIND_ENCRYPTED)
+                    } catch (e: FileFormatException) {
+                        if (e.reason != FileFormatException.Reason.WRONG_PASSWORD) throw e
+                        Log.w(TAG, "cached derived key does not open the export; deriving it again")
+                    }
+                }
+                val c = credential()
+                try {
+                    requireCredential(c, CREDENTIAL_PASSWORD)
+                    return openEncrypted(kind, file.name, c.secret)
+                } finally {
+                    Bytes.wipe(c.secret)
+                }
+            }
+            is PasswordFiles.Kind.Plain -> {
+                // The file has no password: the stored key's unwrap is what opens it.
+                Bytes.wipe(credential().secret)
+                return Opened(kind.read(file.name), KIND_PLAIN)
+            }
+        }
+    }
+
+    /** A KDBX database opened with [composite]; null when the key does not open it. */
+    private fun tryKdbx(file: ByteArray, header: KdbxHeader, composite: ByteArray): Opened? {
         val k0 = System.nanoTime()
         val transformed = KdbxReader.transformKey(header.kdf, composite)
         val kdfMs = (System.nanoTime() - k0) / 1_000_000
         return try {
-            Opened(KdbxReader.openWithKey(file, header, transformed), transformed, kdfMs)
+            Opened(KdbxReader.openWithKey(file, header, transformed), KIND_KDBX, transformed, header.kdfFingerprint(), kdfMs)
         } catch (e: KdbxException) {
             Bytes.wipe(transformed)
             if (e.reason != KdbxException.Reason.WRONG_KEY) throw e
@@ -761,237 +841,359 @@ object Vault {
         }
     }
 
+    /** A password-protected export opened with [password]; FileFormatException(WRONG_PASSWORD) when it does not open it. */
+    private fun openEncrypted(kind: PasswordFiles.Kind.Encrypted, fileName: String, password: ByteArray): Opened {
+        val k0 = System.nanoTime()
+        val key = kind.export.deriveKey(password)
+        val kdfMs = (System.nanoTime() - k0) / 1_000_000
+        return try {
+            Opened(kind.open(key, fileName), KIND_ENCRYPTED, key, kind.export.fingerprint(), kdfMs)
+        } catch (e: Throwable) {
+            Bytes.wipe(key)
+            throw e
+        }
+    }
+
+    /** What the password file needs to be set up: KDBX (password and key file), a password, or nothing. */
+    enum class PasswordFileKind { KDBX, ENCRYPTED, PLAIN }
+
+    /** Reads [source] and tells its kind; throws when it cannot be read or holds no passwords. */
+    suspend fun passwordFileKind(source: DbSource): PasswordFileKind = withContext(Dispatchers.Default) {
+        val file = Sources.read(appContext, source)
+        try {
+            when (PasswordFiles.detect(file.data)) {
+                PasswordFiles.Kind.Kdbx -> PasswordFileKind.KDBX
+                is PasswordFiles.Kind.Encrypted -> PasswordFileKind.ENCRYPTED
+                is PasswordFiles.Kind.Plain -> PasswordFileKind.PLAIN
+            }
+        } finally {
+            Bytes.wipe(file.data)
+        }
+    }
+
     /**
-     * Makes [source] the database: stores the transformed key for it, the
-     * source, releases grants of documents no longer used, and hands the
-     * opened database to a visible page (or wipes it).
+     * Makes [source] the passwords' file: stores the derived key for it (or
+     * drops a cached one when nothing was derived), the source and its kind,
+     * releases grants of documents no longer used, and hands the opened
+     * passwords to a visible page (or wipes them).
      */
-    private suspend fun adoptKeePass(source: DbSource, file: FileContent, header: KdbxHeader, opened: Opened, t0: Long): SetupResult {
+    private suspend fun adoptPasswords(source: DbSource, file: FileContent, opened: Opened, t0: Long): SetupResult {
         val data = try {
-            keys.store(KeyWrapper.Slot.TRANSFORMED, opened.transformed, header.kdfFingerprint())
+            if (opened.transformed != null && opened.fingerprint != null) {
+                keys.store(KeyWrapper.Slot.TRANSFORMED, opened.transformed, opened.fingerprint)
+            } else {
+                keys.delete(KeyWrapper.Slot.TRANSFORMED)
+            }
             val total = (System.nanoTime() - t0) / 1_000_000
-            KeePassData(
+            PasswordData(
                 opened.db, source, file.name, file.size, file.mtime, file.sha256,
-                LoadTiming(0, 0, opened.kdfMs, total - opened.kdfMs, total, cold = true), System.currentTimeMillis(),
+                LoadTiming(0, 0, opened.kdfMs, total - opened.kdfMs, total, cold = opened.transformed != null), System.currentTimeMillis(),
             )
         } catch (e: Throwable) {
             opened.db.wipe()
             throw e
         }
-        prefs.keepassSource = source
+        prefs.passwordsSource = source
+        prefs.passwordsKind = opened.kind
         Sources.releaseGrantsExcept(appContext, (source as? DbSource.Document)?.uri)
-        recordKeePass(data)
+        recordPasswords(data)
         val result = SetupResult(data.db.entries.size, data.timing.kdfMs, data.timing.totalMs)
         withContext(Dispatchers.Main.immediate) {
-            keepassEpoch++
-            if (holders > 0 && prefs.keepassEnabled) installKeePass(data) else data.wipe()
+            passwordsEpoch++
+            if (holders > 0 && prefs.passwordsEnabled) installPasswords(data) else data.wipe()
         }
         return result
     }
 
+    /** Stores [credential] (labeled [label]) as the passwords' key; wipes [opened] when the Keystore refuses. */
+    private fun storeCredential(opened: Opened, credential: ByteArray, label: ByteArray) {
+        try {
+            keys.store(KeyWrapper.Slot.KEEPASS, credential, label)
+        } catch (e: Throwable) {
+            opened.db.wipe()
+            opened.wipeKey()
+            throw e
+        }
+    }
+
     /**
-     * Opens [source] with the password and key file (running the KDF once to
-     * prove them right), then stores the wrapped composite key and the
-     * wrapped transformed key, and deletes an imported key file. An empty
-     * password means no password component; like KeePassXC, an empty
-     * password is tried as well when that fails and a key file is used.
+     * Opens [source] in its format and stores what opens it again, wrapped:
+     * for a KDBX database the composite key of the password and key file
+     * (the KDF runs once to prove them right; an empty password means no
+     * password component, and like KeePassXC an empty password is tried as
+     * well when that fails and a key file is used) and an imported key file
+     * is deleted; for a password-protected export its password; for a file
+     * without a password a random key, whose unwrap opens it.
      */
-    suspend fun setupKeePass(source: DbSource, keyFile: KeyFileChoice, password: ByteArray): SetupResult =
+    suspend fun setupPasswords(source: DbSource, keyFile: KeyFileChoice, password: ByteArray): SetupResult =
         withContext(Dispatchers.Default) {
-            val keyFileKey = when (keyFile) {
-                KeyFileChoice.None -> null
-                KeyFileChoice.Imported -> importedKeyFileKey()
-                is KeyFileChoice.Picked -> keyFile.key.copyOf()
-            }
             val file = Sources.read(appContext, source)
-            val candidates = ArrayList<ByteArray>()
             try {
-                if (password.isNotEmpty() || keyFileKey == null) {
-                    candidates.add(KeyFile.compositeKey(password, keyFileKey))
-                } else {
-                    candidates.add(KeyFile.compositeKey(null, keyFileKey))
-                    candidates.add(KeyFile.compositeKey(ByteArray(0), keyFileKey))
-                }
-                val header = KdbxHeader.parse(file.data)
                 val t0 = System.nanoTime()
-                for (composite in candidates) {
-                    val opened = tryOpen(file.data, header, composite) ?: continue
-                    try {
+                when (val kind = PasswordFiles.detect(file.data)) {
+                    PasswordFiles.Kind.Kdbx -> setupKdbx(source, file, keyFile, password, t0)
+                    is PasswordFiles.Kind.Encrypted -> {
+                        val opened = openEncrypted(kind, file.name, password)
                         try {
-                            keys.store(KeyWrapper.Slot.KEEPASS, composite)
-                        } catch (e: Throwable) {
-                            opened.db.wipe()
-                            throw e
+                            storeCredential(opened, password, CREDENTIAL_PASSWORD)
+                            prefs.usesKeyFile = false
+                            markKeysFresh()
+                            adoptPasswords(source, file, opened, t0)
+                        } finally {
+                            opened.wipeKey()
                         }
-                        prefs.usesKeyFile = keyFileKey != null
-                        markKeysFresh()
-                        val result = adoptKeePass(source, file, header, opened, t0)
-                        // The key file is not kept on the phone: the wrapped composite key replaces it.
-                        if (keyFile == KeyFileChoice.Imported) deleteImportedKeyFile("setup done")
-                        Log.i(TAG, "KeePass set up with ${source.fileName}" + if (keyFileKey != null) " and a key file" else "")
-                        return@withContext result
-                    } finally {
-                        Bytes.wipe(opened.transformed)
                     }
-                }
-                throw KdbxException(KdbxException.Reason.WRONG_KEY, "password or key file does not open the database")
+                    is PasswordFiles.Kind.Plain -> {
+                        val opened = Opened(kind.read(file.name), KIND_PLAIN)
+                        val marker = ByteArray(32).also { SecureRandom().nextBytes(it) }
+                        try {
+                            storeCredential(opened, marker, CREDENTIAL_NONE)
+                        } finally {
+                            Bytes.wipe(marker)
+                        }
+                        prefs.usesKeyFile = false
+                        markKeysFresh()
+                        adoptPasswords(source, file, opened, t0)
+                    }
+                }.also { Log.i(TAG, "passwords set up with ${source.fileName} (${prefs.passwordsKind}, ${it.entries} entries)") }
             } finally {
-                candidates.forEach { Bytes.wipe(it) }
-                Bytes.wipe(keyFileKey, file.data)
+                Bytes.wipe(file.data)
             }
         }
 
+    private suspend fun setupKdbx(source: DbSource, file: FileContent, keyFile: KeyFileChoice, password: ByteArray, t0: Long): SetupResult {
+        val keyFileKey = when (keyFile) {
+            KeyFileChoice.None -> null
+            KeyFileChoice.Imported -> importedKeyFileKey()
+            is KeyFileChoice.Picked -> keyFile.key.copyOf()
+        }
+        val candidates = ArrayList<ByteArray>()
+        try {
+            if (password.isNotEmpty() || keyFileKey == null) {
+                candidates.add(KeyFile.compositeKey(password, keyFileKey))
+            } else {
+                candidates.add(KeyFile.compositeKey(null, keyFileKey))
+                candidates.add(KeyFile.compositeKey(ByteArray(0), keyFileKey))
+            }
+            val header = KdbxHeader.parse(file.data)
+            for (composite in candidates) {
+                val opened = tryKdbx(file.data, header, composite) ?: continue
+                try {
+                    storeCredential(opened, composite, CREDENTIAL_KDBX)
+                    prefs.usesKeyFile = keyFileKey != null
+                    markKeysFresh()
+                    val result = adoptPasswords(source, file, opened, t0)
+                    // The key file is not kept on the phone: the wrapped composite key replaces it.
+                    if (keyFile == KeyFileChoice.Imported) deleteImportedKeyFile("setup done")
+                    return result
+                } finally {
+                    opened.wipeKey()
+                }
+            }
+            throw KdbxException(KdbxException.Reason.WRONG_KEY, "password or key file does not open the database")
+        } finally {
+            candidates.forEach { Bytes.wipe(it) }
+            Bytes.wipe(keyFileKey)
+        }
+    }
+
     /**
-     * Replaces the database of a set-up KeePass with [source] if the stored
-     * composite key opens it (the same database elsewhere, or a copy);
-     * throws KdbxException(WRONG_KEY) when it does not, and the setup then
-     * needs the password.
+     * Replaces the passwords' file with [source] if the stored key opens it
+     * (the same file elsewhere, or a copy) or it needs none; throws
+     * [PasswordNeededException] when it does not, and the setup then needs
+     * the password.
      */
-    suspend fun switchKeePassSource(source: DbSource): SetupResult = withContext(Dispatchers.Default) {
+    suspend fun switchPasswordsSource(source: DbSource): SetupResult = withContext(Dispatchers.Default) {
         enforceForgetPolicy()
-        val composite = keys.load(KeyWrapper.Slot.KEEPASS)
+        val credential = keys.loadLabeled(KeyWrapper.Slot.KEEPASS)
         try {
             val file = Sources.read(appContext, source)
             try {
-                val header = KdbxHeader.parse(file.data)
                 val t0 = System.nanoTime()
-                val opened = tryOpen(file.data, header, composite)
-                    ?: throw KdbxException(KdbxException.Reason.WRONG_KEY, "the stored key does not open this database")
+                val opened = when (val kind = PasswordFiles.detect(file.data)) {
+                    PasswordFiles.Kind.Kdbx -> credential.takeIf { it.label.contentEquals(CREDENTIAL_KDBX) }
+                        ?.let { tryKdbx(file.data, KdbxHeader.parse(file.data), it.secret) }
+                    is PasswordFiles.Kind.Encrypted -> credential.takeIf { it.label.contentEquals(CREDENTIAL_PASSWORD) }?.let {
+                        try {
+                            openEncrypted(kind, file.name, it.secret)
+                        } catch (e: FileFormatException) {
+                            if (e.reason != FileFormatException.Reason.WRONG_PASSWORD) throw e
+                            null
+                        }
+                    }
+                    is PasswordFiles.Kind.Plain -> Opened(kind.read(file.name), KIND_PLAIN).also { opened ->
+                        val marker = ByteArray(32).also { SecureRandom().nextBytes(it) }
+                        try {
+                            storeCredential(opened, marker, CREDENTIAL_NONE)
+                        } finally {
+                            Bytes.wipe(marker)
+                        }
+                        prefs.usesKeyFile = false
+                    }
+                } ?: throw PasswordNeededException("the stored key does not open this file")
                 try {
-                    val result = adoptKeePass(source, file, header, opened, t0)
-                    Log.i(TAG, "KeePass database replaced by ${source.fileName} (stored key)")
+                    val result = adoptPasswords(source, file, opened, t0)
+                    Log.i(TAG, "passwords' file replaced by ${source.fileName} (${opened.kind})")
                     result
                 } finally {
-                    Bytes.wipe(opened.transformed)
+                    opened.wipeKey()
                 }
             } finally {
                 Bytes.wipe(file.data)
             }
         } finally {
-            Bytes.wipe(composite)
+            Bytes.wipe(credential.secret)
         }
     }
 
     /**
-     * Sets up Aegis: with [bytes], a newly picked vault file (named
-     * [sourceName]) that replaces the current one only once [password] has
-     * opened it; without, the current file. Derives the master key from the
-     * password slot (scrypt), checks it and stores it wrapped.
+     * Sets up the 2FA codes: with [bytes], a newly picked encrypted Aegis
+     * vault file (named [sourceName]) that becomes the vault's own file once
+     * [password] has opened it; without, the current file again. Derives the
+     * master key from the password slot (scrypt), checks it and stores it
+     * wrapped.
      */
-    suspend fun setupAegis(password: ByteArray, bytes: ByteArray? = null, sourceName: String = ""): SetupResult =
+    suspend fun setupCodes(password: ByteArray, bytes: ByteArray? = null, sourceName: String = ""): SetupResult =
         withContext(Dispatchers.Default) {
             val t0 = System.nanoTime()
-            val raw = bytes ?: AtomicFile(aegisFile).readFully()
+            val raw = bytes ?: AtomicFile(codesFile).readFully()
             val vault = AegisVault.parse(raw)
             if (!vault.encrypted) throw AegisException(AegisException.Reason.NO_PASSWORD_SLOT, "the vault file is not encrypted")
             val master = vault.unlockWithPassword(password)
             try {
-                val data = AegisData(vault.open(master), System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
-                try {
-                    if (bytes != null) writeAegisFile(bytes)
-                    keys.store(KeyWrapper.Slot.AEGIS, master)
-                } catch (e: Throwable) {
-                    data.wipe()
-                    throw e
-                }
-                if (bytes != null) prefs.aegisSourceName = sourceName
-                markKeysFresh()
-                prefs.putStatus(
-                    VaultPrefs.Source.AEGIS,
-                    VaultPrefs.LoadStatus(
-                        loadedAt = data.loadedAt, fileSize = aegisFile.length(), fileMtime = aegisFile.lastModified(),
-                        entries = data.entries.size, format = "Aegis", totalMillis = data.millis,
-                    ),
-                )
-                val result = SetupResult(data.entries.size, 0, data.millis)
-                withContext(Dispatchers.Main.immediate) {
-                    aegisEpoch++
-                    if (holders > 0 && prefs.aegisEnabled) installAegis(data) else data.wipe()
-                }
-                Log.i(TAG, "Aegis vault set up" + if (bytes != null) " from a new file (${bytes.size} bytes)" else "")
-                result
+                adoptCodes(vault.open(master), if (bytes != null) bytes else null, master, sourceName, t0, 0)
             } finally {
                 Bytes.wipe(master)
             }
         }
 
-    private val aegisWrite = Mutex()
+    /**
+     * Sets up the 2FA codes from the accounts of a file in any format
+     * [CodeFiles] reads ([filePassword] opens an encrypted one): a new file
+     * of the vault's own holds them, encrypted with [password] (the picked
+     * file's own, or one chosen for a file without), and replaces the
+     * current one.
+     */
+    suspend fun setupCodesFrom(bytes: ByteArray, sourceName: String, filePassword: ByteArray?, password: ByteArray): SetupResult =
+        withContext(Dispatchers.Default) {
+            val t0 = System.nanoTime()
+            val detected = CodeFiles.detect(bytes)
+            val accounts = detected.accounts(filePassword)
+            val (file, master) = AegisVault.create(password, accounts.entries)
+            try {
+                adoptCodes(AegisVault.parse(file).open(master), file, master, sourceName, t0, accounts.skipped).also {
+                    Log.i(TAG, "2FA codes set up from a ${detected.format} file: ${it.entries} accounts, ${accounts.skipped} not readable")
+                }
+            } finally {
+                Bytes.wipe(master, file)
+            }
+        }
+
+    /** Makes [entries] the shown 2FA codes, [file] (when new) the vault's own file and [master] its stored key. */
+    private suspend fun adoptCodes(
+        entries: List<AegisEntry>,
+        file: ByteArray?,
+        master: ByteArray,
+        sourceName: String,
+        t0: Long,
+        skipped: Int,
+    ): SetupResult {
+        val data = CodesData(entries, System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
+        try {
+            if (file != null) writeCodesFile(file)
+            keys.store(KeyWrapper.Slot.AEGIS, master)
+        } catch (e: Throwable) {
+            data.wipe()
+            throw e
+        }
+        if (file != null) prefs.codesSourceName = sourceName
+        markKeysFresh()
+        prefs.putStatus(
+            VaultPrefs.Source.CODES,
+            VaultPrefs.LoadStatus(
+                loadedAt = data.loadedAt, fileSize = codesFile.length(), fileMtime = codesFile.lastModified(),
+                entries = data.entries.size, totalMillis = data.millis,
+            ),
+        )
+        val result = SetupResult(data.entries.size, 0, data.millis, skipped)
+        withContext(Dispatchers.Main.immediate) {
+            codesEpoch++
+            if (holders > 0 && prefs.codesEnabled) installCodes(data) else data.wipe()
+        }
+        Log.i(TAG, "2FA codes set up" + if (file != null) " from a new file" else "")
+        return result
+    }
+
+    private val codesWrite = Mutex()
 
     /**
-     * Changes the accounts of the Aegis vault ([what] names the change for
+     * Changes the accounts of the 2FA codes ([what] names the change for
      * the log): decrypts the vault with the wrapped master key, applies
      * [change] to its entries, encrypts it again (fresh nonce; same master
      * key and slots, so the password and Aegis' import keep working), checks
      * that the result opens and replaces the file. Pages then show the new
      * entries.
      */
-    suspend fun changeAegis(what: String, change: (MutableList<MutableMap<String, Any?>>) -> Unit) =
+    suspend fun changeCodes(what: String, change: (MutableList<MutableMap<String, Any?>>) -> Unit) =
         withContext(Dispatchers.Default + NonCancellable) {
-            aegisWrite.withLock {
+            codesWrite.withLock {
                 val t0 = System.nanoTime()
                 try {
                     enforceForgetPolicy()
                     val master = keys.load(KeyWrapper.Slot.AEGIS)
                     try {
-                        val file = AegisVault.parse(AtomicFile(aegisFile).readFully()).edit(master, change)
-                        val data = AegisData(AegisVault.parse(file).open(master), System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
+                        val file = AegisVault.parse(AtomicFile(codesFile).readFully()).edit(master, change)
+                        val data = CodesData(AegisVault.parse(file).open(master), System.currentTimeMillis(), (System.nanoTime() - t0) / 1_000_000)
                         try {
-                            writeAegisFile(file)
+                            writeCodesFile(file)
                         } catch (e: Throwable) {
                             data.wipe()
                             throw e
                         }
                         prefs.putStatus(
-                            VaultPrefs.Source.AEGIS,
-                            prefs.status(VaultPrefs.Source.AEGIS).copy(
-                                fileSize = aegisFile.length(), fileMtime = aegisFile.lastModified(), entries = data.entries.size,
+                            VaultPrefs.Source.CODES,
+                            prefs.status(VaultPrefs.Source.CODES).copy(
+                                fileSize = codesFile.length(), fileMtime = codesFile.lastModified(), entries = data.entries.size,
                             ),
                         )
                         withContext(Dispatchers.Main.immediate) {
-                            aegisEpoch++
-                            if (holders > 0 && aegisActive()) installAegis(data) else data.wipe()
+                            codesEpoch++
+                            if (holders > 0 && codesActive()) installCodes(data) else data.wipe()
                         }
-                        Log.i(TAG, "Aegis vault changed: $what (${data.entries.size} entries)")
+                        Log.i(TAG, "2FA codes changed: $what (${data.entries.size} entries)")
                     } finally {
                         Bytes.wipe(master)
                     }
                 } catch (e: Throwable) {
-                    recordFailure(VaultPrefs.Source.AEGIS, "changing the Aegis vault ($what)", e)
+                    recordFailure(VaultPrefs.Source.CODES, "changing the 2FA codes ($what)", e)
                     throw e
                 }
             }
         }
 
-    /** Accounts of another Aegis vault file merged into this one. */
-    class MergeResult(val added: Int, val total: Int)
+    /** Accounts of another file merged into the 2FA codes: added, read from the file, and not readable there. */
+    class MergeResult(val added: Int, val total: Int, val skipped: Int)
 
     /**
-     * Adds the accounts of another Aegis vault file ([bytes]; [password]
-     * for an encrypted one, null for an unencrypted export) that this vault
-     * does not hold yet. The other file is only read; this vault keeps its
+     * Adds the accounts of another file in any format [CodeFiles] reads
+     * ([password] for an encrypted one, null otherwise) that the 2FA codes
+     * do not hold yet. The other file is only read; the 2FA codes keep their
      * password.
      */
-    suspend fun mergeAegis(bytes: ByteArray, password: ByteArray?): MergeResult {
-        val incoming = withContext(Dispatchers.Default) {
-            val other = AegisVault.parse(bytes)
-            if (other.encrypted) {
-                val master = other.unlockWithPassword(password ?: throw AegisException(AegisException.Reason.WRONG_PASSWORD, "no password"))
-                try {
-                    other.rawEntries(master)
-                } finally {
-                    Bytes.wipe(master)
-                }
-            } else {
-                other.rawEntries(null)
-            }
-        }
-        var added = 0
-        changeAegis("accounts imported") { entries -> added = AegisVault.merge(entries, incoming) }
-        return MergeResult(added, incoming.size)
+    suspend fun importCodes(bytes: ByteArray, password: ByteArray?): MergeResult {
+        val accounts = withContext(Dispatchers.Default) { CodeFiles.detect(bytes).accounts(password) }
+        return addCodes(accounts)
     }
 
-    private fun writeAegisFile(bytes: ByteArray) {
-        val f = AtomicFile(aegisFile)
+    /** Adds [accounts] (in the vault file's shape) that the 2FA codes do not hold yet. */
+    suspend fun addCodes(accounts: CodeFiles.Accounts): MergeResult {
+        var added = 0
+        changeCodes("accounts imported") { entries -> added = AegisVault.merge(entries, accounts.entries) }
+        return MergeResult(added, accounts.entries.size, accounts.skipped)
+    }
+
+    private fun writeCodesFile(bytes: ByteArray) {
+        val f = AtomicFile(codesFile)
         val out = f.startWrite()
         try {
             out.write(bytes)
@@ -1014,20 +1216,18 @@ object Vault {
         Log.i(TAG, "keys forgotten ($reason)")
     }
 
-    private fun recordKeePass(data: KeePassData) {
-        val info = data.db.info
+    private fun recordPasswords(data: PasswordData) {
         prefs.putStatus(
-            VaultPrefs.Source.KEEPASS,
+            VaultPrefs.Source.PASSWORDS,
             VaultPrefs.LoadStatus(
                 loadedAt = data.loadedAt, fileSize = data.size, fileMtime = data.mtime, sha256 = data.sha256,
-                entries = data.db.entries.size,
-                format = "KDBX ${info.version} · ${info.cipher} · ${info.kdf.name}",
-                kdfMillis = data.timing.kdfMs, totalMillis = data.timing.totalMs,
+                entries = data.db.entries.size, format = data.db.format,
+                kdfMillis = if (prefs.passwordsKind == KIND_PLAIN) -1 else data.timing.kdfMs, totalMillis = data.timing.totalMs,
             ),
         )
         if (data.timing.cold) {
-            Log.i(TAG, "KeePass database opened: ${data.db.entries.size} entries, KDBX ${info.version}, " +
-                "${info.kdf.name}, KDF ${data.timing.kdfMs} ms, total ${data.timing.totalMs} ms")
+            Log.i(TAG, "passwords opened: ${data.db.entries.size} entries, ${data.db.format}, " +
+                "KDF ${data.timing.kdfMs} ms, total ${data.timing.totalMs} ms")
         }
     }
 

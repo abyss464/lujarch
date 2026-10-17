@@ -1,7 +1,7 @@
 """Lujarch Vault is the preferred autofill service; user name, password and one-time code fields are
 filled from the entries that match: an app by its package, a website by its domain or a parent
 domain, or with Same host only by its own host. The suggestions end with Search the vault while
-that is on; nothing is offered while the database is turned off or the phone is locked, and never
+that is on; nothing is offered while the passwords are turned off or the phone is locked, and never
 to Lujarch's own apps.
 
 verifies: VLT-7
@@ -10,7 +10,7 @@ timeout: 2400
 import time
 
 from _vault import (SYNCED, ShopProbe, appears, keepass, no_screen_lock, reset, screen_lock,
-                    set_up_keepass, unlock_with_pin, vault_page)
+                    set_up_passwords, unlock_with_pin, vault_page)
 from lujarch_test import check, device, note, run, step
 
 DB, KEY = "lujarch-test-vault.kdbx", "lujarch-test-vault.keyx"
@@ -52,9 +52,9 @@ def main():
         service = d.sh("settings get secure autofill_service").strip()
         check(service.startswith("org.lujarch.vault/"), f"the autofill service ({service})")
 
-        step("nothing while the database is not set up")
+        step("nothing while the passwords are not set up")
         check(not offered(suggestions(d, p)) & {"Probe app", "Search the vault"}, "nothing offered")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("an app by its package: the entry for it, then Search the vault")
         rows = suggestions(d, p)
@@ -100,12 +100,12 @@ def main():
         d.tap(d.switch_of("Search the vault suggestion"))
         check("Search the vault" not in offered(suggestions(d, p)), "no Search the vault")
 
-        step("nothing while the database is off")
+        step("nothing while the passwords are off")
         vault_page(d, ("Lujarch Vault", "Sources"))
-        d.tap(d.switch_of("Use the KeePass database"))
+        d.tap(d.switch_of("Use passwords"))
         check("Probe app" not in offered(suggestions(d, p)), "nothing offered")
         vault_page(d, ("Lujarch Vault", "Sources"))
-        d.tap(d.switch_of("Use the KeePass database"))
+        d.tap(d.switch_of("Use passwords"))
 
         step("never to Lujarch's own apps: the vault's own search field")
         vault_page(d, ("Lujarch Vault", "Passwords"))

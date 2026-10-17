@@ -54,12 +54,14 @@ import org.lujarch.settings.pages.showDialog
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
 import org.lujarch.vault.core.aegis.AegisException
+import org.lujarch.vault.core.formats.FileFormatException
 import org.lujarch.vault.core.kdbx.KdbxException
 import org.lujarch.vault.core.kdbx.KeyFile
 import org.lujarch.vault.core.otp.InvalidOtp
 import org.lujarch.vault.data.SyncFilesException
 import org.lujarch.vault.data.KeysForgottenException
 import org.lujarch.vault.data.KeystoreLockedException
+import org.lujarch.vault.data.PasswordNeededException
 import org.lujarch.vault.data.SourceUnavailableException
 import org.lujarch.vault.data.Vault
 import org.lujarch.vault.data.VaultState
@@ -249,6 +251,57 @@ abstract class BasePreferenceFragment : SettingsBasePreferenceFragment(), PageDi
         return builder.create()
     }
 
+    /**
+     * A new password, typed twice: [onEntered] gets it as a char array once
+     * both fields match and are not empty; until then the dialog stays open
+     * and says what is wrong. The fields are wiped like [passwordDialog]'s.
+     */
+    protected fun newPasswordDialog(d: DialogScope, titleRes: Int, message: CharSequence?, onEntered: (CharArray) -> Unit): Dialog {
+        val view = LayoutInflater.from(d.context).inflate(R.layout.dialog_new_password, null)
+        val first = view.findViewById<EditText>(R.id.password)
+        val second = view.findViewById<EditText>(R.id.password_again)
+        val show = view.findViewById<CheckBox>(R.id.show_password)
+        d.secret(first, second)
+        show.setOnCheckedChangeListener { _, on ->
+            for (edit in listOf(first, second)) {
+                val sel = edit.selectionEnd
+                edit.inputType = InputType.TYPE_CLASS_TEXT or
+                    if (on) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_TEXT_VARIATION_PASSWORD
+                edit.setSelection(sel.coerceAtLeast(0))
+            }
+        }
+        val builder = AlertDialog.Builder(d.context)
+            .setTitle(titleRes)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(android.R.string.cancel, null)
+        if (message != null) builder.setMessage(message)
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val a = first.text
+                val b = second.text
+                val problem = when {
+                    a.isEmpty() -> R.string.setup_password_empty
+                    a.length != b.length || a.indices.any { a[it] != b[it] } -> R.string.setup_password_mismatch
+                    else -> 0
+                }
+                if (problem != 0) {
+                    Toast.makeText(d.context, problem, Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                val chars = CharArray(a.length) { a[it] }
+                for (text in listOf(a, b)) {
+                    text.replace(0, text.length, " ".repeat(text.length))
+                    text.clear()
+                }
+                dialog.dismiss()
+                onEntered(chars)
+            }
+        }
+        return dialog
+    }
+
     protected fun utf8(chars: CharArray): ByteArray {
         val bb = Charsets.UTF_8.encode(CharBuffer.wrap(chars))
         val out = ByteArray(bb.remaining())
@@ -292,11 +345,20 @@ object Errors {
             KdbxException.Reason.CORRUPT -> context.getString(R.string.error_kdbx_corrupt, t.message)
         }
         is AegisException -> when (t.reason) {
-            AegisException.Reason.FORMAT -> context.getString(R.string.error_aegis_format, t.message)
-            AegisException.Reason.NO_PASSWORD_SLOT -> context.getString(R.string.error_aegis_no_slot)
-            AegisException.Reason.WRONG_PASSWORD -> context.getString(R.string.error_aegis_wrong_password)
-            AegisException.Reason.WRONG_KEY -> context.getString(R.string.error_aegis_wrong_key)
+            AegisException.Reason.FORMAT -> context.getString(R.string.error_codes_format, t.message)
+            AegisException.Reason.NO_PASSWORD_SLOT -> context.getString(R.string.error_codes_no_slot)
+            AegisException.Reason.WRONG_PASSWORD -> context.getString(R.string.error_wrong_password)
+            AegisException.Reason.WRONG_KEY -> context.getString(R.string.error_codes_wrong_key)
         }
+        is FileFormatException -> when (t.reason) {
+            FileFormatException.Reason.NOT_PASSWORDS -> context.getString(R.string.error_not_passwords)
+            FileFormatException.Reason.NOT_CODES -> context.getString(R.string.error_not_codes)
+            FileFormatException.Reason.WRONG_PASSWORD -> context.getString(R.string.error_wrong_password)
+            FileFormatException.Reason.ACCOUNT_KEY -> context.getString(R.string.error_account_key)
+            FileFormatException.Reason.DAMAGED -> context.getString(R.string.error_file_damaged, t.message)
+            FileFormatException.Reason.NEEDS_SETUP -> context.getString(R.string.error_needs_setup)
+        }
+        is PasswordNeededException -> context.getString(R.string.sources_switch_needs_password)
         is KeystoreLockedException -> context.getString(R.string.error_keystore)
         is KeysForgottenException -> context.getString(R.string.error_keys_forgotten)
         is SourceUnavailableException -> when (t.reason) {
@@ -306,7 +368,7 @@ object Errors {
         }
         is KeyFile.InvalidKeyFile -> context.getString(R.string.error_key_file, t.message)
         is InvalidOtp -> context.getString(R.string.error_otp, t.message)
-        is java.io.FileNotFoundException -> context.getString(R.string.error_aegis_missing)
+        is java.io.FileNotFoundException -> context.getString(R.string.error_file_missing)
         else -> context.getString(R.string.error_unexpected, t.message ?: t.javaClass.simpleName)
     }
 }

@@ -34,16 +34,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.lujarch.vault.R
 import org.lujarch.vault.TAG
-import org.lujarch.vault.core.KpEntry
-import org.lujarch.vault.core.KpField
+import org.lujarch.vault.core.PasswordEntry
+import org.lujarch.vault.core.PasswordField
 import org.lujarch.vault.core.otp.Otp
 import org.lujarch.vault.core.otp.OtpParams
 import org.lujarch.vault.data.Clipboard
-import org.lujarch.vault.data.KeePassData
+import org.lujarch.vault.data.PasswordData
 import org.lujarch.vault.data.VaultState
 
 /**
- * One KeePass entry: copy user name, password, URL; reveal the password and
+ * One password entry: copy user name, password, URL; reveal the password and
  * protected fields (fingerprint or screen lock first, a setting); notes and
  * every other field. Revealed values are hidden again when the page stops.
  */
@@ -53,8 +53,8 @@ class EntryFragment : BasePreferenceFragment() {
     private lateinit var other: PreferenceCategory
     private lateinit var details: PreferenceCategory
     private lateinit var messagePref: ZeroStatePreference
-    private var shown: KeePassData? = null
-    private var entry: KpEntry? = null
+    private var shown: PasswordData? = null
+    private var entry: PasswordEntry? = null
     private var otpParams: OtpParams? = null
     private var codePref: CodePreference? = null
     private val secretPrefs = ArrayList<FieldPreference>()
@@ -72,7 +72,7 @@ class EntryFragment : BasePreferenceFragment() {
             key = "actions"
             setButton1Text(R.string.action_copy_username)
             setButton1Icon(R.drawable.ic_person)
-            setButton1OnClickListener { entry?.let { copyField(it.get(KpEntry.USERNAME), R.string.copied_username) } }
+            setButton1OnClickListener { entry?.let { copyField(it.get(PasswordEntry.USERNAME), R.string.copied_username) } }
             setButton2Text(R.string.action_copy_password)
             setButton2Icon(R.drawable.ic_key)
             setButton2OnClickListener { entry?.let { copyField(it.password, R.string.copied_password) } }
@@ -117,7 +117,7 @@ class EntryFragment : BasePreferenceFragment() {
     }
 
     override fun onVaultState(state: VaultState) {
-        val data = state.keepassData
+        val data = state.passwordsData
         if (data === shown) return
         shown = data
         val e = data?.db?.entries?.firstOrNull { it.uuid == uuid }
@@ -125,7 +125,7 @@ class EntryFragment : BasePreferenceFragment() {
         render(e)
     }
 
-    private fun render(e: KpEntry?) {
+    private fun render(e: PasswordEntry?) {
         main.removeAll()
         other.removeAll()
         details.removeAll()
@@ -147,9 +147,9 @@ class EntryFragment : BasePreferenceFragment() {
         actions.setButton2Enabled(e.password?.isEmpty == false)
         actions.setButton3Enabled(e.url.isNotBlank())
 
-        addField(main, R.string.field_username, e.get(KpEntry.USERNAME), R.string.copied_username)
+        addField(main, R.string.field_username, e.get(PasswordEntry.USERNAME), R.string.copied_username)
         addField(main, R.string.field_password, e.password, R.string.copied_password, forceMasked = true)
-        addField(main, R.string.field_url, e.get(KpEntry.URL), R.string.copied_url)
+        addField(main, R.string.field_url, e.get(PasswordEntry.URL), R.string.copied_url)
         if (Otp.hasOtp(e)) {
             otpParams = try {
                 Otp.fromEntry(e)
@@ -169,7 +169,7 @@ class EntryFragment : BasePreferenceFragment() {
             }
             codePref?.tick(System.currentTimeMillis())
         }
-        addField(main, R.string.field_notes, e.get(KpEntry.NOTES), R.string.copied_notes)
+        addField(main, R.string.field_notes, e.get(PasswordEntry.NOTES), R.string.copied_notes)
 
         val custom = e.customFields
         for (f in custom) addField(other, 0, f, R.string.copied_field, title = f.name)
@@ -184,7 +184,7 @@ class EntryFragment : BasePreferenceFragment() {
     private fun addField(
         category: PreferenceCategory,
         titleRes: Int,
-        field: KpField?,
+        field: PasswordField?,
         copiedRes: Int,
         forceMasked: Boolean = false,
         title: String? = null,
@@ -222,7 +222,7 @@ class EntryFragment : BasePreferenceFragment() {
     }
 
     /** Protected fields (the password among them) ask first when "copying needs verification" is on. */
-    private fun copyField(field: KpField?, copiedRes: Int) {
+    private fun copyField(field: PasswordField?, copiedRes: Int) {
         if (field == null || field.isEmpty) return
         val copy = {
             Clipboard.copy(requireContext(), field.name, field.value())

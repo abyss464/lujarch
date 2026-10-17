@@ -30,7 +30,7 @@ import org.lujarch.vault.TAG
 import org.lujarch.vault.core.Bytes
 import org.lujarch.vault.core.WipeableBuffer
 
-/** Where the KeePass database comes from (VLT-2). */
+/** Where the passwords' file comes from (VLT-2). */
 sealed class DbSource {
     /** The file name shown to the user and in logs. */
     abstract val fileName: String
@@ -67,7 +67,7 @@ data class FileStat(val size: Long, val mtime: Long)
 /** Reads and inspects database sources and picked documents. */
 object Sources {
     /**
-     * Largest KeePass database from either source: the decompressed payload
+     * Largest password file from either source: the decompressed payload
      * limit of the KDBX reader (a larger file cannot be opened); the daemon
      * serves synced databases up to the same size (vault::kMaxDatabaseSize).
      */

@@ -1,4 +1,4 @@
-"""Passwords lists the database's groups and entries and searches title, user name, URL, tags and
+"""Passwords lists the file's groups and entries and searches title, user name, URL, tags and
 group; an entry copies its user name, password and URL and shows its notes and other fields. A
 password is revealed, and with Verify to copy copied, only after the screen lock (Verify to reveal
 on and Verify to copy off by default); what a page showed is hidden again when the page stops.
@@ -9,7 +9,7 @@ timeout: 1800
 import time
 
 from _vault import (SYNCED, confirm_credential, keepass,
-                    no_screen_lock, reset, screen_lock, set_up_keepass, vault_page)
+                    no_screen_lock, reset, screen_lock, set_up_passwords, vault_page)
 from lujarch_test import AppProbe, check, device, note, run, step
 
 DB, KEY = "lujarch-test-vault.kdbx", "lujarch-test-vault.keyx"
@@ -42,7 +42,7 @@ def main():
         d.push(str(db), f"{SYNCED}/{DB}")
         d.sh(f"chown -R 5100:5100 {SYNCED}")
         d.push(str(key), f"/sdcard/Download/{KEY}")
-        set_up_keepass(d, DB, KEY)
+        set_up_passwords(d, DB, KEY)
 
         step("Verify to reveal on, Verify to copy off by default")
         vault_page(d, ("Lujarch Vault", "Settings"))

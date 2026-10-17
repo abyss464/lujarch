@@ -19,7 +19,7 @@ package org.lujarch.vault.core.otp
 import java.net.URLDecoder
 import java.util.Base64
 import org.lujarch.vault.core.Bytes
-import org.lujarch.vault.core.KpEntry
+import org.lujarch.vault.core.PasswordEntry
 import org.lujarch.vault.core.Secret
 
 enum class OtpType { TOTP, HOTP, STEAM }
@@ -45,6 +45,7 @@ class InvalidOtp(message: String) : Exception(message)
 
 object Otp {
     private const val STEAM_ALPHABET = "23456789BCDFGHJKMNPQRTVWXY"
+    private const val STEAM_SCHEME = "steam://"
 
     /** The code at [timeMillis] (TOTP, Steam) or for the stored counter (HOTP). */
     fun code(p: OtpParams, timeMillis: Long): String {
@@ -115,7 +116,8 @@ object Otp {
                 if (part.isEmpty()) continue
                 val eq = part.indexOf('=')
                 val k = decode(if (eq < 0) part else part.substring(0, eq)).lowercase()
-                val v = if (eq < 0) "" else decode(part.substring(eq + 1))
+                // A query value takes '+' for a space, as Android's Uri reads it (Ente Auth writes them so).
+                val v = if (eq < 0) "" else decode(part.substring(eq + 1).replace('+', ' '))
                 params[k] = v
             }
         }
@@ -143,6 +145,40 @@ object Otp {
         ).also { validate(it) }
     }
 
+    /** An otpauth:// link, or a steam:// link with a Base32 key (Steam Guard codes). */
+    fun parseLink(link: String, issuer: String = "", account: String = ""): OtpParams {
+        val t = link.trim()
+        if (!t.startsWith(STEAM_SCHEME, ignoreCase = true)) return parseUri(t)
+        val key = Base32.decode(t.substring(STEAM_SCHEME.length)) ?: throw InvalidOtp("Steam key is not Base32")
+        if (key.isEmpty()) throw InvalidOtp("no secret")
+        return of(OtpType.STEAM, key, "SHA1", 5, 30, 0, issuer.ifEmpty { "Steam" }, account)
+    }
+
+    /**
+     * OTP settings read from a file's fields: [key] is the raw key (kept by the result, wiped
+     * when the settings are not valid), checked as a loaded entry's are.
+     */
+    fun of(
+        type: OtpType,
+        key: ByteArray,
+        algorithm: String,
+        digits: Int,
+        period: Int,
+        counter: Long,
+        issuer: String,
+        account: String,
+    ): OtpParams {
+        val p = OtpParams(type, Secret(key), algorithm.ifBlank { "SHA1" }, digits, period, counter, issuer, account)
+        try {
+            if (key.isEmpty()) throw InvalidOtp("no secret")
+            validate(p)
+        } catch (e: Exception) {
+            p.wipe()
+            throw e
+        }
+        return p
+    }
+
     /** OTP settings entered by hand: a Base32 key and its parameters, checked as a loaded entry's are. */
     fun manual(
         type: OtpType,
@@ -167,14 +203,15 @@ object Otp {
     }
 
     /**
-     * OTP settings of a KeePass entry: the `otp` attribute (otpauth URI), the
+     * OTP settings of an entry: the `otp` attribute (otpauth or steam link), the
      * legacy KeePassXC `TOTP Seed` / `TOTP Settings` pair, or KeePass 2.47's
      * `TimeOtp-*` / `HmacOtp-*` fields. null when the entry has none.
      */
-    fun fromEntry(entry: KpEntry): OtpParams? {
+    fun fromEntry(entry: PasswordEntry): OtpParams? {
         entry.get("otp")?.value()?.takeIf { it.isNotBlank() }?.let { value ->
-            return if (value.trim().startsWith("otpauth://", ignoreCase = true)) {
-                parseUri(value)
+            val v = value.trim()
+            return if (v.startsWith("otpauth://", ignoreCase = true) || v.startsWith(STEAM_SCHEME, ignoreCase = true)) {
+                parseLink(v, entry.title, entry.username)
             } else {
                 // KeePassDX and older plugins also store a bare Base32 key here.
                 fromSeed(value, null, entry)
@@ -189,13 +226,13 @@ object Otp {
     }
 
     /** Whether [entry] has OTP settings, without decoding them. */
-    fun hasOtp(entry: KpEntry): Boolean = entry.fields.any { f ->
+    fun hasOtp(entry: PasswordEntry): Boolean = entry.fields.any { f ->
         (f.name == "otp" || f.name == "TOTP Seed" || f.name.startsWith("TimeOtp-Secret") ||
             f.name.startsWith("HmacOtp-Secret")) && !f.isEmpty
     }
 
     /** `TOTP Settings`: "period;digits", digits "S" for Steam; a URI in the seed field is also accepted. */
-    private fun fromSeed(seed: String, settings: String?, entry: KpEntry): OtpParams {
+    private fun fromSeed(seed: String, settings: String?, entry: PasswordEntry): OtpParams {
         if (seed.trim().startsWith("otpauth://", ignoreCase = true)) return parseUri(seed)
         val key = Base32.decode(seed) ?: throw InvalidOtp("TOTP seed is not Base32")
         var period = 30
@@ -224,7 +261,7 @@ object Otp {
         ).also { validate(it) }
     }
 
-    private fun keyFromFields(entry: KpEntry, prefix: String): ByteArray? {
+    private fun keyFromFields(entry: PasswordEntry, prefix: String): ByteArray? {
         entry.get("$prefix-Secret")?.value()?.takeIf { it.isNotEmpty() }?.let { return it.toByteArray(Charsets.UTF_8) }
         entry.get("$prefix-Secret-Hex")?.value()?.takeIf { it.isNotBlank() }?.let {
             return Bytes.fromHex(it) ?: throw InvalidOtp("$prefix-Secret-Hex is not hex")
@@ -242,7 +279,7 @@ object Otp {
         return null
     }
 
-    private fun timeOtp(entry: KpEntry): OtpParams? {
+    private fun timeOtp(entry: PasswordEntry): OtpParams? {
         val key = keyFromFields(entry, "TimeOtp") ?: return null
         return OtpParams(
             type = OtpType.TOTP,
@@ -256,7 +293,7 @@ object Otp {
         ).also { validate(it) }
     }
 
-    private fun hmacOtp(entry: KpEntry): OtpParams? {
+    private fun hmacOtp(entry: PasswordEntry): OtpParams? {
         val key = keyFromFields(entry, "HmacOtp") ?: return null
         return OtpParams(
             type = OtpType.HOTP,

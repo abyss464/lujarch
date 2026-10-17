@@ -35,11 +35,11 @@ class VaultPrefs(context: Context) {
     // ---- sources ----
 
     /**
-     * The KeePass database the vault reads: a file in a synced folder or a
+     * The passwords' file the vault reads: a file in a synced folder or a
      * document with a persisted read grant. Kept when the keys are forgotten,
      * so that setting up again needs only the password.
      */
-    var keepassSource: DbSource?
+    var passwordsSource: DbSource?
         get() = when (prefs.getString(KEY_SOURCE_KIND, null)) {
             KIND_DOCUMENT -> prefs.getString(KEY_DOC_URI, null)?.let {
                 DbSource.Document(Uri.parse(it), prefs.getString(KEY_DOC_NAME, null) ?: "")
@@ -66,24 +66,32 @@ class VaultPrefs(context: Context) {
         return DbSource.Synced(folder, path)
     }
 
+    /**
+     * The kind of the passwords' file as last opened or set up (Vault.KIND_*): whether it takes a
+     * key file. Setups that predate the other kinds are KDBX ones.
+     */
+    var passwordsKind: String
+        get() = prefs.getString(KEY_PASSWORDS_KIND, null) ?: Vault.KIND_KDBX
+        set(v) = prefs.edit().putString(KEY_PASSWORDS_KIND, v).apply()
+
     /** Whether the stored composite key includes a key file (shown on the state page). */
     var usesKeyFile: Boolean
         get() = prefs.getBoolean(KEY_KEYFILE, false)
         set(v) = prefs.edit().putBoolean(KEY_KEYFILE, v).apply()
 
-    /** Name of the document the Aegis vault was imported from; empty when unknown (restored from a backup). */
-    var aegisSourceName: String
-        get() = prefs.getString(KEY_AEGIS_NAME, null) ?: ""
-        set(v) = prefs.edit().putString(KEY_AEGIS_NAME, v).apply()
+    /** Name of the document the 2FA accounts were imported from; empty when unknown (restored from a backup). */
+    var codesSourceName: String
+        get() = prefs.getString(KEY_CODES_NAME, null) ?: ""
+        set(v) = prefs.edit().putString(KEY_CODES_NAME, v).apply()
 
     /** A source that is set up but turned off is neither opened nor used for autofill; its keys stay. */
-    var keepassEnabled: Boolean
-        get() = prefs.getBoolean(KEY_KEEPASS_ENABLED, true)
-        set(v) = prefs.edit().putBoolean(KEY_KEEPASS_ENABLED, v).apply()
+    var passwordsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PASSWORDS_ENABLED, true)
+        set(v) = prefs.edit().putBoolean(KEY_PASSWORDS_ENABLED, v).apply()
 
-    var aegisEnabled: Boolean
-        get() = prefs.getBoolean(KEY_AEGIS_ENABLED, true)
-        set(v) = prefs.edit().putBoolean(KEY_AEGIS_ENABLED, v).apply()
+    var codesEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CODES_ENABLED, true)
+        set(v) = prefs.edit().putBoolean(KEY_CODES_ENABLED, v).apply()
 
     // ---- security ----
 
@@ -152,12 +160,12 @@ class VaultPrefs(context: Context) {
 
     /** After "forget keys": the setup facts go, the chosen sources and the settings stay. */
     fun clearSetup() {
-        prefs.edit().remove(KEY_KEYFILE).remove(Source.KEEPASS.key).remove(Source.AEGIS.key).apply()
+        prefs.edit().remove(KEY_KEYFILE).remove(Source.PASSWORDS.key).remove(Source.CODES.key).apply()
     }
 
     enum class Source(val key: String) {
-        KEEPASS("status_keepass"),
-        AEGIS("status_aegis"),
+        PASSWORDS("status_keepass"),
+        CODES("status_aegis"),
     }
 
     /** When the stored keys are deleted without being asked (VLT-1). */
@@ -220,9 +228,10 @@ class VaultPrefs(context: Context) {
         private const val KEY_DOC_URI = "keepass_document"
         private const val KEY_DOC_NAME = "keepass_document_name"
         private const val KEY_KEYFILE = "keepass_uses_key_file"
-        private const val KEY_AEGIS_NAME = "aegis_source_name"
-        private const val KEY_KEEPASS_ENABLED = "keepass_enabled"
-        private const val KEY_AEGIS_ENABLED = "aegis_enabled"
+        private const val KEY_PASSWORDS_KIND = "passwords_kind"
+        private const val KEY_CODES_NAME = "aegis_source_name"
+        private const val KEY_PASSWORDS_ENABLED = "keepass_enabled"
+        private const val KEY_CODES_ENABLED = "aegis_enabled"
         private const val KEY_REVEAL_AUTH = "reveal_needs_auth"
         private const val KEY_COPY_AUTH = "copy_needs_auth"
         private const val KEY_CLIPBOARD_SECONDS = "clipboard_clear_seconds"
