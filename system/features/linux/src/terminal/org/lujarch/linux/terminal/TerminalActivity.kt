@@ -18,6 +18,7 @@ package org.lujarch.linux.terminal
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -38,7 +39,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
-import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import java.io.File
@@ -173,7 +174,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(tabsRow)
-            addView(iconButton(R.drawable.ic_add, R.string.new_session) { newSession(it) })
+            addView(iconButton(R.drawable.ic_add, R.string.new_session, 40) { newSession(it) })
         }
         val scroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
@@ -181,15 +182,16 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             addView(tabsAndNew)
         }
         bar.addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        bar.addView(iconButton(R.drawable.ic_display, R.string.display) {
+        bar.addView(iconButton(R.drawable.ic_display, R.string.display, 44) {
             startActivity(Intent(this, DesktopActivity::class.java))
         })
-        bar.addView(iconButton(R.drawable.ic_settings, R.string.settings) { openSettings() })
+        bar.addView(iconButton(R.drawable.ic_settings, R.string.settings, 44) { openSettings() })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
 
         val frame = FrameLayout(this).apply {
-            background = GradientDrawable().apply { cornerRadius = dp(16).toFloat() }
+            background = GradientDrawable().apply { cornerRadius = dp(20).toFloat() }
             clipToOutline = true
+            setPadding(dp(10), dp(12), dp(10), dp(12))
         }
         card = frame
         model = InputModel(
@@ -281,14 +283,21 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         }
     }
 
-    private fun iconButton(icon: Int, description: Int, onClick: (View) -> Unit) =
-        ImageButton(this).apply {
+    /** A button of [sizeDp] with a 22dp icon; it never takes focus, so the keyboard stays on the terminal. */
+    private fun iconButton(icon: Int, description: Int, sizeDp: Int, onClick: (View) -> Unit) =
+        ImageView(this).apply {
             setImageResource(icon)
+            imageTintList = ColorStateList.valueOf(getColor(R.color.on_surface_variant))
             contentDescription = getString(description)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
+            val pad = dp((sizeDp - ICON_DP) / 2)
+            setPadding(pad, pad, pad, pad)
+            isFocusable = false
+            isFocusableInTouchMode = false
             val outValue = TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
-            setPadding(dp(12), dp(12), dp(12), dp(12))
             setOnClickListener(onClick)
         }
 
@@ -627,5 +636,6 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         const val REFRESH_DELAY_MS = 300L
         const val STATUS_LINE_DP = 28
         const val KEYS_ROW_DP = 40
+        const val ICON_DP = 22
     }
 }
