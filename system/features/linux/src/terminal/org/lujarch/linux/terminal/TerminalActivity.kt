@@ -333,6 +333,8 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     }
 
     private val attached = mutableSetOf<String>()
+    // Sessions this window just made: their stream has no earlier output to replay.
+    private val fresh = mutableSetOf<String>()
 
     private fun attach(tab: TerminalTab) {
         val reference = terminal.mEmulator
@@ -342,9 +344,10 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         tab.session.dropEmulator()
         tab.session.initializeEmulator(columns, rows, 0, 0)
         attached.add(tab.id)
+        val replay = !fresh.remove(tab.id)
         scope.launch {
             try {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tab.attach(columns, rows) }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tab.attach(columns, rows, replay) }
             } catch (e: LinuxException) {
                 Log.w(TAG, e.message ?: "attachSession")
                 attached.remove(tab.id)
@@ -515,6 +518,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         scope.launch {
             try {
                 wanted = Linux.call("createSession") { it.createSession(kind, "", columns, rows) }
+                    .also { fresh.add(it) }
             } catch (e: LinuxException) {
                 Log.w(TAG, e.message ?: "createSession")
                 val message = when (e.code) {

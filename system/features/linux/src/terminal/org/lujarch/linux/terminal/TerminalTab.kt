@@ -49,14 +49,18 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
     @Volatile private var output: FileOutputStream? = null
     private val writer: ExecutorService = Executors.newSingleThreadExecutor()
 
-    /** Takes the session's stream; off the main thread. The emulator starts empty: the stream replays. */
-    fun attach(columns: Int, rows: Int) {
+    /**
+     * Takes the session's stream; off the main thread. The emulator starts empty: the stream replays
+     * the session's earlier output when there is any (replay).
+     */
+    fun attach(columns: Int, rows: Int, replay: Boolean) {
         detach()
         val pfd = Linux.blocking("attachSession") { it.attachSession(id, columns, rows) }
         stream = pfd
         output = FileOutputStream(pfd.fileDescriptor)
-        // Answers to queries in the replayed output would be typed into the shell.
-        session.holdReplies(REPLAY_HOLD_MS)
+        // Answers to queries in the replayed output would be typed into the shell. A new session's
+        // shell asks while it starts (fish: its terminal's attributes) and waits for the answer.
+        if (replay) session.holdReplies(REPLAY_HOLD_MS)
         Thread({ read(pfd) }, "session-$id").start()
     }
 
