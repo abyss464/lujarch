@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Caffeine quick setting: Android's own switch",
+        "Icon": "system-suspend-hibernate",
+        "Id": "org.kde.plasma.quicksetting.caffeine",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_caffeine@"
+    }
+}

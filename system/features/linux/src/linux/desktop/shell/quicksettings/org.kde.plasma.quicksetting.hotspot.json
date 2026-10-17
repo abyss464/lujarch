@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Hotspot quick setting: Android's own switch",
+        "Icon": "network-wireless-hotspot",
+        "Id": "org.kde.plasma.quicksetting.hotspot",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_hotspot@"
+    }
+}

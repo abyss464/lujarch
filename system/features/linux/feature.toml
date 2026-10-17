@@ -17,3 +17,5 @@ ldflags = ["-checklinkname=0"]
 [downloads.kwin]
 
 [downloads.mesa]
+
+[downloads.plasma-mobile]

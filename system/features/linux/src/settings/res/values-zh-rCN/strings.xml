@@ -79,7 +79,7 @@
     <string name="lnx_install_desktop">安装桌面</string>
     <string name="lnx_install_desktop_none">Plasma Mobile，以及在 Linux 中为手机屏幕构建的 KWin 和 Mesa</string>
     <string name="lnx_install_desktop_done">已安装。再次安装会更新它，并构建有变化的部分。</string>
-    <string name="lnx_install_desktop_message">安装会在 Linux 运行期间以 root 身份在 Linux 中运行。它会更新 Linux 的软件包、安装 Plasma Mobile，并构建 Mesa 和 KWin，耗时较长；构建只使用手机的小核心。</string>
+    <string name="lnx_install_desktop_message">安装会在 Linux 运行期间以 root 身份在 Linux 中运行。它会更新 Linux 的软件包、安装 Plasma Mobile，并构建 Mesa、KWin 和 Plasma Mobile 的横屏布局，耗时较长；构建只使用手机的小核心。</string>
     <string name="lnx_install_desktop_run">安装</string>
     <string name="lnx_lend">供 Linux 使用</string>
     <string name="lnx_lend_clipboard">共享剪贴板</string>
@@ -96,6 +96,16 @@
     <string name="lnx_lend_ir_summary">通过 /run/lujarch/ir 发射</string>
     <string name="lnx_lend_nfc">NFC 读卡</string>
     <string name="lnx_lend_nfc_summary">终端或桌面在屏幕上时，读取靠近手机的卡片</string>
+    <string name="lnx_lend_microphone">麦克风</string>
+    <string name="lnx_lend_microphone_summary">终端或桌面在屏幕上时，Linux 中的程序用手机的麦克风录音</string>
+    <string name="lnx_lend_camera">相机</string>
+    <string name="lnx_lend_camera_summary">终端或桌面在屏幕上时，以 /dev/video40 和 /dev/video41 提供手机的相机</string>
+    <string name="lnx_lend_location">位置信息</string>
+    <string name="lnx_lend_location_summary">终端或桌面在屏幕上时，为 GeoClue 提供手机的位置信息</string>
+    <string name="lnx_lend_vibration">振动</string>
+    <string name="lnx_lend_vibration_summary">桌面的键盘和程序以触感反馈让手机振动</string>
+    <string name="lnx_lend_quick_settings">Android 快捷设置</string>
+    <string name="lnx_lend_quick_settings_summary">桌面的快捷设置和状态栏显示并切换 WLAN、移动数据、蓝牙、飞行模式、热点、手电筒、自动旋转、勿扰、屏幕常亮和亮度</string>
     <string name="lnx_services">服务</string>
     <string name="lnx_remote">远程访问</string>
     <string name="lnx_footer">Arch Linux ARM 与 Android 并行运行，共用同一内核和网络，并使用自己的用户。其会话在“终端”应用中打开。</string>
@@ -164,5 +174,5 @@
     <string name="lnx_search_desktop_keywords">桌面, 显示, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">服务, 守护进程</string>
     <string name="lnx_search_remote_keywords">远程访问, 中继, SSH, frp</string>
-    <string name="lnx_search_lend_keywords">剪贴板, 通知, 传感器, 指纹, 红外, USB, NFC</string>
+    <string name="lnx_search_lend_keywords">剪贴板, 通知, 传感器, 指纹, 红外, 麦克风, 相机, 位置信息, 振动, 快捷设置, USB, NFC, GeoClue, PipeWire</string>
 </resources>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=@lnx_wine_programs@
+Comment=@lnx_wine_programs_comment@
+Exec=wine uninstaller
+Icon=lujarch-wine-programs
+Categories=Settings;
+Keywords=wine;windows;uninstall;

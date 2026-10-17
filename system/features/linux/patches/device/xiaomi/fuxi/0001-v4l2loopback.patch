@@ -1,0 +1,36 @@
+diff --git a/BoardConfig.mk b/BoardConfig.mk
+index 200a4edc882d1666831a6a5c37df35dc448cfd4b..ad4cf67350f27face29d27696a8524543a7d6594 100644
+--- a/BoardConfig.mk
++++ b/BoardConfig.mk
+@@ -21,6 +21,14 @@ BOARD_VENDOR_KERNEL_MODULES_LOAD += \
+ 	goodix_fod.ko \
+ 	fts_touch_spi.ko
+ 
++# Lujarch: the cameras of the Linux development environment (v4l2loopback,
++# CONFIG_V4L2_LOOPBACK in fuxi_GKI.config). vendor_modprobe.sh loads it from
++# vendor_dlkm's modules.load; libmodprobe takes its options from
++# modules.options there.
++BOARD_VENDOR_KERNEL_MODULES_LOAD += \
++	v4l2loopback.ko
++BOARD_VENDOR_KERNEL_MODULES_OPTIONS_FILE := $(DEVICE_PATH)/modules.options
++
+ # OTA
+ TARGET_OTA_ASSERT_DEVICE := fuxi
+ 
+diff --git a/modules.options b/modules.options
+new file mode 100644
+index 0000000000000000000000000000000000000000..a120c07fb01e63a61bf03161c42d1217dc2bd10d
+--- /dev/null
++++ b/modules.options
+@@ -0,0 +1,11 @@
++# Installed as /vendor_dlkm/lib/modules/modules.options; libmodprobe (the
++# /vendor/bin/modprobe that vendor_modprobe.sh runs) passes a module's line
++# to finit_module. One line per module, its words separated by one space.
++#
++# v4l2loopback: the cameras of Lujarch's Linux development environment,
++# /dev/video40 for the back camera and /dev/video41 for the front.
++# exclusive_caps: a device shows as a capture device only while a producer
++# writes to it, which browsers and PipeWire need to list it as a camera.
++# ueventd gives both nodes to Linux's user (device/xiaomi/sm8550-common
++# init/ueventd-odm.rc).
++options v4l2loopback devices=2 video_nr=40,41 card_label="Android back camera,Android front camera" exclusive_caps=1,1 max_buffers=4

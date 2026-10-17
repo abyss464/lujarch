@@ -72,6 +72,15 @@ struct Bind {
     bool recursive;
 };
 
+// Android's fonts, read-only in Linux beside its own: the desktop's keyboard draws with them, and
+// Windows programs get their CJK faces.
+struct Fonts {
+    const char* android;
+    const char* linux;
+};
+constexpr Fonts kFonts[] = {{"/system/fonts", "/usr/share/fonts/android"},
+                            {"/product/fonts", "/usr/share/fonts/android-product"}};
+
 std::vector<Bind> Binds(const std::vector<std::string>& nodes, bool usb) {
     std::vector<Bind> binds = {
             {"/proc", "proc", true},
@@ -79,6 +88,9 @@ std::vector<Bind> Binds(const std::vector<std::string>& nodes, bool usb) {
             {"/dev/pts", "dev/pts", false},
             {kFiles, std::string(kLinuxFiles).substr(1), false},
     };
+    for (const Fonts& f : kFonts) {
+        if (access(f.android, F_OK) == 0) binds.push_back({f.android, std::string(f.linux).substr(1), false});
+    }
     for (const std::string& node : nodes) binds.push_back({"/dev/" + node, "dev/" + node, false});
     if (usb) binds.push_back({"/dev/bus/usb", "dev/bus/usb", true});
     return binds;
@@ -104,6 +116,10 @@ Result<void> PrepareMountPoints(int root, const std::vector<std::string>& nodes,
         if (auto made = files::MakeDirsIn(root, "/dev/bus/usb", 0755); !made.ok()) {
             return made.error();
         }
+    }
+    for (const Fonts& f : kFonts) {
+        if (access(f.android, F_OK) != 0) continue;
+        if (auto made = files::MakeDirsIn(root, f.linux, 0755); !made.ok()) return made.error();
     }
     for (const std::string& node : nodes) {
         const std::string path = "/dev/" + node;
@@ -333,6 +349,74 @@ Result<void> System::LendUsb(bool lend) {
     Result<void> report = ReadReport(status_r.get(), lend ? "lend USB" : "take USB back",
                                      {"enter the namespace", "open the root",
                                       "bind /dev/bus/usb", "unmount /dev/bus/usb"});
+    TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
+    return report;
+}
+
+Result<void> System::LendCameras(bool lend) {
+    std::lock_guard lock(mutex_);
+    if (anchor_.pid <= 0) return {};
+    std::vector<std::string> nodes;
+    for (const char* node : kCameraNodes) {
+        if (access((std::string("/dev/") + node).c_str(), F_OK) == 0) nodes.push_back(node);
+    }
+    if (nodes.empty()) return {};
+    if (lend) {
+        auto root = files::OpenRoot(kRoot);
+        if (!root.ok()) return root.error();
+        for (const std::string& node : nodes) {
+            const std::string path = "/dev/" + node;
+            if (files::ExistsIn(root->get(), path)) continue;
+            auto made = files::OpenIn(root->get(), path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0644);
+            if (!made.ok()) return made.error();
+        }
+    }
+    std::vector<std::string> sources;
+    std::vector<std::string> targets;
+    for (const std::string& node : nodes) {
+        sources.push_back("/dev/" + node);
+        targets.push_back("dev/" + node);
+    }
+    int status[2];
+    if (pipe2(status, O_CLOEXEC) != 0) return ErrnoError() << "pipe";
+    unique_fd status_r(status[0]), status_w(status[1]);
+    const int ns = anchor_.pidfd.get();
+    const pid_t pid = fork();
+    if (pid < 0) return ErrnoError() << "fork";
+    if (pid == 0) {
+        const int out = status_w.get();
+        if (setns(ns, CLONE_NEWNS) != 0) ChildFail(out, 0);
+        const int root = open(kRoot, O_PATH | O_DIRECTORY | O_CLOEXEC);
+        if (root < 0) ChildFail(out, 1);
+        for (size_t i = 0; i < targets.size(); ++i) {
+            const int target = OpenInRoot(root, targets[i].c_str(), O_PATH | O_NOFOLLOW);
+            if (target < 0) {
+                if (lend) ChildFail(out, 2);
+                continue;
+            }
+            char path[32];
+            FdPath(target, path);
+            // Earlier binds go first, so that one bind is there at most.
+            while (umount2(path, MNT_DETACH) == 0) {
+            }
+            if (errno != EINVAL) ChildFail(out, 3);
+            close(target);
+            if (lend) {
+                const int fresh = OpenInRoot(root, targets[i].c_str(), O_PATH | O_NOFOLLOW);
+                if (fresh < 0) ChildFail(out, 2);
+                FdPath(fresh, path);
+                if (mount(sources[i].c_str(), path, nullptr, MS_BIND, nullptr) != 0) ChildFail(out, 2);
+                close(fresh);
+            }
+        }
+        const char ok = 1;
+        TEMP_FAILURE_RETRY(write(out, &ok, 1));
+        _exit(0);
+    }
+    status_w.reset();
+    Result<void> report = ReadReport(status_r.get(), lend ? "lend the cameras" : "take the cameras back",
+                                     {"enter the namespace", "open the root", "bind a camera",
+                                      "unmount a camera"});
     TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
     return report;
 }

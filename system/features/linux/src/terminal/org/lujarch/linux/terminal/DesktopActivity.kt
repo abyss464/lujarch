@@ -16,10 +16,12 @@
 
 package org.lujarch.linux.terminal
 
+import android.database.ContentObserver
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.InputDevice
@@ -30,6 +32,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -62,6 +65,11 @@ class DesktopActivity : LinuxActivity() {
     private var attaching: Job? = null
     private var opening: Job? = null
     private var sound: Sound? = null
+
+    // Caffeine (the desktop's tile): the screen stays on while the desktop is shown.
+    private val caffeine = object : ContentObserver(main) {
+        override fun onChange(selfChange: Boolean) = keepScreenOn()
+    }
 
     private val holderCallback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
@@ -126,6 +134,8 @@ class DesktopActivity : LinuxActivity() {
 
     override fun onStart() {
         super.onStart()
+        contentResolver.registerContentObserver(Settings.Secure.getUriFor("lujarch_linux_caffeine"), false, caffeine)
+        keepScreenOn()
         attaching = scope.launch { keepAttached() }
         opening = scope.launch {
             try {
@@ -138,6 +148,7 @@ class DesktopActivity : LinuxActivity() {
     }
 
     override fun onStop() {
+        contentResolver.unregisterContentObserver(caffeine)
         attaching?.cancel()
         attaching = null
         opening?.cancel()
@@ -178,6 +189,14 @@ class DesktopActivity : LinuxActivity() {
                     Log.w(TAG, e.message ?: "setClipboard")
                 }
             }
+        }
+    }
+
+    private fun keepScreenOn() {
+        if (Linux.caffeine(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 

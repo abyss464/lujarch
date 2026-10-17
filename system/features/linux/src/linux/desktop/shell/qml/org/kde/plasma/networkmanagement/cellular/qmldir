@@ -1,0 +1,3 @@
+module org.kde.plasma.networkmanagement.cellular
+CellularModemList 254.0 CellularModemList.qml
+CellularModem 254.0 CellularModem.qml

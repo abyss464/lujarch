@@ -1,0 +1,48 @@
+# Plasma Mobile with the phone's landscape layout (LNX-6): the status bar a column at the screen's
+# left end, the navigation panel at its right end (plasma-mobile.patch). Arch Linux's plasma-mobile
+# PKGBUILD (gitlab.archlinux.org/archlinux/packaging/packages/plasma-mobile, 6.7.5-1, the version
+# Arch Linux ARM ships), plus the patch. The desktop's install script stages it with the patch,
+# fills in Plasma Mobile's pin from lock.toml (@PLASMA_MOBILE_VERSION@, @PLASMA_MOBILE_URL@,
+# @PLASMA_MOBILE_SHA256@), builds it as the owner's user and installs the package with pacman -U.
+
+pkgname=plasma-mobile-lujarch
+pkgver=@PLASMA_MOBILE_VERSION@
+pkgrel=1
+pkgdesc='Plasma shell for mobile devices, with the landscape layout of the Lujarch desktop'
+arch=(aarch64)
+url='https://plasma-mobile.org/'
+license=(GPL-3.0-or-later)
+depends=(bash bluez-qt glibc kauth kcmutils kconfig kcoreaddons kdbusaddons kdeclarative ki18n kio
+         kirigami kirigami-addons kitemmodels kjobwidgets knewstuff knotifications kpackage kpipewire
+         kservice ksvg kwayland kwin kwindowsystem layer-shell-qt libgcc libkscreen libplasma
+         libstdc++ milou modemmanager-qt networkmanager-qt plasma-keyboard plasma-nano plasma-nm
+         plasma-pa plasma-workspace powerdevil qcoro qt6-5compat qt6-base qt6-declarative
+         qt6-sensors solid systemd-libs wayland)
+makedepends=(cmake ninja extra-cmake-modules plasma-wayland-protocols vulkan-headers)
+provides=("plasma-mobile=$pkgver")
+conflicts=(plasma-mobile)
+# The phone builds this: no LTO and no debug package.
+options=(!lto !debug)
+source=("plasma-mobile-$pkgver.tar.xz::@PLASMA_MOBILE_URL@"
+        plasma-mobile.patch)
+sha256sums=('@PLASMA_MOBILE_SHA256@'
+            SKIP)
+
+prepare() {
+  local tree="$srcdir/plasma-mobile-$pkgver"
+  if ! patch -d "$tree" -p1 -R --dry-run -s -f < "$srcdir/plasma-mobile.patch" >/dev/null 2>&1; then
+    patch -d "$tree" -p1 -N < "$srcdir/plasma-mobile.patch"
+  fi
+}
+
+build() {
+  cmake -B build -S plasma-mobile-$pkgver -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DKDE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build --parallel "${JOBS:-3}"
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

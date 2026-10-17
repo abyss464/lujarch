@@ -83,6 +83,13 @@ object Linux {
     fun colors(context: Context): String = secure(context, "colors") ?: "system"
 
     fun keysRow(context: Context): Boolean = secure(context, "keys_row") != "0"
+
+    /** The screen stays on while the desktop is shown (the desktop's Caffeine tile, LNX-7). */
+    fun caffeine(context: Context): Boolean = secure(context, "caffeine") == "1"
+
+    fun setCaffeine(context: Context, on: Boolean) {
+        Settings.Secure.putString(context.contentResolver, "lujarch_linux_caffeine", if (on) "1" else "0")
+    }
 }
 
 /**
@@ -119,6 +126,13 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
     override fun onClipboard(text: String) {
         main.post { sink.onClipboard(text) }
     }
+
+    // LinuxParts hears these with a listener of its own.
+    override fun onAndroidSet(key: String, value: String) {}
+
+    override fun onVibrate(pattern: String) {}
+
+    override fun onStream(stream: String, wanted: Boolean) {}
 
     fun register() {
         try {

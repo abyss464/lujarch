@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Flashlight quick setting: Android's own switch",
+        "Icon": "flashlight-on",
+        "Id": "org.kde.plasma.quicksetting.flashlight",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_flashlight@"
+    }
+}

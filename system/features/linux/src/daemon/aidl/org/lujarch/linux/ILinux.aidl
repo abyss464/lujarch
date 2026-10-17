@@ -16,7 +16,9 @@
 
 package org.lujarch.linux;
 
+import org.lujarch.linux.AndroidState;
 import org.lujarch.linux.ILinuxListener;
+import org.lujarch.linux.LinuxLocation;
 import org.lujarch.linux.LinuxNotification;
 import org.lujarch.linux.LinuxService;
 import org.lujarch.linux.RemoteConfig;
@@ -77,6 +79,20 @@ interface ILinux {
 
     const int MAX_SESSIONS = 16;
 
+    /**
+     * The lent parts a program in Linux reads (ILinuxListener.onStream): Android's microphone
+     * (16-bit little-endian PCM, 48 kHz, mono), a camera (frames: STREAM_FRAME_MAGIC, the frame's
+     * size in bytes as a 32-bit little-endian number, then the frame, NV12 of
+     * STREAM_CAMERA_WIDTH x STREAM_CAMERA_HEIGHT), the location (setLocation).
+     */
+    const String STREAM_MICROPHONE = "microphone";
+    const String STREAM_CAMERA_BACK = "camera-back";
+    const String STREAM_CAMERA_FRONT = "camera-front";
+    const String STREAM_LOCATION = "location";
+    const String STREAM_FRAME_MAGIC = "LJF1";
+    const int STREAM_CAMERA_WIDTH = 1280;
+    const int STREAM_CAMERA_HEIGHT = 720;
+
     /** The caller may not do this. */
     const int ERROR_REFUSED = 1;
     const int ERROR_INVALID = 2;
@@ -95,6 +111,8 @@ interface ILinux {
     const int ERROR_NO_DESKTOP = 11;
     /** Linux has no sound for the desktop. */
     const int ERROR_NO_SOUND = 12;
+    /** No program in Linux reads the stream, or its part is not lent. */
+    const int ERROR_NOT_WANTED = 13;
 
     Status getStatus();
 
@@ -184,4 +202,16 @@ interface ILinux {
 
     /** The card's answer to a command (ILinuxListener.onNfcRequest), or why there is none. */
     void answerNfc(int id, in byte[] response, @nullable String error);
+
+    /** Android's switches and readings, while Linux is lent Android's quick settings. */
+    void setAndroidState(in AndroidState state);
+
+    /**
+     * What the Terminal app writes a stream into while a program in Linux reads it
+     * (STREAM_MICROPHONE, STREAM_CAMERA_BACK, STREAM_CAMERA_FRONT): a non-blocking FIFO.
+     */
+    ParcelFileDescriptor openStream(String stream);
+
+    /** Android's position, while a program in Linux reads STREAM_LOCATION. */
+    void setLocation(in LinuxLocation location);
 }

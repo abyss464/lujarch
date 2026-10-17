@@ -1,0 +1,59 @@
+#!/bin/sh
+# Applies Lujarch's Wine settings to a prefix (WINEPREFIX, default ~/.wine), creating it when
+# missing (LNX-6). The wine wrapper runs this once per prefix; running it again reapplies the
+# settings over changes made in winecfg or regedit, and refreshes the prefix's DXVK and
+# VKD3D-Proton after an upgrade.
+set -eu
+
+prefix=${WINEPREFIX:-$HOME/.wine}
+export WINEPREFIX="$prefix"
+export WINEDEBUG="${WINEDEBUG:--all}"
+if [ -z "${LC_ALL:-}${LC_CTYPE:-}" ]; then
+    export LC_CTYPE=zh_CN.UTF-8
+fi
+here=/usr/local/lib/lujarch-wine
+
+log() { printf 'lujarch-wine setup: %s\n' "$*" >&2; }
+
+# Creating a prefix takes a while with nothing on screen; say so on the desktop.
+res=/usr/lib/lujarch/desktop/res/res
+if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && command -v notify-send >/dev/null; then
+    notify-send -a Wine -i wine -t 30000 "$(python3 "$res" text lnx_wine_preparing)" \
+        "$(python3 "$res" text lnx_wine_preparing_body)" 2>/dev/null || true
+fi
+
+log "prefix $prefix"
+/usr/bin/wine wineboot -u
+/usr/bin/wineserver -w
+
+win="$prefix/drive_c/windows"
+
+# CJK text: Android's Noto CJK (Linux sees Android's fonts at /usr/share/fonts/android), linked so
+# Android's own font updates reach Wine. The registry maps the Windows CJK faces onto them.
+for f in NotoSansCJK-Regular.ttc NotoSerifCJK-Regular.ttc; do
+    if [ -e "/usr/share/fonts/android/$f" ]; then
+        ln -sfn "/usr/share/fonts/android/$f" "$win/Fonts/$f"
+    else
+        log "no /usr/share/fonts/android/$f: CJK text falls back to fontconfig's fonts"
+    fi
+done
+
+# DXVK (Direct3D 8-11) and VKD3D-Proton (Direct3D 12) over Turnip, Proton's builds. 64-bit programs
+# take the ARM64EC builds (the emulator stays out of the driver code), 32-bit programs the i386 ones.
+for p in dxvk vkd3d-proton; do
+    cp -f /usr/lib/wine/$p/aarch64-windows/*.dll "$win/system32/"
+    cp -f /usr/lib/wine/$p/i386-windows/*.dll "$win/syswow64/"
+done
+
+# regedit reads UTF-16 with a BOM, at a Windows path; Z: is the root of the Linux tree. wine.reg
+# writes the CJK face names as \uXXXX.
+reg=$(mktemp --suffix=.reg)
+trap 'rm -f "$reg"' EXIT
+python3 -c 'import re, sys
+text = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), open(sys.argv[1], encoding="ascii").read())
+sys.stdout.buffer.write(b"\xff\xfe" + text.encode("utf-16-le"))' "$here/wine.reg" >"$reg"
+/usr/bin/wine regedit /S "Z:$(printf '%s' "$reg" | tr / '\\')"
+/usr/bin/wineserver -w
+
+date -Iseconds > "$prefix/.lujarch-wine"
+log "done"

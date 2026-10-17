@@ -32,15 +32,34 @@
 //   clipboard      file: Android's clipboard text as the Terminal app last saw it
 //   clipboard-set  FIFO: a line, text in base64, becomes Android's clipboard through the
 //                  Terminal app
+//   microphone     FIFO: while a program reads it, Android's microphone records into it through
+//                  the Terminal app on screen: 16-bit little-endian PCM, 48 kHz, mono
+//   camera-back,   FIFO: while a program reads one, that camera of the phone films into it
+//   camera-front   through the Terminal app on screen: frames of "LJF1", the frame's size as a
+//                  32-bit little-endian number, NV12 of 1280 x 720 (ILinux::STREAM_)
+//   location       FIFO: while a program reads it, one JSON line for each of Android's fixes:
+//                  {"lat","lon","time"[,"alt","acc","speed","bearing"]} or {"error":"permission"
+//                  |"off"}
+//   vibrate        FIFO: a line "<amplitude 0-255>:<ms>,..." (or "<ms>") vibrates the phone
+//                  through the Terminal app on screen, as touch feedback
+//   android        file: Android's switches and readings (AndroidState) as JSON, for the
+//                  desktop's quick settings and status bar
+//   android-set    FIFO: a line "<key> <value>" flips one of Android's switches through the
+//                  Terminal app on screen (ILinuxListener.onAndroidSet)
 //
 // The terminal's sessions share the clipboard in the Terminal app itself; the desktop shares it
 // through clipboard and clipboard-set. USB devices are /dev/bus/usb in Linux and the owner's user
-// in the group aid_usb (1018) of its /etc/group.
+// in the group aid_usb (1018) of its /etc/group; the cameras are /dev/video40 (back) and
+// /dev/video41 (front), v4l2loopback devices of Linux's user that Linux's desktop writes the
+// camera FIFOs' frames into. Linux's /etc/localtime follows Android's time zone while Linux runs.
 #pragma once
 
+#include <aidl/org/lujarch/linux/AndroidState.h>
+#include <aidl/org/lujarch/linux/LinuxLocation.h>
 #include <aidl/org/lujarch/linux/LinuxNotification.h>
 #include <android-base/unique_fd.h>
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <map>
@@ -61,6 +80,9 @@ class Bridge {
         std::function<void(int id, const std::string& text)> auth;
         std::function<void(int id, const std::vector<uint8_t>& command)> nfc;
         std::function<void(const std::string& text)> clipboard;
+        std::function<void(const std::string& key, const std::string& value)> android_set;
+        std::function<void(const std::string& pattern)> vibrate;
+        std::function<void(const std::string& stream, bool wanted)> stream;
     };
 
     Bridge(System& system, Asks asks);
@@ -80,6 +102,13 @@ class Bridge {
     bool SetClipboard(const std::string& value);
     void AnswerNfc(int id, const std::vector<uint8_t>& response,
                    const std::optional<std::string>& error);
+    // false while Android's quick settings are not lent.
+    bool SetAndroidState(const aidl::org::lujarch::linux::AndroidState& state);
+    void SetLocation(const aidl::org::lujarch::linux::LinuxLocation& location);
+    // The write end of a stream a program reads now (ILinux::STREAM_), for the Terminal app.
+    Result<unique_fd> OpenStream(const std::string& stream);
+    // The streams programs read now.
+    std::vector<std::string> Wanted();
 
   private:
     using Clock = std::chrono::steady_clock;
@@ -87,6 +116,18 @@ class Bridge {
     struct Pending {
         std::string reply;
         Clock::time_point deadline;
+    };
+
+    // A FIFO that Android writes while a program in Linux reads it. The daemon holds a write end
+    // from the program's open until the last reader leaves, so the readers see no end of file
+    // while the Terminal app comes and goes.
+    struct Reader {
+        const char* name;
+        // The switch's part: lend_<part>.
+        const char* part;
+        int ident;
+        int watch = -1;
+        unique_fd out;
     };
 
     void Loop();
@@ -99,6 +140,12 @@ class Bridge {
     void Auth(const std::string& line);
     void Nfc(const std::string& line);
     void Clipboard(const std::string& line);
+    void AndroidSet(const std::string& line);
+    void Vibrate(const std::string& line);
+    void WriteAndroidState();
+    void ReaderOpened(Reader& r);
+    void ReaderGone(Reader& r);
+    void Timezone();
     void Reply(const char* dir, const std::string& reply, const std::string& text);
     void WriteNotifications();
     void SensorsReader();
@@ -136,6 +183,19 @@ class Bridge {
     void* sensors_queue_ = nullptr;
     std::map<int, std::vector<float>> sensor_values_;
     bool usb_lent_ = false;
+    bool cameras_lent_ = false;
+    bool cameras_checked_ = false;
+    std::array<Reader, 4> readers_;
+    android::base::unique_fd vibrate_fifo_;
+    std::string vibrate_buffer_;
+    android::base::unique_fd android_set_fifo_;
+    std::string android_set_buffer_;
+    std::optional<aidl::org::lujarch::linux::AndroidState> android_state_;
+    bool android_lent_ = false;
+    std::string timezone_;
+    // Starts of Linux, and the one Arrange made the parts for.
+    uint64_t generation_ = 0;
+    uint64_t arranged_ = 0;
 };
 
 }  // namespace lujarch::linux

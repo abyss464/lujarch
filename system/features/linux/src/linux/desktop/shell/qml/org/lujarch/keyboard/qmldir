@@ -1,0 +1,4 @@
+module org.lujarch.keyboard
+singleton KeyboardTheme 1.0 KeyboardTheme.qml
+KeyStripRow 1.0 KeyStripRow.qml
+LatinInputMethod 1.0 LatinInputMethod.qml

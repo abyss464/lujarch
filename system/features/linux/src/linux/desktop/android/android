@@ -1,0 +1,1741 @@
+#!/usr/bin/python3
+"""Android for the Linux desktop (LNX-7): the desktop's side of what lujarch_linux lends it under
+/run/lujarch (the daemon's bridge.h).
+
+  android daemon          the resident part, started by the desktop's session
+  android set KEY VALUE   flips one of Android's switches (what the quick settings' tiles run): wifi,
+                          mobile, bluetooth, airplane, hotspot, flashlight, rotation, dnd, caffeine (1 or 0)
+                          or brightness (the slider's position); exit 1 when Android's quick settings are
+                          not lent
+
+Android's switches and readings come from /run/lujarch/android, which the Terminal app keeps while Android's
+quick settings are lent; the quick settings (org.lujarch.android in QML) read it themselves. The daemon puts
+the phone behind the Linux interfaces programs already use:
+
+- the session bus: org.kde.Solid.PowerManagement's BrightnessControl (the drawer's brightness slider, the
+  name powerdevil owns when it runs, which the session turns off) and org.sigxcpu.Feedback (feedbackd's API:
+  plasma-keyboard's key vibration, as Android's touch vibration, /run/lujarch/vibrate);
+- the desktop's system bus (DBUS_SYSTEM_BUS_ADDRESS): org.freedesktop.UPower with the phone's battery, which
+  the status bar and the battery tile read, and a GeoClue agent; while GeoClue has a client the daemon reads
+  Android's fixes from /run/lujarch/location and hands them to GeoClue through its NMEA socket and its static
+  source file.
+
+Only the standard library: Linux has no D-Bus bindings here, and the part of D-Bus this needs is small.
+"""
+import collections
+import datetime
+import heapq
+import json
+import math
+import os
+import selectors
+import socket
+import struct
+import sys
+import threading
+import time
+import traceback
+import urllib.parse
+
+RUN = "/run/lujarch"
+STATE = RUN + "/android"
+SET_FIFO = RUN + "/android-set"
+VIBRATE_FIFO = RUN + "/vibrate"
+LOCATION_FIFO = RUN + "/location"
+DIR = "/tmp/lujarch-android"
+NMEA_SOCKET = DIR + "/nmea.sock"  # geoclue.conf names it
+GEOLOCATION = "/etc/geolocation"  # GeoClue's static source; fixed at GeoClue's build
+
+BRIGHTNESS_NAME = "org.kde.Solid.PowerManagement"
+BRIGHTNESS_PATH = "/org/kde/Solid/PowerManagement/Actions/BrightnessControl"
+BRIGHTNESS_IFACE = "org.kde.Solid.PowerManagement.Actions.BrightnessControl"
+
+FEEDBACK_NAME = "org.sigxcpu.Feedback"
+FEEDBACK_PATH = "/org/sigxcpu/Feedback"
+FEEDBACK_IFACE = "org.sigxcpu.Feedback"
+HAPTIC_IFACE = "org.sigxcpu.Feedback.Haptic"
+
+UPOWER_NAME = "org.freedesktop.UPower"
+UPOWER_PATH = "/org/freedesktop/UPower"
+UPOWER_IFACE = "org.freedesktop.UPower"
+UPOWER_DEVICE_IFACE = "org.freedesktop.UPower.Device"
+UPOWER_BATTERY = "/org/freedesktop/UPower/devices/battery_battery"
+UPOWER_LINE = "/org/freedesktop/UPower/devices/line_power_usb"
+UPOWER_DISPLAY = "/org/freedesktop/UPower/devices/DisplayDevice"
+
+GEOCLUE_NAME = "org.freedesktop.GeoClue2"
+GEOCLUE_MANAGER_PATH = "/org/freedesktop/GeoClue2/Manager"
+GEOCLUE_MANAGER_IFACE = "org.freedesktop.GeoClue2.Manager"
+GEOCLUE_AGENT_PATH = "/org/freedesktop/GeoClue2/Agent"
+GEOCLUE_AGENT_IFACE = "org.freedesktop.GeoClue2.Agent"
+GEOCLUE_AGENT_ID = "lujarch-location"  # the whitelist of geoclue.conf
+GCLUE_ACCURACY_EXACT = 8
+
+DBUS_NAME = "org.freedesktop.DBus"
+DBUS_PATH = "/org/freedesktop/DBus"
+DBUS_IFACE = "org.freedesktop.DBus"
+PROPERTIES_IFACE = "org.freedesktop.DBus.Properties"
+INTROSPECTABLE_IFACE = "org.freedesktop.DBus.Introspectable"
+PEER_IFACE = "org.freedesktop.DBus.Peer"
+NAME_OWNER_CHANGED = "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged'"
+
+SWITCHES = ("wifi", "mobile", "bluetooth", "airplane", "hotspot", "flashlight", "rotation", "dnd", "caffeine")
+
+_log_lock = threading.Lock()
+
+
+def log(message):
+    # stderr is the desktop service's log
+    with _log_lock:
+        print("android: " + message, file=sys.stderr, flush=True)
+
+
+# ------------------------------------------------------------------ lujarch_linux's FIFOs
+
+def fifo_line(path, line):
+    """One line into a FIFO lujarch_linux reads; an error's text when it cannot be written (the part is
+    not lent, or lujarch_linux does not read it)."""
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as e:
+        return e.strerror or str(e)
+    try:
+        os.write(fd, (line + "\n").encode("utf-8", "replace"))
+    except OSError as e:
+        return e.strerror or str(e)
+    finally:
+        os.close(fd)
+    return None
+
+
+class Latest:
+    """fn(value) for the latest value put, in a thread of its own: a slow fn never holds the loop, and a value
+    not yet taken is replaced by a newer one."""
+
+    def __init__(self, fn, name):
+        self.fn = fn
+        self.cv = threading.Condition()
+        self.pending = False
+        self.value = None
+        threading.Thread(target=self.run, daemon=True, name=name).start()
+
+    def put(self, value):
+        with self.cv:
+            self.value = value
+            self.pending = True
+            self.cv.notify()
+
+    def run(self):
+        while True:
+            with self.cv:
+                while not self.pending:
+                    self.cv.wait()
+                value, self.pending = self.value, False
+            try:
+                self.fn(value)
+            except Exception:
+                log("an error in a worker (kept going):\n" + traceback.format_exc())
+
+
+class Setter:
+    """One of Android's switches set from the loop, the latest value at most every `pace` seconds."""
+
+    def __init__(self, key, pace=0.0):
+        self.key = key
+        self.pace = pace
+        self.failing = False
+        self.latest = Latest(self.send, "set-" + key)
+
+    def put(self, value):
+        self.latest.put(value)
+
+    def send(self, value):
+        error = fifo_line(SET_FIFO, "%s %s" % (self.key, value))
+        if error is None:
+            self.failing = False
+        elif not self.failing:
+            self.failing = True
+            log("%s not set (%s): Android's quick settings are not lent" % (self.key, error))
+        if self.pace:
+            time.sleep(self.pace)
+
+
+class Vibrator:
+    """Vibration requests in order, from a thread of their own; one that waited longer than STALE_S is
+    dropped (a key's tick after the moment is wrong, not late)."""
+
+    STALE_S = 0.5
+
+    def __init__(self):
+        self.cv = threading.Condition()
+        self.queue = collections.deque(maxlen=16)
+        self.failing = False
+        threading.Thread(target=self.run, daemon=True, name="vibrate").start()
+
+    def put(self, value):
+        with self.cv:
+            self.queue.append((time.monotonic(), value))
+            self.cv.notify()
+
+    def run(self):
+        while True:
+            with self.cv:
+                while not self.queue:
+                    self.cv.wait()
+                queued, value = self.queue.popleft()
+            if time.monotonic() - queued > self.STALE_S:
+                continue
+            error = fifo_line(VIBRATE_FIFO, value)
+            if error is None:
+                self.failing = False
+            elif not self.failing:
+                # One line per streak: a keyboard sends a request per key.
+                self.failing = True
+                log("vibration not played (%s): vibration is not lent" % error)
+
+
+# ------------------------------------------------------------------ D-Bus
+
+BASIC = {"y": ("B", 1), "b": ("I", 4), "n": ("h", 2), "q": ("H", 2), "i": ("i", 4), "u": ("I", 4),
+         "x": ("q", 8), "t": ("Q", 8), "d": ("d", 8), "h": ("I", 4)}
+ALIGN = {"s": 4, "o": 4, "g": 1, "v": 1, "a": 4, "(": 8, "{": 8}
+ALIGN.update({c: size for c, (_, size) in BASIC.items()})
+
+
+class Variant:
+    """A D-Bus variant: a value with its own signature."""
+    __slots__ = ("sig", "value")
+
+    def __init__(self, sig, value):
+        self.sig = sig
+        self.value = value
+
+    def __repr__(self):
+        return "Variant(%r, %r)" % (self.sig, self.value)
+
+
+def type_end(sig, i):
+    """The index after the complete type that starts at sig[i]."""
+    if i >= len(sig):
+        raise ValueError("the signature %r ends early" % sig)
+    c = sig[i]
+    if c == "a":
+        return type_end(sig, i + 1)
+    if c in "({":
+        close = ")" if c == "(" else "}"
+        i += 1
+        while i < len(sig) and sig[i] != close:
+            i = type_end(sig, i)
+        if i >= len(sig):
+            raise ValueError("unclosed %r in the signature %r" % (c, sig))
+        return i + 1
+    if c in ALIGN:
+        return i + 1
+    raise ValueError("unknown type %r in the signature %r" % (c, sig))
+
+
+def split_signature(sig):
+    """The complete types of a signature, in order."""
+    types = []
+    i = 0
+    while i < len(sig):
+        j = type_end(sig, i)
+        types.append(sig[i:j])
+        i = j
+    return types
+
+
+class Marshal:
+    """D-Bus values into a little-endian body: basic types, strings, object paths, signatures, arrays,
+    dicts (a dict or (key, value) pairs), structs (tuples) and variants (Variant)."""
+
+    @staticmethod
+    def pad(buf, n):
+        while len(buf) % n:
+            buf.append(0)
+
+    @classmethod
+    def u32(cls, buf, v):
+        cls.pad(buf, 4)
+        buf += struct.pack("<I", v)
+
+    @classmethod
+    def i32(cls, buf, v):
+        cls.pad(buf, 4)
+        buf += struct.pack("<i", v)
+
+    @classmethod
+    def string(cls, buf, s):
+        b = s.encode("utf-8", "replace")
+        cls.u32(buf, len(b))
+        buf += b + b"\0"
+
+    @staticmethod
+    def signature(buf, s):
+        b = s.encode()
+        buf.append(len(b))
+        buf += b + b"\0"
+
+    @classmethod
+    def value(cls, buf, sig, v):
+        c = sig[0]
+        if c in BASIC:
+            fmt, size = BASIC[c]
+            cls.pad(buf, size)
+            if c == "b":
+                v = 1 if v else 0
+            elif c == "d":
+                v = float(v)
+            buf += struct.pack("<" + fmt, v)
+        elif c in "so":
+            cls.string(buf, v)
+        elif c == "g":
+            cls.signature(buf, v)
+        elif c == "v":
+            if not isinstance(v, Variant):
+                raise ValueError("a variant needs a Variant")
+            cls.signature(buf, v.sig)
+            cls.value(buf, v.sig, v.value)
+        elif c == "a":
+            cls.pad(buf, 4)
+            at = len(buf)
+            buf += b"\0\0\0\0"
+            element = sig[1:]
+            cls.pad(buf, ALIGN[element[0]])
+            start = len(buf)
+            if element[0] == "{":
+                key_sig, value_sig = split_signature(element[1:-1])
+                for k, x in (v.items() if isinstance(v, dict) else v):
+                    cls.pad(buf, 8)
+                    cls.value(buf, key_sig, k)
+                    cls.value(buf, value_sig, x)
+            else:
+                for x in v:
+                    cls.value(buf, element, x)
+            struct.pack_into("<I", buf, at, len(buf) - start)
+        elif c == "(":
+            cls.pad(buf, 8)
+            fields = split_signature(sig[1:-1])
+            if len(fields) != len(v):
+                raise ValueError("a struct (%s) needs %d fields" % (sig, len(fields)))
+            for t, x in zip(fields, v):
+                cls.value(buf, t, x)
+        else:
+            raise ValueError("cannot marshal %r" % sig)
+
+    @classmethod
+    def body(cls, sig, args):
+        types = split_signature(sig)
+        if len(types) != len(args):
+            raise ValueError("the signature %r takes %d values, not %d" % (sig, len(types), len(args)))
+        buf = bytearray()
+        for t, x in zip(types, args):
+            cls.value(buf, t, x)
+        return bytes(buf)
+
+
+class Unmarshal:
+    def __init__(self, data, order):
+        self.data = data
+        self.pos = 0
+        self.order = order  # "<" or ">"
+
+    def align(self, n):
+        self.pos += (-self.pos) % n
+
+    def take(self, fmt, n):
+        self.align(n)
+        (v,) = struct.unpack_from(self.order + fmt, self.data, self.pos)
+        self.pos += n
+        return v
+
+    def string(self):
+        n = self.take("I", 4)
+        if self.pos + n + 1 > len(self.data):
+            raise ValueError("a string runs past the message")
+        s = self.data[self.pos:self.pos + n].decode("utf-8", "replace")
+        self.pos += n + 1
+        return s
+
+    def signature(self):
+        if self.pos >= len(self.data):
+            raise ValueError("a signature runs past the message")
+        n = self.data[self.pos]
+        if self.pos + n + 2 > len(self.data):
+            raise ValueError("a signature runs past the message")
+        s = self.data[self.pos + 1:self.pos + 1 + n].decode()
+        self.pos += n + 2
+        return s
+
+    def value(self, sig):
+        c = sig[0]
+        if c in BASIC:
+            fmt, size = BASIC[c]
+            v = self.take(fmt, size)
+            return bool(v) if c == "b" else v
+        if c in "so":
+            return self.string()
+        if c == "g":
+            return self.signature()
+        if c == "v":
+            inner = self.signature()
+            if len(split_signature(inner)) != 1:
+                raise ValueError("a variant holds one complete type, not %r" % inner)
+            return Variant(inner, self.value(inner))
+        if c == "a":
+            n = self.take("I", 4)
+            element = sig[1:]
+            self.align(ALIGN[element[0]])
+            end = self.pos + n
+            if end > len(self.data):
+                raise ValueError("an array runs past the message")
+            if element[0] == "{":
+                key_sig, value_sig = split_signature(element[1:-1])
+                out = {}
+                while self.pos < end:
+                    self.align(8)
+                    k = self.value(key_sig)
+                    out[k] = self.value(value_sig)
+                return out
+            items = []
+            while self.pos < end:
+                items.append(self.value(element))
+            return items
+        if c == "(":
+            self.align(8)
+            return tuple(self.value(t) for t in split_signature(sig[1:-1]))
+        raise ValueError("cannot read %r" % sig)
+
+    def body(self, sig):
+        return [self.value(t) for t in split_signature(sig)]
+
+
+METHOD_CALL, METHOD_RETURN, ERROR, SIGNAL = 1, 2, 3, 4
+NO_REPLY_EXPECTED = 1
+F_PATH, F_INTERFACE, F_MEMBER, F_ERROR_NAME, F_REPLY_SERIAL, F_DESTINATION, F_SENDER, F_SIGNATURE = 1, 2, 3, 4, 5, 6, 7, 8
+FIELD_TYPES = {F_PATH: "o", F_INTERFACE: "s", F_MEMBER: "s", F_ERROR_NAME: "s", F_REPLY_SERIAL: "u",
+               F_DESTINATION: "s", F_SENDER: "s", F_SIGNATURE: "g"}
+
+
+class Message:
+    def __init__(self, mtype, serial, fields, body_sig="", body=b"", flags=0):
+        self.type = mtype
+        self.serial = serial
+        self.fields = fields
+        self.body_sig = body_sig
+        self.body = body
+        self.flags = flags
+        self.order = "<"
+
+    def args(self):
+        """The body's values."""
+        return Unmarshal(self.body, self.order).body(self.body_sig) if self.body_sig else []
+
+    def encode(self):
+        f = bytearray()
+        for code, value in self.fields.items():
+            Marshal.pad(f, 8)
+            f.append(code)
+            sig = FIELD_TYPES[code]
+            Marshal.signature(f, sig)
+            Marshal.value(f, sig, value)
+        head = bytearray(b"l")
+        head += bytes([self.type, self.flags, 1])
+        head += struct.pack("<II", len(self.body), self.serial)
+        head += struct.pack("<I", len(f)) + f
+        Marshal.pad(head, 8)
+        return bytes(head) + self.body
+
+    @staticmethod
+    def decode(data):
+        """(message, bytes used) from the start of `data`, or None while it is incomplete."""
+        if len(data) < 16:
+            return None
+        order = "<" if data[0:1] == b"l" else ">"
+        body_len, serial, fields_len = struct.unpack(order + "III", data[4:16])
+        head_len = 16 + fields_len
+        head_len += (-head_len) % 8
+        total = head_len + body_len
+        if len(data) < total:
+            return None
+        u = Unmarshal(data[:16 + fields_len], order)
+        u.pos = 16
+        fields = {}
+        while u.pos < 16 + fields_len:
+            u.align(8)
+            code = u.take("B", 1)
+            sig = u.signature()
+            fields[code] = u.value(sig)
+        m = Message(data[1], serial, fields, fields.get(F_SIGNATURE, ""), data[head_len:total], data[2])
+        m.order = order
+        return m, total
+
+
+def parse_address(address):
+    """The first usable unix address of a D-Bus address string, as a socket address."""
+    for entry in address.split(";"):
+        if not entry.startswith("unix:"):
+            continue
+        kv = {}
+        for part in entry[5:].split(","):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                kv[k] = urllib.parse.unquote(v)
+        if "path" in kv:
+            return kv["path"]
+        if "abstract" in kv:
+            return "\0" + kv["abstract"]
+        if kv.get("runtime") == "yes":
+            return os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "bus")
+    raise ValueError("no unix address in " + address)
+
+
+class Bus:
+    """A connection to a D-Bus daemon: authenticated and named (Hello), blocking until setup is done."""
+
+    def __init__(self, address):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(5)
+        self.serial = 0
+        self.buf = b""
+        try:
+            self.sock.connect(parse_address(address))
+            self.sock.sendall(b"\0AUTH EXTERNAL " + str(os.getuid()).encode().hex().encode() + b"\r\n")
+            reply = self.read_auth_line()
+            if not reply.startswith(b"OK"):
+                raise OSError("D-Bus authentication refused: %r" % reply)
+            self.sock.sendall(b"BEGIN\r\n")
+            self.unique = self.call_wait(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "Hello")
+        except BaseException:
+            self.close()
+            raise
+
+    def read_auth_line(self):
+        while b"\r\n" not in self.buf:
+            b = self.sock.recv(4096)
+            if not b:
+                raise OSError("the bus closed during authentication")
+            self.buf += b
+        line, self.buf = self.buf.split(b"\r\n", 1)
+        return line
+
+    def next_serial(self):
+        self.serial += 1
+        return self.serial
+
+    def send(self, message):
+        self.sock.sendall(message.encode())
+
+    def call(self, destination, path, interface, member, sig="", args=(), flags=0):
+        serial = self.next_serial()
+        fields = {F_PATH: path, F_DESTINATION: destination, F_INTERFACE: interface, F_MEMBER: member}
+        if sig:
+            fields[F_SIGNATURE] = sig
+        self.send(Message(METHOD_CALL, serial, fields, sig, Marshal.body(sig, args) if sig else b"", flags))
+        return serial
+
+    def read_message(self):
+        """The next message, waiting for it (setup only: the socket has a timeout)."""
+        while True:
+            got = Message.decode(self.buf)
+            if got:
+                m, used = got
+                self.buf = self.buf[used:]
+                return m
+            b = self.sock.recv(65536)
+            if not b:
+                raise OSError("the bus closed the connection")
+            self.buf += b
+
+    def call_wait(self, destination, path, interface, member, sig="", args=()):
+        """The first value of the reply (or None), after a call during setup."""
+        serial = self.call(destination, path, interface, member, sig, args)
+        while True:
+            m = self.read_message()
+            if m.type in (METHOD_RETURN, ERROR) and m.fields.get(F_REPLY_SERIAL) == serial:
+                values = m.args()
+                if m.type == ERROR:
+                    raise OSError("%s: %s" % (m.fields.get(F_ERROR_NAME), values[0] if values else ""))
+                return values[0] if values else None
+
+    def close(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+
+
+
+class DBusError(Exception):
+    def __init__(self, name, text):
+        super().__init__(text)
+        self.name = name
+        self.text = text
+
+
+class Method:
+    def __init__(self, in_sig, out_sig, fn, in_names=(), out_names=()):
+        self.in_sig = in_sig
+        self.out_sig = out_sig
+        self.fn = fn  # fn(message, *args) -> the out values (a tuple, or the one value)
+        self.in_names = in_names
+        self.out_names = out_names
+
+
+class Property:
+    def __init__(self, sig, get, set=None):
+        self.sig = sig
+        self.get = get
+        self.set = set
+
+
+class Interface:
+    def __init__(self, name, methods=None, properties=None, signals=None):
+        self.name = name
+        self.methods = methods or {}
+        self.properties = properties or {}
+        self.signals = signals or {}  # name -> (sig, arg names)
+
+    def xml(self):
+        def args(sig, names, direction):
+            out = []
+            for i, t in enumerate(split_signature(sig)):
+                name = ' name="%s"' % names[i] if i < len(names) else ""
+                d = ' direction="%s"' % direction if direction else ""
+                out.append('      <arg type="%s"%s%s/>' % (t, name, d))
+            return out
+
+        lines = ['  <interface name="%s">' % self.name]
+        for name, m in self.methods.items():
+            lines.append('    <method name="%s">' % name)
+            lines += args(m.in_sig, m.in_names, "in") + args(m.out_sig, m.out_names, "out")
+            lines.append("    </method>")
+        for name, (sig, names) in self.signals.items():
+            lines.append('    <signal name="%s">' % name)
+            lines += args(sig, names, "")
+            lines.append("    </signal>")
+        for name, p in self.properties.items():
+            lines.append('    <property name="%s" type="%s" access="%s"/>' % (name, p.sig, "readwrite" if p.set else "read"))
+        lines.append("  </interface>")
+        return "\n".join(lines)
+
+
+STANDARD_INTERFACES = """  <interface name="org.freedesktop.DBus.Introspectable">
+    <method name="Introspect"><arg type="s" direction="out"/></method>
+  </interface>
+  <interface name="org.freedesktop.DBus.Peer">
+    <method name="Ping"/>
+    <method name="GetMachineId"><arg type="s" direction="out"/></method>
+  </interface>
+  <interface name="org.freedesktop.DBus.Properties">
+    <method name="Get"><arg type="s" direction="in"/><arg type="s" direction="in"/><arg type="v" direction="out"/></method>
+    <method name="GetAll"><arg type="s" direction="in"/><arg type="a{sv}" direction="out"/></method>
+    <method name="Set"><arg type="s" direction="in"/><arg type="s" direction="in"/><arg type="v" direction="in"/></method>
+    <signal name="PropertiesChanged"><arg type="s"/><arg type="a{sv}"/><arg type="as"/></signal>
+  </interface>"""
+
+INTROSPECT_DOCTYPE = ('<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN" '
+                      '"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">')
+
+
+class Connection:
+    """One connection to a bus inside the loop: the names it owns, the objects it exports (methods,
+    properties, introspection), calls out with a callback, signals in. It connects again after a loss, and
+    the services hear of both (on_up, on_down)."""
+
+    RETRY_S = 5.0
+
+    def __init__(self, loop, label, env):
+        self.loop = loop
+        self.label = label
+        self.env = env
+        self.bus = None
+        self.objects = {}  # path -> {interface name: Interface}
+        self.names = []
+        self.matches = []
+        self.replies = {}  # serial -> callback(ok, values)
+        self.signal_handlers = []
+        self.up_handlers = []
+        self.down_handlers = []
+        self.warned = False
+
+    # -- what the services register before start()
+    def export(self, path, interface):
+        self.objects.setdefault(path, {})[interface.name] = interface
+
+    def own(self, name):
+        self.names.append(name)
+
+    def add_match(self, rule):
+        if rule not in self.matches:
+            self.matches.append(rule)
+
+    def on_signal(self, fn):
+        self.signal_handlers.append(fn)
+
+    def on_up(self, fn):
+        self.up_handlers.append(fn)
+
+    def on_down(self, fn):
+        self.down_handlers.append(fn)
+
+    def start(self):
+        self.loop.call_later(0, self.connect)
+
+    # -- the connection
+    def connect(self):
+        address = os.environ.get(self.env)
+        if not address:
+            log("%s: %s is not set; nothing is served there" % (self.label, self.env))
+            return
+        bus = None
+        try:
+            bus = Bus(address)
+            for rule in self.matches:
+                bus.call_wait(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", "s", [rule])
+            for name in self.names:
+                # Queued behind another owner (flags 0), the name comes to this connection when it leaves.
+                result = bus.call_wait(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RequestName", "su", [name, 0])
+                if result not in (1, 4):
+                    log("%s: %s has another owner; this daemon takes it when that one leaves" % (self.label, name))
+        except (OSError, ValueError, struct.error) as e:
+            if bus is not None:
+                bus.close()
+            if not self.warned:
+                self.warned = True
+                log("%s: %s; trying again every %d s" % (self.label, e, self.RETRY_S))
+            self.loop.call_later(self.RETRY_S, self.connect)
+            return
+        bus.sock.setblocking(False)
+        self.bus = bus
+        self.warned = False
+        self.loop.add_reader(bus.sock, self.readable)
+        log("%s: serving %s" % (self.label, ", ".join(self.names) or "no names"))
+        for fn in self.up_handlers:
+            self.loop.guarded(fn)
+
+    def lost(self, why):
+        if self.bus is None:
+            return
+        log("%s: the connection ended (%s); connecting again" % (self.label, why))
+        self.loop.remove(self.bus.sock)
+        self.bus.close()
+        self.bus = None
+        self.replies.clear()
+        for fn in self.down_handlers:
+            self.loop.guarded(fn)
+        self.loop.call_later(self.RETRY_S, self.connect)
+
+    def readable(self):
+        bus = self.bus
+        try:
+            data = bus.sock.recv(65536)
+        except BlockingIOError:
+            return
+        except OSError as e:
+            self.lost(str(e))
+            return
+        if not data:
+            self.lost("closed")
+            return
+        bus.buf += data
+        while self.bus is bus:
+            try:
+                got = Message.decode(bus.buf)
+            except (ValueError, struct.error, IndexError) as e:
+                self.lost("an unreadable message: %s" % e)
+                return
+            if not got:
+                break
+            m, used = got
+            bus.buf = bus.buf[used:]
+            self.loop.guarded(lambda: self.dispatch(m))
+
+    def dispatch(self, m):
+        if m.type == METHOD_CALL:
+            self.handle_call(m)
+        elif m.type in (METHOD_RETURN, ERROR):
+            callback = self.replies.pop(m.fields.get(F_REPLY_SERIAL), None)
+            if callback is None:
+                return
+            try:
+                values = m.args()
+            except (ValueError, struct.error, IndexError, RecursionError) as e:
+                values = ["org.freedesktop.DBus.Error.InvalidArgs", "an unreadable reply: %s" % e]
+                callback(False, values)
+                return
+            if m.type == ERROR:
+                callback(False, [m.fields.get(F_ERROR_NAME, ""), values[0] if values else ""])
+            else:
+                callback(True, values)
+        elif m.type == SIGNAL:
+            for fn in self.signal_handlers:
+                self.loop.guarded(lambda fn=fn: fn(m))
+
+    # -- calls in
+    def handle_call(self, m):
+        path = m.fields.get(F_PATH, "")
+        iface = m.fields.get(F_INTERFACE, "")
+        member = m.fields.get(F_MEMBER, "")
+        try:
+            self.call_in(m, path, iface, member)
+        except DBusError as e:
+            self.reply_error(m, e.name, e.text)
+        except (ValueError, struct.error, IndexError, RecursionError) as e:
+            log("%s: a call to %s %s.%s could not be read: %s" % (self.label, path, iface, member, e))
+            self.reply_error(m, "org.freedesktop.DBus.Error.InvalidArgs", str(e))
+        except Exception:
+            log("%s: %s %s.%s failed:\n%s" % (self.label, path, iface, member, traceback.format_exc()))
+            self.reply_error(m, "org.freedesktop.DBus.Error.Failed", "the call failed")
+
+    def call_in(self, m, path, iface, member):
+        if iface == PEER_IFACE:
+            if member == "Ping":
+                return self.reply(m)
+            if member == "GetMachineId":
+                try:
+                    with open("/etc/machine-id") as f:
+                        mid = f.read().strip()
+                except OSError:
+                    mid = "0" * 32
+                return self.reply(m, "s", [mid])
+        if member == "Introspect" and iface in (INTROSPECTABLE_IFACE, ""):
+            xml = self.introspect(path)
+            if xml is None:
+                raise DBusError("org.freedesktop.DBus.Error.UnknownObject", "no object at %s" % path)
+            return self.reply(m, "s", [xml])
+        interfaces = self.objects.get(path)
+        if interfaces is None:
+            raise DBusError("org.freedesktop.DBus.Error.UnknownObject", "no object at %s" % path)
+        if iface == PROPERTIES_IFACE:
+            return self.properties_call(m, interfaces, member)
+        if iface:
+            interface = interfaces.get(iface)
+            if interface is None:
+                raise DBusError("org.freedesktop.DBus.Error.UnknownInterface", "no interface %s at %s" % (iface, path))
+            method = interface.methods.get(member)
+        else:
+            method = next((i.methods[member] for i in interfaces.values() if member in i.methods), None)
+        if method is None:
+            raise DBusError("org.freedesktop.DBus.Error.UnknownMethod", "no method %s on %s" % (member, path))
+        if m.body_sig != method.in_sig:
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
+                            "%s takes (%s), not (%s)" % (member, method.in_sig, m.body_sig))
+        result = method.fn(m, *m.args())
+        out_types = split_signature(method.out_sig)
+        if len(out_types) == 1 and not isinstance(result, tuple):
+            result = (result,)
+        self.reply(m, method.out_sig, list(result) if out_types else [])
+
+    def properties_call(self, m, interfaces, member):
+        args = m.args()
+        if member == "Get" and m.body_sig == "ss":
+            prop = self.find_property(interfaces, args[0], args[1])
+            return self.reply(m, "v", [Variant(prop.sig, prop.get())])
+        if member == "GetAll" and m.body_sig == "s":
+            interface = interfaces.get(args[0])
+            if interface is None:
+                raise DBusError("org.freedesktop.DBus.Error.UnknownInterface", "no interface %s" % args[0])
+            values = {name: Variant(p.sig, p.get()) for name, p in interface.properties.items()}
+            return self.reply(m, "a{sv}", [values])
+        if member == "Set" and m.body_sig == "ssv":
+            prop = self.find_property(interfaces, args[0], args[1])
+            if prop.set is None:
+                raise DBusError("org.freedesktop.DBus.Error.PropertyReadOnly", "%s is read-only" % args[1])
+            if args[2].sig != prop.sig:
+                raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "%s is of type %s" % (args[1], prop.sig))
+            prop.set(args[2].value)
+            return self.reply(m)
+        raise DBusError("org.freedesktop.DBus.Error.UnknownMethod", "no method %s(%s) on %s" % (member, m.body_sig, PROPERTIES_IFACE))
+
+    @staticmethod
+    def find_property(interfaces, iface, name):
+        if iface:
+            interface = interfaces.get(iface)
+            candidates = [interface] if interface is not None else []
+        else:
+            candidates = list(interfaces.values())
+        for interface in candidates:
+            if name in interface.properties:
+                return interface.properties[name]
+        raise DBusError("org.freedesktop.DBus.Error.UnknownProperty", "no property %s.%s" % (iface, name))
+
+    def introspect(self, path):
+        interfaces = self.objects.get(path, {})
+        prefix = path.rstrip("/") + "/"
+        children = sorted({p[len(prefix):].split("/")[0] for p in self.objects if p.startswith(prefix) and p != path})
+        if not interfaces and not children:
+            return None
+        lines = [INTROSPECT_DOCTYPE, "<node>"]
+        if interfaces:
+            lines.append(STANDARD_INTERFACES)
+            lines += [i.xml() for i in interfaces.values()]
+        lines += ['  <node name="%s"/>' % c for c in children]
+        lines.append("</node>")
+        return "\n".join(lines) + "\n"
+
+    # -- messages out
+    def call(self, destination, path, interface, member, sig="", args=(), callback=None):
+        """A call whose answer goes to callback(ok, values) (values of an error: its name and text)."""
+        if self.bus is None:
+            if callback is not None:
+                callback(False, ["org.freedesktop.DBus.Error.Disconnected", "not connected"])
+            return
+        serial = self.bus.next_serial()
+        fields = {F_PATH: path, F_DESTINATION: destination, F_INTERFACE: interface, F_MEMBER: member}
+        if sig:
+            fields[F_SIGNATURE] = sig
+        flags = 0 if callback is not None else NO_REPLY_EXPECTED
+        if callback is not None:
+            self.replies[serial] = callback
+        self.write(Message(METHOD_CALL, serial, fields, sig, Marshal.body(sig, args) if sig else b"", flags))
+
+    def emit(self, path, interface, member, sig="", args=()):
+        if self.bus is None:
+            return
+        fields = {F_PATH: path, F_INTERFACE: interface, F_MEMBER: member}
+        if sig:
+            fields[F_SIGNATURE] = sig
+        self.write(Message(SIGNAL, self.bus.next_serial(), fields, sig, Marshal.body(sig, args) if sig else b"",
+                           NO_REPLY_EXPECTED))
+
+    def properties_changed(self, path, interface_name, names):
+        if not names:
+            return
+        interface = self.objects[path][interface_name]
+        changed = {n: Variant(interface.properties[n].sig, interface.properties[n].get()) for n in names}
+        self.emit(path, PROPERTIES_IFACE, "PropertiesChanged", "sa{sv}as", [interface_name, changed, []])
+
+    def reply(self, m, sig="", args=()):
+        if m.flags & NO_REPLY_EXPECTED or self.bus is None:
+            return
+        fields = {F_REPLY_SERIAL: m.serial}
+        if F_SENDER in m.fields:
+            fields[F_DESTINATION] = m.fields[F_SENDER]
+        if sig:
+            fields[F_SIGNATURE] = sig
+        self.write(Message(METHOD_RETURN, self.bus.next_serial(), fields, sig, Marshal.body(sig, args) if sig else b"",
+                           NO_REPLY_EXPECTED))
+
+    def reply_error(self, m, name, text):
+        if m.flags & NO_REPLY_EXPECTED or self.bus is None:
+            return
+        fields = {F_ERROR_NAME: name, F_REPLY_SERIAL: m.serial, F_SIGNATURE: "s"}
+        if F_SENDER in m.fields:
+            fields[F_DESTINATION] = m.fields[F_SENDER]
+        self.write(Message(ERROR, self.bus.next_serial(), fields, "s", Marshal.body("s", [text]), NO_REPLY_EXPECTED))
+
+    def write(self, message):
+        if self.bus is None:
+            return
+        data = message.encode()
+        try:
+            self.bus.sock.sendall(data)
+        except BlockingIOError:
+            # The bus is not reading: what this sends is small and waits in the kernel's buffer, so this
+            # only happens with a full one; drop the connection and connect again.
+            self.lost("the send buffer is full")
+        except OSError as e:
+            self.lost(str(e))
+
+
+# ------------------------------------------------------------------ the loop
+
+class Loop:
+    def __init__(self):
+        self.sel = selectors.DefaultSelector()
+        self.timers = []
+        self.seq = 0
+        # Threads hand work to the loop through post(): the deque, and a byte on the socket pair to wake it.
+        self.posted = collections.deque()
+        self.wake_r, self.wake_w = socket.socketpair()
+        self.wake_r.setblocking(False)
+        self.wake_w.setblocking(False)
+        self.add_reader(self.wake_r, self.drain)
+
+    def add_reader(self, fileobj, fn):
+        self.sel.register(fileobj, selectors.EVENT_READ, fn)
+
+    def remove(self, fileobj):
+        try:
+            self.sel.unregister(fileobj)
+        except (KeyError, ValueError):
+            pass
+
+    def call_later(self, delay, fn):
+        self.seq += 1
+        heapq.heappush(self.timers, (time.monotonic() + delay, self.seq, fn))
+
+    def post(self, fn):
+        """From any thread: fn runs in the loop."""
+        self.posted.append(fn)
+        try:
+            self.wake_w.send(b"x")
+        except (BlockingIOError, OSError):
+            pass  # a wake-up byte is already waiting
+
+    def drain(self):
+        try:
+            while self.wake_r.recv(4096):
+                pass
+        except BlockingIOError:
+            pass
+        while self.posted:
+            self.guarded(self.posted.popleft())
+
+    @staticmethod
+    def guarded(fn):
+        try:
+            fn()
+        except Exception:
+            log("an error in a handler (kept going):\n" + traceback.format_exc())
+
+    def run(self):
+        while True:
+            timeout = None
+            if self.timers:
+                timeout = max(0.0, self.timers[0][0] - time.monotonic())
+            for key, _ in self.sel.select(timeout):
+                self.guarded(key.data)
+            now = time.monotonic()
+            while self.timers and self.timers[0][0] <= now:
+                _, _, fn = heapq.heappop(self.timers)
+                self.guarded(fn)
+
+
+# ------------------------------------------------------------------ Android's state
+
+class State:
+    """/run/lujarch/android, read again when it changes (lujarch_linux replaces it whole); handlers get the
+    new state, {} while Android's quick settings are not lent."""
+
+    POLL_S = 0.5
+
+    def __init__(self, loop):
+        self.loop = loop
+        self.handlers = []
+        self.stamp = None
+        self.state = {}
+
+    def on_change(self, fn):
+        self.handlers.append(fn)
+
+    def start(self):
+        self.poll()
+
+    def poll(self):
+        self.loop.call_later(self.POLL_S, self.poll)
+        try:
+            st = os.stat(STATE)
+            stamp = (st.st_ino, st.st_mtime_ns, st.st_size)
+        except FileNotFoundError:
+            stamp = None
+        except OSError as e:
+            stamp = ("error", str(e))
+        if stamp == self.stamp:
+            return
+        self.stamp = stamp
+        state = {}
+        if stamp is not None:
+            try:
+                with open(STATE, encoding="utf-8") as f:
+                    state = json.load(f)
+            except (OSError, ValueError) as e:
+                log("%s: %s" % (STATE, e))
+                return
+            if not isinstance(state, dict):
+                state = {}
+        self.state = state
+        for fn in self.handlers:
+            self.loop.guarded(lambda fn=fn: fn(state))
+
+
+# ------------------------------------------------------------------ the brightness slider
+
+class Brightness:
+    """Plasma Mobile's brightness slider (BrightnessControl on the session bus) over Android's brightness."""
+
+    HOLD_S = 1.0  # after a move of the slider, Android's reports of the brightness wait for the hand to stop
+
+    def __init__(self, loop, conn):
+        self.loop = loop
+        self.conn = conn
+        self.value = 0
+        self.max = 65535
+        self.android = None
+        self.moved = 0.0
+        # The latest position, one request at a time and at most ten a second, so a slider drag ends on its
+        # last position whatever order the answers come in.
+        self.sender = Setter("brightness", pace=0.1)
+        conn.own(BRIGHTNESS_NAME)
+        # The drawer's slider watches this name to learn that the brightness is there.
+        conn.own(BRIGHTNESS_IFACE)
+        conn.export(BRIGHTNESS_PATH, Interface(BRIGHTNESS_IFACE, methods={
+            "setBrightness": Method("i", "", self.set_brightness, ["value"]),
+            "setBrightnessSilent": Method("i", "", self.set_brightness, ["value"]),
+            "brightness": Method("", "i", lambda m: self.value),
+            "brightnessMax": Method("", "i", lambda m: self.max),
+            "brightnessSteps": Method("", "i", lambda m: 100),
+        }, signals={"brightnessChanged": ("i", ["value"]), "brightnessMaxChanged": ("i", ["value"])}))
+
+    # -- what the app says about the brightness
+    def update(self, brightness):
+        if not isinstance(brightness, dict):
+            return
+        value, maximum = brightness.get("value"), brightness.get("max")
+        if isinstance(maximum, int) and maximum > 0 and maximum != self.max:
+            self.max = maximum
+            self.emit("brightnessMaxChanged", maximum)
+        if isinstance(value, int):
+            self.android = value
+            self.follow()
+
+    def follow(self):
+        """Takes Android's brightness unless the slider was moved a moment ago."""
+        if self.android is None or self.android == self.value:
+            return
+        if time.monotonic() - self.moved < self.HOLD_S:
+            self.loop.call_later(self.HOLD_S, self.follow)
+            return
+        self.value = self.android
+        self.emit("brightnessChanged", self.value)
+
+    def emit(self, member, value):
+        self.conn.emit(BRIGHTNESS_PATH, BRIGHTNESS_IFACE, member, "i", [value])
+
+    # -- Plasma's slider moves
+    def set_brightness(self, m, value):
+        value = max(0, min(self.max, value))
+        self.moved = time.monotonic()
+        if value != self.value:
+            self.value = value
+            self.emit("brightnessChanged", value)
+        self.sender.put(value)
+        self.loop.call_later(self.HOLD_S + 0.05, self.follow)
+
+
+
+
+# ------------------------------------------------------------------ vibration
+
+def vibration_value(pattern):
+    """feedbackd's pattern (amplitude 0.0-1.0, ms) as the bridge's `vibrate` value (amplitude 0-255:ms,...),
+    at most 128 steps and 30 s; None when nothing would move."""
+    steps = []
+    total = 0
+    for item in pattern[:128]:
+        amplitude, ms = item
+        if not isinstance(amplitude, float) or math.isnan(amplitude) or ms <= 0:
+            continue
+        ms = min(int(ms), 30000 - total)
+        if ms <= 0:
+            break
+        steps.append((int(round(max(0.0, min(1.0, amplitude)) * 255)), ms))
+        total += ms
+    if not any(a for a, _ in steps):
+        return None
+    return ",".join("%d:%d" % step for step in steps)
+
+
+class Feedback:
+    """feedbackd's D-Bus API on the session bus, played by Android's vibrator (touch usage, so Android's
+    touch feedback switch governs it): Haptic.Vibrate, which plasma-keyboard calls with one (1.0, ms) step
+    per key, and TriggerFeedback, which plays a click for the events of a touch."""
+
+    CLICK_EVENTS = ("button-pressed",)
+    END_NATURAL, END_EXPLICIT, END_NOT_FOUND = 0, 2, 0xFFFFFFFF  # LfbEventEndReason; NOT_FOUND is -1
+
+    def __init__(self, loop, conn):
+        self.loop = loop
+        self.conn = conn
+        self.vibrator = Vibrator()
+        self.next_id = 0
+        self.profile = "full"
+        conn.own(FEEDBACK_NAME)
+        conn.export(FEEDBACK_PATH, Interface(FEEDBACK_IFACE, methods={
+            "TriggerFeedback": Method("ssa{sv}i", "u", self.trigger, ["app_id", "event", "hints", "timeout"], ["id"]),
+            "EndFeedback": Method("u", "", self.end, ["id"]),
+        }, properties={
+            "Profile": Property("s", lambda: self.profile, self.set_profile),
+        }, signals={"FeedbackEnded": ("uu", ["id", "reason"])}))
+        conn.export(FEEDBACK_PATH, Interface(HAPTIC_IFACE, methods={
+            "Vibrate": Method("sa(du)", "b", self.vibrate, ["app_id", "pattern"], ["success"]),
+        }))
+
+    def vibrate(self, m, app_id, pattern):
+        value = vibration_value(pattern)
+        if value is not None:
+            self.vibrator.put(value)
+        return True
+
+    def trigger(self, m, app_id, event, hints, timeout):
+        self.next_id = self.next_id % 0xFFFFFFFF + 1
+        event_id = self.next_id
+        if event in self.CLICK_EVENTS and self.profile != "silent":
+            self.vibrator.put("255:10")
+            reason = self.END_NATURAL
+        else:
+            reason = self.END_NOT_FOUND
+        # After the reply, which carries the id the signal names.
+        self.loop.call_later(0, lambda: self.conn.emit(FEEDBACK_PATH, FEEDBACK_IFACE, "FeedbackEnded", "uu",
+                                                       [event_id, reason]))
+        return event_id
+
+    def end(self, m, event_id):
+        return None  # every event has ended already
+
+    def set_profile(self, value):
+        if value not in ("full", "quiet", "silent"):
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs", "the profile is full, quiet or silent")
+        if value != self.profile:
+            self.profile = value
+            self.loop.call_later(0, lambda: self.conn.properties_changed(FEEDBACK_PATH, FEEDBACK_IFACE, ["Profile"]))
+
+
+
+
+# ------------------------------------------------------------------ location
+
+def nmea_checksum(body):
+    x = 0
+    for ch in body.encode("ascii"):
+        x ^= ch
+    return "%02X" % x
+
+
+def nmea_sentence(fields):
+    body = ",".join(fields)
+    return "$%s*%s\r\n" % (body, nmea_checksum(body))
+
+
+def nmea_coordinate(value, latitude):
+    """ddmm.mmmmmm / dddmm.mmmmmm and the hemisphere; minutes rounded in whole millionths, so 59.9999999
+    carries into the degrees instead of printing as 60."""
+    hemisphere = ("N" if value >= 0 else "S") if latitude else ("E" if value >= 0 else "W")
+    micro = int(round(abs(value) * 60 * 1000000))
+    degrees, rest = divmod(micro, 60 * 1000000)
+    return "%0*d%09.6f" % (2 if latitude else 3, degrees, rest / 1000000.0), hemisphere
+
+
+def nmea_hdop(accuracy):
+    """GeoClue turns HDOP into metres by steps (1 -> 0 m, 2 -> 1, 5 -> 3, 10 -> 50, 20 -> 100, more -> 300);
+    the step nearest Android's accuracy on a log scale."""
+    if accuracy is None:
+        return "10.0"
+    for limit, hdop in ((0.5, "1.0"), (1.7, "2.0"), (12.0, "5.0"), (70.0, "10.0"), (170.0, "20.0")):
+        if accuracy <= limit:
+            return hdop
+    return "50.0"
+
+
+def nmea_sentences(fix):
+    """$GPGGA and $GPRMC for one fix, as GeoClue's NMEA source reads them (it combines the two)."""
+    when = datetime.datetime.fromtimestamp(fix["time"] / 1000.0, datetime.timezone.utc)
+    hms = "%02d%02d%02d.%02d" % (when.hour, when.minute, when.second, when.microsecond // 10000)
+    lat, ns = nmea_coordinate(fix["lat"], True)
+    lon, ew = nmea_coordinate(fix["lon"], False)
+    alt = "%.1f" % fix["alt"] if fix["alt"] is not None else ""
+    gga = nmea_sentence(["GPGGA", hms, lat, ns, lon, ew, "1", "", nmea_hdop(fix["acc"]), alt, "M" if alt else "",
+                         "", "", "", ""])
+    knots = "%.2f" % (fix["speed"] / 0.514444) if fix["speed"] is not None else ""
+    course = "%.1f" % fix["bearing"] if fix["bearing"] is not None else ""
+    rmc = nmea_sentence(["GPRMC", hms, "A", lat, ns, lon, ew, knots, course, when.strftime("%d%m%y"), "", "", "A"])
+    return (gga + rmc).encode("ascii")
+
+
+def location_fix(o):
+    """The state's `location` as a fix, or None when it is not one."""
+    def number(key, low=None, high=None):
+        v = o.get(key)
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+            return None
+        if (low is not None and v < low) or (high is not None and v > high):
+            return None
+        return float(v)
+
+    lat, lon = number("lat", -90, 90), number("lon", -180, 180)
+    if lat is None or lon is None:
+        return None
+    when = number("time", 1)
+    return {"lat": lat, "lon": lon, "alt": number("alt"), "acc": number("acc", 0), "speed": number("speed", 0),
+            "bearing": number("bearing") % 360.0 if number("bearing") is not None else None,
+            "time": when if when is not None else time.time() * 1000.0}
+
+
+
+class Location:
+    """Android's location for GeoClue, which runs on the desktop's system bus (the session starts it).
+
+    - An agent for the desktop's user (/org/freedesktop/GeoClue2/Agent): GeoClue hands no client a location
+      for a user without one. The user's own programs are allowed at once; a Flatpak app that GeoClue asks
+      about is allowed too, since the location portal has asked the owner already.
+    - Demand: GeoClue's Manager.InUse (a client is started), or GeoClue connected to the NMEA socket (its NMEA
+      source runs). While there is demand the daemon reads /run/lujarch/location, so Android's location runs
+      (Android's own permission dialog, privacy indicator and location switch apply); it closes it when the
+      demand ends.
+    - The fixes: $GPGGA and $GPRMC on the NMEA socket for GeoClue's NMEA source (exact requests), and
+      /etc/geolocation for its static source, which answers requests at city level too (GeoClue starts only
+      sources no more precise than a request; Firefox asks at city level unless a page wants high accuracy).
+      /etc/geolocation holds a location only while there is demand."""
+
+    STATIC_EVERY_S = 2.0  # GeoClue reads the file at most every 2.5 s
+    REOPEN_S = 2.0
+
+    def __init__(self, loop, conn):
+        self.loop = loop
+        self.conn = conn
+        self.in_use = False
+        self.clients = []
+        self.demand = False
+        self.fix = None
+        self.error = None
+        self.fifo = None
+        self.buf = b""
+        self.missing = False
+        self.static_ok = True
+        self.static_has_fix = self.static_holds_fix()  # one left from an earlier session is cleared below
+        self.static_last = 0.0
+        self.static_timer = False
+        self.geoclue = None
+        conn.export(GEOCLUE_AGENT_PATH, Interface(GEOCLUE_AGENT_IFACE, methods={
+            "AuthorizeApp": Method("su", "bu", self.authorize, ["desktop_id", "req_accuracy_level"],
+                                   ["authorized", "allowed_accuracy_level"]),
+        }, properties={
+            "MaxAccuracyLevel": Property("u", lambda: GCLUE_ACCURACY_EXACT),
+        }))
+        conn.add_match(NAME_OWNER_CHANGED)
+        conn.add_match("type='signal',interface='%s',member='PropertiesChanged',path='%s'"
+                       % (PROPERTIES_IFACE, GEOCLUE_MANAGER_PATH))
+        conn.on_signal(self.signal)
+        conn.on_up(self.bus_up)
+        conn.on_down(lambda: self.geoclue_gone("the bus connection ended"))
+        self.server = None
+        self.listen()
+        self.clear_static()
+
+    # -- the NMEA socket
+    def listen(self):
+        try:
+            os.makedirs(DIR, mode=0o700, exist_ok=True)
+            try:
+                os.unlink(NMEA_SOCKET)
+            except FileNotFoundError:
+                pass
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.bind(NMEA_SOCKET)
+            os.chmod(NMEA_SOCKET, 0o600)  # GeoClue runs as the desktop's user
+            s.listen(4)
+            s.setblocking(False)
+        except OSError as e:
+            log("the NMEA socket %s: %s; GeoClue gets no exact location" % (NMEA_SOCKET, e))
+            return
+        self.server = s
+        self.loop.add_reader(s, self.accept)
+
+    def accept(self):
+        try:
+            c, _ = self.server.accept()
+        except BlockingIOError:
+            return
+        c.setblocking(False)
+        self.clients.append(c)
+        self.loop.add_reader(c, lambda: self.client_readable(c))
+        log("GeoClue reads the NMEA socket")
+        self.update_demand()
+        if self.fix is not None:
+            self.send_nmea(nmea_sentences(self.fix), [c])
+
+    def client_readable(self, c):
+        try:
+            data = c.recv(4096)
+        except BlockingIOError:
+            return
+        except OSError:
+            data = b""
+        if not data:
+            self.drop_client(c)
+
+    def drop_client(self, c):
+        if c not in self.clients:
+            return
+        self.loop.remove(c)
+        self.clients.remove(c)
+        try:
+            c.close()
+        except OSError as e:
+            log("the NMEA socket: %s" % e)
+        log("GeoClue left the NMEA socket")
+        self.update_demand()
+
+    def send_nmea(self, data, clients=None):
+        for c in list(self.clients if clients is None else clients):
+            try:
+                c.send(data)
+            except BlockingIOError:
+                pass  # GeoClue is behind: this fix is skipped, the next one comes
+            except OSError:
+                self.drop_client(c)
+
+    # -- GeoClue on the bus
+    def bus_up(self):
+        self.conn.call(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "GetNameOwner", "s", [GEOCLUE_NAME],
+                       callback=lambda ok, values: ok and self.geoclue_here(values[0]))
+
+    def geoclue_here(self, owner):
+        if owner == self.geoclue:
+            return
+        self.geoclue = owner
+        # Asynchronous: GeoClue answers AddAgent only after it has read this agent's properties.
+        self.conn.call(GEOCLUE_NAME, GEOCLUE_MANAGER_PATH, GEOCLUE_MANAGER_IFACE, "AddAgent", "s", [GEOCLUE_AGENT_ID],
+                       callback=self.agent_added)
+        self.read_in_use()
+
+    def agent_added(self, ok, values):
+        if ok:
+            log("GeoClue: the location agent is registered")
+        else:
+            log("GeoClue refused the location agent (%s: %s); is /etc/geoclue/conf.d/90-lujarch.conf there?"
+                % (values[0], values[1]))
+
+    def read_in_use(self):
+        self.conn.call(GEOCLUE_NAME, GEOCLUE_MANAGER_PATH, PROPERTIES_IFACE, "Get", "ss",
+                       [GEOCLUE_MANAGER_IFACE, "InUse"], callback=self.got_in_use)
+
+    def got_in_use(self, ok, values):
+        if ok and isinstance(values[0], Variant):
+            self.set_in_use(bool(values[0].value))
+
+    def geoclue_gone(self, why):
+        if self.geoclue is not None:
+            log("GeoClue left (%s)" % why)
+        self.geoclue = None
+        self.set_in_use(False)
+
+    def signal(self, m):
+        member = m.fields.get(F_MEMBER)
+        if member == "NameOwnerChanged" and m.body_sig == "sss":
+            name, _, new_owner = m.args()
+            if name == GEOCLUE_NAME:
+                if new_owner:
+                    self.geoclue_here(new_owner)
+                else:
+                    self.geoclue_gone("its name has no owner")
+        elif member == "PropertiesChanged" and m.fields.get(F_PATH) == GEOCLUE_MANAGER_PATH and m.body_sig == "sa{sv}as":
+            iface, changed, invalidated = m.args()
+            if iface != GEOCLUE_MANAGER_IFACE:
+                return
+            if "InUse" in changed and isinstance(changed["InUse"], Variant):
+                self.set_in_use(bool(changed["InUse"].value))
+            elif "InUse" in invalidated:
+                self.read_in_use()
+
+    def authorize(self, m, desktop_id, level):
+        return True, level
+
+    # -- demand
+    def set_in_use(self, in_use):
+        if in_use != self.in_use:
+            self.in_use = in_use
+            log("GeoClue %s" % ("has a client" if in_use else "has no client"))
+            self.update_demand()
+
+    def update_demand(self):
+        demand = self.in_use or bool(self.clients)
+        if demand == self.demand:
+            return
+        self.demand = demand
+        if demand:
+            self.open_fifo()
+        else:
+            self.close_fifo()
+            self.fix = None
+            self.error = None
+            self.clear_static()
+
+    # -- /run/lujarch/location
+    def open_fifo(self):
+        if self.fifo is not None or not self.demand:
+            return
+        try:
+            fd = os.open(LOCATION_FIFO, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        except OSError as e:
+            if not self.missing:
+                self.missing = True
+                log("%s: %s; Linux gets no location until Location is lent" % (LOCATION_FIFO, e.strerror or e))
+            self.loop.call_later(self.REOPEN_S, self.open_fifo)
+            return
+        self.missing = False
+        self.fifo = fd
+        self.buf = b""
+        self.loop.add_reader(fd, self.readable)
+        log("reading Android's location")
+
+    def close_fifo(self):
+        if self.fifo is None:
+            return
+        self.loop.remove(self.fifo)
+        os.close(self.fifo)
+        self.fifo = None
+        log("Android's location no longer read")
+
+    def readable(self):
+        try:
+            data = os.read(self.fifo, 65536)
+        except BlockingIOError:
+            return
+        except OSError as e:
+            data = b""
+            log("%s: %s" % (LOCATION_FIFO, e))
+        if not data:
+            # lujarch_linux took the location back: reading again once it is lent again.
+            self.close_fifo()
+            self.loop.call_later(self.REOPEN_S, self.open_fifo)
+            return
+        self.buf += data
+        while b"\n" in self.buf:
+            line, self.buf = self.buf.split(b"\n", 1)
+            try:
+                o = json.loads(line)
+            except ValueError:
+                log("not JSON in %s: %r" % (LOCATION_FIFO, line[:80]))
+                continue
+            self.update(o)
+        if len(self.buf) > 65536:
+            self.buf = b""
+
+    def update(self, o):
+        if not isinstance(o, dict) or not self.demand:
+            return
+        if "error" in o:
+            if o["error"] != self.error:
+                self.error = o["error"]
+                log("Android gives no location: %s" % self.error)
+            self.fix = None
+            self.clear_static()
+            return
+        fix = location_fix(o)
+        if fix is None or fix == self.fix:
+            return
+        self.fix = fix
+        self.error = None
+        self.send_nmea(nmea_sentences(fix))
+        self.write_static()
+
+    # -- /etc/geolocation, GeoClue's static source
+    @staticmethod
+    def static_holds_fix():
+        try:
+            with open(GEOLOCATION, encoding="ascii", errors="replace") as f:
+                return any(line.split("#", 1)[0].strip() for line in f)
+        except OSError:
+            return False
+
+    def write_static(self):
+        if not self.static_ok or self.static_timer:
+            return
+        wait = self.static_last + self.STATIC_EVERY_S - time.monotonic()
+        if wait > 0:
+            self.static_timer = True
+            self.loop.call_later(wait, self.static_due)
+            return
+        fix = self.fix
+        if fix is None:
+            return
+        # GeoClue's own sentinel for an unknown altitude (-G_MAXDOUBLE)
+        alt = repr(fix["alt"]) if fix["alt"] is not None else "-1.7976931348623157e+308"
+        acc = repr(fix["acc"]) if fix["acc"] is not None else "50.0"
+        self.put_static("# Android's location, while a Linux program uses it\n%r\n%r\n%s\n%s\n"
+                        % (fix["lat"], fix["lon"], alt, acc), True)
+
+    def static_due(self):
+        self.static_timer = False
+        if self.demand and self.fix is not None:
+            self.write_static()
+
+    def clear_static(self):
+        if self.static_has_fix:
+            # No location in it: GeoClue's static source then has none.
+            self.put_static("# no location: no Linux program uses Android's location\n", False)
+
+    def put_static(self, text, has_fix):
+        if not self.static_ok:
+            return
+        try:
+            # In place: GeoClue watches this path, and the desktop's user may write the file, not /etc.
+            with open(GEOLOCATION, "r+" if os.path.exists(GEOLOCATION) else "w", encoding="ascii") as f:
+                f.seek(0)
+                f.write(text)
+                f.truncate()
+        except OSError as e:
+            self.static_ok = False
+            log("%s: %s; GeoClue answers city-level requests with no location (Install the desktop makes it)"
+                % (GEOLOCATION, e.strerror or e))
+            return
+        self.static_has_fix = has_fix
+        self.static_last = time.monotonic()
+
+
+# ------------------------------------------------------------------ the battery
+
+class Battery:
+    """UPower's API on the desktop's system bus over Android's battery: the status bar's indicator and the
+    battery tile read it through Solid. One battery and one charger; Android decides what a low battery
+    does, so nothing here acts on it."""
+
+    STATE_CHARGING, STATE_DISCHARGING, STATE_FULL = 1, 2, 4
+    TYPE_LINE_POWER, TYPE_BATTERY = 1, 2
+
+    def __init__(self, loop, conn):
+        self.conn = conn
+        self.known = False
+        self.percent = 0.0
+        self.charging = False
+        self.plugged = False
+        self.updated = int(time.time())
+        conn.own(UPOWER_NAME)
+        conn.export(UPOWER_PATH, Interface(UPOWER_IFACE, methods={
+            "EnumerateDevices": Method("", "ao", lambda m: [UPOWER_LINE, UPOWER_BATTERY] if self.known else []),
+            "GetDisplayDevice": Method("", "o", lambda m: UPOWER_DISPLAY),
+            "GetCriticalAction": Method("", "s", lambda m: "Ignore"),
+        }, properties={
+            "DaemonVersion": Property("s", lambda: "1.90.0"),
+            "OnBattery": Property("b", lambda: self.known and not self.plugged),
+            "LidIsClosed": Property("b", lambda: False),
+            "LidIsPresent": Property("b", lambda: False),
+        }, signals={"DeviceAdded": ("o", ["device"]), "DeviceRemoved": ("o", ["device"])}))
+        for path in (UPOWER_BATTERY, UPOWER_DISPLAY):
+            conn.export(path, self.device(path == UPOWER_DISPLAY))
+        conn.export(UPOWER_LINE, Interface(UPOWER_DEVICE_IFACE, methods=self.device_methods(), properties={
+            "NativePath": Property("s", lambda: "usb"),
+            "Type": Property("u", lambda: self.TYPE_LINE_POWER),
+            "PowerSupply": Property("b", lambda: True),
+            "Online": Property("b", lambda: self.plugged),
+            "UpdateTime": Property("t", lambda: self.updated),
+            "IsPresent": Property("b", lambda: self.known),
+        }))
+
+    def device_methods(self):
+        return {
+            "Refresh": Method("", "", lambda m: None),
+            "GetHistory": Method("suu", "a(udu)", lambda m, kind, span, resolution: []),
+            "GetStatistics": Method("s", "a(dd)", lambda m, kind: []),
+        }
+
+    def state(self):
+        if not self.known:
+            return 0
+        if self.plugged and self.percent >= 100:
+            return self.STATE_FULL
+        return self.STATE_CHARGING if self.charging else self.STATE_DISCHARGING
+
+    def icon(self):
+        if not self.known:
+            return "battery-missing-symbolic"
+        level = "full" if self.percent > 90 else "good" if self.percent > 50 else "low" if self.percent > 15 \
+            else "caution" if self.percent > 5 else "empty"
+        return "battery-%s%s-symbolic" % (level, "-charging" if self.charging else "")
+
+    def device(self, display):
+        return Interface(UPOWER_DEVICE_IFACE, methods=self.device_methods(), properties={
+            "NativePath": Property("s", lambda: "" if display else "battery"),
+            "Vendor": Property("s", lambda: ""),
+            "Model": Property("s", lambda: ""),
+            "Serial": Property("s", lambda: ""),
+            "UpdateTime": Property("t", lambda: self.updated),
+            "Type": Property("u", lambda: self.TYPE_BATTERY),
+            "PowerSupply": Property("b", lambda: True),
+            "HasHistory": Property("b", lambda: False),
+            "HasStatistics": Property("b", lambda: False),
+            "Online": Property("b", lambda: False),
+            "Energy": Property("d", lambda: self.percent),
+            "EnergyEmpty": Property("d", lambda: 0.0),
+            "EnergyFull": Property("d", lambda: 100.0),
+            "EnergyFullDesign": Property("d", lambda: 100.0),
+            "EnergyRate": Property("d", lambda: 0.0),
+            "Voltage": Property("d", lambda: 0.0),
+            "ChargeCycles": Property("i", lambda: -1),
+            "Luminosity": Property("d", lambda: 0.0),
+            "TimeToEmpty": Property("x", lambda: 0),
+            "TimeToFull": Property("x", lambda: 0),
+            "Percentage": Property("d", lambda: self.percent),
+            "Temperature": Property("d", lambda: 0.0),
+            "IsPresent": Property("b", lambda: self.known),
+            "State": Property("u", self.state),
+            "IsRechargeable": Property("b", lambda: True),
+            "Capacity": Property("d", lambda: 100.0),
+            "Technology": Property("u", lambda: 1),  # lithium ion
+            "WarningLevel": Property("u", lambda: 1),  # none: Android warns
+            "BatteryLevel": Property("u", lambda: 1),  # none: the percentage is the level
+            "IconName": Property("s", self.icon),
+        })
+
+    def update(self, state):
+        battery = state.get("battery")
+        known = isinstance(battery, dict) and isinstance(battery.get("percent"), int)
+        percent = float(battery["percent"]) if known else 0.0
+        charging = bool(battery.get("charging")) if known else False
+        plugged = bool(battery.get("plugged")) if known else False
+        if (known, percent, charging, plugged) == (self.known, self.percent, self.charging, self.plugged):
+            return
+        appeared = known != self.known
+        self.known, self.percent, self.charging, self.plugged = known, percent, charging, plugged
+        self.updated = int(time.time())
+        if appeared:
+            for path in (UPOWER_LINE, UPOWER_BATTERY):
+                self.conn.emit(UPOWER_PATH, UPOWER_IFACE, "DeviceAdded" if known else "DeviceRemoved", "o", [path])
+        self.conn.properties_changed(UPOWER_PATH, UPOWER_IFACE, ["OnBattery"])
+        names = ["Percentage", "Energy", "State", "IsPresent", "IconName", "UpdateTime"]
+        for path in (UPOWER_BATTERY, UPOWER_DISPLAY):
+            self.conn.properties_changed(path, UPOWER_DEVICE_IFACE, names)
+        self.conn.properties_changed(UPOWER_LINE, UPOWER_DEVICE_IFACE, ["Online", "IsPresent", "UpdateTime"])
+
+
+# ------------------------------------------------------------------ the daemon
+
+def daemon():
+    loop = Loop()
+    state = State(loop)
+    session = Connection(loop, "the session bus", "DBUS_SESSION_BUS_ADDRESS")
+    system = Connection(loop, "the desktop's system bus", "DBUS_SYSTEM_BUS_ADDRESS")
+    brightness = Brightness(loop, session)
+    Feedback(loop, session)
+    battery = Battery(loop, system)
+    Location(loop, system)
+    state.on_change(lambda s: brightness.update(s.get("brightness")))
+    state.on_change(battery.update)
+    session.start()
+    system.start()
+    state.start()
+    log("started")
+    loop.run()
+
+
+# ------------------------------------------------------------------ the command line
+
+def command_set(key, value):
+    if key == "brightness":
+        valid = value.isdigit() and int(value) <= 65535
+    else:
+        valid = key in SWITCHES and value in ("1", "0")
+    if not valid:
+        print("android: set <%s> 1|0, or set brightness <0-65535>" % "|".join(SWITCHES), file=sys.stderr)
+        return 2
+    error = fifo_line(SET_FIFO, "%s %s" % (key, value))
+    if error is not None:
+        print("android: %s not set (%s): Android's quick settings are not lent" % (key, error), file=sys.stderr)
+        return 1
+    return 0
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == "daemon":
+        daemon()
+        return 0
+    if len(argv) == 4 and argv[1] == "set":
+        return command_set(argv[2], argv[3])
+    print(__doc__.split("\n\n")[1], file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

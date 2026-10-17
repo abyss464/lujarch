@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+"""What the Linux desktop shows of Lujarch's, in English, Simplified Chinese and Japanese (the
+strings.xml files beside this one, as Android's resources are kept).
+
+  res text NAME          the string in LANG's language
+  res desktop IN OUT     a .desktop file whose values @name@ become the string in every language
+  res json IN OUT        a KPackage metadata.json whose "Name": "@name@" becomes the string in every
+                         language
+"""
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+LANGUAGES = (("", "values"), ("zh_CN", "values-zh-rCN"), ("ja", "values-ja"))
+STRING = re.compile(r'<string name="([a-z0-9_]+)">(.*?)</string>', re.S)
+PLACEHOLDER = re.compile(r"@([a-z0-9_]+)@")
+
+
+def load(directory):
+    with open(os.path.join(HERE, directory, "strings.xml"), encoding="utf-8") as f:
+        text = f.read()
+    out = {}
+    for name, value in STRING.findall(text):
+        value = value.replace("\\'", "'").replace('\\"', '"')
+        out[name] = value.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    return out
+
+
+def catalogs():
+    return [(locale, load(directory)) for locale, directory in LANGUAGES]
+
+
+def language():
+    lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
+    if lang.startswith("zh"):
+        return "zh_CN"
+    if lang.startswith("ja"):
+        return "ja"
+    return ""
+
+
+def text(name):
+    by_locale = dict(catalogs())
+    value = by_locale[language()].get(name, by_locale[""].get(name))
+    if value is None:
+        raise SystemExit("res: no string %s" % name)
+    return value
+
+
+def desktop(src, out):
+    cats = catalogs()
+    lines = []
+    with open(src, encoding="utf-8") as f:
+        for line in f.read().split("\n"):
+            m = re.fullmatch(r"([A-Za-z]+)=@([a-z0-9_]+)@", line)
+            if not m:
+                lines.append(line)
+                continue
+            key, name = m.groups()
+            for locale, cat in cats:
+                if name not in cat:
+                    raise SystemExit("res: no string %s in %s" % (name, locale or "English"))
+                lines.append("%s%s=%s" % (key, "[%s]" % locale if locale else "", cat[name]))
+    write(out, "\n".join(lines))
+
+
+def metadata(src, out):
+    cats = catalogs()
+    with open(src, encoding="utf-8") as f:
+        meta = json.load(f)
+    plugin = meta["KPlugin"]
+    for key in list(plugin):
+        m = PLACEHOLDER.fullmatch(str(plugin[key]))
+        if not m:
+            continue
+        for locale, cat in cats:
+            plugin["%s[%s]" % (key, locale) if locale else key] = cat[m.group(1)]
+    write(out, json.dumps(meta, ensure_ascii=False, indent=4) + "\n")
+
+
+def write(path, data):
+    tmp = path + ".new"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(data)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == "text":
+        print(text(argv[2]))
+    elif len(argv) == 4 and argv[1] == "desktop":
+        desktop(argv[2], argv[3])
+    elif len(argv) == 4 and argv[1] == "json":
+        metadata(argv[2], argv[3])
+    else:
+        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

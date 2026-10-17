@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=@lnx_wine_settings@
+Comment=@lnx_wine_settings_comment@
+Exec=wine winecfg
+Icon=lujarch-wine-settings
+Categories=Settings;
+Keywords=wine;windows;winecfg;

@@ -92,7 +92,7 @@
     <string name="lnx_install_desktop">Install the desktop</string>
     <string name="lnx_install_desktop_none">Plasma Mobile, with KWin and Mesa built in Linux for the phone\'s screen</string>
     <string name="lnx_install_desktop_done">Installed. Installing again updates it and builds what changed.</string>
-    <string name="lnx_install_desktop_message">The install runs as root in Linux while Linux runs. It updates Linux\'s packages, installs Plasma Mobile and builds Mesa and KWin, which takes long; the builds use only the phone\'s small cores.</string>
+    <string name="lnx_install_desktop_message">The install runs as root in Linux while Linux runs. It updates Linux\'s packages, installs Plasma Mobile and builds Mesa, KWin and Plasma Mobile\'s landscape layout, which takes long; the builds use only the phone\'s small cores.</string>
     <string name="lnx_install_desktop_run">Install</string>
     <string name="lnx_lend">Lent to Linux</string>
     <string name="lnx_lend_clipboard">Shared clipboard</string>
@@ -109,6 +109,16 @@
     <string name="lnx_lend_ir_summary">Transmitting through /run/lujarch/ir</string>
     <string name="lnx_lend_nfc">NFC card reading</string>
     <string name="lnx_lend_nfc_summary">Cards held to the phone while the terminal or the desktop is on screen</string>
+    <string name="lnx_lend_microphone">Microphone</string>
+    <string name="lnx_lend_microphone_summary">Linux\'s programs record with the phone\'s microphone while the terminal or the desktop is on screen</string>
+    <string name="lnx_lend_camera">Camera</string>
+    <string name="lnx_lend_camera_summary">The phone\'s cameras as /dev/video40 and /dev/video41 while the terminal or the desktop is on screen</string>
+    <string name="lnx_lend_location">Location</string>
+    <string name="lnx_lend_location_summary">The phone\'s location for GeoClue while the terminal or the desktop is on screen</string>
+    <string name="lnx_lend_vibration">Vibration</string>
+    <string name="lnx_lend_vibration_summary">The desktop\'s keyboard and programs vibrate the phone as touch feedback</string>
+    <string name="lnx_lend_quick_settings">Android\'s quick settings</string>
+    <string name="lnx_lend_quick_settings_summary">The desktop\'s quick settings and status bar show and switch Wi-Fi, mobile data, Bluetooth, airplane mode, hotspot, flashlight, auto-rotate, Do Not Disturb, the screen staying on and the brightness</string>
     <string name="lnx_services">Services</string>
     <string name="lnx_remote">Remote access</string>
     <string name="lnx_footer">Arch Linux ARM runs beside Android on the same kernel and network, as a user of its own. Its sessions open in the Terminal app.</string>
@@ -180,5 +190,5 @@
     <string name="lnx_search_desktop_keywords">desktop, display, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">services, daemons</string>
     <string name="lnx_search_remote_keywords">remote access, relay, SSH, frp</string>
-    <string name="lnx_search_lend_keywords">clipboard, notifications, sensors, fingerprint, infrared, USB, NFC</string>
+    <string name="lnx_search_lend_keywords">clipboard, notifications, sensors, fingerprint, infrared, microphone, camera, location, vibration, quick settings, USB, NFC, GeoClue, PipeWire</string>
 </resources>

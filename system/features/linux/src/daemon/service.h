@@ -86,6 +86,9 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     ndk::ScopedAStatus setNfcCard(const std::optional<std::string>& card) override;
     ndk::ScopedAStatus answerNfc(int32_t id, const std::vector<uint8_t>& response,
                                  const std::optional<std::string>& error) override;
+    ndk::ScopedAStatus setAndroidState(const aidl::org::lujarch::linux::AndroidState& state) override;
+    ndk::ScopedAStatus openStream(const std::string& stream, ndk::ScopedFileDescriptor* fd) override;
+    ndk::ScopedAStatus setLocation(const aidl::org::lujarch::linux::LinuxLocation& location) override;
 
   private:
     struct Listener {

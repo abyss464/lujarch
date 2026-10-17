@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Mobile data quick setting: Android's own switch",
+        "Icon": "network-modem",
+        "Id": "org.kde.plasma.quicksetting.mobiledata",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_mobile_data@"
+    }
+}

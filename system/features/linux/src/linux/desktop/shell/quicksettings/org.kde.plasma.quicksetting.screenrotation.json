@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Auto-rotate quick setting: Android's own switch",
+        "Icon": "rotation-allowed",
+        "Id": "org.kde.plasma.quicksetting.screenrotation",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_auto_rotate@"
+    }
+}

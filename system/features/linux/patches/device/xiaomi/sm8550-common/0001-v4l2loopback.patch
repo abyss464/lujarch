@@ -1,0 +1,16 @@
+diff --git a/init/ueventd-odm.rc b/init/ueventd-odm.rc
+index 05ca11c20cae47d23260e2b4cef79ddd059647dc..a33112a38c51dba7ecdfaec1c55bdbafb17dadcc 100644
+--- a/init/ueventd-odm.rc
++++ b/init/ueventd-odm.rc
+@@ -75,3 +75,11 @@ subsystem mi_display
+ 
+ # xiaomi ntag
+ /dev/ntag5-nci            0660   nfc        nfc
++
++# Lujarch: the cameras of the Linux development environment (v4l2loopback,
++# video_nr=40,41 in device/xiaomi/fuxi modules.options) belong to Linux's
++# user, uid and gid 5200, alone. ueventd takes the last matching rule, and
++# this file is parsed after /vendor/etc/ueventd.rc, whose /dev/video* rule
++# (system:camera) these two replace.
++/dev/video40              0660   oem_5200   oem_5200
++/dev/video41              0660   oem_5200   oem_5200

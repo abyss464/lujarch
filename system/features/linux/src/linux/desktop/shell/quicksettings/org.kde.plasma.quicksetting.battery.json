@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Battery quick setting: Android's battery",
+        "Icon": "battery-full",
+        "Id": "org.kde.plasma.quicksetting.battery",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_battery@"
+    }
+}

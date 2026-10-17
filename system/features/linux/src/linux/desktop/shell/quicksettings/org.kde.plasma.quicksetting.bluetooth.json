@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Bluetooth quick setting: Android's own switch",
+        "Icon": "network-bluetooth",
+        "Id": "org.kde.plasma.quicksetting.bluetooth",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_bluetooth@"
+    }
+}

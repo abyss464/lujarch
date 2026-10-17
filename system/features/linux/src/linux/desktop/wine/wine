@@ -1,0 +1,103 @@
+#!/bin/sh
+# Lujarch's wine for Windows programs on the desktop (LNX-6): Proton's /usr/bin/wine with the
+# desktop's defaults. The desktop's session puts its directory first in PATH, so Dolphin
+# (wine.desktop runs "wine start /unix %f"), Konsole, winetricks and the menu entries Wine writes
+# for installed programs all come through here.
+# - Non-Unicode programs get the Chinese code page (GBK); Wine's own language still follows LANG. A
+#   caller that sets LC_ALL or LC_CTYPE keeps it (LC_ALL=ja_JP.UTF-8 for Japanese programs).
+# - The first run in a prefix applies Lujarch's settings (setup); from then on they live in the
+#   prefix, where winecfg and regedit change them.
+here=/usr/local/lib/lujarch-wine
+if [ ! -x /usr/bin/wine ]; then
+    echo "wine: Linux has no Proton's Wine (/usr/bin/wine)" >&2
+    exit 127
+fi
+if [ -z "${LC_ALL}${LC_CTYPE}" ]; then
+    export LC_CTYPE=zh_CN.UTF-8
+fi
+# FEX (the x86 emulator) takes Proton's defaults, as Proton's launcher sets them; a caller's own wins.
+export FEX_APP_CONFIG_LOCATION="${FEX_APP_CONFIG_LOCATION:-$here/fex-emu/}"
+# Proton's winegstreamer converts video colours with GStreamer GL whenever it can open a GL display;
+# on Xwayland without DRI3 that fails and the movie goes to Proton's media converter, which works
+# only under Steam. EGL without a window runs on Turnip through Zink wherever the program draws.
+export GST_GL_PLATFORM="${GST_GL_PLATFORM:-egl}" GST_GL_WINDOW="${GST_GL_WINDOW:-surfaceless}"
+# Proton's media converter registers itself as a WMA decoder one rank above gst-libav's, to hand out
+# media Steam transcoded in advance; outside Steam it fails the stream. gst-libav's WMA decoders,
+# raised to primary, take those streams.
+wma=avdec_wmav1:PRIMARY,avdec_wmav2:PRIMARY,avdec_wmapro:PRIMARY,avdec_wmalossless:PRIMARY,avdec_wmavoice:PRIMARY
+export GST_PLUGIN_FEATURE_RANK="${GST_PLUGIN_FEATURE_RANK:+$GST_PLUGIN_FEATURE_RANK,}$wma"
+# A stream GStreamer cannot play goes to Proton's media converter, which outside Steam has no
+# transcoded copy; given blank clips it plays those, and the program sees a short, valid movie end.
+# LUJARCH_WINE_SKIP_MEDIA=0 leaves the converter without them.
+if [ "${LUJARCH_WINE_SKIP_MEDIA:-1}" = 1 ]; then
+    export MEDIACONV_BLANK_VIDEO_FILE="${MEDIACONV_BLANK_VIDEO_FILE:-$here/media/blank.mkv}"
+    export MEDIACONV_BLANK_AUDIO_FILE="${MEDIACONV_BLANK_AUDIO_FILE:-$here/media/blank.ptna}"
+    export MEDIACONV_VIDEO_DUMP_FILE="${MEDIACONV_VIDEO_DUMP_FILE:-/dev/null}"
+    export MEDIACONV_AUDIO_DUMP_FILE="${MEDIACONV_AUDIO_DUMP_FILE:-/dev/null}"
+fi
+if [ ! -e "${WINEPREFIX:-$HOME/.wine}/.lujarch-wine" ]; then
+    "$here/setup" || echo "wine: the prefix's setup failed; Wine runs without Lujarch's settings" >&2
+fi
+
+# The program being started: the first argument that names an .exe (after "start /unix" from Dolphin).
+exe=
+for a in "$@"; do
+    case "$a" in *.exe|*.EXE) exe=$a; break ;; esac
+done
+dir=
+[ -n "$exe" ] && dir=$(cd "$(dirname -- "$exe")" 2>/dev/null && pwd)
+
+# Each program's Wine output goes to a log of its own when nobody sees stderr (started from Dolphin
+# or the menu): ~/.cache/lujarch-wine/logs/<program>.log, the run before it kept as .log.1.
+if [ -n "$exe" ] && [ ! -t 2 ]; then
+    logs=${XDG_CACHE_HOME:-$HOME/.cache}/lujarch-wine/logs
+    log=$logs/$(basename -- "$exe").log
+    mkdir -p "$logs" && { [ -e "$log" ] && mv -f "$log" "$log.1"; :; } && exec 2>"$log" &&
+        printf '%s wine %s\n' "$(date -Iseconds)" "$*" >&2
+fi
+
+# KiriKiri games (an .xp3 beside the program) draw with DirectDraw on GDI only when Direct3D 9 is not
+# there for them: their Direct3D 9 drawer through DXVK ends the game. The first launch from a game's
+# folder gives each of its programs Wine's own Direct3D 9, as per-program settings that Wine
+# Settings' Applications tab shows and changes; the folder is then remembered and never touched
+# again. Every other program keeps DXVK.
+kirikiri=
+if [ -n "$dir" ] && ls "$dir"/*.xp3 >/dev/null 2>&1; then
+    kirikiri=1
+    # KiriKiri's movie plugin reads compressed WMV and WMA through the Windows Media reader and
+    # decodes them with Windows' DMO decoders, which Proton's winegstreamer pairs only under the
+    # profile of Steam app 802870: the reader hands out decoded samples and the DMOs pass them
+    # through. A caller's own SteamGameId wins.
+    export SteamGameId="${SteamGameId:-802870}"
+    seen="${WINEPREFIX:-$HOME/.wine}/.lujarch-wine-kirikiri"
+    if ! grep -qxF "$dir" "$seen" 2>/dev/null; then
+        for f in "$dir"/*.exe "$dir"/*.EXE; do
+            [ -e "$f" ] || continue
+            WINEDEBUG=-all /usr/bin/wine reg add "HKCU\\Software\\Wine\\AppDefaults\\$(basename -- "$f")\\DllOverrides" \
+                /v d3d9 /d builtin /f >/dev/null 2>&1
+        done
+        printf '%s\n' "$dir" >> "$seen"
+    fi
+fi
+
+# Games in a window, through gamescope: the game sees a 1280x720 screen of its own, so its
+# fullscreen and mode changes stay inside gamescope, one ordinary window of the desktop that scales
+# the picture into it. The game is an X11 client of gamescope's own Xwayland (a Wayland socket that
+# does not exist makes Wine take its X11 driver). KiriKiri games go there by themselves;
+# LUJARCH_WINE_WINDOW=1 sends any program (Dolphin's Run in a window), LUJARCH_WINE_WINDOW=0 keeps
+# one out.
+window=${LUJARCH_WINE_WINDOW:-$kirikiri}
+if [ "$window" = 1 ] && [ -n "$dir" ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v gamescope >/dev/null; then
+    # The program's own arguments are what follows it; the game starts in its folder, as from Explorer.
+    while [ $# -gt 0 ] && [ "$1" != "$exe" ]; do shift; done
+    [ $# -gt 0 ] && shift
+    cd "$dir" || exit 1
+    # --default-touch-mode 1: a touch is a left click. gamescope ends, and kills what is left, when
+    # its child exits; launchers that start the game and exit would take the game with them, so the
+    # child waits for the prefix's whole Wine session (wineserver -w) after the program.
+    exec gamescope --backend wayland -W 1280 -H 720 -w 1280 -h 720 --default-touch-mode 1 -- \
+        env WAYLAND_DISPLAY=lujarch-wine-x11 LUJARCH_WINE_WINDOW=0 \
+        sh -c '/usr/bin/wine "$@"; exec /usr/bin/wineserver -w' wine "$dir/$(basename -- "$exe")" "$@"
+fi
+
+exec /usr/bin/wine "$@"

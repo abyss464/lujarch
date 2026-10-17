@@ -90,7 +90,10 @@ wakelock_use(lujarch_linux)
 hal_client_domain(lujarch_linux, hal_health)
 allow lujarch_linux self:netlink_kobject_uevent_socket create_socket_perms_no_ioctl;
 
-# The lent parts: the sensors, the infrared transmitter.
+# The lent parts: the sensors, the infrared transmitter, the cameras' device nodes it binds into
+# Linux's /dev (/dev/video40 and /dev/video41, v4l2loopback's), Android's time zone.
+get_prop(lujarch_linux, timezone_prop)
+allow lujarch_linux video_device:chr_file getattr;
 allow lujarch_linux sensorservice_service:service_manager find;
 binder_call(lujarch_linux, system_server)
 allow lujarch_linux system_server:unix_stream_socket { read write getattr getopt setopt };
@@ -104,11 +107,11 @@ binder_call(lujarch_linux, lujarch_root)
 allow lujarch_linux { platform_app mediaprovider_app }:fd use;
 allow lujarch_linux { media_rw_data_file fuse }:file { read getattr };
 
-# The Terminal app holds one end of a session's or the desktop's socket pair, and the desktop's
-# sound FIFO, which the daemon opens.
+# The Terminal app holds one end of a session's or the desktop's socket pair, the desktop's sound
+# FIFO and the FIFOs of the microphone and the cameras, which the daemon opens.
 allow platform_app lujarch_linux:fd use;
 allow platform_app lujarch_linux:unix_stream_socket { read write getattr getopt setopt shutdown };
-allow platform_app lujarch_linux_arch_file:fifo_file { read getattr };
+allow platform_app lujarch_linux_arch_file:fifo_file { read write getattr };
 
 # The desktop's display: dma-bufs of the graphics allocator, the Terminal app's release fences and
 # KWin's acquire fences pass through the daemon, which passes every fence on as a sync_file of

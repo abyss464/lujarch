@@ -11,5 +11,21 @@ sources added.
 mesa/patches are changes to Mesa (https://mesa3d.org), licensed under the MIT license
 (https://spdx.org/licenses/MIT.html).
 
+plasma-mobile/plasma-mobile.patch is a change to Plasma Mobile (https://invent.kde.org/plasma/plasma-mobile),
+licensed under the GNU General Public License, version 2 or later
+(https://spdx.org/licenses/GPL-2.0-or-later.html). plasma-mobile/PKGBUILD is Arch Linux's
+plasma-mobile PKGBUILD (https://gitlab.archlinux.org/archlinux/packaging/packages/plasma-mobile) with
+the package renamed and the patch added.
+
+shell/share/plasma/keyboard/layouts/fallback/handwriting.qml is Qt Virtual Keyboard's
+(https://code.qt.io/qt/qtvirtualkeyboard.git), licensed under the GNU General Public License,
+version 3 (https://spdx.org/licenses/GPL-3.0-only.html). The images of
+shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch are Gboard's key icons, Google's Material Symbols
+(https://fonts.google.com/icons), licensed under the Apache License, Version 2.0.
+
+wine/fex-config.json is Proton's FEX_Config.json and wine/media/blank.mka and blank.ptna are
+Proton's (https://github.com/ValveSoftware/Proton, proton-11.0-2), licensed under the BSD 3-Clause
+license (https://spdx.org/licenses/BSD-3-Clause.html).
+
 The rest is Lujarch's, licensed under the Apache License, Version 2.0
 (https://www.apache.org/licenses/LICENSE-2.0).

@@ -1,6 +1,7 @@
 #!/usr/bin/bash
-# The desktop's session as the owner's user (run starts it): PipeWire, the shared clipboard and
-# Plasma Mobile, whose KWin draws into the Terminal app's buffers through lujarch_linux.
+# The desktop's session as the owner's user (run starts it): PipeWire, the shared clipboard, the
+# parts of the phone Linux is lent (android, media: LNX-7) and Plasma Mobile, whose KWin draws into
+# the Terminal app's buffers through lujarch_linux.
 dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 cd "$HOME" || exit 1
 # Plasma's own lock screen stays off: Android's lock guards the phone, and the user has no
@@ -11,6 +12,44 @@ if [ ! -e "$HOME/.config/lujarch/desktop-lock-off" ]; then
     kwriteconfig6 --file kscreenlockerrc --group Daemon --key LockOnResume false
     kwriteconfig6 --file kscreenlockerrc --group Daemon --key Timeout 0
     touch "$HOME/.config/lujarch/desktop-lock-off"
+fi
+# Plasma Mobile's quick settings over Android's (LNX-7): the tiles of Android's switches carry the
+# stock tiles' ids, so each switch is one tile under its own name. Set once: the tiles with nothing
+# of Android's behind them are turned off; System Settings > Quick Settings changes them
+# afterwards.
+if [ ! -e "$HOME/.config/lujarch/desktop-quicksettings" ]; then
+    stock=org.kde.plasma.quicksetting
+    removed=" audio record powermenu kscreenosd waydroid "
+    enabled=$(kreadconfig6 --file plasmamobilerc --group QuickSettings --key enabledQuickSettings)
+    disabled=$(kreadconfig6 --file plasmamobilerc --group QuickSettings --key disabledQuickSettings)
+    if [ -z "$enabled$disabled" ]; then
+        # Nothing stored yet: Plasma Mobile's own order.
+        for n in wifi mobiledata bluetooth flashlight screenrotation settingsapp airplanemode audio battery \
+                 record nightcolor screenshot powermenu donotdisturb caffeine keyboardtoggle hotspot \
+                 autohidepanels docked kscreenosd waydroid; do
+            enabled="$enabled,$stock.$n"
+        done
+        enabled=${enabled#,}
+    fi
+    new_enabled=
+    new_disabled=$disabled
+    for id in $(printf %s "$enabled" | tr , ' '); do
+        case $removed in
+            *" ${id#"$stock".} "*) new_disabled="$new_disabled,$id" ;;
+            *) new_enabled="$new_enabled,$id" ;;
+        esac
+    done
+    kwriteconfig6 --file plasmamobilerc --group QuickSettings --key enabledQuickSettings "${new_enabled#,}"
+    kwriteconfig6 --file plasmamobilerc --group QuickSettings --key disabledQuickSettings "${new_disabled#,}"
+    touch "$HOME/.config/lujarch/desktop-quicksettings"
+fi
+# powerdevil owns org.kde.Solid.PowerManagement, which the drawer's brightness slider talks to, and
+# its dimming and screen-off decide for a screen that is Android's: the android daemon answers for
+# that name with Android's brightness instead, so powerdevil's autostart is off. Set once; deleting
+# ~/.config/autostart/powerdevil.desktop starts it again.
+if [ ! -e "$HOME/.config/lujarch/desktop-powerdevil-off" ]; then
+    kwriteconfig6 --file autostart/powerdevil.desktop --group "Desktop Entry" --key Hidden true
+    touch "$HOME/.config/lujarch/desktop-powerdevil-off"
 fi
 [ -f /etc/locale.conf ] && . /etc/locale.conf
 export LANG=${LANG:-C.UTF-8}
@@ -24,8 +63,45 @@ export KWIN_LUJARCH=1 KWIN_LUJARCH_SOCKET=/run/lujarch/display XDG_SESSION_TYPE=
 # service's log.
 export QT_FORCE_STDERR_LOGGING=1
 export LUJARCH_DESKTOP=$dir
+# Lujarch's files for the shell (/usr/lib/lujarch/desktop/shell), ahead of the system's: Android's
+# state for the quick settings (installed in /usr/local/share/plasma/quicksettings) and the status
+# bar's indicators, in place of the modules of BlueZ, NetworkManager and ModemManager, which have no
+# daemons here; the keyboard's layouts and style (LNX-6); the phone's panel sizes. The quick
+# settings read Android's state and Lujarch's strings with XMLHttpRequest, which Qt allows for local
+# files only with QML_XHR_ALLOW_FILE_READ.
+shell=/usr/lib/lujarch/desktop/shell
+export QML_IMPORT_PATH=$shell/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}
+export XDG_DATA_DIRS=$shell/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+export QML_XHR_ALLOW_FILE_READ=1
+# Lujarch's wine ahead of Proton's (LNX-6).
+export PATH=/usr/local/lib/lujarch-wine/bin:$PATH
+# A system bus of the desktop's own: Linux beside Android has none. The android daemon serves the
+# battery (UPower's API) and GeoClue's agent on it, and GeoClue runs on it as the desktop's user.
+# It has no service directories, so nothing is activated there (iio-sensor-proxy, a dependency of
+# KWin, never runs).
+bus=/tmp/lujarch-android
+mkdir -p "$bus" && chmod 700 "$bus"
+rm -f "$bus/system_bus"
+dbus-daemon --config-file="$dir/system-bus.conf" --nofork --nopidfile &
+for _ in $(seq 50); do
+    [ -S "$bus/system_bus" ] && break
+    sleep 0.1
+done
+export DBUS_SYSTEM_BUS_ADDRESS=unix:path=$bus/system_bus
+# GeoClue (the location portal, Firefox, maps) as the desktop's user: /etc/geoclue/conf.d/
+# 90-lujarch.conf has it take Android's location from the android daemon. --timeout 0: it stays,
+# since nothing here starts it again; it runs again if it ends.
+if [ -x /usr/lib/geoclue ]; then
+    (while :; do
+        GSETTINGS_BACKEND=memory /usr/lib/geoclue --timeout 0
+        echo "geoclue ended (status $?), starting it again" >&2
+        sleep 5
+    done) &
+else
+    echo "geoclue is not installed: Linux's programs get no location" >&2
+fi
 # D-Bus-activated services (kded, the portals) start with the session's environment, or the shell
-# draws nothing. PipeWire and the clipboard run again when they end.
+# draws nothing. PipeWire, the clipboard and the parts of the phone run again when they end.
 exec dbus-run-session -- bash -c '
     dbus-update-activation-environment --all || exit 1
     supervise() {
@@ -41,4 +117,6 @@ exec dbus-run-session -- bash -c '
         supervise 1 "$program"
     done
     supervise 3 bash "$LUJARCH_DESKTOP/clipboard"
+    supervise 3 python3 /usr/lib/lujarch/desktop/android/android daemon
+    supervise 3 python3 /usr/lib/lujarch/desktop/android/media daemon
     exec startplasmamobile'

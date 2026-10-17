@@ -86,24 +86,93 @@ license {
     name: "lujarch_linux_desktop_license",
     license_kinds: [
         "SPDX-license-identifier-Apache-2.0",
+        "SPDX-license-identifier-BSD-3-Clause",
         "SPDX-license-identifier-GPL-2.0-or-later",
+        "SPDX-license-identifier-GPL-3.0",
         "SPDX-license-identifier-MIT",
     ],
     license_text: ["src/linux/desktop/NOTICE"],
 }
 
-// The desktop's recipe (LNX-6), which Linux builds and installs: its install script, the display
-// protocol, KWin's Lujarch backend, Mesa's patches and the desktop's session; downloads holds the
-// pins of lock.toml it builds from, staged by the tools.
-prebuilt_etc {
+// The desktop's recipe (LNX-6, LNX-7), which Linux builds and installs, at /usr/lib/lujarch/desktop
+// in Linux: its install script, the display protocol, KWin's Lujarch backend, Mesa's patches, Plasma
+// Mobile's landscape layout, the desktop's session, the shell's quick settings and keyboard, the
+// daemons of the parts of the phone Linux is lent, Lujarch's strings for Linux, and the glue of
+// Proton's Wine; downloads holds the pins of lock.toml it builds from, staged by the tools. One
+// module for each directory of src/linux/desktop.
+phony {
     name: "lujarch_linux_desktop",
+    required: [
+        "lujarch_linux_desktop_recipe",
+        "lujarch_linux_desktop_android",
+        "lujarch_linux_desktop_kwin",
+        "lujarch_linux_desktop_kwin_lujarch",
+        "lujarch_linux_desktop_mesa",
+        "lujarch_linux_desktop_mesa_patches",
+        "lujarch_linux_desktop_plasma_mobile",
+        "lujarch_linux_desktop_protocol",
+        "lujarch_linux_desktop_res",
+        "lujarch_linux_desktop_res_values",
+        "lujarch_linux_desktop_res_values_ja",
+        "lujarch_linux_desktop_res_values_zh_rcn",
+        "lujarch_linux_desktop_session",
+        "lujarch_linux_desktop_shell_qml_qtquick_virtualkeyboard_styles_lujarch",
+        "lujarch_linux_desktop_shell_qml_qtquick_virtualkeyboard_styles_lujarch_images",
+        "lujarch_linux_desktop_shell_qml_org_kde_bluezqt",
+        "lujarch_linux_desktop_shell_qml_org_kde_plasma_networkmanagement",
+        "lujarch_linux_desktop_shell_qml_org_kde_plasma_networkmanagement_cellular",
+        "lujarch_linux_desktop_shell_qml_org_lujarch_android",
+        "lujarch_linux_desktop_shell_qml_org_lujarch_keyboard",
+        "lujarch_linux_desktop_shell_quicksettings",
+        "lujarch_linux_desktop_shell_share_plasma_mobile_device_presets",
+        "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_en_us",
+        "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_fallback",
+        "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_zh_cn",
+        "lujarch_linux_desktop_wine",
+        "lujarch_linux_desktop_wine_media",
+        "lujarch_linux_desktop_wine_share_applications",
+        "lujarch_linux_desktop_wine_share_kio_servicemenus",
+    ],
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_recipe",
     licenses: ["lujarch_linux_desktop_license"],
     srcs: [
-        "src/linux/desktop/install",
         "src/linux/desktop/NOTICE",
-        "src/linux/desktop/protocol/lujarch_display.h",
+        "src/linux/desktop/install",
+        "downloads",
+    ],
+    sub_dir: "lujarch/linux/desktop",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_android",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/android/android",
+        "src/linux/desktop/android/media",
+    ],
+    sub_dir: "lujarch/linux/desktop/android",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_kwin",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
         "src/linux/desktop/kwin/PKGBUILD",
         "src/linux/desktop/kwin/kwin.patch",
+    ],
+    sub_dir: "lujarch/linux/desktop/kwin",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_kwin_lujarch",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
         "src/linux/desktop/kwin/lujarch/CMakeLists.txt",
         "src/linux/desktop/kwin/lujarch/lujarch_backend.cpp",
         "src/linux/desktop/kwin/lujarch/lujarch_backend.h",
@@ -117,48 +186,310 @@ prebuilt_etc {
         "src/linux/desktop/kwin/lujarch/lujarch_logging.h",
         "src/linux/desktop/kwin/lujarch/lujarch_output.cpp",
         "src/linux/desktop/kwin/lujarch/lujarch_output.h",
-        "src/linux/desktop/mesa/build.sh",
+    ],
+    sub_dir: "lujarch/linux/desktop/kwin/lujarch",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_mesa",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/mesa/build.sh"],
+    sub_dir: "lujarch/linux/desktop/mesa",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_mesa_patches",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
         "src/linux/desktop/mesa/patches/0001-tu-kgsl-accept-khr-display-with-no-displays.patch",
         "src/linux/desktop/mesa/patches/0002-zink-take-the-nodeless-gpu-when-no-drm-node-matches.patch",
+    ],
+    sub_dir: "lujarch/linux/desktop/mesa/patches",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_plasma_mobile",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/plasma-mobile/PKGBUILD",
+        "src/linux/desktop/plasma-mobile/plasma-mobile.patch",
+    ],
+    sub_dir: "lujarch/linux/desktop/plasma-mobile",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_protocol",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/protocol/lujarch_display.h"],
+    sub_dir: "lujarch/linux/desktop/protocol",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_res",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/res/res"],
+    sub_dir: "lujarch/linux/desktop/res",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_res_values",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/res/values/strings.xml"],
+    sub_dir: "lujarch/linux/desktop/res/values",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_res_values_ja",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/res/values-ja/strings.xml"],
+    sub_dir: "lujarch/linux/desktop/res/values-ja",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_res_values_zh_rcn",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/res/values-zh-rCN/strings.xml"],
+    sub_dir: "lujarch/linux/desktop/res/values-zh-rCN",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_session",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/session/clipboard",
+        "src/linux/desktop/session/environment",
+        "src/linux/desktop/session/geoclue.conf",
+        "src/linux/desktop/session/pipewire.conf",
         "src/linux/desktop/session/run",
         "src/linux/desktop/session/session",
-        "src/linux/desktop/session/environment",
-        "src/linux/desktop/session/clipboard",
-        "src/linux/desktop/session/pipewire.conf",
+        "src/linux/desktop/session/system-bus.conf",
         "src/linux/desktop/session/wireplumber.conf",
-        "downloads",
     ],
-    dsts: [
-        "desktop/install",
-        "desktop/NOTICE",
-        "desktop/protocol/lujarch_display.h",
-        "desktop/kwin/PKGBUILD",
-        "desktop/kwin/kwin.patch",
-        "desktop/kwin/lujarch/CMakeLists.txt",
-        "desktop/kwin/lujarch/lujarch_backend.cpp",
-        "desktop/kwin/lujarch/lujarch_backend.h",
-        "desktop/kwin/lujarch/lujarch_connection.cpp",
-        "desktop/kwin/lujarch/lujarch_connection.h",
-        "desktop/kwin/lujarch/lujarch_egl_backend.cpp",
-        "desktop/kwin/lujarch/lujarch_egl_backend.h",
-        "desktop/kwin/lujarch/lujarch_input.cpp",
-        "desktop/kwin/lujarch/lujarch_input.h",
-        "desktop/kwin/lujarch/lujarch_logging.cpp",
-        "desktop/kwin/lujarch/lujarch_logging.h",
-        "desktop/kwin/lujarch/lujarch_output.cpp",
-        "desktop/kwin/lujarch/lujarch_output.h",
-        "desktop/mesa/build.sh",
-        "desktop/mesa/patches/0001-tu-kgsl-accept-khr-display-with-no-displays.patch",
-        "desktop/mesa/patches/0002-zink-take-the-nodeless-gpu-when-no-drm-node-matches.patch",
-        "desktop/session/run",
-        "desktop/session/session",
-        "desktop/session/environment",
-        "desktop/session/clipboard",
-        "desktop/session/pipewire.conf",
-        "desktop/session/wireplumber.conf",
-        "desktop/downloads",
+    sub_dir: "lujarch/linux/desktop/session",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_qtquick_virtualkeyboard_styles_lujarch",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/style.qml"],
+    sub_dir: "lujarch/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_qtquick_virtualkeyboard_styles_lujarch_images",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/backspace.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/done.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/emoji.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/enter.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/globe.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/shift-active.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/shift.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/space.png",
+        "src/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images/tab.png",
     ],
-    sub_dir: "lujarch/linux",
+    sub_dir: "lujarch/linux/desktop/shell/qml/QtQuick/VirtualKeyboard/Styles/Lujarch/images",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_org_kde_bluezqt",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/org/kde/bluezqt/Manager.qml",
+        "src/linux/desktop/shell/qml/org/kde/bluezqt/qmldir",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/qml/org/kde/bluezqt",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_org_kde_plasma_networkmanagement",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/Configuration.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/ConnectionIcon.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/EnabledConnections.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/Handler.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/WirelessStatus.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/qmldir",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/qml/org/kde/plasma/networkmanagement",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_org_kde_plasma_networkmanagement_cellular",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/cellular/CellularModem.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/cellular/CellularModemList.qml",
+        "src/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/cellular/qmldir",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/qml/org/kde/plasma/networkmanagement/cellular",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_org_lujarch_android",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/org/lujarch/android/Bridge.qml",
+        "src/linux/desktop/shell/qml/org/lujarch/android/qmldir",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/qml/org/lujarch/android",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_qml_org_lujarch_keyboard",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/qml/org/lujarch/keyboard/KeyStripRow.qml",
+        "src/linux/desktop/shell/qml/org/lujarch/keyboard/KeyboardTheme.qml",
+        "src/linux/desktop/shell/qml/org/lujarch/keyboard/LatinInputMethod.qml",
+        "src/linux/desktop/shell/qml/org/lujarch/keyboard/qmldir",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/qml/org/lujarch/keyboard",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_quicksettings",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.airplanemode.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.airplanemode.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.battery.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.battery.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.bluetooth.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.bluetooth.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.caffeine.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.caffeine.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.donotdisturb.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.donotdisturb.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.flashlight.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.flashlight.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.hotspot.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.hotspot.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.mobiledata.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.mobiledata.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.screenrotation.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.screenrotation.qml",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.wifi.json",
+        "src/linux/desktop/shell/quicksettings/org.kde.plasma.quicksetting.wifi.qml",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/quicksettings",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_share_plasma_mobile_device_presets",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/shell/share/plasma-mobile-device-presets/qcom,kalama-mtp.conf"],
+    sub_dir: "lujarch/linux/desktop/shell/share/plasma-mobile-device-presets",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_en_us",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/dialpad.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/digits.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/handwriting.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/main.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/numbers.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/en_US/symbols.fallback",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/share/plasma/keyboard/layouts/en_US",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_fallback",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/dialpad.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/digits.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/handwriting.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/main.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/numbers.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/fallback/symbols.qml",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/share/plasma/keyboard/layouts/fallback",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_shell_share_plasma_keyboard_layouts_zh_cn",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/dialpad.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/digits.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/handwriting.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/main.qml",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/numbers.fallback",
+        "src/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN/symbols.qml",
+    ],
+    sub_dir: "lujarch/linux/desktop/shell/share/plasma/keyboard/layouts/zh_CN",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_wine",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/wine/fex-config.json",
+        "src/linux/desktop/wine/pe-icon.py",
+        "src/linux/desktop/wine/setup",
+        "src/linux/desktop/wine/wine",
+        "src/linux/desktop/wine/wine.reg",
+    ],
+    sub_dir: "lujarch/linux/desktop/wine",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_wine_media",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/wine/media/blank.mka",
+        "src/linux/desktop/wine/media/blank.mkv",
+        "src/linux/desktop/wine/media/blank.ptna",
+    ],
+    sub_dir: "lujarch/linux/desktop/wine/media",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_wine_share_applications",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: [
+        "src/linux/desktop/wine/share/applications/lujarch-wine-programs.desktop",
+        "src/linux/desktop/wine/share/applications/lujarch-wine-settings.desktop",
+    ],
+    sub_dir: "lujarch/linux/desktop/wine/share/applications",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "lujarch_linux_desktop_wine_share_kio_servicemenus",
+    licenses: ["lujarch_linux_desktop_license"],
+    srcs: ["src/linux/desktop/wine/share/kio/servicemenus/lujarch-wine-run.desktop"],
+    sub_dir: "lujarch/linux/desktop/wine/share/kio/servicemenus",
     system_ext_specific: true,
 }
 
@@ -243,12 +574,15 @@ android_library {
 }
 
 // The desktop's presenter in the Terminal app (src/terminal/jni): the display protocol's app side,
-// the AHardwareBuffer pool, SurfaceControl transactions paced by Choreographer. NDK only, so the
-// APK's copy loads in the app's own linker namespace; AHardwareBuffer_getNativeHandle is looked
-// up at run time.
+// the AHardwareBuffer pool, SurfaceControl transactions paced by Choreographer; and the cameras'
+// frames for Linux, YUV to NV12. NDK only, so the APK's copy loads in the app's own linker
+// namespace; AHardwareBuffer_getNativeHandle is looked up at run time.
 cc_library_shared {
     name: "liblujarch_linux_display_jni",
-    srcs: ["src/terminal/jni/display_jni.cpp"],
+    srcs: [
+        "src/terminal/jni/camera_jni.cpp",
+        "src/terminal/jni/display_jni.cpp",
+    ],
     local_include_dirs: ["src/linux/desktop/protocol"],
     header_libs: ["jni_headers"],
     sdk_version: "current",
@@ -289,4 +623,13 @@ android_app {
     optimize: {
         proguard_flags_files: ["src/terminal/proguard.flags"],
     },
+    required: ["default-permissions-org.lujarch.linux.terminal.xml"],
+}
+
+// The runtime permission the Terminal app starts with.
+prebuilt_etc {
+    name: "default-permissions-org.lujarch.linux.terminal.xml",
+    src: "src/terminal/etc/default-permissions-org.lujarch.linux.terminal.xml",
+    sub_dir: "default-permissions",
+    system_ext_specific: true,
 }

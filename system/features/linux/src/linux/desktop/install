@@ -1,14 +1,16 @@
 #!/usr/bin/bash
 # Installs the desktop of the Linux development environment (LNX-6) in Linux: Plasma Mobile and
 # PipeWire from Arch Linux ARM, Mesa with Turnip on KGSL and Zink at /opt/mesa-kgsl (mesa/), KWin
-# with the Lujarch backend as the package kwin-lujarch (kwin/, protocol/), and the service desktop
-# (session/). lujarch_linux runs it as root from Settings > System > Linux development
-# environment > Install the desktop, and starts the service again when it ends well:
+# with the Lujarch backend as the package kwin-lujarch (kwin/, protocol/), Plasma Mobile with the
+# phone's landscape layout as plasma-mobile-lujarch (plasma-mobile/), the service desktop
+# (session/) with the parts of the phone Linux is lent (android/: LNX-7), and the glue of Proton's
+# Wine when Linux has it (wine/). lujarch_linux runs it as root from Settings > System > Linux
+# development environment > Install the desktop, and starts the service again when it ends well:
 #
 #   install USER UID
 #
-# It can run again: Mesa and KWin are built again only when their recipe or their pin in
-# lock.toml (the file downloads) changed, or what is installed lacks them. The builds run at the
+# It can run again: Mesa, KWin and Plasma Mobile are built again only when their recipe or their
+# pin in lock.toml (the file downloads) changed, or what is installed lacks them. The builds run at the
 # lowest priority on the little cores (0-2), three jobs, so that the phone stays usable; their
 # logs are in /var/log/lujarch/desktop-install. The last line of the output says what failed.
 set -euo pipefail
@@ -32,7 +34,8 @@ home=$(getent passwd "$user" | cut -d: -f6)
 pin() {
     sed -n "s|^$1: ||p" "$here/downloads"
 }
-for key in kwin.url kwin.version kwin.sha256 mesa.url mesa.version mesa.sha256; do
+for key in kwin.url kwin.version kwin.sha256 mesa.url mesa.version mesa.sha256 \
+    plasma-mobile.url plasma-mobile.version plasma-mobile.sha256; do
     grep -q "^$key: ." "$here/downloads" 2>/dev/null || fail "no $key in $here/downloads"
 done
 
@@ -55,19 +58,60 @@ as_user() {
 # The lowest priority on the little cores.
 low=(taskset -c 0-2 nice -n 19)
 
+# Proton's Wine is installed: its wine and FEX's ARM64EC DLL.
+proton_wine() {
+    [ -x /usr/bin/wine ] && [ -f /usr/lib/wine/aarch64-windows/libarm64ecfex.dll ]
+}
+
+# A package of a recipe: makepkg builds it as the user and packages it as root. Its usual packaging
+# runs in fakeroot, which needs System V IPC, and the phone's kernel has none: the user's makepkg
+# gets a fakeroot that does nothing, and the package is made by makepkg's own packaging stage (-F)
+# as root. package_build NAME WORK LOG MAKEPKG-ARGS...: the recipe staged in WORK/recipe.
+package_build() {
+    local name=$1 w=$2 log=$3
+    shift 3
+    (cd "$w/recipe" && as_user env PATH="$w/shim:/usr/local/bin:/usr/bin" BUILDDIR="$w/build" \
+        SRCDEST="$w/sources" PKGDEST="$w/user-packages" JOBS=3 "${low[@]}" makepkg "$@") \
+        >"$log" 2>&1 || { tail -n 30 "$log"; fail "$name did not build ($log)"; }
+    chown -R root:root "$w/build"
+    (cd "$w/recipe" && env FAKEROOTKEY=lujarch BUILDDIR="$w/build" SRCDEST="$w/sources" \
+        PKGDEST="$w/packages" "${low[@]}" makepkg -F "$@") >>"$log" 2>&1 ||
+        { chown -R "$user:" "$w/build"; tail -n 30 "$log"; fail "$name was not packaged ($log)"; }
+    chown -R "$user:" "$w/build"
+}
+
 mkdir -p "$state" "$work" /var/log/lujarch/desktop-install
 
 # The packages: the desktop's, and what Mesa and KWin are built with. KWin's come from its
 # PKGBUILD.
 mapfile -t kwin_packages < <(bash -c 'source "$1" && printf "%s\n" "${depends[@]}" "${makedepends[@]}"' \
     _ "$here/kwin/PKGBUILD")
+# Plasma Mobile's come from its PKGBUILD, but for KWin, which is kwin-lujarch; Arch Linux ARM's
+# plasma-mobile until plasma-mobile-lujarch takes its place.
+mapfile -t plasma_mobile_packages < <(bash -c 'source "$1" && printf "%s\n" "${depends[@]}" "${makedepends[@]}"' \
+    _ "$here/plasma-mobile/PKGBUILD" | grep -vx kwin)
+pacman -Q plasma-mobile-lujarch >/dev/null 2>&1 || plasma_mobile_packages+=(plasma-mobile)
+# The parts of the phone Linux is lent (LNX-7): python runs the android and media daemons, GeoClue
+# takes Android's location, v4l-utils looks at the cameras.
 packages=(
-    plasma-mobile plasma-keyboard breeze breeze-icons xorg-xwayland qt6-wayland konsole dolphin
+    plasma-keyboard breeze breeze-icons xorg-xwayland qt6-wayland konsole dolphin
     systemsettings pipewire wireplumber pipewire-pulse pipewire-alsa wl-clipboard inotify-tools
+    python geoclue v4l-utils libnotify
     base-devel meson ninja python-mako python-yaml python-packaging glslang spirv-tools
     vulkan-headers vulkan-icd-loader libdrm libglvnd wayland wayland-protocols libelf libxml2 curl
-    "${kwin_packages[@]}"
+    "${kwin_packages[@]}" "${plasma_mobile_packages[@]}"
 )
+# Proton's Wine (LNX-6), when Linux has it: what it links or loads (the GStreamer plugins decode
+# video for winegstreamer), gamescope for games in a window, 7zip for the archives games come in,
+# winetricks for Windows runtimes.
+if proton_wine; then
+    packages+=(
+        alsa-lib fontconfig freetype2 glib2 gnutls gstreamer gst-plugins-base gst-plugins-good
+        gst-plugins-bad-libs gst-plugins-ugly gst-libav libpulse libusb libx11 libxcomposite
+        libxcursor libxext libxi libxinerama libxkbcommon libxrandr libxrender sdl2-compat
+        systemd-libs gamescope 7zip winetricks
+    )
+fi
 say "installing the packages"
 pacman -Syu --needed --noconfirm "${packages[@]}" >/var/log/lujarch/desktop-install/pacman.log 2>&1 ||
     { tail -n 20 /var/log/lujarch/desktop-install/pacman.log; fail "pacman could not install the packages (/var/log/lujarch/desktop-install/pacman.log)"; }
@@ -141,11 +185,79 @@ if ! kwin_installed || [ "$(cat "$state/kwin" 2>/dev/null)" != "$kwin_print" ]; 
     printf '%s\n' "$kwin_print" >"$state/kwin"
 fi
 
-# The service desktop, and the sound's way to Android.
+# Plasma Mobile with the phone's landscape layout.
+pm_version=$(pin plasma-mobile.version)
+pm_print=$(fingerprint plasma-mobile plasma-mobile)
+if ! pacman -Q plasma-mobile-lujarch >/dev/null 2>&1 || [ "$(cat "$state/plasma-mobile" 2>/dev/null)" != "$pm_print" ]; then
+    say "building Plasma Mobile $pm_version with the landscape layout"
+    pw=$work/plasma-mobile-lujarch
+    rm -rf "$pw/recipe" "$pw/shim" "$pw/build" "$pw/packages" "$pw/user-packages"
+    mkdir -p "$pw/recipe" "$pw/shim" "$pw/build" "$pw/sources" "$pw/packages" "$pw/user-packages"
+    cp "$here/plasma-mobile/plasma-mobile.patch" "$pw/recipe/"
+    sed -e "s|@PLASMA_MOBILE_VERSION@|$pm_version|g" -e "s|@PLASMA_MOBILE_URL@|$(pin plasma-mobile.url)|g" \
+        -e "s|@PLASMA_MOBILE_SHA256@|$(pin plasma-mobile.sha256)|g" "$here/plasma-mobile/PKGBUILD" >"$pw/recipe/PKGBUILD"
+    printf '#!/bin/sh\nexit 0\n' >"$pw/shim/fakeroot"
+    chmod 755 "$pw/shim/fakeroot"
+    chown -R "$user:" "$pw/recipe" "$pw/shim" "$pw/build" "$pw/sources" "$pw/user-packages"
+    pm_log=/var/log/lujarch/desktop-install/$(date +%Y%m%d-%H%M%S)-plasma-mobile.log
+    package_build "Plasma Mobile" "$pw" "$pm_log" -f --noconfirm --nocheck
+    package=$(ls -t "$pw"/packages/plasma-mobile-lujarch-"$pm_version"-*.pkg.tar.* 2>/dev/null | head -n 1)
+    [ -n "$package" ] || fail "makepkg left no package in $pw/packages"
+    # --ask 4: yes to removing the conflicting plasma-mobile.
+    pacman -U --noconfirm --ask 4 "$package" >>"$pm_log" 2>&1 ||
+        { tail -n 20 "$pm_log"; fail "pacman could not install $package"; }
+    printf '%s\n' "$pm_print" >"$state/plasma-mobile"
+fi
+
+# The service desktop, the sound's way to Android and the parts of the phone Linux is lent.
 mkdir -p "$service"
 install -m 755 "$here/session/run" "$service/run"
-install -m 644 "$here/session/session" "$here/session/environment" "$here/session/clipboard" "$service/"
+install -m 644 "$here/session/session" "$here/session/environment" "$here/session/clipboard" \
+    "$here/session/system-bus.conf" "$service/"
 printf 'user: %s\n' "$user" >"$service/user"
 install -D -m 644 "$here/session/pipewire.conf" /etc/pipewire/pipewire.conf.d/50-lujarch-android.conf
 install -D -m 644 "$here/session/wireplumber.conf" /etc/wireplumber/wireplumber.conf.d/50-lujarch-android.conf
+install -D -m 644 "$here/session/geoclue.conf" /etc/geoclue/conf.d/90-lujarch.conf
+# GeoClue's static source, which the android daemon writes as the user while a program uses the
+# location.
+[ -e /etc/geolocation ] || install -m 600 -o "$user" -g "$user" /dev/null /etc/geolocation
+# The quick settings over Android's switches, in the stock tiles' places (/usr/local/share comes
+# before /usr/share), their names in every language.
+tiles=/usr/local/share/plasma/quicksettings
+for meta in "$here"/shell/quicksettings/*.json; do
+    tile=${meta%.json}
+    id=${tile##*/}
+    rm -rf "${tiles:?}/$id"
+    install -D -m 644 "$tile.qml" "$tiles/$id/contents/ui/main.qml"
+    python3 "$here/res/res" json "$meta" "$tiles/$id/metadata.json"
+done
+
+# Proton's Wine on the desktop, when Linux has it: Lujarch's wine and the prefix's setup, the menu
+# entries with Wine's own icons, Dolphin's Run with Japanese locale and Run in a window.
+glue=/usr/local/lib/lujarch-wine
+if proton_wine; then
+    install -D -m 755 "$here/wine/wine" "$glue/bin/wine"
+    install -D -m 755 "$here/wine/setup" "$glue/setup"
+    install -D -m 644 "$here/wine/wine.reg" "$glue/wine.reg"
+    install -D -m 644 "$here/wine/fex-config.json" "$glue/fex-emu/Config.json"
+    install -D -m 644 -t "$glue/media" "$here/wine/media/blank.mkv" "$here/wine/media/blank.mka" \
+        "$here/wine/media/blank.ptna"
+    mkdir -p /usr/local/share/applications /usr/local/share/kio/servicemenus
+    for entry in applications/lujarch-wine-settings.desktop applications/lujarch-wine-programs.desktop \
+        kio/servicemenus/lujarch-wine-run.desktop; do
+        python3 "$here/res/res" desktop "$here/wine/share/$entry" "/usr/local/share/$entry"
+    done
+    icons=/usr/local/share/icons/hicolor/256x256/apps
+    mkdir -p "$icons"
+    python3 "$here/wine/pe-icon.py" /usr/lib/wine/aarch64-windows/winecfg.exe "$icons/lujarch-wine-settings.png" ||
+        say "Wine Settings has no icon of Wine's"
+    python3 "$here/wine/pe-icon.py" /usr/lib/wine/aarch64-windows/appwiz.cpl "$icons/lujarch-wine-programs.png" ||
+        say "Windows Programs has no icon of Wine's"
+    say "Proton's Wine is on the desktop"
+else
+    rm -rf "$glue" /usr/local/share/applications/lujarch-wine-settings.desktop \
+        /usr/local/share/applications/lujarch-wine-programs.desktop \
+        /usr/local/share/kio/servicemenus/lujarch-wine-run.desktop
+    say "Linux has no Proton's Wine (/usr/bin/wine with FEX's ARM64EC DLL): Windows programs do not run"
+fi
 say "the desktop is installed"

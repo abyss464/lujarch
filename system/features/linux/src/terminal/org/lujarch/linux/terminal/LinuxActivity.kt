@@ -29,10 +29,11 @@ import kotlinx.coroutines.cancel
 import java.util.concurrent.Executors
 
 /**
- * What the Terminal app's windows share: while one is started it hears lujarch_linux and takes
- * what Linux's desktop copies onto Android's clipboard while the clipboard is lent; while one is
- * in front it answers what Linux asks of the owner (an authorization, LNX-7) and reads NFC cards
- * for Linux while NFC card reading is lent.
+ * What the Terminal app's windows share: while one is started it hears lujarch_linux, takes what
+ * Linux's desktop copies onto Android's clipboard while the clipboard is lent, and serves the
+ * other lent parts that need the app ([LinuxWindows], [LinuxParts]); while one is in front it
+ * answers what Linux asks of the owner (an authorization, LNX-7) and reads NFC cards for Linux
+ * while NFC card reading is lent.
  */
 abstract class LinuxActivity : Activity(), LinuxEvents.Sink {
     protected val scope = MainScope()
@@ -44,9 +45,11 @@ abstract class LinuxActivity : Activity(), LinuxEvents.Sink {
     override fun onStart() {
         super.onStart()
         background.execute { events.register() }
+        LinuxWindows.onStart(this)
     }
 
     override fun onStop() {
+        LinuxWindows.onStop(this)
         background.execute { events.unregister() }
         super.onStop()
     }
@@ -54,14 +57,21 @@ abstract class LinuxActivity : Activity(), LinuxEvents.Sink {
     override fun onResume() {
         super.onResume()
         inFront = true
+        LinuxWindows.onResume(this)
         if (Linux.lent(this, "nfc")) nfc = NfcReader(this).also { it.start() }
     }
 
     override fun onPause() {
         inFront = false
+        LinuxWindows.onPause(this)
         nfc?.stop()
         nfc = null
         super.onPause()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        LinuxWindows.onPermissionsResult(this, requestCode, permissions)
     }
 
     override fun onDestroy() {

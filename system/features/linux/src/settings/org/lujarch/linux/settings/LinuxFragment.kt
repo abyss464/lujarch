@@ -611,6 +611,11 @@ class LinuxFragment : LinuxPage() {
             "fingerprint" to (R.string.lnx_lend_fingerprint to R.string.lnx_lend_fingerprint_summary),
             "ir" to (R.string.lnx_lend_ir to R.string.lnx_lend_ir_summary),
             "nfc" to (R.string.lnx_lend_nfc to R.string.lnx_lend_nfc_summary),
+            "microphone" to (R.string.lnx_lend_microphone to R.string.lnx_lend_microphone_summary),
+            "camera" to (R.string.lnx_lend_camera to R.string.lnx_lend_camera_summary),
+            "location" to (R.string.lnx_lend_location to R.string.lnx_lend_location_summary),
+            "vibration" to (R.string.lnx_lend_vibration to R.string.lnx_lend_vibration_summary),
+            "quick_settings" to (R.string.lnx_lend_quick_settings to R.string.lnx_lend_quick_settings_summary),
         )
     }
 }

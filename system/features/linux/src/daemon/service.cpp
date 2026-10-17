@@ -53,8 +53,10 @@ namespace lujarch::linux {
 
 namespace {
 
+using aidl::org::lujarch::linux::AndroidState;
 using aidl::org::lujarch::linux::ILinux;
 using aidl::org::lujarch::linux::ILinuxListener;
+using aidl::org::lujarch::linux::LinuxLocation;
 using aidl::org::lujarch::linux::LinuxNotification;
 using aidl::org::lujarch::linux::LinuxService;
 using aidl::org::lujarch::linux::RemoteConfig;
@@ -66,10 +68,12 @@ constexpr size_t kMaxColors = 64 << 10;
 constexpr size_t kMaxNotifications = 200;
 constexpr size_t kMaxNotificationText = 1024;
 // The switches the daemon follows, as lujarch.setting.linux.<key>.
-constexpr const char* kSwitches[] = {"enabled",       "root_sessions",  "memory",
-                                     "swap",          "lend_clipboard", "lend_notifications",
-                                     "lend_sensors",  "lend_usb",       "lend_fingerprint",
-                                     "lend_ir",       "lend_nfc",       "remote"};
+constexpr const char* kSwitches[] = {"enabled",          "root_sessions",   "memory",
+                                     "swap",             "lend_clipboard",  "lend_notifications",
+                                     "lend_sensors",     "lend_usb",        "lend_fingerprint",
+                                     "lend_ir",          "lend_nfc",        "lend_microphone",
+                                     "lend_camera",      "lend_location",   "lend_vibration",
+                                     "lend_quick_settings", "remote"};
 
 enum class Caller { kSettings, kTerminal, kEither };
 
@@ -154,6 +158,15 @@ Service::Service()
                       },
                       [this](const std::string& copied) {
                           ForTerminal([&](ILinuxListener& l) { l.onClipboard(copied); });
+                      },
+                      [this](const std::string& key, const std::string& value) {
+                          ForTerminal([&](ILinuxListener& l) { l.onAndroidSet(key, value); });
+                      },
+                      [this](const std::string& pattern) {
+                          ForTerminal([&](ILinuxListener& l) { l.onVibrate(pattern); });
+                      },
+                      [this](const std::string& stream, bool wanted) {
+                          ForTerminal([&](ILinuxListener& l) { l.onStream(stream, wanted); });
                       }}),
       death_(AIBinder_DeathRecipient_new(&Service::OnListenerDied)) {
     // The cookie is the service, which outlives every link: nothing to release when one ends.
@@ -197,6 +210,8 @@ void Service::Start() {
                     std::string("lujarch.setting.") + kFeature + "." + key)
                 .detach();
     }
+    // Linux's time zone follows Android's.
+    std::thread(&Service::WatchProperty, this, std::string(kTimezoneProperty)).detach();
     std::thread(&Service::KernelSuRootLoop, this).detach();
     std::thread(&Service::Loop, this).detach();
 }
@@ -749,6 +764,12 @@ ndk::ScopedAStatus Service::registerListener(const std::shared_ptr<ILinuxListene
     }
     AIBinder_linkToDeath(listener->asBinder().get(), death_.get(), this);
     listeners_.push_back({listener, static_cast<uid_t>(AIBinder_getCallingUid()), terminal});
+    if (terminal) {
+        // The streams programs read already; the bridge's thread tells of later ones.
+        std::thread([this, listener] {
+            for (const std::string& stream : bridge_.Wanted()) listener->onStream(stream, true);
+        }).detach();
+    }
     return ndk::ScopedAStatus::ok();
 }
 
@@ -1052,6 +1073,31 @@ ndk::ScopedAStatus Service::answerNfc(int32_t id, const std::vector<uint8_t>& re
                                       const std::optional<std::string>& error) {
     CHECK_CALLER(Caller::kTerminal);
     bridge_.AnswerNfc(id, response, error);
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Service::setAndroidState(const AndroidState& state) {
+    CHECK_CALLER(Caller::kTerminal);
+    if (!bridge_.SetAndroidState(state)) {
+        return Fail(ILinux::ERROR_REFUSED, "Android's quick settings are not lent");
+    }
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Service::openStream(const std::string& stream, ndk::ScopedFileDescriptor* fd) {
+    CHECK_CALLER(Caller::kTerminal);
+    auto out = bridge_.OpenStream(stream);
+    if (!out.ok()) {
+        return Fail(out.error().code() == EINVAL ? ILinux::ERROR_INVALID : ILinux::ERROR_NOT_WANTED,
+                    out.error().message());
+    }
+    *fd = ndk::ScopedFileDescriptor(out->release());
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Service::setLocation(const LinuxLocation& location) {
+    CHECK_CALLER(Caller::kTerminal);
+    bridge_.SetLocation(location);
     return ndk::ScopedAStatus::ok();
 }
 

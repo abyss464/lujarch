@@ -58,6 +58,12 @@ abstract class LinuxPage : BasePreferenceFragment() {
         override fun onNfcRequest(id: Int, command: ByteArray) {}
 
         override fun onClipboard(text: String) {}
+
+        override fun onAndroidSet(key: String, value: String) {}
+
+        override fun onVibrate(pattern: String) {}
+
+        override fun onStream(stream: String, wanted: Boolean) {}
     }
 
     /** Loads the page's data; failures go to the banner. */

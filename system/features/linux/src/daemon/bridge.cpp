@@ -17,7 +17,9 @@
 #include <aidl/android/hardware/ir/IConsumerIr.h>
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
+#include <android-base/properties.h>
 #include <android-base/strings.h>
+#include <aidl/org/lujarch/linux/ILinux.h>
 #include <android/binder_manager.h>
 #include <android/looper.h>
 #include <android/sensor.h>
@@ -33,8 +35,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <thread>
+#include <tuple>
 
 #include "files.h"
 #include "paths.h"
@@ -43,6 +47,9 @@ namespace lujarch::linux {
 
 namespace {
 
+using aidl::org::lujarch::linux::AndroidState;
+using aidl::org::lujarch::linux::ILinux;
+using aidl::org::lujarch::linux::LinuxLocation;
 using aidl::org::lujarch::linux::LinuxNotification;
 using android::base::ErrnoError;
 using android::base::Error;
@@ -55,6 +62,10 @@ constexpr int kNfcIdent = 4;
 constexpr int kInotifyIdent = 5;
 constexpr int kSensorsIdent = 6;
 constexpr int kClipboardIdent = 7;
+constexpr int kVibrateIdent = 8;
+constexpr int kAndroidSetIdent = 9;
+// The readers' write ends, kReaderIdent + their index.
+constexpr int kReaderIdent = 16;
 
 constexpr auto kAuthTimeout = std::chrono::seconds(60);
 constexpr auto kNfcTimeout = std::chrono::seconds(10);
@@ -65,6 +76,15 @@ constexpr gid_t kUsbGroup = 1018;  // AID_USB
 constexpr char kUsbGroupName[] = "aid_usb";
 // The sampling period of the lent sensors, in microseconds.
 constexpr int32_t kSensorPeriodUs = 200000;
+// A vibration's pattern: at most this many steps and this long in all.
+constexpr size_t kMaxVibrationSteps = 128;
+constexpr int kMaxVibrationMs = 30000;
+// Android's switches Linux's desktop flips, and their values: 1 or 0, or the brightness slider's
+// position.
+constexpr const char* kAndroidSwitches[] = {"wifi",       "mobile",   "bluetooth", "airplane",
+                                            "hotspot",    "flashlight", "rotation", "dnd",
+                                            "caffeine"};
+constexpr int kMaxBrightness = 65535;
 
 std::string Run(const char* name) {
     return std::string(kBridgeDir) + "/" + name;
@@ -133,6 +153,18 @@ std::string ToHex(const std::vector<uint8_t>& bytes) {
     return out;
 }
 
+// A time zone's name as tzdata names it: Area/Location, letters, digits, '_', '-', '+'.
+bool IsZoneName(const std::string& name) {
+    if (name.empty() || name.size() > 64 || name.front() == '/' || name.back() == '/') return false;
+    for (const std::string& part : android::base::Split(name, "/")) {
+        if (part.empty() || part == "." || part == "..") return false;
+        for (char c : part) {
+            if (!isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-' && c != '+') return false;
+        }
+    }
+    return true;
+}
+
 // A request line: the reply FIFO's name, a space, the rest.
 bool SplitRequest(const std::string& line, std::string* reply, std::string* rest) {
     const size_t space = line.find(' ');
@@ -144,7 +176,13 @@ bool SplitRequest(const std::string& line, std::string* reply, std::string* rest
 
 }  // namespace
 
-Bridge::Bridge(System& system, Asks asks) : system_(system), asks_(std::move(asks)) {}
+Bridge::Bridge(System& system, Asks asks)
+    : system_(system),
+      asks_(std::move(asks)),
+      readers_{{{ILinux::STREAM_MICROPHONE, "microphone", kReaderIdent},
+                {ILinux::STREAM_CAMERA_BACK, "camera", kReaderIdent + 1},
+                {ILinux::STREAM_CAMERA_FRONT, "camera", kReaderIdent + 2},
+                {ILinux::STREAM_LOCATION, "location", kReaderIdent + 3}}} {}
 
 void Bridge::Start() {
     wake_.reset(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK));
@@ -161,6 +199,7 @@ void Bridge::Wake() {
 void Bridge::SetLinux(bool running, const std::string& user) {
     {
         std::lock_guard lock(mutex_);
+        if (running && !linux_) ++generation_;
         linux_ = running;
         user_ = user;
     }
@@ -215,6 +254,22 @@ void Bridge::Arrange() {
         return linux_ && SettingIsOn(kFeature, std::string("lend_") + part);
     };
     ALooper* looper = ALooper_forThread();
+    // A new start of Linux: its /run is new, and the cameras are bound into its new namespace.
+    if (generation_ != arranged_) {
+        arranged_ = generation_;
+        for (Reader& r : readers_) {
+            ReaderGone(r);
+            if (r.watch >= 0) inotify_rm_watch(inotify_.get(), r.watch);
+            r.watch = -1;
+        }
+        for (unique_fd* fd : {&vibrate_fifo_, &android_set_fifo_}) {
+            if (*fd >= 0) ALooper_removeFd(looper, fd->get());
+            fd->reset();
+        }
+        android_lent_ = false;
+        cameras_checked_ = false;
+        timezone_.clear();
+    }
     auto root = files::OpenRoot(kRoot);
     const bool ready = linux_ && root.ok() &&
                        files::MakeDirsIn(root->get(), kBridgeDir, 01775, 0, aid::kLinux).ok();
@@ -230,6 +285,17 @@ void Bridge::Arrange() {
         usb_lent_ = usb;
     }
     usb_checked_ = linux_;
+
+    // The cameras' device nodes; bound again into every new namespace.
+    const bool cameras = linux_ && lent("camera");
+    if (cameras != cameras_lent_ || (linux_ && !cameras_checked_)) {
+        if (auto r = system_.LendCameras(cameras); !r.ok()) LOG(ERROR) << "bridge: " << r.error();
+        if (cameras != cameras_lent_) {
+            LOG(INFO) << "bridge: cameras " << (cameras ? "lent" : "taken back");
+        }
+        cameras_lent_ = cameras;
+    }
+    cameras_checked_ = linux_;
 
     // A FIFO the daemon reads.
     auto fifo = [&](const char* name, bool want, unique_fd& fd, int ident, mode_t mode,
@@ -265,6 +331,8 @@ void Bridge::Arrange() {
     fifo("nfc", lent("nfc"), nfc_fifo_, kNfcIdent, 0620, "nfc.d");
     const bool clipboard_was_lent = clipboard_fifo_ >= 0;
     fifo("clipboard-set", lent("clipboard"), clipboard_fifo_, kClipboardIdent, 0620, nullptr);
+    fifo("vibrate", lent("vibration"), vibrate_fifo_, kVibrateIdent, 0620, nullptr);
+    fifo("android-set", lent("quick_settings"), android_set_fifo_, kAndroidSetIdent, 0620, nullptr);
     if (clipboard_was_lent && clipboard_fifo_ < 0) {
         if (root.ok() && linux_) files::RemoveIn(root->get(), Run("clipboard"));
         android_clipboard_.clear();
@@ -289,18 +357,60 @@ void Bridge::Arrange() {
             const std::string link = "/proc/self/fd/" + std::to_string(path->get());
             sensors_watch_ = inotify_add_watch(inotify_.get(), link.c_str(), IN_OPEN);
             if (sensors_watch_ < 0) PLOG(ERROR) << "bridge: inotify on the sensors";
-            ALooper_addFd(looper, inotify_.get(), kInotifyIdent, ALOOPER_EVENT_INPUT, nullptr,
-                          nullptr);
             LOG(INFO) << "bridge: sensors lent";
         }
     } else if (!sensors && sensors_watch_ >= 0) {
         SensorsStop();
         inotify_rm_watch(inotify_.get(), sensors_watch_);
         sensors_watch_ = -1;
-        ALooper_removeFd(looper, inotify_.get());
         if (root.ok() && linux_) files::RemoveIn(root->get(), Run("sensors"));
         LOG(INFO) << "bridge: sensors taken back";
     }
+
+    // FIFOs Android writes while a program reads them.
+    for (Reader& r : readers_) {
+        const bool want = lent(r.part);
+        if (want && ready && r.watch < 0) {
+            if (auto made = files::MakeFifoIn(root->get(), Run(r.name), 0640, aid::kLinux); !made.ok()) {
+                LOG(ERROR) << "bridge: " << made.error();
+                continue;
+            }
+            auto path = files::OpenIn(root->get(), Run(r.name), O_PATH | O_NOFOLLOW);
+            if (!path.ok()) {
+                LOG(ERROR) << "bridge: " << path.error();
+                continue;
+            }
+            const std::string link = "/proc/self/fd/" + std::to_string(path->get());
+            r.watch = inotify_add_watch(inotify_.get(), link.c_str(), IN_OPEN);
+            if (r.watch < 0) {
+                PLOG(ERROR) << "bridge: inotify on " << r.name;
+                continue;
+            }
+            LOG(INFO) << "bridge: " << r.name << " lent";
+        } else if (!want && r.watch >= 0) {
+            ReaderGone(r);
+            inotify_rm_watch(inotify_.get(), r.watch);
+            r.watch = -1;
+            if (root.ok() && linux_) files::RemoveIn(root->get(), Run(r.name));
+            LOG(INFO) << "bridge: " << r.name << " taken back";
+        }
+    }
+
+    // Android's switches and readings.
+    const bool android = lent("quick_settings");
+    if (android && ready) {
+        if (!android_lent_) LOG(INFO) << "bridge: Android's quick settings lent";
+        android_lent_ = true;
+        WriteAndroidState();
+    } else if (android_lent_) {
+        android_lent_ = false;
+        android_state_.reset();
+        if (root.ok() && linux_) files::RemoveIn(root->get(), Run("android"));
+        LOG(INFO) << "bridge: Android's quick settings taken back";
+    }
+
+    if (ready) Timezone();
+    if (!linux_) timezone_.clear();
 
     // Notifications and the NFC card.
     const bool notifications = lent("notifications");
@@ -437,6 +547,228 @@ bool Bridge::SetClipboard(const std::string& value) {
         LOG(ERROR) << "bridge: clipboard: " << w.error();
     }
     return true;
+}
+
+void Bridge::AndroidSet(const std::string& line) {
+    const size_t space = line.find(' ');
+    const std::string key = line.substr(0, space);
+    const std::string value = space == std::string::npos ? "" : android::base::Trim(line.substr(space + 1));
+    bool valid;
+    if (key == "brightness") {
+        int position;
+        valid = android::base::ParseInt(value, &position, 0, kMaxBrightness);
+    } else {
+        valid = (value == "1" || value == "0") &&
+                std::find_if(std::begin(kAndroidSwitches), std::end(kAndroidSwitches),
+                             [&](const char* k) { return key == k; }) != std::end(kAndroidSwitches);
+    }
+    if (!valid) {
+        LOG(WARNING) << "bridge: android-set: not '<switch> 1|0' or 'brightness <0-" << kMaxBrightness
+                     << ">': " << text::SanitizeUtf8(line.substr(0, 64));
+        return;
+    }
+    if (!asks_.answerable()) {
+        LOG(INFO) << "bridge: android-set " << key << ": the Terminal app is not on screen";
+        return;
+    }
+    asks_.android_set(key, value);
+}
+
+void Bridge::Vibrate(const std::string& line) {
+    const std::vector<std::string> steps = android::base::Split(android::base::Trim(line), ",");
+    bool valid = !steps.empty() && steps.size() <= kMaxVibrationSteps;
+    int total = 0;
+    for (size_t i = 0; valid && i < steps.size(); ++i) {
+        const std::vector<std::string> f = android::base::Split(steps[i], ":");
+        int amplitude = 255;
+        int ms = 0;
+        valid = f.size() <= 2 && android::base::ParseInt(f.back(), &ms, 0, kMaxVibrationMs) &&
+                (f.size() == 1 || android::base::ParseInt(f[0], &amplitude, 0, 255));
+        total += ms;
+    }
+    if (!valid || total > kMaxVibrationMs) {
+        LOG(WARNING) << "bridge: vibrate: not '<amplitude 0-255>:<ms>,...' (at most "
+                     << kMaxVibrationSteps << " steps, " << kMaxVibrationMs << " ms)";
+        return;
+    }
+    // One for each key a keyboard presses: not logged.
+    if (asks_.answerable()) asks_.vibrate(android::base::Trim(line));
+}
+
+void Bridge::ReaderOpened(Reader& r) {
+    if (r.out >= 0) return;
+    auto root = files::OpenRoot(kRoot);
+    if (!root.ok()) return;
+    // ENXIO: the program closed it again already.
+    auto fd = files::OpenIn(root->get(), Run(r.name), O_WRONLY | O_NONBLOCK);
+    if (!fd.ok()) return;
+    r.out = std::move(*fd);
+    // Only errors: the last reader leaving.
+    ALooper_addFd(ALooper_forThread(), r.out.get(), r.ident, 0, nullptr, nullptr);
+    LOG(INFO) << "bridge: a program reads " << r.name;
+    asks_.stream(r.name, true);
+}
+
+void Bridge::ReaderGone(Reader& r) {
+    if (r.out < 0) return;
+    ALooper_removeFd(ALooper_forThread(), r.out.get());
+    r.out.reset();
+    LOG(INFO) << "bridge: no program reads " << r.name;
+    asks_.stream(r.name, false);
+}
+
+bool Bridge::SetAndroidState(const AndroidState& state) {
+    std::lock_guard lock(mutex_);
+    if (!android_lent_) return false;
+    android_state_ = state;
+    WriteAndroidState();
+    return true;
+}
+
+void Bridge::WriteAndroidState() {
+    if (!android_state_) return;
+    auto root = files::OpenRoot(kRoot);
+    if (!root.ok()) return;
+    const AndroidState& a = *android_state_;
+    auto clean = [](const std::string& t) { return text::SanitizeUtf8(t.substr(0, kMaxText)); };
+    auto known = [](bool k, Json::Value v) { return k ? v : Json::Value(Json::nullValue); };
+    Json::Value out(Json::objectValue);
+    Json::Value wifi(Json::objectValue);
+    wifi["on"] = a.wifiOn;
+    wifi["connected"] = a.wifiConnected;
+    wifi["ssid"] = clean(a.wifiSsid);
+    wifi["level"] = std::clamp(a.wifiLevel, 0, 4);
+    out["wifi"] = known(a.wifiKnown, wifi);
+    Json::Value mobile(Json::objectValue);
+    mobile["present"] = a.mobilePresent;
+    mobile["on"] = a.mobileOn;
+    mobile["operator"] = clean(a.mobileOperator);
+    mobile["level"] = std::clamp(a.mobileLevel, 0, 4);
+    mobile["tech"] = clean(a.mobileTech);
+    mobile["connected"] = a.mobileConnected;
+    out["mobile"] = known(a.mobileKnown, mobile);
+    Json::Value bluetooth(Json::objectValue);
+    bluetooth["on"] = a.bluetoothOn;
+    Json::Value devices(Json::arrayValue);
+    for (size_t i = 0; i < a.bluetoothConnected.size() && i < 32; ++i) {
+        devices.append(clean(a.bluetoothConnected[i]));
+    }
+    bluetooth["connected"] = devices;
+    out["bluetooth"] = known(a.bluetoothKnown, bluetooth);
+    Json::Value airplane(Json::objectValue);
+    airplane["on"] = a.airplaneOn;
+    out["airplane"] = known(a.airplaneKnown, airplane);
+    Json::Value hotspot(Json::objectValue);
+    hotspot["on"] = a.hotspotOn;
+    out["hotspot"] = known(a.hotspotKnown, hotspot);
+    Json::Value flashlight(Json::objectValue);
+    flashlight["available"] = a.flashlightAvailable;
+    flashlight["on"] = a.flashlightOn;
+    out["flashlight"] = flashlight;
+    Json::Value battery(Json::objectValue);
+    battery["percent"] = std::clamp(a.batteryPercent, 0, 100);
+    battery["charging"] = a.batteryCharging;
+    battery["plugged"] = a.batteryPlugged;
+    out["battery"] = known(a.batteryKnown, battery);
+    Json::Value rotation(Json::objectValue);
+    rotation["auto"] = a.rotationAuto;
+    out["rotation"] = known(a.rotationKnown, rotation);
+    Json::Value dnd(Json::objectValue);
+    dnd["on"] = a.dndOn;
+    out["dnd"] = known(a.dndKnown, dnd);
+    Json::Value caffeine(Json::objectValue);
+    caffeine["on"] = a.caffeineOn;
+    out["caffeine"] = caffeine;
+    Json::Value brightness(Json::objectValue);
+    brightness["value"] = std::clamp(a.brightness, 0, kMaxBrightness);
+    brightness["max"] = std::clamp(a.brightnessMax, 1, kMaxBrightness);
+    out["brightness"] = known(a.brightnessKnown, brightness);
+    const std::string transport = a.transport;
+    out["default"] = transport == "wifi" || transport == "mobile" || transport == "other" ? transport : "none";
+    if (auto w = files::WriteIn(root->get(), Run("android"), text::ToJson(out) + "\n", 0640, 0,
+                                aid::kLinux);
+        !w.ok()) {
+        LOG(ERROR) << "bridge: android: " << w.error();
+    }
+}
+
+void Bridge::SetLocation(const LinuxLocation& l) {
+    std::lock_guard lock(mutex_);
+    Reader& r = readers_[3];
+    if (r.out < 0) return;
+    Json::Value out(Json::objectValue);
+    if (l.error) {
+        out["error"] = *l.error == "permission" ? "permission" : "off";
+    } else {
+        if (!std::isfinite(l.latitude) || !std::isfinite(l.longitude) || std::abs(l.latitude) > 90 ||
+            std::abs(l.longitude) > 180) {
+            return;
+        }
+        out["lat"] = l.latitude;
+        out["lon"] = l.longitude;
+        out["time"] = static_cast<Json::Int64>(l.time);
+        if (l.hasAltitude && std::isfinite(l.altitude)) out["alt"] = l.altitude;
+        if (l.hasAccuracy && std::isfinite(l.accuracy)) out["acc"] = l.accuracy;
+        if (l.hasSpeed && std::isfinite(l.speed)) out["speed"] = l.speed;
+        if (l.hasBearing && std::isfinite(l.bearing)) out["bearing"] = l.bearing;
+    }
+    const std::string line = text::ToJson(out) + "\n";
+    // A fix the reader has not taken yet is followed by the next; one written while it lags is
+    // dropped.
+    if (write(r.out.get(), line.data(), line.size()) < 0 && errno == EPIPE) ReaderGone(r);
+}
+
+Result<unique_fd> Bridge::OpenStream(const std::string& stream) {
+    std::lock_guard lock(mutex_);
+    for (Reader& r : readers_) {
+        if (stream != r.name || r.ident == readers_[3].ident) continue;
+        if (r.out < 0) return Error(ENOENT) << "no program reads " << stream;
+        unique_fd fd(fcntl(r.out.get(), F_DUPFD_CLOEXEC, 0));
+        if (fd < 0) return ErrnoError() << stream;
+        return fd;
+    }
+    return Error(EINVAL) << "no stream " << stream;
+}
+
+std::vector<std::string> Bridge::Wanted() {
+    std::lock_guard lock(mutex_);
+    std::vector<std::string> wanted;
+    for (const Reader& r : readers_) {
+        if (r.out >= 0) wanted.push_back(r.name);
+    }
+    return wanted;
+}
+
+void Bridge::Timezone() {
+    const std::string zone = android::base::GetProperty(kTimezoneProperty, "");
+    if (zone.empty() || zone == timezone_) return;
+    timezone_ = zone;
+    if (!IsZoneName(zone)) {
+        LOG(WARNING) << "bridge: Android's time zone is no zone name: " << text::SanitizeUtf8(zone);
+        return;
+    }
+    auto root = files::OpenRoot(kRoot);
+    if (!root.ok()) return;
+    const std::string target = std::string(kZoneinfo) + "/" + zone;
+    if (!files::ExistsIn(root->get(), target)) {
+        LOG(WARNING) << "bridge: Linux has no " << target << " (tzdata): its time zone stays";
+        return;
+    }
+    std::string name;
+    auto etc = files::OpenParentIn(root->get(), "/etc/localtime", &name);
+    if (!etc.ok()) {
+        LOG(ERROR) << "bridge: /etc/localtime: " << etc.error();
+        return;
+    }
+    const std::string tmp = ".localtime.lujarch-new";
+    unlinkat(etc->get(), tmp.c_str(), 0);
+    if (symlinkat(target.c_str(), etc->get(), tmp.c_str()) != 0 ||
+        renameat(etc->get(), tmp.c_str(), etc->get(), name.c_str()) != 0) {
+        PLOG(ERROR) << "bridge: /etc/localtime";
+        unlinkat(etc->get(), tmp.c_str(), 0);
+        return;
+    }
+    LOG(INFO) << "bridge: Linux's time zone is " << zone;
 }
 
 void Bridge::Reply(const char* dir, const std::string& reply, const std::string& text) {
@@ -583,6 +915,7 @@ void Bridge::SensorsWrite() {
 void Bridge::Loop() {
     ALooper* looper = ALooper_prepare(0);
     ALooper_addFd(looper, wake_.get(), kWakeIdent, ALOOPER_EVENT_INPUT, nullptr, nullptr);
+    ALooper_addFd(looper, inotify_.get(), kInotifyIdent, ALOOPER_EVENT_INPUT, nullptr, nullptr);
     auto last_write = Clock::now();
     for (;;) {
         int timeout = -1;
@@ -620,18 +953,34 @@ void Bridge::Loop() {
             case kClipboardIdent:
                 Lines(clipboard_fifo_, clipboard_buffer_, [this](const std::string& l) { Clipboard(l); });
                 break;
+            case kVibrateIdent:
+                Lines(vibrate_fifo_, vibrate_buffer_, [this](const std::string& l) { Vibrate(l); });
+                break;
+            case kAndroidSetIdent:
+                Lines(android_set_fifo_, android_set_buffer_,
+                      [this](const std::string& l) { AndroidSet(l); });
+                break;
             case kInotifyIdent: {
-                char buf[4096];
+                alignas(inotify_event) char buf[4096];
                 bool opened = false;
+                std::array<bool, std::tuple_size_v<decltype(readers_)>> read_now = {};
                 ssize_t n;
                 while ((n = read(inotify_.get(), buf, sizeof(buf))) > 0) {
                     for (char* p = buf; p < buf + n;) {
                         auto* e = reinterpret_cast<inotify_event*>(p);
-                        if (e->wd == sensors_watch_ && (e->mask & IN_OPEN)) opened = true;
+                        if ((e->mask & IN_OPEN) && e->wd >= 0) {
+                            if (e->wd == sensors_watch_) opened = true;
+                            for (size_t i = 0; i < readers_.size(); ++i) {
+                                if (e->wd == readers_[i].watch) read_now[i] = true;
+                            }
+                        }
                         p += sizeof(inotify_event) + e->len;
                     }
                 }
                 if (opened) SensorsReader();
+                for (size_t i = 0; i < readers_.size(); ++i) {
+                    if (read_now[i]) ReaderOpened(readers_[i]);
+                }
                 break;
             }
             case kSensorsIdent: {
@@ -650,6 +999,9 @@ void Bridge::Loop() {
                 break;
             }
             default:
+                for (Reader& r : readers_) {
+                    if (ident == r.ident) ReaderGone(r);
+                }
                 break;
         }
         const auto now = Clock::now();

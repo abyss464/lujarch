@@ -17,8 +17,9 @@
 // Linux runs beside Android on the same kernel, network and process IDs, in a mount namespace of
 // its own whose root is the installed system. The namespace holds only binds (no domain of the
 // system may mount a file system): Android's /proc, /sys and /dev/pts, single device nodes (the
-// GPU's among them, for the desktop), Lujarch's files for Linux, and /dev/bus/usb while USB
-// devices are lent. A child of the daemon
+// GPU's among them, for the desktop), Android's fonts at /usr/share/fonts/android and
+// /usr/share/fonts/android-product, Lujarch's files for Linux, /dev/bus/usb while USB devices
+// are lent and the cameras' nodes while the cameras are. A child of the daemon
 // that made it holds the namespace and dies with the daemon; every program of Linux enters it
 // through that child's pidfd and starts through
 // lujarch_linux_enter, which enters the system's domain, changes its root to the system and
@@ -84,6 +85,10 @@ class System {
 
     // Binds Android's /dev/bus/usb into the namespace, or takes it away.
     Result<void> LendUsb(bool lend);
+
+    // Binds the cameras' device nodes (kCameraNodes) Android has into the namespace's /dev, or
+    // takes them away; either any number of times.
+    Result<void> LendCameras(bool lend);
 
   private:
     // Enters the namespace from a child of the daemon.

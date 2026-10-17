@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/x-ms-dos-executable;application/x-msi;
+Actions=runJapanese;runWindow;
+X-KDE-Priority=TopLevel
+
+# Dolphin's context menu on an .exe: a Japanese program needs the Japanese code page (the wine
+# wrapper keeps a caller's LC_ALL); any program in a window of its own (LUJARCH_WINE_WINDOW).
+[Desktop Action runJapanese]
+Name=@lnx_wine_run_japanese@
+Icon=wine
+Exec=env LC_ALL=ja_JP.UTF-8 wine start /unix %f
+
+[Desktop Action runWindow]
+Name=@lnx_wine_run_window@
+Icon=wine
+Exec=env LUJARCH_WINE_WINDOW=1 wine start /unix %f

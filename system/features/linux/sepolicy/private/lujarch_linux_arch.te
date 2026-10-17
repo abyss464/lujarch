@@ -67,10 +67,14 @@ allow lujarch_linux_arch { gpu_device graphics_device }:chr_file rw_file_perms;
 allow lujarch_linux_arch dmabuf_system_heap_device:chr_file r_file_perms;
 allow lujarch_linux_arch usb_device:dir r_dir_perms;
 allow lujarch_linux_arch usb_device:chr_file rw_file_perms;
+# The cameras while they are lent: the two v4l2loopback nodes bound into its /dev, which Linux's
+# desktop writes Android's frames into and programs read (no other video node is in its /dev).
+allow lujarch_linux_arch video_device:chr_file { rw_file_perms map };
 
-# Lujarch's files for Linux (the initial setup, the fingerprint helper).
+# Lujarch's files for Linux (the initial setup, the fingerprint helper, the desktop's files) and
+# Android's fonts, which fontconfig maps.
 allow lujarch_linux_arch system_file:dir r_dir_perms;
-allow lujarch_linux_arch system_file:file r_file_perms;
+allow lujarch_linux_arch system_file:file { r_file_perms map };
 
 # What programs read of the kernel.
 r_dir_file(lujarch_linux_arch, proc)

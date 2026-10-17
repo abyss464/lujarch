@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Airplane mode quick setting: Android's own switch",
+        "Icon": "network-flightmode-on",
+        "Id": "org.kde.plasma.quicksetting.airplanemode",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_airplane_mode@"
+    }
+}

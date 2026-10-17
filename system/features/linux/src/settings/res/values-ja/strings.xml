@@ -79,7 +79,7 @@
     <string name="lnx_install_desktop">デスクトップをインストール</string>
     <string name="lnx_install_desktop_none">Plasma Mobile と、スマートフォンの画面用に Linux でビルドする KWin と Mesa</string>
     <string name="lnx_install_desktop_done">インストール済み。再度インストールすると更新され、変更された部分がビルドされます。</string>
-    <string name="lnx_install_desktop_message">インストールは Linux の実行中に Linux で root として実行されます。Linux のパッケージを更新し、Plasma Mobile をインストールして Mesa と KWin をビルドするため、時間がかかります。ビルドにはスマートフォンの小さいコアだけを使います。</string>
+    <string name="lnx_install_desktop_message">インストールは Linux の実行中に Linux で root として実行されます。Linux のパッケージを更新し、Plasma Mobile をインストールして Mesa、KWin、Plasma Mobile の横向きレイアウトをビルドするため、時間がかかります。ビルドにはスマートフォンの小さいコアだけを使います。</string>
     <string name="lnx_install_desktop_run">インストール</string>
     <string name="lnx_lend">Linux に貸し出す機能</string>
     <string name="lnx_lend_clipboard">共有クリップボード</string>
@@ -96,6 +96,16 @@
     <string name="lnx_lend_ir_summary">/run/lujarch/ir から送信</string>
     <string name="lnx_lend_nfc">NFC カードの読み取り</string>
     <string name="lnx_lend_nfc_summary">ターミナルまたはデスクトップの表示中、スマートフォンにかざしたカードを読み取ります</string>
+    <string name="lnx_lend_microphone">マイク</string>
+    <string name="lnx_lend_microphone_summary">ターミナルまたはデスクトップの表示中、Linux のプログラムがスマートフォンのマイクで録音します</string>
+    <string name="lnx_lend_camera">カメラ</string>
+    <string name="lnx_lend_camera_summary">ターミナルまたはデスクトップの表示中、スマートフォンのカメラを /dev/video40 と /dev/video41 として提供</string>
+    <string name="lnx_lend_location">位置情報</string>
+    <string name="lnx_lend_location_summary">ターミナルまたはデスクトップの表示中、スマートフォンの位置情報を GeoClue に提供</string>
+    <string name="lnx_lend_vibration">バイブレーション</string>
+    <string name="lnx_lend_vibration_summary">デスクトップのキーボードとプログラムがタッチ フィードバックとしてスマートフォンを振動させます</string>
+    <string name="lnx_lend_quick_settings">Android のクイック設定</string>
+    <string name="lnx_lend_quick_settings_summary">デスクトップのクイック設定とステータスバーで Wi-Fi、モバイルデータ、Bluetooth、機内モード、テザリング、ライト、自動回転、サイレント モード、画面の点灯維持、明るさを表示、切り替えます</string>
     <string name="lnx_services">サービス</string>
     <string name="lnx_remote">リモート アクセス</string>
     <string name="lnx_footer">Arch Linux ARM は Android と同じカーネルとネットワークで、専用のユーザーとして並行して動作します。セッションはターミナル アプリで開きます。</string>
@@ -164,5 +174,5 @@
     <string name="lnx_search_desktop_keywords">デスクトップ, ディスプレイ, Plasma, KWin, Wayland</string>
     <string name="lnx_search_services_keywords">サービス, デーモン</string>
     <string name="lnx_search_remote_keywords">リモート アクセス, 中継, SSH, frp</string>
-    <string name="lnx_search_lend_keywords">クリップボード, 通知, センサー, 指紋, 赤外線, USB, NFC</string>
+    <string name="lnx_search_lend_keywords">クリップボード, 通知, センサー, 指紋, 赤外線, マイク, カメラ, 位置情報, バイブレーション, クイック設定, USB, NFC, GeoClue, PipeWire</string>
 </resources>

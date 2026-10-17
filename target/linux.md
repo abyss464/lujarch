@@ -1,9 +1,10 @@
 # Linux
 
 The Linux development environment runs Arch Linux ARM on the phone beside Android, on the same
-kernel and the same network: its own user, its services, its terminal and desktop as a mode of the
-phone beside the home screen, and the phone's sensors, USB devices, fingerprint, infrared and NFC
-when the owner lends them. Its page in System holds all of it.
+kernel, the same network and the same time zone: its own user, its services, its terminal and
+desktop as a mode of the phone beside the home screen, Windows programs on the desktop, and the
+phone's sensors, USB devices, fingerprint, infrared, NFC, microphone, cameras, location, vibration
+and quick settings when the owner lends them. Its page in System holds all of it.
 
 ## Turning it on
 
@@ -17,7 +18,8 @@ when the owner lends them. Its page in System holds all of it.
 While the switch is on, the installed system runs from every start of the phone with its own
 services, and the page shows its state (running, stopped, not installed) and its sessions; off, it
 does not run and its sessions end. Turning the switch on or off takes effect at once. System has a
-Linux development environment row with the state as its summary.
+Linux development environment row with the state as its summary. Linux's time zone is Android's
+and follows it when it changes.
 
 ### LNX-2 The system is installed from an archive
 
@@ -89,25 +91,46 @@ page shows the current use. Swap gives Linux a swap file in its own storage whil
 
 The desktop of Arch Linux shows full screen on the phone in the terminal's place, with touch, the
 keyboard and the phone's sound, and stops drawing while it is not on screen. Install the desktop
-installs Plasma Mobile in Linux and builds KWin with Lujarch's display and Mesa for the phone's
-GPU, as root in Linux while it runs and on the small cores only; installing again updates it. The
-page shows the last install with its outcome. While Linux is on
-screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and media through and
-holds other notifications; the status bar stays locked and a swipe from the bottom returns to
-Android.
+installs Plasma Mobile in Linux and builds KWin with Lujarch's display, Plasma Mobile with the
+phone's landscape layout and Mesa for the phone's GPU, as root in Linux while it runs and on the
+small cores only; installing again updates it. The page shows the last install with its outcome.
+While Linux is on screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and
+media through and holds other notifications; the status bar stays locked and a swipe from the
+bottom returns to Android.
+
+In landscape the desktop's status bar is a column at the screen's left end, its navigation panel a
+column at its right end, and its on-screen keyboard a column beside the navigation panel, the
+programs between them. The on-screen keyboard is drawn as Gboard draws it, in pinyin and English
+with Gboard's symbol pages and number pads, and has the key strip over its keys: Esc, Tab, the
+arrows and the symbols a command line wants.
+
+Windows programs run on the desktop with Proton's Wine, FEX for x86 programs and DXVK and
+VKD3D-Proton on the phone's GPU, when Linux has Proton's Wine: Wine Settings and Windows Programs
+are in the desktop's app list, Dolphin opens .exe and .msi files with Wine and offers Run with
+Japanese locale and Run in a window, a game in a window runs in gamescope, and Windows programs
+draw CJK text with Android's fonts.
 
 ## Lending the phone
 
 ### LNX-7 Linux uses the phone's parts only when lent
 
 - Home: Settings > System > Linux development environment
-- Switch: Shared clipboard, Android notifications, Sensors, USB devices, Confirm authorization with fingerprint, Infrared transmitter, NFC card reading: on, off each
+- Switch: Shared clipboard, Android notifications, Sensors, USB devices, Confirm authorization with fingerprint, Infrared transmitter, NFC card reading, Microphone, Camera, Location, Vibration, Android's quick settings: on, off each
 - Default: off each
 - Verify: phone
 
 Each switch lends Linux one part of the phone: the clipboard both ways, a count and list of Android's
 notifications, the motion and environment sensors, USB devices connected to the phone, the
-fingerprint to confirm authorization requests in Linux, the infrared transmitter and NFC card reading.
+fingerprint to confirm authorization requests in Linux, the infrared transmitter, NFC card reading,
+the microphone (the desktop's programs record from "Android microphone"), the cameras (the desktop's
+programs and PipeWire see the back and the front camera as /dev/video40 and /dev/video41), the
+location (for GeoClue, and through it the desktop's programs), vibration (the desktop's keyboard and
+programs vibrate the phone as touch feedback) and Android's quick settings: the desktop's quick
+settings and status bar show and switch Android's Wi-Fi, mobile data, Bluetooth, airplane mode,
+hotspot, flashlight, auto-rotate, Do Not Disturb and Caffeine (the screen stays on while the desktop
+is shown), show the battery, and the brightness slider is Android's brightness. The microphone, a
+camera and the location are on only while a program in Linux uses them and the terminal or the
+desktop is on screen, after Android's own permission dialog, with Android's privacy indicator.
 Off, Linux cannot reach that part.
 
 ### LNX-8 Services are run and watched on the phone

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="lnx_qs_wifi">WLAN</string>
+    <string name="lnx_qs_connected">已连接</string>
+    <string name="lnx_qs_mobile_data">移动数据</string>
+    <string name="lnx_qs_no_sim">未插入 SIM 卡</string>
+    <string name="lnx_qs_bluetooth">蓝牙</string>
+    <string name="lnx_qs_list_separator">、</string>
+    <string name="lnx_qs_airplane_mode">飞行模式</string>
+    <string name="lnx_qs_hotspot">热点</string>
+    <string name="lnx_qs_flashlight">手电筒</string>
+    <string name="lnx_qs_not_available">不可用</string>
+    <string name="lnx_qs_auto_rotate">自动屏幕旋转</string>
+    <string name="lnx_qs_dnd">勿扰</string>
+    <string name="lnx_qs_caffeine">保持亮屏</string>
+    <string name="lnx_qs_caffeine_on">屏幕保持开启</string>
+    <string name="lnx_qs_battery">电池</string>
+    <string name="lnx_qs_charging">正在充电</string>
+    <string name="lnx_wine_settings">Wine 设置</string>
+    <string name="lnx_wine_settings_comment">Windows 程序的显示方式、缩放、函数库和驱动器</string>
+    <string name="lnx_wine_programs">Windows 程序</string>
+    <string name="lnx_wine_programs_comment">卸载或修改装在 Wine 里的 Windows 程序</string>
+    <string name="lnx_wine_run_japanese">用日文环境运行</string>
+    <string name="lnx_wine_run_window">在窗口中运行</string>
+    <string name="lnx_wine_preparing">正在准备 Wine</string>
+    <string name="lnx_wine_preparing_body">第一次运行需要约半分钟，之后直接启动。</string>
+</resources>

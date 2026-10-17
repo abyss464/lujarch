@@ -1,0 +1,933 @@
+#!/usr/bin/python3
+"""Android's microphone and cameras for the Linux desktop (LNX-7, Microphone and Camera).
+
+  media daemon   the resident part, started (and started again when it ends) by the desktop's session
+
+Microphone: PipeWire's source "Android microphone" (node android_mic, the pipe tunnel of pipewire.conf)
+reads raw PCM from MIC_FIFO. While a Linux program records from it (a capture stream linked to it, followed
+with `pw-dump --monitor`), this reads /run/lujarch/microphone, so Android's microphone records into it
+through the Terminal app, and copies it into MIC_FIFO. GRACE_S after the last capture stream goes, it closes
+it and Android's microphone stops.
+
+Cameras: /dev/video40 (back) and /dev/video41 (front) are v4l2loopback devices with exclusive_caps, which
+Linux programs list as cameras only while a producer streams into them. This is that producer: it keeps
+each device streaming with a black frame a second, so it is always listed, and learns from v4l2loopback's
+client-usage event when a program starts and stops reading it. While one does, it reads that camera's
+/run/lujarch/camera-back or camera-front, so Android films into it, and writes the frames into the device;
+GRACE_S after the reader stops, it closes it. Android opens one camera at a time: when both devices are
+read, the one read first is served and the other gets the black frame.
+
+Only the standard library. Logs go to stderr, the desktop service's log.
+"""
+import errno
+import fcntl
+import heapq
+import json
+import os
+import select
+import signal
+import stat
+import struct
+import subprocess
+import sys
+import time
+import traceback
+
+RUN = "/run/lujarch"
+MIC_FEED = RUN + "/microphone"
+MIC_FIFO = "/tmp/lujarch-microphone"  # pipe.filename in pipewire.conf
+MIC_NODE = "android_mic"                 # node.name there
+# Written to the FIFO in pieces of at most PIPE_BUF, always whole samples: a write that small is atomic,
+# so the pipe tunnel never reads half a sample.
+MIC_CHUNK = 4096
+MIC_BACKLOG = 48000                      # bytes (0.5 s) kept while PipeWire does not read the FIFO
+
+CAMERAS = (("back", "/dev/video40"), ("front", "/dev/video41"))
+# The devices' format and Android's frames (ILinux::STREAM_CAMERA_WIDTH and _HEIGHT): each frame behind
+# a header of FRAME_MAGIC and its size, little-endian.
+WIDTH, HEIGHT, FPS = 1280, 720, 30
+FRAME_MAGIC = b"LJF1"
+FRAME_HEADER = 8
+
+GRACE_S = 2.0          # a stream stays this long after its last user: a program that reopens does not restart it
+PLACEHOLDER_S = 1.0    # the black frame's period while Android's frames do not come
+REOPEN_S = 5.0         # a feed that is not there (its part not lent) or ended is opened again this often
+
+# V4L2 (linux/videodev2.h), sizes of the 64-bit ABI (arm64)
+_IOC_WRITE, _IOC_READ = 1, 2
+
+
+def _vidioc(direction, nr, size):
+    return (direction << 30) | (size << 16) | (ord("V") << 8) | nr
+
+
+VIDIOC_QUERYCAP = _vidioc(_IOC_READ, 0, 104)                  # struct v4l2_capability
+VIDIOC_S_FMT = _vidioc(_IOC_READ | _IOC_WRITE, 5, 208)        # struct v4l2_format
+VIDIOC_S_PARM = _vidioc(_IOC_READ | _IOC_WRITE, 22, 204)      # struct v4l2_streamparm
+VIDIOC_DQEVENT = _vidioc(_IOC_READ, 89, 136)                  # struct v4l2_event
+VIDIOC_SUBSCRIBE_EVENT = _vidioc(_IOC_WRITE, 90, 32)          # struct v4l2_event_subscription
+V4L2_BUF_TYPE_VIDEO_OUTPUT = 2
+V4L2_PIX_FMT_NV12 = 0x3231564E
+V4L2_FIELD_NONE = 1
+# Camera2's YUV is JFIF: BT.601 matrix, full range, which V4L2 calls the JPEG colorspace
+V4L2_COLORSPACE_JPEG = 7
+V4L2_EVENT_SUB_FL_SEND_INITIAL = 1
+# v4l2loopback's private event: count 1 while a reader streams from the device, 0 when none does
+V4L2_EVENT_PRI_CLIENT_USAGE = 0x08000000 + 0x08E00000 + 1
+V4L2LOOPBACK_DRIVER = b"v4l2 loopback"
+
+
+
+def log(message):
+    print("media: " + message, file=sys.stderr, flush=True)
+
+
+class Shutdown(BaseException):
+    """SIGTERM or SIGINT: leave the loop (BaseException, so the handlers' guard does not catch it)."""
+
+
+# ------------------------------------------------------------------ the loop
+
+class Timer:
+    __slots__ = ("fn", "cancelled")
+
+    def __init__(self, fn):
+        self.fn = fn
+        self.cancelled = False
+
+    def cancel(self):
+        self.cancelled = True
+
+
+class Loop:
+    """poll(2) with timers. A handler that raises loses its fd and its owner hears of it (crash), so an fd
+    that stays ready cannot spin the loop."""
+
+    def __init__(self):
+        self.poller = select.poll()
+        self.fds = {}  # fd -> (handler(revents), crash(why))
+        self.timers = []
+        self.seq = 0
+
+    def add(self, fd, mask, handler, crash):
+        self.poller.register(fd, mask)
+        self.fds[fd] = (handler, crash)
+
+    def remove(self, fd):
+        if self.fds.pop(fd, None) is not None:
+            try:
+                self.poller.unregister(fd)
+            except (KeyError, ValueError):
+                pass
+
+    def later(self, delay, fn):
+        t = Timer(fn)
+        self.seq += 1
+        heapq.heappush(self.timers, (time.monotonic() + max(0.0, delay), self.seq, t))
+        return t
+
+    @staticmethod
+    def guarded(fn, *args):
+        try:
+            fn(*args)
+            return None
+        except Exception:
+            return traceback.format_exc()
+
+    def run(self):
+        while True:
+            timeout = None
+            while self.timers and self.timers[0][2].cancelled:
+                heapq.heappop(self.timers)
+            if self.timers:
+                timeout = max(0, int((self.timers[0][0] - time.monotonic()) * 1000) + 1)
+            for fd, revents in self.poller.poll(timeout):
+                entry = self.fds.get(fd)
+                if entry is None:
+                    continue
+                handler, crash = entry
+                error = self.guarded(handler, revents)
+                if error is not None:
+                    log("an error in a handler (its fd is dropped):\n" + error)
+                    self.remove(fd)
+                    error = self.guarded(crash, "an error in its handler")
+                    if error is not None:
+                        log("an error while recovering from it:\n" + error)
+            now = time.monotonic()
+            while self.timers and self.timers[0][0] <= now:
+                _, _, t = heapq.heappop(self.timers)
+                if not t.cancelled:
+                    t.cancelled = True
+                    error = self.guarded(t.fn)
+                    if error is not None:
+                        log("an error in a timer (kept going):\n" + error)
+
+
+class Quiet:
+    """Logs a message once, and again only when it changes or after a while: a retry every few seconds
+    must not fill the session's log."""
+
+    def __init__(self, every=600.0):
+        self.every = every
+        self.last = None
+        self.at = 0.0
+
+    def log(self, message):
+        now = time.monotonic()
+        if message != self.last or now - self.at >= self.every:
+            log(message)
+            self.last = message
+            self.at = now
+
+    def reset(self):
+        self.last = None
+
+
+
+# ------------------------------------------------------------------ lujarch_linux's FIFOs
+
+class Feed:
+    """One FIFO of lujarch_linux that Android writes while this reads it: open while it has a target. A feed
+    that is not there (its part is not lent) or that lujarch_linux ends is opened again every REOPEN_S."""
+
+    def __init__(self, loop, name):
+        self.loop = loop
+        self.name = name
+        self.target = None
+        self.path = None
+        self.fd = None
+        self.retry = None
+        self.quiet = Quiet()
+
+    def set_target(self, value):
+        if value == self.target:
+            return
+        self.close()
+        self.target = value
+        if value is not None:
+            self.open()
+
+    def open(self):
+        self.retry = None
+        if self.target is None or self.fd is not None:
+            return
+        self.path = self.feed_path(self.target)
+        try:
+            fd = os.open(self.path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        except OSError as e:
+            self.quiet.log("%s: %s: %s; %s stays silent until it is lent" % (self.name, self.path, e.strerror,
+                                                                              self.name))
+            self.retry = self.loop.later(REOPEN_S, self.open)
+            return
+        if not stat.S_ISFIFO(os.fstat(fd).st_mode):
+            os.close(fd)
+            self.quiet.log("%s: %s is not a FIFO" % (self.name, self.path))
+            self.retry = self.loop.later(REOPEN_S, self.open)
+            return
+        self.quiet.reset()
+        self.fd = fd
+        self.loop.add(fd, select.POLLIN, self.readable, self.crashed)
+        log("%s: reading %s" % (self.name, self.path))
+        self.opened()
+
+    def close(self):
+        if self.retry is not None:
+            self.retry.cancel()
+            self.retry = None
+        if self.fd is None:
+            return
+        self.loop.remove(self.fd)
+        os.close(self.fd)
+        self.fd = None
+        log("%s: %s closed" % (self.name, self.path))
+        self.closed()
+
+    def readable(self, revents):
+        if revents & select.POLLIN:
+            try:
+                data = os.read(self.fd, 1 << 16)
+            except BlockingIOError:
+                return
+            except OSError as e:
+                log("%s: %s: %s" % (self.name, self.path, e))
+                data = b""
+            if data:
+                self.receive(data)
+                return
+        # lujarch_linux ended it (the part taken back, Linux's daemon gone): open it again later.
+        self.close()
+        if self.target is not None:
+            self.retry = self.loop.later(REOPEN_S, self.open)
+
+    def crashed(self, why):
+        self.close()
+        if self.target is not None:
+            self.retry = self.loop.later(REOPEN_S, self.open)
+
+    def shutdown(self):
+        self.set_target(None)
+
+    # -- for the kinds of feed
+    def feed_path(self, target):
+        raise NotImplementedError
+
+    def opened(self):
+        pass
+
+    def receive(self, data):
+        pass
+
+    def closed(self):
+        pass
+
+
+class Microphone(Feed):
+    """Android's microphone into MIC_FIFO, which PipeWire's android_mic source reads."""
+
+    def __init__(self, loop):
+        super().__init__(loop, "microphone")
+        self.fifo = None
+        self.pending = bytearray()
+        self.open_after = 0.0
+        self.dropping = False
+        self.fifo_quiet = Quiet()
+
+    def feed_path(self, target):
+        return MIC_FEED
+
+    def receive(self, data):
+        self.pending += data
+        self.flush()
+
+    def open_fifo(self):
+        now = time.monotonic()
+        if now < self.open_after:
+            return False
+        self.open_after = now + 2.0
+        try:
+            # O_NONBLOCK: ENXIO instead of waiting when PipeWire does not have it open
+            fd = os.open(MIC_FIFO, os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        except OSError as e:
+            self.fifo_quiet.log("microphone: %s: %s (is PipeWire running with the desktop's pipewire.conf?)"
+                                % (MIC_FIFO, e.strerror))
+            return False
+        if not stat.S_ISFIFO(os.fstat(fd).st_mode):
+            os.close(fd)
+            self.fifo_quiet.log("microphone: %s is not a FIFO" % MIC_FIFO)
+            return False
+        self.fifo = fd
+        self.fifo_quiet.reset()
+        return True
+
+    def close_fifo(self):
+        if self.fifo is not None:
+            os.close(self.fifo)
+            self.fifo = None
+
+    def flush(self):
+        if self.fifo is not None or self.open_fifo():
+            while len(self.pending) >= 2:
+                n = min(len(self.pending), MIC_CHUNK) & ~1
+                try:
+                    os.write(self.fifo, self.pending[:n])
+                except BlockingIOError:
+                    break
+                except OSError as e:
+                    # EPIPE: PipeWire went away; a new one makes the FIFO again
+                    self.fifo_quiet.log("microphone: writing %s: %s" % (MIC_FIFO, e.strerror))
+                    self.close_fifo()
+                    break
+                del self.pending[:n]
+                self.dropping = False
+        if len(self.pending) > MIC_BACKLOG:
+            # Nobody reads the FIFO (the source is not running): keep the newest, whole samples
+            excess = (len(self.pending) - MIC_BACKLOG // 2 + 1) & ~1
+            del self.pending[:excess]
+            if not self.dropping:
+                self.dropping = True
+                log("microphone: PipeWire does not read the microphone; dropping what it misses")
+
+    def closed(self):
+        self.pending.clear()
+        self.dropping = False
+        self.close_fifo()
+
+
+class MicrophoneUse:
+    """Reads Android's microphone while a program records from android_mic."""
+
+    def __init__(self, loop, mic):
+        self.loop = loop
+        self.mic = mic
+        self.grace = None
+        self.count = 0
+
+    def recorders(self, count):
+        if count == self.count:
+            return
+        self.count = count
+        if count > 0:
+            if self.grace is not None:
+                self.grace.cancel()
+                self.grace = None
+            if self.mic.target is None:
+                log("microphone: %d program(s) record from the Android microphone" % count)
+                self.mic.set_target("on")
+        elif self.mic.target is not None and self.grace is None:
+            self.grace = self.loop.later(GRACE_S, self.grace_over)
+
+    def grace_over(self):
+        self.grace = None
+        if self.count == 0 and self.mic.target is not None:
+            log("microphone: no program records any more: Android's microphone stops")
+            self.mic.set_target(None)
+
+
+# ------------------------------------------------------------------ PipeWire
+
+def truthy(v):
+    return v is True or (isinstance(v, str) and v.lower() in ("true", "1"))
+
+
+class PipeWireWatch:
+    """`pw-dump --monitor`: the capture streams linked to android_mic, and the V4L2 devices and camera nodes
+    PipeWire has."""
+
+    def __init__(self, loop, recorders):
+        self.loop = loop
+        self.recorders = recorders
+        self.objects = {}
+        self.ready = False
+        self.v4l2_devices = set()
+        self.v4l2_nodes = set()
+        self.proc = None
+        self.fd = None
+        self.buf = bytearray()
+        self.backoff = 1.0
+        self.started_at = 0.0
+        self.quiet = Quiet()
+        loop.later(0, self.start)
+
+    def start(self):
+        try:
+            self.proc = subprocess.Popen(["pw-dump", "--monitor", "--no-colors"], stdin=subprocess.DEVNULL,
+                                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, close_fds=True)
+        except OSError as e:
+            self.quiet.log("cannot run pw-dump: %s (pipewire package); trying again in 30 s" % e)
+            self.loop.later(30, self.start)
+            return
+        self.fd = self.proc.stdout.fileno()
+        os.set_blocking(self.fd, False)
+        self.buf = bytearray()
+        self.started_at = time.monotonic()
+        self.loop.add(self.fd, select.POLLIN, self.readable, self.ended)
+
+    def readable(self, revents):
+        try:
+            data = os.read(self.fd, 1 << 16)
+        except BlockingIOError:
+            return
+        except OSError:
+            data = b""
+        if not data:
+            self.ended("closed")
+            return
+        self.buf += data
+        # pw-dump prints one JSON array per change, its closing bracket alone on a line: inner brackets are
+        # indented and strings hold no raw newline
+        start = 0
+        changed = False
+        while True:
+            end = self.buf.find(b"\n]\n", start)
+            if end < 0:
+                break
+            chunk = bytes(self.buf[start:end + 2])
+            start = end + 3
+            try:
+                items = json.loads(chunk)
+            except ValueError as e:
+                self.quiet.log("pw-dump printed something that is not JSON (%s): skipped" % e)
+                continue
+            if isinstance(items, list):
+                self.apply(items)
+                changed = True
+        if start:
+            del self.buf[:start]
+        if len(self.buf) > 16 << 20:
+            self.ended("an unfinished document over 16 MiB")
+            return
+        if changed:
+            self.ready = True
+            self.recompute()
+
+    def apply(self, items):
+        for o in items:
+            if not isinstance(o, dict) or not isinstance(o.get("id"), int):
+                continue
+            if "type" not in o:
+                # {"id": N, "info": null}: the object is gone
+                self.objects.pop(o["id"], None)
+                continue
+            info = o.get("info") if isinstance(o.get("info"), dict) else {}
+            props = info.get("props") if isinstance(info.get("props"), dict) else {}
+            self.objects[o["id"]] = (o["type"], info, props)
+
+    def recompute(self):
+        mic = None
+        nodes = {}
+        devices = set()
+        cameras = set()
+        for oid, (typ, info, props) in self.objects.items():
+            if typ == "PipeWire:Interface:Node":
+                nodes[oid] = props
+                if props.get("node.name") == MIC_NODE:
+                    mic = oid
+                # The camera node of a V4L2 device (Video/Source) carries the device's path
+                path = props.get("api.v4l2.path")
+                if isinstance(path, str):
+                    cameras.add(path)
+            elif typ == "PipeWire:Interface:Device" and props.get("device.api") == "v4l2":
+                path = props.get("api.v4l2.path")
+                if isinstance(path, str):
+                    devices.add(path)
+        recorders = set()
+        if mic is not None:
+            for typ, info, props in self.objects.values():
+                if typ != "PipeWire:Interface:Link" or info.get("output-node-id") != mic:
+                    continue
+                if info.get("state") in ("error", "unlinked"):
+                    continue
+                peer_id = info.get("input-node-id")
+                peer = nodes.get(peer_id)
+                if peer is None or not str(peer.get("media.class", "")).startswith("Stream/Input"):
+                    continue
+                # A level meter (pavucontrol's, Plasma's) records with stream.monitor; it shows the level of
+                # what flows, and does not turn the microphone on
+                if truthy(peer.get("stream.monitor")):
+                    continue
+                recorders.add(peer_id)
+        self.v4l2_devices = devices
+        self.v4l2_nodes = cameras
+        self.recorders(len(recorders))
+
+    def ended(self, why):
+        if self.fd is not None:
+            self.loop.remove(self.fd)
+            self.fd = None
+        if self.proc is not None:
+            try:
+                self.proc.kill()
+            except OSError:
+                pass
+            try:
+                self.proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
+            self.proc.stdout.close()
+            self.proc = None
+        if time.monotonic() - self.started_at > 30:
+            self.backoff = 1.0
+        self.quiet.log("pw-dump ended (%s; PipeWire not running?); starting it again" % why)
+        self.objects.clear()
+        self.ready = False
+        self.v4l2_devices = set()
+        self.v4l2_nodes = set()
+        self.recorders(0)
+        self.loop.later(self.backoff, self.start)
+        self.backoff = min(self.backoff * 2, 10.0)
+
+
+# ------------------------------------------------------------------ the cameras
+
+def black_nv12(width, height):
+    # Full range (the JPEG colorspace the device declares): Y 0, chroma at its middle
+    return bytes(width * height) + b"\x80" * (width * height // 2)
+
+
+class CameraDevice:
+    """One v4l2loopback device, kept streaming: the black frame while Android's frames do not come."""
+
+    def __init__(self, loop, facing, path):
+        self.loop = loop
+        self.facing = facing
+        self.path = path
+        self.changed = lambda started=None: None
+        self.fd = None
+        self.width = self.height = 0
+        self.black = b""
+        self.reader = False
+        self.reader_since = 0.0
+        self.wanted = False      # a program reads, or did less than GRACE_S ago
+        self.live = False        # Android's frames go in
+        self.fit = None          # (width, height, buffer) when Android's size is not the device's
+        self.grace = None
+        self.tick = None
+        self.ready_at = 0.0
+        self.poke_at = -1e9
+        self.pokes = 0
+        self.quiet = Quiet()
+        self.name = "%s camera (%s)" % (facing, path)
+        loop.later(0, self.open)
+
+    def open(self):
+        self.restore_mode()
+        try:
+            fd = os.open(self.path, os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC)
+        except OSError as e:
+            absent = e.errno in (errno.ENOENT, errno.ENODEV, errno.ENXIO)
+            self.trouble("cannot open it: %s%s" % (e.strerror, " (is the camera lent?)" if absent else ""),
+                         10)
+            return
+        try:
+            cap = bytearray(104)
+            fcntl.ioctl(fd, VIDIOC_QUERYCAP, cap)
+            driver = bytes(cap[:16]).split(b"\0")[0]
+            if driver != V4L2LOOPBACK_DRIVER:
+                # Never write into a device of Android's (its cameras, the codec)
+                os.close(fd)
+                self.trouble("not a v4l2loopback device (driver %r): left alone" % driver.decode(errors="replace"),
+                             600)
+                return
+            fmt = bytearray(208)
+            struct.pack_into("<I", fmt, 0, V4L2_BUF_TYPE_VIDEO_OUTPUT)
+            struct.pack_into("<12I", fmt, 8, WIDTH, HEIGHT, V4L2_PIX_FMT_NV12, V4L2_FIELD_NONE, WIDTH,
+                             WIDTH * HEIGHT * 3 // 2, V4L2_COLORSPACE_JPEG, 0, 0, 0, 0, 0)
+            fcntl.ioctl(fd, VIDIOC_S_FMT, fmt)
+            width, height, pixfmt, _, stride, size = struct.unpack_from("<6I", fmt, 8)
+            # A reader that stayed from an earlier daemon keeps the format it has; it is used if it is NV12
+            if pixfmt != V4L2_PIX_FMT_NV12 or stride != width or size != width * height * 3 // 2 \
+                    or width < 2 or height < 2 or width % 2 or height % 2:
+                raise OSError(errno.EBUSY, "the device holds a format this cannot write (%dx%d, fourcc %#x, "
+                                           "stride %d)" % (width, height, pixfmt, stride))
+            parm = bytearray(204)
+            struct.pack_into("<I", parm, 0, V4L2_BUF_TYPE_VIDEO_OUTPUT)
+            struct.pack_into("<II", parm, 12, 1, FPS)  # outputparm.timeperframe
+            fcntl.ioctl(fd, VIDIOC_S_PARM, parm)
+            fcntl.ioctl(fd, VIDIOC_SUBSCRIBE_EVENT,
+                        struct.pack("<8I", V4L2_EVENT_PRI_CLIENT_USAGE, 0, V4L2_EVENT_SUB_FL_SEND_INITIAL,
+                                    0, 0, 0, 0, 0))
+            black = black_nv12(width, height)
+            # The first frame starts the output stream: from now on programs see a capture device
+            os.write(fd, black)
+        except OSError as e:
+            os.close(fd)
+            self.trouble("cannot stream into it: %s" % e, 10)
+            return
+        self.fd = fd
+        self.width, self.height, self.black = width, height, black
+        self.ready_at = time.monotonic()
+        self.loop.add(fd, select.POLLPRI, self.events, self.fail)
+        self.quiet.reset()
+        log("%s: ready, %dx%d NV12, black until a program reads it" % (self.name, width, height))
+        self.tick = self.loop.later(PLACEHOLDER_S, self.placeholder)
+
+    def trouble(self, message, retry_s):
+        self.quiet.log("%s: %s; trying again in %d s" % (self.name, message, retry_s))
+        self.loop.later(retry_s, self.open)
+
+    def restore_mode(self):
+        """A daemon that ended while it made PipeWire look again (poke) left the node without access."""
+        try:
+            st = os.stat(self.path)
+            if st.st_uid == os.getuid() and stat.S_IMODE(st.st_mode) & 0o600 != 0o600:
+                os.chmod(self.path, 0o660)
+                log("%s: access restored (0660)" % self.name)
+        except OSError:
+            pass
+
+    def events(self, revents):
+        if revents & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+            self.fail("poll %#x" % revents)
+            return
+        for _ in range(8):
+            ev = bytearray(136)
+            try:
+                fcntl.ioctl(self.fd, VIDIOC_DQEVENT, ev)
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    return
+                self.fail("VIDIOC_DQEVENT: %s" % e)
+                return
+            if struct.unpack_from("<I", ev, 0)[0] == V4L2_EVENT_PRI_CLIENT_USAGE:
+                self.set_reader(struct.unpack_from("<I", ev, 8)[0] > 0)
+
+    def set_reader(self, on):
+        if on == self.reader:
+            return
+        self.reader = on
+        if on:
+            self.reader_since = time.monotonic()
+            if self.grace is not None:
+                self.grace.cancel()
+                self.grace = None
+            log("%s: a program started reading it" % self.name)
+            if not self.live:
+                self.write(self.black)  # its first frame, now
+            self.wanted = True
+            self.changed(self.facing)
+        else:
+            log("%s: the program stopped reading it" % self.name)
+            if self.grace is None:
+                self.grace = self.loop.later(GRACE_S, self.grace_over)
+
+    def grace_over(self):
+        self.grace = None
+        if not self.reader and self.wanted:
+            self.wanted = False
+            self.changed()
+
+    def placeholder(self):
+        self.tick = None
+        if self.fd is None:
+            return
+        if not self.live:
+            self.write(self.black)
+        if self.fd is not None:
+            self.tick = self.loop.later(PLACEHOLDER_S, self.placeholder)
+
+    def begin(self, width, height):
+        self.live = True
+        if (width, height) != (self.width, self.height):
+            log("%s: Android's frames are %dx%d, the device's %dx%d: they are cropped or padded"
+                % (self.name, width, height, self.width, self.height))
+            self.fit = (width, height, bytearray(self.black))
+
+    def frame(self, buf):
+        if self.fd is None:
+            return
+        if self.fit is None:
+            self.write(buf)
+            return
+        sw, sh, out = self.fit
+        dw, dh = self.width, self.height
+        w, h = min(sw, dw) & ~1, min(sh, dh) & ~1
+        sx, sy = ((sw - w) // 2) & ~1, ((sh - h) // 2) & ~1
+        dx, dy = ((dw - w) // 2) & ~1, ((dh - h) // 2) & ~1
+        src = memoryview(buf)
+        for r in range(h):
+            s = (sy + r) * sw + sx
+            d = (dy + r) * dw + dx
+            out[d:d + w] = src[s:s + w]
+        sbase, dbase = sw * sh, dw * dh
+        for r in range(h // 2):
+            s = sbase + (sy // 2 + r) * sw + sx
+            d = dbase + (dy // 2 + r) * dw + dx
+            out[d:d + w] = src[s:s + w]
+        self.write(out)
+
+    def end(self):
+        self.live = False
+        self.fit = None
+        if self.fd is not None:
+            self.write(self.black)  # not Android's last frame, frozen
+
+    def write(self, buf):
+        try:
+            os.write(self.fd, buf)
+        except OSError as e:
+            self.fail("write: %s" % e)
+
+    def fail(self, why):
+        if self.fd is None:
+            return
+        log("%s: %s; opening it again in 5 s" % (self.name, why))
+        self.loop.remove(self.fd)
+        try:
+            os.close(self.fd)
+        except OSError:
+            pass
+        self.fd = None
+        if self.tick is not None:
+            self.tick.cancel()
+            self.tick = None
+        if self.grace is not None:
+            self.grace.cancel()
+            self.grace = None
+        self.reader = False
+        if self.wanted:
+            self.wanted = False
+            self.changed()
+        self.loop.later(5, self.open)
+
+    def check_listed(self, pw):
+        """PipeWire makes a camera node for a V4L2 device only if it is a capture device when WirePlumber
+        probes it, which it is only while this streams into it. When WirePlumber probed before (it started
+        first, or while this daemon was down), its device has no node; WirePlumber has no udev events here
+        and looks again only when the node's access changes, so the access is taken away for a moment."""
+        now = time.monotonic()
+        if self.path in pw.v4l2_nodes:
+            self.pokes = 0
+            return
+        if self.fd is None or self.reader or not pw.ready or now - self.ready_at < 3 or now - self.poke_at < 60:
+            return
+        if self.path not in pw.v4l2_devices:
+            return
+        if self.pokes >= 3:
+            if self.pokes == 3:
+                self.pokes += 1
+                log("%s: PipeWire still lists no camera for it after 3 tries; programs that open the device "
+                    "itself see it, PipeWire's clients do not until WirePlumber restarts" % self.name)
+            return
+        self.pokes += 1
+        self.poke_at = now
+        try:
+            mode = stat.S_IMODE(os.stat(self.path).st_mode)
+            os.chmod(self.path, 0)
+        except OSError as e:
+            self.quiet.log("%s: PipeWire lists no camera for it, and its access cannot be changed to make "
+                           "PipeWire look again: %s" % (self.name, e))
+            return
+        log("%s: PipeWire probed it before it was ready and lists no camera for it: making it look again"
+            % self.name)
+
+        def restore():
+            try:
+                os.chmod(self.path, mode if mode & 0o600 == 0o600 else 0o660)
+            except OSError as e:
+                log("%s: cannot restore its access: %s" % (self.name, e))
+
+        # Apart, so that PipeWire handles the two changes one by one
+        self.loop.later(1.5, restore)
+
+
+
+class Camera(Feed):
+    """Android's frames of the camera of a facing into the device of that facing."""
+
+    SIZE = WIDTH * HEIGHT * 3 // 2
+
+    def __init__(self, loop, devices):
+        super().__init__(loop, "camera")
+        self.devices = devices
+        self.device = None
+        self.buf = bytearray()
+        self.synced = True
+        self.frames = 0
+
+    def feed_path(self, target):
+        return "%s/camera-%s" % (RUN, target)
+
+    def opened(self):
+        self.device = self.devices[self.target]
+        self.buf = bytearray()
+        self.synced = True
+        self.frames = 0
+        self.device.begin(WIDTH, HEIGHT)
+
+    def receive(self, data):
+        self.buf += data
+        while True:
+            if len(self.buf) < FRAME_HEADER:
+                return
+            if bytes(self.buf[:4]) != FRAME_MAGIC:
+                # A frame Android began and did not finish: the next one starts at its header.
+                if self.synced:
+                    self.synced = False
+                    log("camera: Android's stream lost a frame's end; finding the next frame")
+                at = self.buf.find(FRAME_MAGIC, 1)
+                if at < 0:
+                    del self.buf[:len(self.buf) - 3]
+                    return
+                del self.buf[:at]
+                continue
+            size = struct.unpack_from("<I", self.buf, 4)[0]
+            if size != self.SIZE:
+                self.quiet.log("camera: a frame of %d bytes, not NV12 of %dx%d: skipped" % (size, WIDTH, HEIGHT))
+                del self.buf[:4]
+                continue
+            if len(self.buf) < FRAME_HEADER + size:
+                return
+            self.synced = True
+            self.frames += 1
+            self.device.frame(bytes(self.buf[FRAME_HEADER:FRAME_HEADER + size]))
+            del self.buf[:FRAME_HEADER + size]
+
+    def closed(self):
+        if self.device is not None:
+            self.device.end()
+        self.device = None
+        self.buf = bytearray()
+
+
+class CameraChoice:
+    """Android opens one camera at a time: the device read first is served."""
+
+    def __init__(self, camera, devices):
+        self.camera = camera
+        self.devices = devices
+        self.conflict = None
+        for d in devices.values():
+            d.changed = self.changed
+
+    def changed(self, started=None):
+        """A device's readers changed; started: the facing a program has just started reading."""
+        wanted = [d for d in self.devices.values() if d.wanted]
+        current = self.camera.target
+        if current is not None and self.devices[current].wanted:
+            choice = current
+        elif wanted:
+            choice = min(wanted, key=lambda d: d.reader_since).facing
+        else:
+            choice = None
+        others = sorted(d.facing for d in wanted if d.facing != choice)
+        if others and others != self.conflict:
+            log("camera: programs read both cameras; Android gives one at a time: the %s camera, read first, "
+                "is served, the %s camera stays black" % (choice, others[0]))
+        self.conflict = others or None
+        if choice != current:
+            if choice is None:
+                log("camera: no program reads a camera any more: giving it back to Android")
+            else:
+                log("camera: asking Android for the %s camera" % choice)
+            self.camera.set_target(choice)
+
+
+
+# ------------------------------------------------------------------ main
+
+def daemon():
+    os.environ.setdefault("XDG_RUNTIME_DIR", "/tmp/runtime-%d" % os.getuid())
+    loop = Loop()
+    mic = Microphone(loop)
+    devices = {facing: CameraDevice(loop, facing, path) for facing, path in CAMERAS}
+    camera = Camera(loop, devices)
+    CameraChoice(camera, devices)
+    use = MicrophoneUse(loop, mic)
+    pw = PipeWireWatch(loop, use.recorders)
+
+    def check_listed():
+        for d in devices.values():
+            d.check_listed(pw)
+        loop.later(5, check_listed)
+
+    loop.later(5, check_listed)
+
+    def stop(signum, frame):
+        raise Shutdown()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    log("started")
+    try:
+        loop.run()
+    except Shutdown:
+        log("stopping")
+        for s in (mic, camera):
+            s.shutdown()
+        if pw.proc is not None:
+            try:
+                pw.proc.kill()
+            except OSError as e:
+                log("pw-dump: %s" % e)
+    return 0
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == "daemon":
+        return daemon()
+    print(__doc__.split("\n\n")[1], file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -142,6 +142,14 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Open desktop | 打开桌面 | デスクトップを開く |
 | Install the desktop | 安装桌面 | デスクトップをインストール |
 | Services | 服务 | サービス |
+| Microphone | 麦克风 | マイク |
+| Camera | 相机 | カメラ |
+| Location | 位置信息 | 位置情報 |
+| Vibration | 振动 | バイブレーション |
+| Android's quick settings | Android 快捷设置 | Android のクイック設定 |
+| Caffeine | 保持亮屏 | カフェイン |
+| Wine Settings | Wine 设置 | Wine の設定 |
+| Windows Programs | Windows 程序 | Windows プログラム |
 | System | 系统 | システム |
 | Modes | 模式 | モード |
 | Status bar | 状态栏 | ステータスバー |

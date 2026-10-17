@@ -62,6 +62,11 @@ inline constexpr char kBridgeDir[] = "/run/lujarch";
 // into.
 inline constexpr char kDisplaySocket[] = "/run/lujarch/display";
 inline constexpr char kSoundFifo[] = "/run/lujarch/sound";
+// The cameras' v4l2loopback devices (Linux's user's), under /dev in Android and in Linux.
+inline constexpr const char* kCameraNodes[] = {"video40", "video41"};
+// Android's time zone, and the zone files of Linux it names.
+inline constexpr char kTimezoneProperty[] = "persist.sys.timezone";
+inline constexpr char kZoneinfo[] = "/usr/share/zoneinfo";
 // The service that is the desktop: it runs in kDesktopCgroup.
 inline constexpr char kDesktopService[] = "desktop";
 inline constexpr char kShell[] = "/usr/bin/bash";

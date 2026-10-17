@@ -1,0 +1,10 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Description": "Wi-Fi quick setting: Android's own switch",
+        "Icon": "network-wireless-signal",
+        "Id": "org.kde.plasma.quicksetting.wifi",
+        "License": "GPL-2.0+",
+        "Name": "@lnx_qs_wifi@"
+    }
+}

@@ -32,4 +32,20 @@ oneway interface ILinuxListener {
 
     /** Linux's desktop copied text, for Android's clipboard while it is lent. */
     void onClipboard(String text);
+
+    /**
+     * Linux's desktop flips one of Android's switches, while Android's quick settings are lent:
+     * wifi, mobile, bluetooth, airplane, hotspot, flashlight, rotation, dnd, caffeine (1 or 0) or
+     * brightness (the slider's position).
+     */
+    void onAndroidSet(String key, String value);
+
+    /** A program in Linux vibrates, while vibration is lent: "<amplitude 0-255>:<ms>,...". */
+    void onVibrate(String pattern);
+
+    /**
+     * A program in Linux starts or stops reading one of ILinux's STREAM_ parts; told again to a
+     * listener that registers while one reads.
+     */
+    void onStream(String stream, boolean wanted);
 }

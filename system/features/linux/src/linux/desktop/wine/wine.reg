@@ -1,0 +1,151 @@
+Windows Registry Editor Version 5.00
+
+; Lujarch's defaults for a Wine prefix (LNX-6), imported by the prefix's setup (setup). ASCII here,
+; the CJK face names below as \uXXXX; the setup hands regedit a UTF-16 copy with a BOM, which is
+; what it reads for them. Every value can be changed in winecfg or regedit afterwards.
+
+; The Wayland driver first: it has the desktop's input method (text-input-v3) and Vulkan on Turnip;
+; X11 through Xwayland is the fallback.
+[HKEY_CURRENT_USER\Software\Wine\Drivers]
+"Graphics"="wayland,x11"
+
+; Wine's own Direct3D (wined3d) draws only what DXVK and VKD3D-Proton do not: DirectDraw and Direct3D 1-7,
+; the 2D path of most visual-novel engines and old programs, in software through GDI; its OpenGL renderer
+; on Zink ends DirectDraw programs. Direct3D 8-12 stay on the GPU through DXVK and VKD3D-Proton.
+[HKEY_CURRENT_USER\Software\Wine\Direct3D]
+"renderer"="gdi"
+
+; DXVK and VKD3D-Proton, copied into the prefix by the setup; builtin if they fail to load.
+[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
+"d3d8"="native,builtin"
+"d3d9"="native,builtin"
+"d3d10core"="native,builtin"
+"d3d11"="native,builtin"
+"dxgi"="native,builtin"
+"d3d12"="native,builtin"
+"d3d12core"="native,builtin"
+
+; The desktop's scale is 1.5 (the KWin backend keeps it), and Wine's Wayland driver does not take it from
+; the output, so Wine's DPI is set to match: 96 x 1.5. DPI-aware programs draw at 144; the others are
+; scaled by Wine, as Windows scales them. winecfg's Graphics tab changes it.
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"LogPixels"=dword:00000090
+
+; Installed programs get their menu entries, but Wine does not take over the desktop's file types
+; (.txt, .html, images ...) for its own programs.
+[HKEY_CURRENT_USER\Software\Wine\FileOpenAssociations]
+"Enable"="N"
+
+; Windows CJK faces drawn with Android's Noto CJK (linked into C:\windows\Fonts).
+[HKEY_CURRENT_USER\Software\Wine\Fonts\Replacements]
+; Simplified Chinese, sans
+"Microsoft YaHei"="Noto Sans CJK SC"
+"\u5fae\u8f6f\u96c5\u9ed1"="Noto Sans CJK SC"
+"Microsoft YaHei UI"="Noto Sans CJK SC"
+"SimHei"="Noto Sans CJK SC"
+"\u9ed1\u4f53"="Noto Sans CJK SC"
+"DengXian"="Noto Sans CJK SC"
+"\u7b49\u7ebf"="Noto Sans CJK SC"
+; SimSun is the UI face of Chinese Windows (dialogs, menus, Wine's own UI under the GBK code page): sans,
+; since the serif Noto is thin at a phone's sizes.
+"SimSun"="Noto Sans CJK SC"
+"\u5b8b\u4f53"="Noto Sans CJK SC"
+"NSimSun"="Noto Sans CJK SC"
+"\u65b0\u5b8b\u4f53"="Noto Sans CJK SC"
+"SimSun-ExtB"="Noto Sans CJK SC"
+; Kai and FangSong have no Noto face of their own: the serif is the nearest.
+"KaiTi"="Noto Serif CJK SC"
+"\u6977\u4f53"="Noto Serif CJK SC"
+"FangSong"="Noto Serif CJK SC"
+"\u4eff\u5b8b"="Noto Serif CJK SC"
+; Traditional Chinese
+"Microsoft JhengHei"="Noto Sans CJK TC"
+"\u5fae\u8edf\u6b63\u9ed1\u9ad4"="Noto Sans CJK TC"
+"Microsoft JhengHei UI"="Noto Sans CJK TC"
+; MingLiU is the UI face of Traditional Chinese Windows: sans, as SimSun.
+"MingLiU"="Noto Sans CJK TC"
+"\u7d30\u660e\u9ad4"="Noto Sans CJK TC"
+"PMingLiU"="Noto Sans CJK TC"
+"\u65b0\u7d30\u660e\u9ad4"="Noto Sans CJK TC"
+; Japanese, sans
+"MS Gothic"="Noto Sans CJK JP"
+"\uff2d\uff33 \u30b4\u30b7\u30c3\u30af"="Noto Sans CJK JP"
+"MS PGothic"="Noto Sans CJK JP"
+"\uff2d\uff33 \uff30\u30b4\u30b7\u30c3\u30af"="Noto Sans CJK JP"
+"MS UI Gothic"="Noto Sans CJK JP"
+"Meiryo"="Noto Sans CJK JP"
+"\u30e1\u30a4\u30ea\u30aa"="Noto Sans CJK JP"
+"Meiryo UI"="Noto Sans CJK JP"
+"Yu Gothic"="Noto Sans CJK JP"
+"\u6e38\u30b4\u30b7\u30c3\u30af"="Noto Sans CJK JP"
+"Yu Gothic UI"="Noto Sans CJK JP"
+; Japanese, serif
+"MS Mincho"="Noto Serif CJK JP"
+"\uff2d\uff33 \u660e\u671d"="Noto Serif CJK JP"
+"MS PMincho"="Noto Serif CJK JP"
+"\uff2d\uff33 \uff30\u660e\u671d"="Noto Serif CJK JP"
+"Yu Mincho"="Noto Serif CJK JP"
+"\u6e38\u660e\u671d"="Noto Serif CJK JP"
+; Korean
+"Malgun Gothic"="Noto Sans CJK KR"
+"\ub9d1\uc740 \uace0\ub515"="Noto Sans CJK KR"
+"Gulim"="Noto Sans CJK KR"
+"\uad74\ub9bc"="Noto Sans CJK KR"
+"Dotum"="Noto Sans CJK KR"
+"\ub3cb\uc6c0"="Noto Sans CJK KR"
+; Korean, serif
+"Batang"="Noto Serif CJK KR"
+"\ubc14\ud0d5"="Noto Serif CJK KR"
+
+; CJK text in the Latin UI faces falls back to Noto Sans CJK (SC first, then JP):
+; NotoSansCJK-Regular.ttc,Noto Sans CJK SC / NotoSansCJK-Regular.ttc,Noto Sans CJK JP
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\FontLink\SystemLink]
+"Tahoma"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"Microsoft Sans Serif"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"MS Shell Dlg"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"MS Shell Dlg 2"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"Segoe UI"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"Arial"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00
+"Lucida Sans Unicode"=hex(7):4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,00,73,00,43,00,4a,00,4b,00,2d,\
+  00,52,00,65,00,67,00,75,00,6c,00,61,00,72,00,2e,00,74,00,74,00,63,00,2c,\
+  00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,00,6e,00,73,00,20,00,43,00,4a,\
+  00,4b,00,20,00,53,00,43,00,00,00,4e,00,6f,00,74,00,6f,00,53,00,61,00,6e,\
+  00,73,00,43,00,4a,00,4b,00,2d,00,52,00,65,00,67,00,75,00,6c,00,61,00,72,\
+  00,2e,00,74,00,74,00,63,00,2c,00,4e,00,6f,00,74,00,6f,00,20,00,53,00,61,\
+  00,6e,00,73,00,20,00,43,00,4a,00,4b,00,20,00,4a,00,50,00,00,00,00,00

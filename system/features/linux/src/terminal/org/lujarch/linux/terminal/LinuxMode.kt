@@ -38,6 +38,9 @@ import android.view.WindowInsetsController
 object LinuxMode {
     private val CONDITION: Uri = Uri.parse("condition://org.lujarch.linux.terminal/linux")
 
+    /** The desktop is on screen: the Mode is on. */
+    @Volatile private var active = false
+
     fun enter(activity: Activity) {
         activity.window.insetsController?.let {
             // The default behavior: a swipe from the bottom goes home at once.
@@ -45,12 +48,21 @@ object LinuxMode {
             it.hide(WindowInsets.Type.systemBars())
         }
         lockStatusBar(activity, true)
+        active = true
         setActive(activity, true)
     }
 
     fun leave(activity: Activity) {
         lockStatusBar(activity, false)
+        active = false
         setActive(activity, false)
+    }
+
+    /** Turns the Mode on again while the desktop is on screen: turning Do Not Disturb off snoozed it. */
+    fun renew(context: Context) {
+        if (!active) return
+        setActive(context, false)
+        setActive(context, true)
     }
 
     private fun lockStatusBar(context: Context, locked: Boolean) {

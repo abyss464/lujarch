@@ -1,0 +1,6 @@
+module org.kde.plasma.networkmanagement
+ConnectionIcon 254.0 ConnectionIcon.qml
+WirelessStatus 254.0 WirelessStatus.qml
+Handler 254.0 Handler.qml
+EnabledConnections 254.0 EnabledConnections.qml
+singleton Configuration 254.0 Configuration.qml

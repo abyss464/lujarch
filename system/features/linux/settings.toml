@@ -92,6 +92,43 @@ type = "bool"
 default = false
 item = "LNX-7"
 
+[lend_microphone]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_camera]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_location]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_vibration]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+[lend_quick_settings]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
+# The phone's screen stays on while the desktop is shown: the desktop's Caffeine tile.
+[caffeine]
+table = "secure"
+type = "bool"
+default = false
+item = "LNX-7"
+
 # charging, always or off.
 [remote]
 table = "global"
