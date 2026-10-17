@@ -6,7 +6,6 @@
     <string name="kind_arch_root">Arch Linux as root</string>
     <string name="kind_android_root">Android as root</string>
     <string name="new_session">New session</string>
-    <string name="more">More options</string>
     <string name="rename">Rename</string>
     <string name="keep_awake">Keep awake</string>
     <string name="end_session">End session</string>
@@ -61,4 +60,6 @@
     <string name="remote_waiting">%1$s · waiting for a charger</string>
     <!-- Remote access stopped after failures; %1$s is when it runs -->
     <string name="remote_failed">%1$s · stopped after failures</string>
+    <!-- The status line when there is no network -->
+    <string name="status_offline">offline</string>
 </resources>

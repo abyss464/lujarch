@@ -6,7 +6,6 @@
     <string name="kind_arch_root">Arch Linux（root）</string>
     <string name="kind_android_root">Android（root）</string>
     <string name="new_session">新建会话</string>
-    <string name="more">更多选项</string>
     <string name="rename">重命名</string>
     <string name="keep_awake">保持唤醒</string>
     <string name="end_session">结束会话</string>
@@ -39,4 +38,5 @@
     <string name="remote_running">%1$s · 运行中</string>
     <string name="remote_waiting">%1$s · 等待充电</string>
     <string name="remote_failed">%1$s · 多次失败后已停止</string>
+    <string name="status_offline">离线</string>
 </resources>

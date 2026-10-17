@@ -20,6 +20,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -32,6 +33,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.window.OnBackInvokedDispatcher
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
@@ -57,7 +59,10 @@ import org.lujarch.linux.Status
  * in Arch Linux or of root in Android. A session goes on while the app is closed; it shows
  * whether a command runs, can be renamed and ended, and keeps the phone awake only when the owner
  * chooses so. The colors and the keys row above the keyboard are the owner's choices on the
- * Linux development environment's page.
+ * Linux development environment's page. It is Linux mode beside the home screen: full screen with
+ * Linux's own status line where Android's status bar was, the session tabs with + / Display /
+ * Settings, the terminal on a card, and the keys row on the keyboard's top edge; a swipe from the
+ * bottom goes home, and the back gesture does nothing (Linux has no "back").
  */
 class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionClient {
     private lateinit var root: LinearLayout
@@ -67,6 +72,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     private lateinit var emptyText: TextView
     private lateinit var emptyButton: Button
     private lateinit var keys: KeysRow
+    private lateinit var statusLine: StatusLine
+    private lateinit var card: FrameLayout
+    private var resumed = false
 
     private val tabs = mutableListOf<TerminalTab>()
     private var current: TerminalTab? = null
@@ -82,6 +90,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         textSize = getPreferences(Context.MODE_PRIVATE).getInt(PREF_TEXT_SIZE, dp(14))
         buildViews()
         wanted = intent.getStringExtra(Linux.EXTRA_SESSION)
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {}
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -94,6 +103,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     override fun onStart() {
         super.onStart()
         opened = false
+        statusLine.start()
         keys.visibility = if (Linux.keysRow(this) && imeShown) View.VISIBLE else View.GONE
         scope.launch {
             val choice = Linux.colors(this@TerminalActivity)
@@ -109,6 +119,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             }
             Palette.apply(this@TerminalActivity, choice, own)
             terminal.setBackgroundColor(Palette.background())
+            (card.background as GradientDrawable).setColor(Palette.background())
             for (tab in tabs) tab.session.emulator?.mColors?.reset()
             terminal.invalidate()
             refresh(reattach = true)
@@ -116,8 +127,26 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     }
 
     override fun onStop() {
+        statusLine.stop()
         for (tab in tabs) tab.detach()
         super.onStop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        resumed = true
+        LinuxMode.enter(this)
+    }
+
+    override fun onPause() {
+        resumed = false
+        LinuxMode.leave(this)
+        super.onPause()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && resumed) LinuxMode.enter(this)
     }
 
     override fun onDestroy() {
@@ -129,21 +158,37 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
 
     private fun buildViews() {
         root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        statusLine = StatusLine(this)
+        root.addView(statusLine, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(STATUS_LINE_DP)))
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), 0, dp(6), 0)
         }
         tabsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val tabsAndNew = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(tabsRow)
+            addView(iconButton(R.drawable.ic_add, R.string.new_session) { newSession(it) })
+        }
         val scroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
-            addView(tabsRow)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(tabsAndNew)
         }
         bar.addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        bar.addView(iconButton(R.drawable.ic_add, R.string.new_session) { newSession(it) })
-        bar.addView(iconButton(R.drawable.ic_more, R.string.more) { more(it) })
-        root.addView(bar)
+        bar.addView(iconButton(R.drawable.ic_display, R.string.display) {
+            startActivity(Intent(this, DesktopActivity::class.java))
+        })
+        bar.addView(iconButton(R.drawable.ic_settings, R.string.settings) { openSettings() })
+        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
 
-        val frame = FrameLayout(this)
+        val frame = FrameLayout(this).apply {
+            background = GradientDrawable().apply { cornerRadius = dp(16).toFloat() }
+            clipToOutline = true
+        }
+        card = frame
         terminal = TerminalView(this, null).apply {
             setTerminalViewClient(this@TerminalActivity)
             setTextSize(textSize)
@@ -168,13 +213,25 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             topMargin = dp(16)
         })
         frame.addView(empty, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        root.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
+            marginStart = dp(8)
+            marginEnd = dp(8)
+            bottomMargin = dp(8)
+        })
 
         keys = KeysRow(this) { key -> onKeysRow(key) }
         root.addView(keys)
         root.setOnApplyWindowInsetsListener { v, insets ->
-            val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime() or WindowInsets.Type.displayCutout())
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            // Android's bars are hidden: the status line stands in the band of the camera cutout
+            // and of Android's status bar, as tall as that bar.
+            val cut = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+            val ime = insets.getInsets(WindowInsets.Type.ime())
+            v.setPadding(cut.left, 0, cut.right, maxOf(cut.bottom, ime.bottom))
+            val line = maxOf(dp(STATUS_LINE_DP), cut.top,
+                insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top)
+            if (statusLine.layoutParams.height != line) {
+                statusLine.layoutParams = statusLine.layoutParams.apply { height = line }
+            }
             imeShown = insets.isVisible(WindowInsets.Type.ime())
             keys.visibility = if (Linux.keysRow(this) && imeShown) View.VISIBLE else View.GONE
             WindowInsets.CONSUMED
@@ -234,6 +291,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             null
         }
         status = s
+        statusLine.setUser(s?.user)
         if (s == null) {
             showEmpty(getString(R.string.service_missing), null)
             return
@@ -471,20 +529,6 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         }
     }
 
-    private fun more(anchor: View) {
-        val menu = PopupMenu(this, anchor)
-        menu.menu.add(0, MENU_DISPLAY, 0, R.string.display)
-        menu.menu.add(0, MENU_SETTINGS, 1, R.string.settings)
-        menu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                MENU_DISPLAY -> startActivity(Intent(this, DesktopActivity::class.java))
-                MENU_SETTINGS -> openSettings()
-            }
-            true
-        }
-        menu.show()
-    }
-
     private fun act(what: String, block: (ILinux) -> Unit) {
         scope.launch {
             try {
@@ -634,10 +678,9 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         const val DEFAULT_COLUMNS = 80
         const val DEFAULT_ROWS = 24
         const val REFRESH_DELAY_MS = 300L
+        const val STATUS_LINE_DP = 28
         const val MENU_RENAME = 1
         const val MENU_AWAKE = 2
         const val MENU_END = 3
-        const val MENU_DISPLAY = 4
-        const val MENU_SETTINGS = 5
     }
 }

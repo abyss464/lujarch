@@ -43,7 +43,11 @@ shows the root file system's state and the last action with its outcome.
 Linux is a mode of the phone beside the home screen, not an app: the terminal and the desktop are
 one screen in place of the home screen, in neither the app drawer nor recents. A double tap on an
 empty space of the home screen enters Linux at the terminal when the owner chooses so; Settings >
-System > Linux development environment opens it too; going home leaves it, and Linux goes on.
+System > Linux development environment opens it too. In Linux, Android's bars are hidden and
+Linux's own status line (user@host, network, battery, time) stands where the status bar was; the
+session tabs carry + (new session), Display and Settings; the notification shade does not open and
+the back gesture does nothing. One swipe from the bottom goes home, never to recents, and Linux goes
+on.
 The terminal holds up to 16 sessions as tabs, each a shell of the owner's user, of root in Arch
 Linux, or of root in Android; sessions go on while Linux is left and end when Linux stops. Each
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner

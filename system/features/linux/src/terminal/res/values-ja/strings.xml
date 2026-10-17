@@ -6,7 +6,6 @@
     <string name="kind_arch_root">Arch Linux（root）</string>
     <string name="kind_android_root">Android（root）</string>
     <string name="new_session">新しいセッション</string>
-    <string name="more">その他のオプション</string>
     <string name="rename">名前を変更</string>
     <string name="keep_awake">スリープしない</string>
     <string name="end_session">セッションを終了</string>
@@ -39,4 +38,5 @@
     <string name="remote_running">%1$s · 実行中</string>
     <string name="remote_waiting">%1$s · 充電を待機中</string>
     <string name="remote_failed">%1$s · 失敗が続いたため停止</string>
+    <string name="status_offline">オフライン</string>
 </resources>
