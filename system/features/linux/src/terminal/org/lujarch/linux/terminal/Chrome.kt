@@ -211,11 +211,12 @@ object Chrome {
         val items = listOf(
             Item(ILinux.KIND_ARCH, R.string.kind_arch, user ?: "user", linuxRuns),
             Item(ILinux.KIND_ARCH_ROOT, R.string.kind_arch_root, "root", linuxRuns && rootOk),
-            Item(ILinux.KIND_ANDROID_ROOT, R.string.kind_android_root, c.getString(R.string.kind_android_root_summary), rootOk),
+            Item(ILinux.KIND_ANDROID_ROOT, R.string.kind_android_root, c.getString(R.string.kind_android_root_summary), linuxRuns && rootOk),
         )
         for (item in items) {
             val summary = when {
-                !linuxRuns && item.kind != ILinux.KIND_ANDROID_ROOT -> c.getString(R.string.kind_linux_off)
+                // Every session, Android's root shell too, lives while Linux runs.
+                !linuxRuns -> c.getString(R.string.kind_linux_off)
                 !rootOk && item.kind != ILinux.KIND_ARCH -> c.getString(R.string.kind_root_disabled)
                 else -> item.summary
             }
