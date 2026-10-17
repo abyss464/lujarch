@@ -42,15 +42,16 @@ shows the root file system's state and the last action with its outcome.
 - Default: Double tap: Enter Linux; When the terminal opens: Arch Linux; each session: sleep with the phone
 - Verify: phone
 
-Linux is a mode of the phone beside the home screen, not an app: the terminal and the desktop are
-one screen in place of the home screen, in neither the app drawer nor recents. A double tap on an
-empty space of the home screen enters Linux at the terminal, the screen growing from the tap
-point, when the owner chooses so; Settings >
-System > Linux development environment opens it too. In Linux, Android's bars are hidden and
-Linux's own status line (user@host, network, battery, time) stands where the status bar was; the
-session tabs carry + (new session), Display and Settings; the notification shade does not open and
-the back gesture does nothing. One swipe from the bottom, or Ctrl+Alt+F1 on a hardware keyboard,
-goes home, never to recents, and Linux goes on.
+Linux is the home screen's other face, not an app: the home screen shows either Android's home or
+Linux, one at a time, and Linux is in neither the app drawer nor recents. A double tap on an empty
+space of Android's home enters Linux at the terminal, the screen growing from the tap point, when
+the owner chooses so; Settings > System > Linux development environment opens it too. While the
+home screen shows Linux, Linux is the home: an app opened from Linux goes back to Linux with a swipe
+from the bottom, and no gesture, recents, notification shade or back gesture of Android acts on
+Linux. Android's bars are hidden and Linux's own status line (user@host, network, battery, time)
+stands where the status bar was; the session tabs carry + (new session), Display and Settings. A
+swipe from the bottom on the desktop goes to the terminal; a swipe from the bottom on the terminal,
+or Ctrl+Alt+F1 on a hardware keyboard, turns the home screen to Android's home, and Linux goes on.
 The terminal holds up to 16 sessions as tabs, each a shell of the owner's user, of root in Arch
 Linux, or of root in Android; sessions go on while Linux is left and end when Linux stops. Each
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner
@@ -96,7 +97,7 @@ phone's landscape layout and Mesa for the phone's GPU, as root in Linux while it
 small cores only; installing again updates it. The page shows the last install with its outcome.
 While Linux is on screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and
 media through and holds other notifications; the status bar stays locked and a swipe from the
-bottom returns to Android.
+bottom goes to the terminal (LNX-3).
 
 In landscape the desktop's status bar is a column at the screen's left end, its navigation panel a
 column at its right end, and its on-screen keyboard a column beside the navigation panel, the
