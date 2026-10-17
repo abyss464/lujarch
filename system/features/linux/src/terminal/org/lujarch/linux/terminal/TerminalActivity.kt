@@ -41,6 +41,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
+import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
 import com.termux.view.TerminalView
@@ -146,7 +147,7 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
         terminal = TerminalView(this, null).apply {
             setTerminalViewClient(this@TerminalActivity)
             setTextSize(textSize)
-            setTypeface(Typeface.MONOSPACE)
+            setTypeface(ownFont() ?: Typeface.MONOSPACE)
             isFocusable = true
             isFocusableInTouchMode = true
         }
@@ -179,6 +180,18 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
             WindowInsets.CONSUMED
         }
         setContentView(root)
+    }
+
+    /** The owner's font (LNX-3): files/font.ttf of this app, when there is one. */
+    private fun ownFont(): Typeface? {
+        val file = File(filesDir, "font.ttf")
+        if (!file.isFile) return null
+        return try {
+            Typeface.createFromFile(file)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "the own font cannot be read: ${e.message}")
+            null
+        }
     }
 
     private fun iconButton(icon: Int, description: Int, onClick: (View) -> Unit) =

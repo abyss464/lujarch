@@ -48,7 +48,7 @@ The terminal holds up to 16 sessions as tabs, each a shell of the owner's user, 
 Linux, or of root in Android; sessions go on while Linux is left and end when Linux stops. Each
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner
 chooses so. The page holds the colors (follow the system, classic, the owner's own) and the keys row
-above the keyboard.
+above the keyboard; the terminal draws with the owner's own font when there is one.
 
 ### LNX-4 Root sessions only while the owner allows them
 
