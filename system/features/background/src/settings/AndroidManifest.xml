@@ -30,10 +30,13 @@
             android:name="org.lujarch.settings.contribution.background"
             android:value="org.lujarch.background.settings.BackgroundContribution" />
 
-        <!-- Settings > System > Background, and an app's Background page. -->
+        <!-- Settings > System > Background, and an app's Background page. Opened from Recents or
+             a notification, it is a task of its own, never on top of another page of Lujarch
+             Settings. -->
         <activity
             android:name="org.lujarch.background.settings.BackgroundActivity"
             android:exported="true"
+            android:taskAffinity="org.lujarch.settings.background"
             android:label="@string/background_title"
             android:theme="@style/Theme.LujarchSettings">
             <intent-filter>

@@ -1,3 +1,107 @@
+diff --git a/core/java/android/window/WindowContainerTransaction.java b/core/java/android/window/WindowContainerTransaction.java
+index 3498747607c2393bcb08f0b453c496e7b62660ce..99d11a08bee49083e0267d15e901ef3eaaee5378 100644
+--- a/core/java/android/window/WindowContainerTransaction.java
++++ b/core/java/android/window/WindowContainerTransaction.java
+@@ -276,6 +276,22 @@ public final class WindowContainerTransaction implements Parcelable {
+         return this;
+     }
+ 
++    /**
++     * Sets whether the windows of a container take touches. When {@code false}, touches pass
++     * through them to what lies below and they hide nothing below from input, as a trusted overlay
++     * does: the organizer shows the container inside its own system UI, which owns the touches
++     * there.
++     * @hide
++     */
++    @NonNull
++    public WindowContainerTransaction setTouchable(
++            @NonNull WindowContainerToken container, boolean touchable) {
++        final Change chg = getOrCreateChange(container.asBinder());
++        chg.mTouchable = touchable;
++        chg.mChangeMask |= Change.CHANGE_TOUCHABLE;
++        return this;
++    }
++
+     /**
+      * Sets whether the IME insets should be excluded by {@link com.android.server.wm.InsetsPolicy}.
+      * @hide
+@@ -1862,6 +1878,7 @@ public final class WindowContainerTransaction implements Parcelable {
+         public static final int CHANGE_FULLSCREEN_REQUEST_ALLOW_MODE = 1 << 16;
+         public static final int CHANGE_DISALLOW_OVERRIDE_BOUNDS_FOR_CHILDREN = 1 << 17;
+         public static final int CHANGE_DISALLOW_OVERRIDE_WINDOWING_MODE_FOR_CHILDREN = 1 << 18;
++        public static final int CHANGE_TOUCHABLE = 1 << 19;
+ 
+ 
+         @IntDef(flag = true, prefix = { "CHANGE_" }, value = {
+@@ -1883,7 +1900,8 @@ public final class WindowContainerTransaction implements Parcelable {
+                 CHANGE_HANDLE_PACKAGE_UPDATE,
+                 CHANGE_FULLSCREEN_REQUEST_ALLOW_MODE,
+                 CHANGE_DISALLOW_OVERRIDE_BOUNDS_FOR_CHILDREN,
+-                CHANGE_DISALLOW_OVERRIDE_WINDOWING_MODE_FOR_CHILDREN
++                CHANGE_DISALLOW_OVERRIDE_WINDOWING_MODE_FOR_CHILDREN,
++                CHANGE_TOUCHABLE
+         })
+         @Retention(RetentionPolicy.SOURCE)
+         public @interface ChangeMask {}
+@@ -1902,6 +1920,7 @@ public final class WindowContainerTransaction implements Parcelable {
+         private boolean mHandlePackageUpdate = false;
+         private boolean mDisallowOverrideBoundsForChildren = false;
+         private boolean mDisallowOverrideWindowingModeForChildren = false;
++        private boolean mTouchable = true;
+ 
+         private @ChangeMask int mChangeMask = 0;
+         private @ActivityInfo.Config int mConfigSetMask = 0;
+@@ -1937,6 +1956,7 @@ public final class WindowContainerTransaction implements Parcelable {
+             mHandlePackageUpdate = in.readBoolean();
+             mDisallowOverrideBoundsForChildren = in.readBoolean();
+             mDisallowOverrideWindowingModeForChildren = in.readBoolean();
++            mTouchable = in.readBoolean();
+             mChangeMask = in.readInt();
+             mConfigSetMask = in.readInt();
+             mWindowSetMask = in.readInt();
+@@ -2013,6 +2033,9 @@ public final class WindowContainerTransaction implements Parcelable {
+                 mDisallowOverrideWindowingModeForChildren =
+                         other.mDisallowOverrideWindowingModeForChildren;
+             }
++            if ((other.mChangeMask & CHANGE_TOUCHABLE) != 0) {
++                mTouchable = other.mTouchable;
++            }
+             mChangeMask |= other.mChangeMask;
+             if (other.mActivityWindowingMode >= WINDOWING_MODE_UNDEFINED) {
+                 mActivityWindowingMode = other.mActivityWindowingMode;
+@@ -2150,6 +2173,14 @@ public final class WindowContainerTransaction implements Parcelable {
+             return mDisallowOverrideWindowingModeForChildren;
+         }
+ 
++        /** Gets whether the windows of the container take touches. */
++        public boolean getTouchable() {
++            if ((mChangeMask & CHANGE_TOUCHABLE) == 0) {
++                throw new RuntimeException("Touchable not set. Check CHANGE_TOUCHABLE first");
++            }
++            return mTouchable;
++        }
++
+         /** Gets whether the config should be sent to the client at the end of the transition. */
+         public boolean getConfigAtTransitionEnd() {
+             return mConfigAtTransitionEnd;
+@@ -2282,6 +2313,9 @@ public final class WindowContainerTransaction implements Parcelable {
+                 sb.append("disallowOverrideWindowingModeForChildren:")
+                         .append(mDisallowOverrideWindowingModeForChildren).append(",");
+             }
++            if ((mChangeMask & CHANGE_TOUCHABLE) != 0) {
++                sb.append("touchable:").append(mTouchable).append(",");
++            }
+             if ((mChangeMask & CHANGE_FULLSCREEN_REQUEST_ALLOW_MODE) != 0) {
+                 sb.append("fullscreenRequestAllowMode:")
+                         .append(DebugUtils.valueToString(FullscreenRequestHandler.class,
+@@ -2324,6 +2358,7 @@ public final class WindowContainerTransaction implements Parcelable {
+             dest.writeBoolean(mHandlePackageUpdate);
+             dest.writeBoolean(mDisallowOverrideBoundsForChildren);
+             dest.writeBoolean(mDisallowOverrideWindowingModeForChildren);
++            dest.writeBoolean(mTouchable);
+             dest.writeInt(mChangeMask);
+             dest.writeInt(mConfigSetMask);
+             dest.writeInt(mWindowSetMask);
 diff --git a/libs/WindowManager/Shell/res/drawable/lujarch_small_window_close.xml b/libs/WindowManager/Shell/res/drawable/lujarch_small_window_close.xml
 new file mode 100644
 index 0000000000000000000000000000000000000000..48d93b7294c5621a8a079b62e79417711eb27635
@@ -186,7 +290,7 @@ index 0000000000000000000000000000000000000000..eb5bf085ef5cb51f307bf6f2295c9785
 +    <string name="lujarch_small_window_close">Close</string>
 +</resources>
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
-index 80577829d9ad884bd91d006f45d5e964c9f6fd67..3bf78bdbf1c47957ab0271008777b8c9ae3b6c66 100644
+index 80577829d9ad884bd91d006f45d5e964c9f6fd67..ea0cc6c06ffae1909333dd2af4e14f2aafea251b 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/Bubble.java
 @@ -131,6 +131,7 @@ public class Bubble implements BubbleViewProvider {
@@ -229,20 +333,38 @@ index 80577829d9ad884bd91d006f45d5e964c9f6fd67..3bf78bdbf1c47957ab0271008777b8c9
              BubbleLog.d("Bubble.setViewInfo() key=%s setting expanded view info to %s",
                      mKey, mExpandedView != null ? mExpandedView : mBubbleBarExpandedView);
          }
+@@ -957,7 +967,14 @@ public class Bubble implements BubbleViewProvider {
+         if (mBubbleBarExpandedView != null) {
+             return mBubbleBarExpandedView.getTaskId();
+         }
+-        return mExpandedView != null ? mExpandedView.getTaskId() : mTaskId;
++        if (mExpandedView != null) {
++            return mExpandedView.getTaskId();
++        }
++        // A small window has neither expanded view: its task view knows the task once created.
++        if (mBubbleTaskView != null && mBubbleTaskView.getTaskId() != INVALID_TASK_ID) {
++            return mBubbleTaskView.getTaskId();
++        }
++        return mTaskId;
+     }
+ 
+     /**
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
-index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0d1b587fd 100644
+index f5cf073faadea06cffbe8b91686388cad3c2d32e..d667e7d9f0e00446b82034bbc17ef890d246606e 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
-@@ -262,6 +262,8 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -262,6 +262,10 @@ public class BubbleController implements ConfigurationChangeListener,
      private final BubbleHelper mBubbleHelper;
      @Nullable private BubbleStackView mStackView;
      @Nullable private BubbleBarLayerView mLayerView;
 +    /** Lujarch's small windows: the bubbles of a phone, in place of the floating stack. */
 +    @Nullable private LujarchSmallWindowsView mSmallWindows;
++    /** Linux is in front of the home screen; kept for small windows made again later. */
++    private boolean mSmallWindowsHidden;
      private BubbleIconFactory mBubbleIconFactory;
      private final BubblePositioner mBubblePositioner;
      private final BubbleFeatureConfig mFeatureConfig;
-@@ -441,8 +443,11 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -441,8 +445,11 @@ public class BubbleController implements ConfigurationChangeListener,
                  // transparent bubble are shown.
                  boolean disableBackgroundLayer =
                          !com.android.window.flags.Flags.addBgColorForTransparentBubbles();
@@ -256,7 +378,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
                  return new BubbleTaskView(taskView, mainExecutor, BubbleController.this);
              }
          };
-@@ -497,9 +502,10 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -497,9 +504,10 @@ public class BubbleController implements ConfigurationChangeListener,
      }
  
      protected void onInit() {
@@ -268,7 +390,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          mBubbleData.setListener(mBubbleDataListener);
          mBubbleData.setSuppressionChangedListener(this::onBubbleMetadataFlagChanged);
          mDataRepository.setSuppressionChangedListener(this::onBubbleMetadataFlagChanged);
-@@ -1113,20 +1119,9 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1113,20 +1121,10 @@ public class BubbleController implements ConfigurationChangeListener,
                          mLogger, mMainExecutor);
                  mLayerView.setUnBubbleConversationCallback(mSysuiProxy::onUnbubbleConversation);
              }
@@ -289,10 +411,11 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
 +        } else if (mSmallWindows == null) {
 +            mSmallWindows = new LujarchSmallWindowsView(mContext, this, mBubbleData,
 +                    mExpandedViewManager);
++            mSmallWindows.setHidden(mSmallWindowsHidden);
          }
          addToWindowManagerMaybe();
      }
-@@ -1140,7 +1135,7 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1140,7 +1138,7 @@ public class BubbleController implements ConfigurationChangeListener,
          // If the appropriate view is null, don't add it.
          if (isShowingAsBubbleBar() && mLayerView == null) {
              return;
@@ -301,7 +424,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              return;
          }
  
-@@ -1171,9 +1166,6 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1171,9 +1169,6 @@ public class BubbleController implements ConfigurationChangeListener,
              if (isShowingAsBubbleBar()) {
                  mBubbleData.getOverflow().initializeForBubbleBar(
                          mExpandedViewManager, mBubblePositioner);
@@ -311,7 +434,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              }
              // (TODO: b/273314541) some duplication in the inset listener
              if (isShowingAsBubbleBar()) {
-@@ -1187,18 +1179,12 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1187,18 +1182,12 @@ public class BubbleController implements ConfigurationChangeListener,
                      return windowInsets;
                  });
              } else {
@@ -334,7 +457,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
                      }
                      return windowInsets;
                  });
-@@ -1225,8 +1211,8 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1225,8 +1214,8 @@ public class BubbleController implements ConfigurationChangeListener,
                      : WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                              | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
              mWmLayoutParams.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
@@ -345,7 +468,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              } else if (mLayerView != null) {
                  mWindowManager.updateViewLayout(mLayerView, mWmLayoutParams);
              }
-@@ -1268,6 +1254,9 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1268,6 +1257,9 @@ public class BubbleController implements ConfigurationChangeListener,
                  mWindowManager.removeView(mLayerView);
                  mBubbleData.getOverflow().cleanUpExpandedState();
              }
@@ -355,7 +478,17 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          } catch (IllegalArgumentException e) {
              // This means the stack has already been removed - it shouldn't happen, but ignore if it
              // does, since we wanted it removed anyway.
-@@ -1423,6 +1412,13 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1377,6 +1369,9 @@ public class BubbleController implements ConfigurationChangeListener,
+         if (mStackView != null) {
+             mStackView.onThemeChanged();
+         }
++        if (mSmallWindows != null) {
++            mSmallWindows.loadResources();
++        }
+         mBubbleIconFactory = new BubbleIconFactory(mContext,
+                 mContext.getResources().getDimensionPixelSize(R.dimen.bubble_size),
+                 mContext.getResources().getDimensionPixelSize(R.dimen.bubble_badge_size),
+@@ -1423,6 +1418,13 @@ public class BubbleController implements ConfigurationChangeListener,
              return;
          }
          BubbleOverflow bubbleOverflow = mBubbleData.getOverflow();
@@ -369,7 +502,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          if (mStackView != null
                  && (newConfig.densityDpi != mDensityDpi
                  || !newConfig.windowConfiguration.getBounds().equals(mScreenBounds))) {
-@@ -1508,7 +1504,7 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1508,7 +1510,7 @@ public class BubbleController implements ConfigurationChangeListener,
       * screen (e.g. if on AOD).
       */
      public boolean hasBubbles() {
@@ -378,12 +511,15 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              return false;
          }
          return mBubbleData.hasBubbles() || mBubbleData.isShowingOverflow();
-@@ -1824,6 +1820,21 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -1824,6 +1826,28 @@ public class BubbleController implements ConfigurationChangeListener,
          }
      }
  
-+    /** Opens a running task in a small window, as Recents asks for it. */
-+    public void showTaskInSmallWindow(int taskId) {
++    /**
++     * Opens a running task in a small window, as Recents asks for it; from is where its card is on
++     * the screen, which the window grows out of.
++     */
++    public void showTaskInSmallWindow(int taskId, @Nullable Rect from) {
 +        final ActivityManager.RunningTaskInfo task = mTaskOrganizer.getRunningTaskInfo(taskId);
 +        if (task == null) {
 +            Log.w(TAG, "task " + taskId + " is not running; it does not open in a small window");
@@ -394,13 +530,17 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
 +            expandStackAndSelectBubble(existing);
 +            return;
 +        }
++        if (from != null && !isShowingAsBubbleBar()) {
++            ensureBubbleViewsAndWindowCreated();
++            if (mSmallWindows != null) mSmallWindows.growNextFrom(from);
++        }
 +        expandStackAndSelectBubble(task, null /* dragData */);
 +    }
 +
      /**
       * Expands and selects a bubble created from a running task in a different mode.
       *
-@@ -2169,9 +2180,10 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -2169,9 +2193,10 @@ public class BubbleController implements ConfigurationChangeListener,
              }
          }
  
@@ -412,7 +552,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
  
          if (mStackView != null) {
              mStackView.cancelClipAnimation();
-@@ -2188,6 +2200,7 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -2188,6 +2213,7 @@ public class BubbleController implements ConfigurationChangeListener,
          removeFromWindowManagerMaybe();
          mLayerView = null;
          mStackView = null;
@@ -420,7 +560,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
  
          if (!mBubbleData.hasBubbles()) {
              // if there are no bubbles, don't create the stack or layer views. they will be created
-@@ -2201,7 +2214,10 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -2201,7 +2227,10 @@ public class BubbleController implements ConfigurationChangeListener,
          BubbleViewInfoTask.Callback callback = null;
          if (!isShowingAsBubbleBar()) {
              callback = b -> {
@@ -432,7 +572,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
                      b.setSuppressFlyout(true);
                      mStackView.addBubble(b);
                      if (b.getKey().equals(mBubbleData.getSelectedBubbleKey())) {
-@@ -2454,7 +2470,11 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -2454,7 +2483,11 @@ public class BubbleController implements ConfigurationChangeListener,
              }
              if (entry != null && (entry.shouldSuppressNotificationList()
                      || entry.getRanking().isSuspended())) {
@@ -445,7 +585,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              }
              rankingMap.getRanking(key, mTmpRanking);
              boolean isActiveOrInOverflow = mBubbleData.hasAnyBubbleWithKey(key);
-@@ -2665,6 +2685,79 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -2665,6 +2698,87 @@ public class BubbleController implements ConfigurationChangeListener,
          }
      };
  
@@ -507,7 +647,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
 +        @Override
 +        public void updateVisibility(boolean visible) {
 +            if (mSmallWindows != null) {
-+                mSmallWindows.setVisibility(visible ? VISIBLE : INVISIBLE);
++                mSmallWindows.setSystemShown(visible);
 +            }
 +        }
 +
@@ -522,10 +662,18 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
 +        return mSmallWindows;
 +    }
 +
++    /** Linux is in front of the home screen: the small windows step aside (LNX-3). */
++    void setSmallWindowsHidden(boolean hidden) {
++        mSmallWindowsHidden = hidden;
++        if (mSmallWindows != null) {
++            mSmallWindows.setHidden(hidden);
++        }
++    }
++
      /** When bubbles are in the bubble bar, this will be used to notify bubble bar views. */
      private final BubbleViewCallback mBubbleBarViewCallback = new BubbleViewCallback() {
          @Override
-@@ -3039,7 +3132,7 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3039,7 +3153,7 @@ public class BubbleController implements ConfigurationChangeListener,
       * Updates bubbles' icon views clickable states (when floating).
       */
      public void updateBubbleViews() {
@@ -534,7 +682,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              return;
          }
          BubbleLog.v("BubbleController.updateBubbleViews() mIsStatusBarShade=%b hasBubbles=%b",
-@@ -3097,6 +3190,10 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3097,6 +3211,10 @@ public class BubbleController implements ConfigurationChangeListener,
              return mStackView.getDisplay().getDisplayId();
          }
  
@@ -545,7 +693,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          return INVALID_DISPLAY;
      }
  
-@@ -3143,6 +3240,9 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3143,6 +3261,9 @@ public class BubbleController implements ConfigurationChangeListener,
          mBubbleData.dump(pw);
          pw.println();
  
@@ -555,7 +703,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          if (mStackView != null) {
              mStackView.dump(pw);
          }
-@@ -3231,6 +3331,13 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3231,6 +3352,13 @@ public class BubbleController implements ConfigurationChangeListener,
              // so we have the total height of the ime.
              int totalImeHeight = imeHeight + mBubblePositioner.getInsets().bottom;
              mBubblePositioner.setImeVisible(imeVisible, totalImeHeight);
@@ -569,34 +717,54 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
              if (mStackView != null) {
                  mStackView.setImeVisible(imeVisible, heightChanged);
                  if (!imeVisible && mOnImeHidden != null) {
-@@ -3508,6 +3615,26 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3508,6 +3636,46 @@ public class BubbleController implements ConfigurationChangeListener,
                      (controller) -> controller.moveDraggedBubbleToFullscreen(key, dropLocation));
          }
  
 +        @Override
-+        public void showTaskInSmallWindow(int taskId) {
++        public void showTaskInSmallWindow(int taskId, @Nullable Rect from) {
 +            executeRemoteCallWithTaskPermission(
 +                    mController,
 +                    "showTaskInSmallWindow",
-+                    controller -> controller.showTaskInSmallWindow(taskId));
++                    controller -> controller.showTaskInSmallWindow(taskId, from));
 +        }
 +
 +        @Override
-+        public void setRecentsShown(boolean shown) {
++        public void setRecentsShown(boolean shown, String[] keys, Rect[] slots) {
 +            executeRemoteCallWithTaskPermission(
 +                    mController,
 +                    "setRecentsShown",
 +                    controller -> {
 +                        if (controller.getSmallWindows() != null) {
-+                            controller.getSmallWindows().setRecentsShown(shown);
++                            controller.getSmallWindows().setRecentsShown(shown, keys, slots);
 +                        }
 +                    });
++        }
++
++        @Override
++        public void openSmallWindow(String key) {
++            executeRemoteCallWithTaskPermission(
++                    mController,
++                    "openSmallWindow",
++                    controller -> {
++                        if (controller.getSmallWindows() != null) {
++                            controller.getSmallWindows().openSmallWindow(key);
++                        }
++                    });
++        }
++
++        @Override
++        public void setSmallWindowsHidden(boolean hidden) {
++            executeRemoteCallWithTaskPermission(
++                    mController,
++                    "setSmallWindowsHidden",
++                    controller -> controller.setSmallWindowsHidden(hidden));
 +        }
 +
          @Override
          public void setHasBubbleBar(boolean hasBubbleBar) {
              executeRemoteCallWithTaskPermission(
-@@ -3820,6 +3947,12 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3820,6 +3988,12 @@ public class BubbleController implements ConfigurationChangeListener,
                              sensitiveNotificationProtectionActive));
          }
  
@@ -609,7 +777,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..6acdd32a2bc72ebf730374ba509ef1e0
          @Override
          public boolean canShowBubbleNotification() {
              // in bubble bar mode, when the IME is visible we can't animate new bubbles.
-@@ -3983,7 +4116,9 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3983,7 +4157,9 @@ public class BubbleController implements ConfigurationChangeListener,
              }
  
              boolean hideRootTask = false;
@@ -656,6 +824,26 @@ index 29faae4299198d3ddec99e4a90bccdad7f0bdefa..0e67712fdf817296b99e16b51a50282c
              }
          }
      }
+diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewTransitionAnimator.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewTransitionAnimator.java
+index 7c87003f4819dc4384b7d77319a74895792e0deb..71b53dd9aa9ab2a05af835fc019c379e12c4e20b 100644
+--- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewTransitionAnimator.java
++++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleExpandedViewTransitionAnimator.java
+@@ -68,12 +68,13 @@ public interface BubbleExpandedViewTransitionAnimator {
+      * @param startT A transaction with first-frame work. This *must* be applied here!
+      * @param startBounds The starting bounds of the task being converted into a bubble.
+      * @param startScale The starting scale of the task being converted into a bubble.
+-     * @param snapshot A snapshot of the task being converted into a bubble.
++     * @param snapshot A snapshot of the task being converted into a bubble; none when the task
++     *                 was not on screen.
+      * @param taskLeash The taskLeash of the task being converted into a bubble.
+      * @param animFinish A runnable to run at the end of the animation.
+      */
+     void animateConvert(@NonNull SurfaceControl.Transaction startT,
+-            @NonNull Rect startBounds, float startScale, @NonNull SurfaceControl snapshot,
++            @NonNull Rect startBounds, float startScale, @Nullable SurfaceControl snapshot,
+             SurfaceControl taskLeash, Runnable animFinish);
+ 
+     /**
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java
 index 1ff1c961332491f1263e09998d30958463587b16..827dff2da8c063b5f4cb5743eaba4e2bc8708859 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubblePositioner.java
@@ -762,25 +950,32 @@ index ceb7925161d13a7cca80d8b08b0cdfcfd08ac1c9..fb500c58c4c39d61077c2d421ffb618a
       * Returns the string representation of the given dismiss reason.
       */
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
-index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..cfb15f66bfe749b6a1f561baa9d19574a82799f7 100644
+index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..d94740ae722c306714f45b4cf26b6c70d051b465 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
-@@ -65,4 +65,8 @@ interface IBubbles {
+@@ -65,4 +65,15 @@ interface IBubbles {
      oneway void moveDraggedBubbleToFullscreen(in String key, in Point dropLocation) = 15;
  
      oneway void setHasBubbleBar(in boolean hasBubbleBar) = 16;
 +
-+    oneway void showTaskInSmallWindow(in int taskId) = 17;
++    oneway void showTaskInSmallWindow(in int taskId, in @nullable Rect from) = 17;
 +
-+    oneway void setRecentsShown(in boolean shown) = 18;
++    /** Recents shows or not; slots[i] is where the small window of taskIds[i] waits in it. */
++    oneway void setRecentsShown(in boolean shown, in String[] keys, in Rect[] slots) = 18;
++
++    /** Linux is in front on the home screen: small windows step aside until it leaves. */
++    oneway void setSmallWindowsHidden(in boolean hidden) = 19;
++
++    /** Opens the small window of a bubble, from its place in Recents. */
++    oneway void openSmallWindow(in String key) = 20;
  }
 \ No newline at end of file
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8eadccea6
+index 0000000000000000000000000000000000000000..5ea6f9e94783e841ff1d8a395b5e3c7b6c1bfc2c
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
-@@ -0,0 +1,437 @@
+@@ -0,0 +1,481 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -815,6 +1010,7 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +import android.text.StaticLayout
 +import android.text.TextPaint
 +import android.text.TextUtils
++import android.view.SurfaceControl
 +import android.view.View
 +import android.view.ViewOutlineProvider
 +import android.widget.FrameLayout
@@ -838,7 +1034,10 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +    val w = LujarchSpring()
 +    val h = LujarchSpring()
 +    val radius = LujarchSpring()
-+    /** 1 for a card turned towards the middle of the screen, 0 for a flat shape. */
++    /**
++     * A card turned towards the middle of the screen: 1 against the right edge, -1 against the
++     * left one, 0 for a flat shape; a change of edge passes through flat.
++     */
 +    val turn = LujarchSpring()
 +    /** 1 for the open window (its handle and outline), 0 for a card. */
 +    val window = LujarchSpring()
@@ -867,17 +1066,33 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +    var taskH = 0
 +
 +    var listener: BubbleTaskViewListener? = null
++    /** The app's task, once created. */
++    val taskId: Int get() = bubble.taskId
 +    var taskView: TaskView? = null
 +    var contentDrawn = false
-+    var headerColor = 0
 +    var unread = 0
 +    var lastMessage: CharSequence? = null
 +    /** A conversation counts towards the limit once it was opened (WIN-8). */
 +    var opened = false
 +    /** Whether the task may take the focus: the window is open and was touched last. */
 +    var focusable: Boolean? = null
++    /**
++     * Whether the app takes the touches on its screen: only in the open window; a card's or a
++     * slot's touches are the dock's or Recents', and the app's screen hides nothing below.
++     */
++    var touchable: Boolean? = null
 +    var lastUsed = 0L
++    /** Where its Recents card was, while it converts into its window (WIN-11). */
++    var fromCard: Rect? = null
 +    var leaving = false
++
++    /**
++     * Its name: a conversation's as its app names it (the shortcut), which a rebuilt notification's
++     * title may put after the sender; else the app's.
++     */
++    val name: CharSequence?
++        get() = (if (isConversation) bubble.shortcutInfo?.shortLabel ?: bubble.title else null)
++            ?: bubble.appName
 +
 +    val isConversation: Boolean
 +        get() = bubble.isChat
@@ -917,16 +1132,24 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +        outlineProvider =
 +            object : ViewOutlineProvider() {
 +                override fun getOutline(view: View, outline: Outline) {
-+                    outline.setRoundRect(0, 0, view.width, view.height, item.radius.value)
++                    val top = (host.headerHeight * item.window.value).roundToInt()
++                    outline.setRoundRect(0, top, view.width, view.height, item.radius.value)
 +                    outline.alpha = item.alpha.value
 +                }
 +            }
-+        namePaint.textSize = 12.5f * density * resources.configuration.fontScale
-+        textPaint.textSize = 11f * density * resources.configuration.fontScale
++        loadResources()
 +        countPaint.textSize = 11.5f * density
 +        countPaint.isFakeBoldText = true
 +        countPaint.textAlign = Paint.Align.CENTER
 +        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
++    }
++
++    /** Text sizes that follow the font size. */
++    fun loadResources() {
++        namePaint.textSize = 12.5f * density * resources.configuration.fontScale
++        textPaint.textSize = 11f * density * resources.configuration.fontScale
++        textLayout = null
++        invalidate()
 +    }
 +
 +    /** Takes the bubble's icon, picture, name and last message. */
@@ -944,7 +1167,7 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +            b.flyoutMessage?.senderAvatar?.let { avatar = it }
 +        }
 +        textLayout = null
-+        contentDescription = b.title ?: b.appName
++        contentDescription = item.name
 +        invalidate()
 +    }
 +
@@ -964,12 +1187,13 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +    }
 +
 +    /** Applies the springs' values: the shape's turn, the task's scale, place, crop, corners. */
-+    fun apply(header: Float, right: Boolean) {
++    fun apply(header: Float) {
 +        val w = width.toFloat()
 +        val h = height.toFloat()
-+        val turnScale = 1f - (1f - LujarchSmallWindowsView.TURN_SCALE) * item.turn.value
++        val turn = item.turn.value
++        val turnScale = 1f - (1f - LujarchSmallWindowsView.TURN_SCALE) * kotlin.math.abs(turn)
 +        val lift = item.lift.value
-+        pivotX = if (item.turn.value > 0.01f) (if (right) w else 0f) else w / 2f
++        pivotX = if (turn > 0.01f) w else if (turn < -0.01f) 0f else w / 2f
 +        pivotY = h / 2f
 +        scaleX = turnScale * lift
 +        scaleY = lift
@@ -995,9 +1219,15 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +            tv.setClipBounds(Rect(clip))
 +        }
 +        val r = item.radius.value / s
-+        if (kotlin.math.abs(r - shownRadius) > 0.5f) {
++        val sc = tv.surfaceControl?.takeIf { it.isValid }
++        if (sc != null && kotlin.math.abs(r - shownRadius) > 0.5f) {
 +            shownRadius = r
 +            tv.setCornerRadius(r)
++            // A SurfaceView hands its radius to the surface only when it updates the surface for
++            // another reason; without this the task keeps the corners it was created with. The
++            // task view draws no frames of its own: the corners go with the window's next one.
++            val t = SurfaceControl.Transaction().setCornerRadius(sc, r)
++            tv.rootSurfaceControl?.applyTransactionOnDraw(t) ?: t.apply()
 +        }
 +        invalidate()
 +    }
@@ -1014,11 +1244,9 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +        val radius = item.radius.value
 +        val window = item.window.value
 +        val icon = item.icon.value
-+        rect.set(0f, 0f, w, h)
-+        // The body under the app's screen: the header's color in a window, the card's otherwise.
-+        fill.color =
-+            blend(host.cardColor(item), if (item.headerColor != 0) item.headerColor
-+            else host.windowColor, window)
++        // The body under the app's screen; a window's handle floats above it, over what is below.
++        rect.set(0f, host.headerHeight * window, w, h)
++        fill.color = blend(host.cardColor(item), host.windowColor, window)
 +        canvas.drawRoundRect(rect, radius, radius, fill)
 +        super.dispatchDraw(canvas)
 +        val cardness = (1f - window) * (1f - icon)
@@ -1032,8 +1260,22 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +        if (cardness > 0f && !item.isConversation && content > 0f) {
 +            drawBadge(canvas, h, cardness * content)
 +        }
-+        if (item.turn.value > 0f) drawShade(canvas, w, h, item.turn.value * cardness)
++        if (item.turn.value != 0f) {
++            drawShade(canvas, w, h, kotlin.math.abs(item.turn.value) * cardness,
++                item.turn.value > 0f)
++        }
++        if (cardness > 0f) drawRim(canvas, w, h, cardness)
 +        if (window > 0f) drawChrome(canvas, w, h, window)
++    }
++
++    /** A card's edge, so that a card reads as lying on the one it covers. */
++    private fun drawRim(canvas: Canvas, w: Float, h: Float, a: Float) {
++        stroke.strokeWidth = density
++        stroke.strokeCap = Paint.Cap.BUTT
++        stroke.color = withAlpha(host.rimColor, a)
++        val o = stroke.strokeWidth / 2
++        rect.set(o, o, w - o, h - o)
++        canvas.drawRoundRect(rect, item.radius.value - o, item.radius.value - o, stroke)
 +    }
 +
 +    private fun drawAppPlaceholder(canvas: Canvas, w: Float, h: Float, a: Float) {
@@ -1063,13 +1305,15 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +
 +    private fun drawBadge(canvas: Canvas, h: Float, a: Float) {
 +        val icon = appIcon ?: return
-+        val size = 22f * density
-+        val margin = 8f * density
++        // The badge keeps its place on the card as the card shrinks into a slot in Recents.
++        val k = min(1f, width / (LujarchSmallWindowsView.CARD_W * density))
++        val size = 22f * density * k
++        val margin = 8f * density * k
 +        // In the lower corner towards the middle of the screen.
-+        val left = if (host.dockRight) margin else width - margin - size
++        val left = if (item.turn.value >= 0f) margin else width - margin - size
 +        val top = h - margin - size
 +        fill.color = withAlpha(Color.WHITE, a * 0.9f)
-+        canvas.drawCircle(left + size / 2, top + size / 2, size / 2 + 2f * density, fill)
++        canvas.drawCircle(left + size / 2, top + size / 2, size / 2 + 2f * density * k, fill)
 +        icon.setBounds(left.roundToInt(), top.roundToInt(), (left + size).roundToInt(),
 +            (top + size).roundToInt())
 +        icon.alpha = (a * 255).roundToInt()
@@ -1082,9 +1326,11 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +        val size = min(52f * density, w * 0.5f)
 +        val cx = w / 2f
 +        val message = item.lastMessage
-+        val name = item.bubble.title ?: item.bubble.appName ?: ""
++        val name = item.name ?: ""
 +        val textBlock = 16f * density + if (message.isNullOrEmpty()) 0f else 34f * density
-+        val top = (h - size - 8f * density - textBlock) / 2f
++        // Centered in what the card above leaves visible, so that the count is never under it.
++        val covered = host.coveredTop(item)
++        val top = covered + (h - covered - size - 8f * density - textBlock) / 2f
 +        drawAvatar(canvas, cx, top + size / 2, size, a)
 +        if (item.unread > 0) {
 +            // The unread count at the picture's upper outer corner.
@@ -1164,11 +1410,11 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +        }
 +    }
 +
-+    private fun drawShade(canvas: Canvas, w: Float, h: Float, a: Float) {
++    private fun drawShade(canvas: Canvas, w: Float, h: Float, a: Float, right: Boolean) {
 +        if (a <= 0.01f) return
 +        // The side turned away from the viewer is the one towards the middle of the screen.
-+        val far = if (host.dockRight) 0f else w
-+        val near = if (host.dockRight) w else 0f
++        val far = if (right) 0f else w
++        val near = if (right) w else 0f
 +        shade.shader =
 +            LinearGradient(far, 0f, near, 0f, Color.argb((46 * a).roundToInt(), 0, 0, 0),
 +                Color.TRANSPARENT, Shader.TileMode.CLAMP)
@@ -1177,30 +1423,23 @@ index 0000000000000000000000000000000000000000..9c81c3eaf1005a3d554a71d63653b2b8
 +
 +    private fun drawChrome(canvas: Canvas, w: Float, h: Float, a: Float) {
 +        val header = host.headerHeight * a
-+        // The handle along the top edge.
-+        val pillW = 30f * density
-+        val pillH = 4f * density
-+        fill.color = withAlpha(host.handleColor(item), a)
-+        rect.set((w - pillW) / 2, (header - pillH) / 2, (w + pillW) / 2, (header + pillH) / 2)
-+        canvas.drawRoundRect(rect, pillH / 2, pillH / 2, fill)
-+        // The corner that scales the window.
++        // The handle along the top edge, as the dock's.
++        host.drawHandlePill(canvas, w / 2, header / 2, a)
++        // The corner that scales the window: a thicker stretch of the outline around it, outside
++        // the app, so that nothing of the app is covered.
++        val radius = item.radius.value
++        val out = 3f * density
 +        stroke.strokeWidth = 3f * density
 +        stroke.strokeCap = Paint.Cap.ROUND
-+        stroke.color = withAlpha(host.handleColor(item), a * 0.9f)
-+        val g = 14f * density
-+        val inset = 7f * density
-+        path.reset()
-+        path.moveTo(w - inset, h - inset - g)
-+        path.lineTo(w - inset, h - inset - 7f * density)
-+        path.quadTo(w - inset, h - inset, w - inset - 7f * density, h - inset)
-+        path.lineTo(w - inset - g, h - inset)
-+        canvas.drawPath(path, stroke)
++        stroke.color = withAlpha(host.accentColor, a)
++        rect.set(w - 2 * (radius + out) + out, h - 2 * (radius + out) + out, w + out, h + out)
++        canvas.drawArc(rect, 0f, 90f, false, stroke)
 +        // The thin outline.
 +        stroke.strokeWidth = 1.5f * density
 +        stroke.strokeCap = Paint.Cap.BUTT
 +        stroke.color = withAlpha(host.accentColor, a * host.outlineAlpha)
 +        val o = stroke.strokeWidth / 2
-+        rect.set(-o, -o, w + o, h + o)
++        rect.set(-o, header - o, w + o, h + o)
 +        canvas.drawRoundRect(rect, item.radius.value + o, item.radius.value + o, stroke)
 +    }
 +
@@ -1594,10 +1833,10 @@ index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c4
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414264dd9ed
+index 0000000000000000000000000000000000000000..94bd7564b27d9ef68f4450d4f877c47c98a75448
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
-@@ -0,0 +1,1629 @@
+@@ -0,0 +1,1799 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1618,6 +1857,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +
 +import android.annotation.SuppressLint
 +import android.app.ActivityManager
++import android.app.ActivityTaskManager.INVALID_TASK_ID
 +import android.app.WindowConfiguration
 +import android.content.Context
 +import android.graphics.Canvas
@@ -1629,6 +1869,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +import android.graphics.drawable.Drawable
 +import android.os.Handler
 +import android.os.Looper
++import android.os.RemoteException
 +import android.os.SystemClock
 +import android.text.TextPaint
 +import android.util.Log
@@ -1646,6 +1887,8 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +import android.window.WindowAnimationState
 +import android.window.WindowContainerTransaction
 +import android.widget.FrameLayout
++import com.android.internal.app.LujarchBackground
++import com.android.internal.app.LujarchSmallWindow
 +import com.android.wm.shell.R
 +import com.android.wm.shell.bubbles.util.BubbleUtils
 +import com.android.wm.shell.shared.bubbles.DismissView
@@ -1689,6 +1932,10 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    private var folded = false
 +    /** While Recents shows, the windows and the cards wait in its Running layer (WIN-11). */
 +    private var recentsShown = false
++    private var nextFrom: Rect? = null
++    private var systemShown = true
++    private var linuxInFront = false
++    private val recentsSlots = HashMap<String, RectF>()
 +
 +    private val handleX = LujarchSpring()
 +    private val handleY = LujarchSpring()
@@ -1708,28 +1955,35 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    /** The last touch went to the app below the open window, which then has the focus. */
 +    private var belowTouched = false
 +
-+    // Colors, from the system's palette.
-+    val accentColor = context.getColor(com.android.internal.R.color.materialColorPrimary)
-+    val onAccentColor = context.getColor(com.android.internal.R.color.materialColorOnPrimary)
-+    val windowColor = context.getColor(com.android.internal.R.color.materialColorSurfaceBright)
-+    val cardTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
-+    private val conversationColor =
-+        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHighest)
-+    val conversationTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
-+    val conversationSubTextColor =
-+        context.getColor(com.android.internal.R.color.materialColorOnSurfaceVariant)
-+    private val placeholderColor =
-+        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHigh)
-+    private val menuColor =
-+        context.getColor(com.android.internal.R.color.materialColorSurfaceContainerHigh)
-+    private val menuTextColor = context.getColor(com.android.internal.R.color.materialColorOnSurface)
++    // Colors, from the system's palette (loadResources).
++    var accentColor = 0
++        private set
++    var onAccentColor = 0
++        private set
++    var windowColor = 0
++        private set
++    var cardTextColor = 0
++        private set
++    private var conversationColor = 0
++    var conversationTextColor = 0
++        private set
++    var conversationSubTextColor = 0
++        private set
++    private var placeholderColor = 0
++    private var menuColor = 0
++    /** The hairline that keeps a card or the menu apart from an app of the same dark surface. */
++    var rimColor = 0
++        private set
++    private var handlePillColor = 0
++    private var railColor = 0
++    private var menuTextColor = 0
 +    var outlineAlpha = OUTLINE_ALPHA
 +        private set
 +
 +    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 +    private val menuPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-+    private val menuIcons: Array<Drawable?>
-+    private val menuLabels: Array<CharSequence>
++    private var menuIcons: Array<Drawable?> = emptyArray()
++    private var menuLabels: Array<CharSequence> = emptyArray()
 +
 +    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 +    private var gesture: Gesture? = null
@@ -1744,6 +1998,28 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        dismissView.setup()
 +        dismissView.elevation = dp(DISMISS_Z)
 +        addView(dismissView)
++        loadResources()
++    }
++
++    /**
++     * Reads the palette, the menu's words and the text sizes again: the language, the font size,
++     * dark theme and the wallpaper's palette change them while the dock stays.
++     */
++    fun loadResources() {
++        fun color(id: Int) = context.getColor(id)
++        accentColor = color(com.android.internal.R.color.materialColorPrimary)
++        onAccentColor = color(com.android.internal.R.color.materialColorOnPrimary)
++        windowColor = color(com.android.internal.R.color.materialColorSurfaceBright)
++        cardTextColor = color(com.android.internal.R.color.materialColorOnSurface)
++        conversationColor = color(com.android.internal.R.color.materialColorSurfaceContainerHighest)
++        conversationTextColor = color(com.android.internal.R.color.materialColorOnSurface)
++        conversationSubTextColor = color(com.android.internal.R.color.materialColorOnSurfaceVariant)
++        placeholderColor = color(com.android.internal.R.color.materialColorSurfaceContainerHigh)
++        menuColor = color(com.android.internal.R.color.materialColorSurfaceContainerHighest)
++        rimColor = color(com.android.internal.R.color.materialColorOutlineVariant)
++        handlePillColor = color(com.android.internal.R.color.materialColorOnSurfaceVariant)
++        railColor = color(com.android.internal.R.color.materialColorSurfaceContainerHigh)
++        menuTextColor = color(com.android.internal.R.color.materialColorOnSurface)
 +        menuPaint.textSize = 14.5f * density * resources.configuration.fontScale
 +        menuIcons =
 +            arrayOf(
@@ -1757,6 +2033,13 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +                context.getText(R.string.lujarch_small_window_dock),
 +                context.getText(R.string.lujarch_small_window_close),
 +            )
++        for (item in items.values) item.view.loadResources()
++        invalidate()
++    }
++
++    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
++        super.onConfigurationChanged(newConfig)
++        loadResources()
 +    }
 +
 +    // ---------------------------------------------------------------------------------------
@@ -1812,6 +2095,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        item.view.tag = item
 +        item.lastUsed = SystemClock.uptimeMillis()
 +        item.lastMessage = bubble.flyoutMessage?.message
++        if (item.isConversation && item.lastMessage != null) item.unread = 1
 +        initWindow(item)
 +        items[bubble.key] = item
 +        dock.add(0, item)
@@ -1823,13 +2107,28 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        if (item.counts) enforceLimit(item)
 +        place(animate = true, stagger = true)
 +        syncTasks()
++        reportWindows()
 +    }
 +
-+    /** A new shape grows out of the top of the dock. */
++    /** A new shape grows out of the top of the dock, or out of the card it was in Recents. */
 +    private fun growIn(item: LujarchSmallWindowItem) {
++        val from = nextFrom
++        nextFrom = null
++        if (from != null) {
++            item.fromCard = from
++            snapItem(item, Frame(from.left.toFloat(), from.top.toFloat(), from.width().toFloat(),
++                from.height().toFloat(), dp(CARD_RADIUS), 0f, 0f, 0f),
++                scale = from.width().toFloat() / max(1, item.layoutW))
++            return
++        }
 +        snapItem(item, slotFrame(0), scale = cardScale(item))
 +        item.alpha.snap(0f)
 +        item.lift.snap(0.6f)
++    }
++
++    /** The next shape that comes in starts where its Recents card is (WIN-11). */
++    fun growNextFrom(from: Rect) {
++        nextFrom = Rect(from)
 +    }
 +
 +    /**
@@ -1854,6 +2153,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        item.lift.to(0.8f)
 +        if (!LujarchSpring.animated()) item.alpha.snap(0f)
 +        place(animate = true, stagger = true)
++        reportWindows()
 +    }
 +
 +    private fun gone(item: LujarchSmallWindowItem) {
@@ -1868,6 +2168,32 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        if (transition != null) transition.continueCollapse() else bubble.cleanupViews()
 +    }
 +
++    private var reported: List<LujarchSmallWindow> = emptyList()
++
++    /**
++     * Background learns the small windows in the order of the screen: their tasks run off screen
++     * (BG-1), and Recents' Running layer keeps a place for each (WIN-11).
++     */
++    private fun reportWindows() {
++        val windows = (listOfNotNull(open) + dock).map { item ->
++            LujarchSmallWindow().apply {
++                key = item.bubble.key
++                taskId = item.taskId
++                packageName = item.bubble.packageName
++                userId = item.bubble.user.identifier
++                label = item.name?.toString()
++                conversation = item.isConversation
++            }
++        }
++        if (windows == reported) return
++        reported = windows
++        try {
++            LujarchBackground.get()?.setSmallWindows(windows.toTypedArray())
++        } catch (e: RemoteException) {
++            Log.w(TAG, "Background cannot be told the small windows", e)
++        }
++    }
++
 +    /** The bubble's task view reports to its shape from the start, attached or not. */
 +    private fun listen(item: LujarchSmallWindowItem) {
 +        if (item.listener != null) return
@@ -1875,7 +2201,10 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        item.listener =
 +            BubbleTaskViewListener(context, btv, item.view, manager,
 +                object : BubbleTaskViewListener.Callback {
-+                    override fun onTaskCreated() = onContentDrawn(item, true)
++                    override fun onTaskCreated() {
++                        onContentDrawn(item, true)
++                        reportWindows()
++                    }
 +
 +                    override fun onContentVisibilityChanged(visible: Boolean) =
 +                        onContentDrawn(item, visible)
@@ -1884,9 +2213,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +                        if (item === open) controller.collapseStack()
 +                    }
 +
-+                    override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {
-+                        onTaskInfo(item, taskInfo)
-+                    }
++                    override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {}
 +                })
 +        item.listener?.setBubble(item.bubble)
 +    }
@@ -2071,6 +2398,14 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        val icon: Float,
 +    )
 +
++    /** How much of a card's top the card above it covers in the dock. */
++    fun coveredTop(item: LujarchSmallWindowItem): Float =
++        if (!folded && item !== open && !recentsShown && dock.indexOf(item) > 0) {
++            dp(CARD_H - CARD_STEP)
++        } else {
++            0f
++        }
++
 +    private fun dockX(): Float = if (dockRight) width - dp(DOCK_MARGIN + CARD_W) else dp(DOCK_MARGIN)
 +
 +    private fun slotFrame(i: Int): Frame =
@@ -2082,7 +2417,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +                dp(RAIL_ICON), dp(RAIL_ICON / 2), 0f, 0f, 1f)
 +        } else {
 +            Frame(dockX(), dockTop + dp(CARD_FROM_HANDLE) + i * dp(CARD_STEP), dp(CARD_W),
-+                dp(CARD_H), dp(CARD_RADIUS), 1f, 0f, 0f)
++                dp(CARD_H), dp(CARD_RADIUS), if (dockRight) 1f else -1f, 0f, 0f)
 +        }
 +
 +    private fun windowFrame(item: LujarchSmallWindowItem): Frame {
@@ -2134,6 +2469,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +
 +    /** Sets every shape's target; [stagger]: the cards follow each other (WIN-9). */
 +    private fun place(animate: Boolean, stagger: Boolean = false) {
++        reportWindows()
 +        if (width == 0) return
 +        val now = SystemClock.uptimeMillis()
 +        dockTop = clampDockTop(dockTop)
@@ -2193,19 +2529,67 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        var x = (width - total) / 2f
 +        val y = statusBar + dp(RECENTS_TOP)
 +        shown.forEachIndexed { i, item ->
-+            target(item, Frame(x, y, w, h, dp(CARD_RADIUS) * h / dp(CARD_H), 0f, 0f, 0f),
-+                w / max(1, item.layoutW))
++            val slot = recentsSlots[item.bubble.key]
++            if (slot != null && item.isConversation) {
++                // A conversation waits as the person's picture, as on the rail.
++                val d = min(slot.width(), slot.height())
++                target(item, Frame(slot.centerX() - d / 2, slot.centerY() - d / 2, d, d, d / 2,
++                    0f, 0f, 1f), d / max(1, item.layoutW))
++            } else if (slot != null) {
++                target(item, Frame(slot.left, slot.top, slot.width(), slot.height(),
++                    dp(CARD_RADIUS) * slot.height() / dp(CARD_H), 0f, 0f, 0f),
++                    slot.width() / max(1, item.layoutW))
++            } else {
++                target(item, Frame(x, y, w, h, dp(CARD_RADIUS) * h / dp(CARD_H), 0f, 0f, 0f),
++                    w / max(1, item.layoutW))
++                x += w + gap
++            }
 +            item.startAt = now + i * LujarchSpring.STAGGER_MS
-+            x += w + gap
 +        }
 +        handleAlpha.to(0f)
 +        railAlpha.to(0f)
 +        menuAlpha.to(0f)
 +    }
 +
-+    /** Recents opened or closed (Launcher reports it). */
-+    fun setRecentsShown(shown: Boolean) {
-+        if (shown == recentsShown) return
++    /**
++     * Linux came to the front of the home screen or left it (Launcher reports it): the small
++     * windows and the dock are not shown and take no touch while it is in front (LNX-3).
++     */
++    fun setHidden(hidden: Boolean) {
++        linuxInFront = hidden
++        applyShown()
++    }
++
++    /** The system shows or hides the bubbles (the shade, the lock screen). */
++    fun setSystemShown(shown: Boolean) {
++        systemShown = shown
++        applyShown()
++    }
++
++    private fun applyShown() {
++        val shown = systemShown && !linuxInFront
++        if (!shown) hideMenu()
++        visibility = if (shown) VISIBLE else INVISIBLE
++        updateTouchMonitor()
++        requestApplyTouchRegion()
++    }
++
++    /**
++     * Recents opened or closed (Launcher reports it), with the place of each small window in its
++     * Running layer, by the bubble's key: the layer lays them out, the shapes fly into them
++     * (WIN-11).
++     */
++    fun setRecentsShown(shown: Boolean, keys: Array<String>?, slots: Array<Rect>?) {
++        recentsSlots.clear()
++        if (keys != null && slots != null) {
++            for (i in 0 until minOf(keys.size, slots.size)) {
++                recentsSlots[keys[i]] = RectF(slots[i])
++            }
++        }
++        if (shown == recentsShown) {
++            if (shown) place(animate = true)
++            return
++        }
 +        recentsShown = shown
 +        if (shown) {
 +            hideMenu()
@@ -2229,7 +2613,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +            placeView(item)
 +        }
 +        for (s in ownSprings) {
-+            s.step(ms, 0.5)
++            s.step(ms, if (s === handleAlpha || s === railAlpha || s === menuAlpha) 0.002 else 0.5)
 +            if (!s.atRest) moving = true
 +        }
 +        // Shapes that left are removed once they have faded.
@@ -2259,7 +2643,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +            )
 +        }
 +        v.layout(l, t, max(l + 1, r), max(t + 1, b))
-+        v.apply(headerHeight, dockRight)
++        v.apply(headerHeight)
 +    }
 +
 +    /** The order the task views are composited in, as the shapes stack (WIN-4). */
@@ -2290,18 +2674,27 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +     * in the rail or behind a card without a preview are in the background (WIN-6).
 +     */
 +    private fun syncTasks() {
++        var changed = false
 +        for (item in items.values) {
 +            val want = wantsContent(item)
 +            if (want && item.taskView == null) {
 +                attachTask(item)
++                changed = true
 +            } else if (!want && item.taskView != null && item.content.value <= 0.001f) {
 +                detachTask(item)
++                changed = true
 +            }
-+            item.content.to(if (want && item.contentDrawn) 1f else 0f)
++            val content = if (want && item.contentDrawn) 1f else 0f
++            if (item.content.target.toFloat() != content) {
++                item.content.to(content)
++                changed = true
++            }
 +        }
 +        updateCompositionOrder()
-+        syncFocus()
-+        clock.start()
++        syncInput()
++        // The frame step calls this once everything rests: the clock starts again only for what
++        // this changed, or it would run every frame.
++        if (changed) clock.start()
 +    }
 +
 +    private fun attachTask(item: LujarchSmallWindowItem) {
@@ -2336,33 +2729,14 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    private fun onContentDrawn(item: LujarchSmallWindowItem, drawn: Boolean) {
 +        item.contentDrawn = drawn
 +        item.focusable = null
-+        syncFocus()
++        item.touchable = null
++        syncInput()
 +        item.content.to(if (drawn && wantsContent(item)) 1f else 0f)
 +        clock.start()
 +    }
 +
-+    private fun onTaskInfo(item: LujarchSmallWindowItem, info: ActivityManager.RunningTaskInfo) {
-+        val d = info.taskDescription ?: return
-+        val color =
-+            when {
-+                Color.alpha(d.statusBarColor) == 0xff -> d.statusBarColor
-+                Color.alpha(d.backgroundColor) == 0xff -> d.backgroundColor
-+                else -> 0
-+            }
-+        if (color != item.headerColor) {
-+            item.headerColor = color
-+            item.view.invalidate()
-+        }
-+    }
-+
 +    fun cardColor(item: LujarchSmallWindowItem): Int =
 +        if (item.isConversation) conversationColor else placeholderColor
-+
-+    fun handleColor(item: LujarchSmallWindowItem): Int {
-+        val bg = if (item.headerColor != 0) item.headerColor else windowColor
-+        return if (Color.luminance(bg) > 0.5f) Color.argb(160, 0, 0, 0)
-+        else Color.argb(170, 255, 255, 255)
-+    }
 +
 +    // ---------------------------------------------------------------------------------------
 +    // What a person does with the windows, the cards, the dock and the rail
@@ -2371,6 +2745,12 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        hideMenu()
 +        if (item === open) return
 +        controller.expandStackAndSelectBubble(item.bubble)
++    }
++
++    /** A tap on a small window's place in Recents' Running layer opens it (WIN-11). */
++    fun openSmallWindow(key: String) {
++        val item = items[key] ?: return
++        openItem(item)
 +    }
 +
 +    private fun moveToDock() {
@@ -2386,8 +2766,13 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    /** Full screen (WIN-2): the small window becomes an ordinary app in Recents. */
 +    private fun fullScreen(item: LujarchSmallWindowItem) {
 +        hideMenu()
-+        val tv = item.bubble.bubbleTaskView?.taskView ?: return
-+        if (tv.taskInfo == null) return
++        val tv = item.bubble.bubbleTaskView?.taskView
++        if (tv?.taskInfo == null || tv.controller?.taskToken == null) {
++            Log.w(TAG, "${item.bubble.key} cannot go full screen: its task is not known " +
++                "(view=${tv != null} info=${tv?.taskInfo != null})")
++            return
++        }
++        Log.i(TAG, "${item.bubble.key} (task ${item.taskId}) goes full screen")
 +        tv.moveToFullscreen()
 +    }
 +
@@ -2404,7 +2789,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        tmpRectF.inset(-dp(EDGE_TOUCH), -dp(EDGE_TOUCH))
 +        if (tmpRectF.contains(x, y)) {
 +            belowTouched = false
-+            syncFocus()
++            syncInput()
 +            return
 +        }
 +        if (y < statusBar || y > height - dp(GESTURE_AREA) || y >= imeTop) return
@@ -2413,28 +2798,33 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +            moveToDock()
 +        } else {
 +            belowTouched = true
-+            syncFocus()
++            syncInput()
 +        }
 +    }
 +
 +    /**
-+     * Only the open window's task may take the focus, and not after a touch on the app below:
-+     * Back, keys and the input method then go to the app being used.
++     * Only the open window's task takes touches on its screen; the cards and Recents' slots show
++     * the app but their touches are the dock's and Recents' own. The open window's task may also
++     * take the focus, but not after a touch on the app below: Back, keys and the input method then
++     * go to the app being used.
 +     */
-+    private fun syncFocus() {
++    private fun syncInput() {
 +        for (item in items.values) {
-+            val want = item === open && !belowTouched && !recentsShown
-+            if (item.focusable == want) continue
++            val touchable = item === open && !recentsShown
++            val focusable = touchable && !belowTouched
++            if (item.focusable == focusable && item.touchable == touchable) continue
 +            val task = item.bubble.bubbleTaskView?.taskView?.taskInfo ?: continue
-+            item.focusable = want
++            item.focusable = focusable
++            item.touchable = touchable
 +            val wct = WindowContainerTransaction()
-+            wct.setFocusable(task.token, want)
++            wct.setFocusable(task.token, focusable)
++            wct.setTouchable(task.token, touchable)
 +            controller.taskOrganizer.applyTransaction(wct)
 +        }
 +    }
 +
 +    private fun updateTouchMonitor() {
-+        if (open != null && !recentsShown && isAttachedToWindow) {
++        if (open != null && !recentsShown && visibility == VISIBLE && isAttachedToWindow) {
 +            touchMonitor.start(display?.displayId ?: 0)
 +        } else {
 +            touchMonitor.stop()
@@ -2471,19 +2861,19 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    private fun drawHandle(canvas: Canvas) {
 +        val a = handleAlpha.value
 +        if (a <= 0.01f) return
-+        val x = handleX.value + dp(HANDLE_W) / 2
-+        val y = handleY.value + dp(HANDLE_H) / 2
++        drawHandlePill(canvas, handleX.value + dp(HANDLE_W) / 2, handleY.value + dp(HANDLE_H) / 2, a)
++    }
++
++    /** A handle's pill, over the dock or a window: it floats over whatever is below it. */
++    fun drawHandlePill(canvas: Canvas, cx: Float, cy: Float, a: Float) {
 +        val pw = dp(30f)
 +        val ph = dp(5f)
-+        tmpRectF.set(x - pw / 2, y - ph / 2, x + pw / 2, y + ph / 2)
++        tmpRectF.set(cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2)
 +        paint.style = Paint.Style.FILL
-+        paint.color = Color.argb((191 * a).roundToInt(), 60, 48, 44)
++        paint.color = withAlpha(handlePillColor, a)
++        paint.setShadowLayer(dp(3f), 0f, dp(1f), Color.argb((90 * a).roundToInt(), 0, 0, 0))
 +        canvas.drawRoundRect(tmpRectF, ph / 2, ph / 2, paint)
-+        paint.style = Paint.Style.STROKE
-+        paint.strokeWidth = dp(1f)
-+        paint.color = Color.argb((153 * a).roundToInt(), 255, 255, 255)
-+        canvas.drawRoundRect(tmpRectF, ph / 2, ph / 2, paint)
-+        paint.style = Paint.Style.FILL
++        paint.clearShadowLayer()
 +    }
 +
 +    private fun drawRail(canvas: Canvas) {
@@ -2494,7 +2884,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        tmpRectF.set(left, railTop.value, left + w, railTop.value + railHeight.value)
 +        val r = w / 2
 +        paint.style = Paint.Style.FILL
-+        paint.color = Color.argb((219 * a).roundToInt(), 40, 30, 27)
++        paint.color = withAlpha(railColor, a * 0.94f)
 +        paint.setShadowLayer(dp(9f), 0f, dp(3f), Color.argb((71 * a).roundToInt(), 0, 0, 0))
 +        // Rounded towards the middle of the screen, flat against the edge.
 +        canvas.save()
@@ -2516,6 +2906,11 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        paint.setShadowLayer(dp(12f), 0f, dp(4f), Color.argb((115 * a).roundToInt(), 0, 0, 0))
 +        canvas.drawRoundRect(menuRect, r, r, paint)
 +        paint.clearShadowLayer()
++        paint.style = Paint.Style.STROKE
++        paint.strokeWidth = dp(1f)
++        paint.color = withAlpha(rimColor, a)
++        canvas.drawRoundRect(menuRect, r, r, paint)
++        paint.style = Paint.Style.FILL
 +        menuPaint.color = withAlpha(menuTextColor, a)
 +        val rowH = dp(MENU_ITEM_H)
 +        for (i in 0..2) {
@@ -2625,7 +3020,10 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +                if (heightFor(limit) > maxH) {
 +                    limit = (maxH - headerHeight) / startLayoutH * startLayoutW
 +                }
-+                over = byWidth > limit + dp(OVERSHOOT)
++                // Past the limit along either side of the corner: the finger has room below.
++                val byHeight = start.h + dy
++                over = byWidth > limit + dp(OVERSHOOT) ||
++                    byHeight > heightFor(limit) + dp(OVERSHOOT)
 +                val w = byWidth.coerceIn(minW, limit + rubber(byWidth - limit))
 +                item.winScale = w / startLayoutW
 +            } else if (right) {
@@ -3033,29 +3431,38 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        startT: SurfaceControl.Transaction,
 +        startBounds: Rect,
 +        startScale: Float,
-+        snapshot: SurfaceControl,
++        snapshot: SurfaceControl?,
 +        taskLeash: SurfaceControl?,
 +        animFinish: Runnable,
 +    ) {
 +        startT.apply()
 +        val item = open
 +        if (item == null) {
-+            removeSnapshot(snapshot)
++            snapshot?.let { removeSnapshot(it) }
 +            animFinish.run()
 +            return
 +        }
-+        // The app's full screen shrinks into the window: one shape changing its place and size.
-+        val scale = startBounds.width() * startScale / max(1, item.layoutW)
-+        snapItem(item,
-+            Frame(startBounds.left.toFloat(), startBounds.top.toFloat() - headerHeight,
-+                startBounds.width() * startScale, startBounds.height() * startScale +
-+                headerHeight, 0f, 0f, 1f, 0f), scale)
++        val card = item.fromCard
++        item.fromCard = null
++        if (card != null) {
++            // The Recents card grows into the window.
++            snapItem(item, Frame(card.left.toFloat(), card.top.toFloat(), card.width().toFloat(),
++                card.height().toFloat(), dp(CARD_RADIUS), 0f, 0f, 0f),
++                card.width().toFloat() / max(1, item.layoutW))
++        } else {
++            // The app's full screen shrinks into the window: one shape changing place and size.
++            val scale = startBounds.width() * startScale / max(1, item.layoutW)
++            snapItem(item,
++                Frame(startBounds.left.toFloat(), startBounds.top.toFloat() - headerHeight,
++                    startBounds.width() * startScale, startBounds.height() * startScale +
++                    headerHeight, 0f, 0f, 1f, 0f), scale)
++        }
 +        item.alpha.snap(1f)
 +        item.lift.snap(1f)
 +        item.contentDrawn = true
 +        item.content.snap(1f)
 +        place(animate = true)
-+        postDelayed({ removeSnapshot(snapshot) }, SNAPSHOT_MS)
++        snapshot?.let { postDelayed({ removeSnapshot(it) }, SNAPSHOT_MS) }
 +        whenAtRest(item) { animFinish.run() }
 +    }
 +
@@ -3182,7 +3589,8 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        const val CARD_W = 108f
 +        const val CARD_H = 150f
 +        const val CARD_RADIUS = 20f
-+        const val CARD_STEP = 142f
++        /** Each card covers the top of the one below by a sixth of its height. */
++        const val CARD_STEP = 125f
 +        const val CARD_FROM_HANDLE = 30f
 +        const val DOCK_MARGIN = 10f
 +        const val DOCK_TOP = 200f
@@ -3196,7 +3604,8 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        const val MIN_W = 160f
 +        const val MIN_H = 120f
 +        const val MARGIN = 12f
-+        const val OVERSHOOT = 30f
++        /** Past the limit by this much a release shows the app full screen: within MARGIN. */
++        const val OVERSHOOT = 8f
 +        const val RAIL_W = 34f
 +        const val RAIL_ICON = 22f
 +        const val RAIL_STEP = 32f
@@ -3220,7 +3629,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +        const val CLOSE_LIFT = 0.82f
 +        const val OUTLINE_ALPHA = 0.85f
 +        const val SNAPSHOT_MS = 150L
-+        const val RECENTS_TILE_H = 104f
++        const val RECENTS_TILE_H = 56f
 +        const val RECENTS_GAP = 10f
 +        const val RECENTS_TOP = 16f
 +        /** A card's turn of 16 degrees, as the width a turned card shows. */
@@ -3228,7 +3637,7 @@ index 0000000000000000000000000000000000000000..755a9b7ae06d35f65caf97b864a06414
 +    }
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
-index 244a25c7e6fa4d1199dc262826f1f57c76c6cff5..b6bceb12d0492aa5a544c0d62b69dd283c40ad7d 100644
+index 244a25c7e6fa4d1199dc262826f1f57c76c6cff5..296c8c7adec85d86a65fe742f816e5521dd66e88 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/transitions/BubbleTransitions.java
 @@ -77,6 +77,8 @@ import com.android.wm.shell.bubbles.BubbleData;
@@ -3331,7 +3740,41 @@ index 244a25c7e6fa4d1199dc262826f1f57c76c6cff5..b6bceb12d0492aa5a544c0d62b69dd28
  
              final TaskView tv = b.getTaskView();
              tv.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT);
-@@ -2051,6 +2051,22 @@ public class BubbleTransitions {
+@@ -1822,9 +1822,11 @@ public class BubbleTransitions {
+             if (mDragData != null) {
+                 mStartBounds.offsetTo((int) mDragData.getDragPosition().x,
+                         (int) mDragData.getDragPosition().y);
+-                startTransaction.setScale(mSnapshot, mDragData.getTaskScale(),
+-                        mDragData.getTaskScale());
+-                startTransaction.setCornerRadius(mSnapshot, mDragData.getCornerRadius());
++                if (mSnapshot != null) {
++                    startTransaction.setScale(mSnapshot, mDragData.getTaskScale(),
++                            mDragData.getTaskScale());
++                    startTransaction.setCornerRadius(mSnapshot, mDragData.getCornerRadius());
++                }
+             }
+ 
+             // Now update state (and talk to launcher) in parallel with snapshot stuff
+@@ -1834,11 +1836,13 @@ public class BubbleTransitions {
+             final int left = mStartBounds.left - info.getRoot(0).getOffset().x;
+             final int top = mStartBounds.top - info.getRoot(0).getOffset().y;
+             startTransaction.setPosition(mTaskLeash, left, top);
+-            startTransaction.show(mSnapshot);
+-            // Move snapshot to root so that it remains visible while task is moved to taskview
+-            startTransaction.reparent(mSnapshot, info.getRoot(0).getLeash());
+-            startTransaction.setPosition(mSnapshot, left, top);
+-            startTransaction.setLayer(mSnapshot, Integer.MAX_VALUE);
++            if (mSnapshot != null) {
++                startTransaction.show(mSnapshot);
++                // Move snapshot to root so that it remains visible while task is moved to taskview
++                startTransaction.reparent(mSnapshot, info.getRoot(0).getLeash());
++                startTransaction.setPosition(mSnapshot, left, top);
++                startTransaction.setLayer(mSnapshot, Integer.MAX_VALUE);
++            }
+ 
+             startTransaction.apply();
+ 
+@@ -2051,6 +2055,22 @@ public class BubbleTransitions {
              mRootLeash = info.getRoot(0).getLeash();
              mFinishCb = finishCallback;
  
@@ -3355,7 +3798,7 @@ index 244a25c7e6fa4d1199dc262826f1f57c76c6cff5..b6bceb12d0492aa5a544c0d62b69dd28
              final View expandedView = getExpandedView(mBubble);
              if (expandedView != null) {
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
-index c671e6ce782154f63e8615b7a2c159a8d14ef0b8..a0b1ab3a6c188e4e92246960b74e3bb613f2339e 100644
+index c671e6ce782154f63e8615b7a2c159a8d14ef0b8..42c4fc1ed6833694e57b829f0ef6bdb3d11a0974 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/util/BubbleUtils.kt
 @@ -27,6 +27,7 @@ import android.window.WindowContainerTransaction
@@ -3388,6 +3831,18 @@ index c671e6ce782154f63e8615b7a2c159a8d14ef0b8..a0b1ab3a6c188e4e92246960b74e3bb6
                  wct.setAlwaysOnTop(rootToken, true /* alwaysOnTop */)
              } else if (reparentToTda) {
                  wct.reparent(token, null, true /* onTop */)
+@@ -103,6 +112,11 @@ object BubbleUtils {
+                 )
+             }
+         }
++        if (!toBubble && LujarchSmallWindowsMode.active) {
++            // A small window's task leaves the focus and the touches the dock had taken.
++            wct.setFocusable(token, true)
++            wct.setTouchable(token, true)
++        }
+         return wct
+     }
+ 
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java b/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java
 index 3368ab9c457d04b4f0216fb71d48c25a7cd7e11d..09e3e97cdd8e5eb607656ad6e86ec0a5312a7679 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/taskview/TaskViewTransitions.java
@@ -3942,10 +4397,10 @@ index 0000000000000000000000000000000000000000..6005d10274c4d0d182fadca15b3d9070
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..73ccc0add01922467512322854365517f602d82d
+index 0000000000000000000000000000000000000000..e9134ef73a4fb2704c5f8f314fd94a49b4cc3b4b
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/lujarch/smallwindow/LujarchSmallWindowsNotifications.java
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,217 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -4082,9 +4537,10 @@ index 0000000000000000000000000000000000000000..73ccc0add01922467512322854365517
 +     * it opens an activity, or it is a conversation that offers itself as a bubble.
 +     */
 +    public boolean canOpen(@Nullable NotificationEntry entry) {
-+        if (entry == null || mBubbles.isEmpty() || !switchesOn() || entry.isBubble()) {
++        if (entry == null || mBubbles.isEmpty() || !switchesOn()) {
 +            return false;
 +        }
++        if (entry.isBubble()) return mBubblesManager.isPresent();
 +        if (offersBubble(entry) && mBubblesManager.isPresent()) return true;
 +        final PendingIntent intent = entry.getSbn().getNotification().contentIntent;
 +        return intent != null && intent.isActivity();
@@ -4124,7 +4580,10 @@ index 0000000000000000000000000000000000000000..73ccc0add01922467512322854365517
 +    public void open(@NonNull NotificationEntry entry) {
 +        final String key = entry.getKey();
 +        final Runnable action = () -> {
-+            if (offersBubble(entry) && mBubblesManager.isPresent()) {
++            if (entry.isBubble() && mBubblesManager.isPresent()) {
++                Log.i(TAG, "conversation " + key + " opens its small window");
++                mBubblesManager.get().expandStackAndSelectBubble(entry);
++            } else if (offersBubble(entry) && mBubblesManager.isPresent()) {
 +                Log.i(TAG, "conversation " + key + " opens in a small window");
 +                mBubblesManager.get().onUserChangedBubble(entry, true /* shouldBubble */);
 +            } else {
@@ -4328,7 +4787,7 @@ index 0000000000000000000000000000000000000000..022d7ebe5ea49ba33213b909f403156b
 +    }
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
-index 3c4032f156efef1d3eb049f764e053f99dd82be0..5c69d6a440ee92b77014c5257d82e6e6a8463090 100644
+index 3c4032f156efef1d3eb049f764e053f99dd82be0..7c5eb52a21ebf7e8ed650d3a9383eb3c6f6a6afb 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationContentView.java
 @@ -55,6 +55,7 @@ import com.android.systemui.statusbar.TransformableView;
@@ -4347,7 +4806,7 @@ index 3c4032f156efef1d3eb049f764e053f99dd82be0..5c69d6a440ee92b77014c5257d82e6e6
 +        final LujarchSmallWindowsNotifications smallWindows =
 +                LujarchSmallWindowsNotifications.get();
 +        final String key = mContainingNotification.getEntryAdapter().getKey();
-+        if (!shouldShowBubbleButton() && smallWindows != null && smallWindows.canOpen(key)) {
++        if (smallWindows != null && smallWindows.canOpen(key)) {
 +            // A notification that opens in a small window: the system's bubble icon.
 +            bubbleButton.setContentDescription(
 +                    mContext.getString(R.string.lujarch_open_in_small_window));
@@ -4356,7 +4815,109 @@ index 3c4032f156efef1d3eb049f764e053f99dd82be0..5c69d6a440ee92b77014c5257d82e6e6
 +            bubbleButton.setOnClickListener(v -> smallWindows.open(key));
 +            bubbleButton.setVisibility(VISIBLE);
 +            actionsContainerForVisibilityChange.setVisibility(VISIBLE);
-+        } else if (shouldShowBubbleButton()) {
++        } else if (smallWindows == null && shouldShowBubbleButton()) {
              boolean isBubble = mContainingNotification.getEntryAdapter().isBubble();
              // explicitly resolve drawable resource using SystemUI's theme
              Drawable d = mContext.getDrawable(isBubble
+diff --git a/services/core/java/com/android/server/wm/ActivityRecordInputSink.java b/services/core/java/com/android/server/wm/ActivityRecordInputSink.java
+index d5d912d8120d088de84982bff84fcb23911d2040..2b026b19a4b4c7e223f2ba0bb8f90264e940e07b 100644
+--- a/services/core/java/com/android/server/wm/ActivityRecordInputSink.java
++++ b/services/core/java/com/android/server/wm/ActivityRecordInputSink.java
+@@ -140,7 +140,8 @@ class ActivityRecordInputSink {
+                 activityBelowInTask.mAllowedTouchUid == mActivityRecord.getUid()
+                         || activityBelowInTask.isUid(mActivityRecord.getUid()));
+         if (allowPassthrough || !mIsCompatEnabled || mActivityRecord.inTransition()
+-                || !mActivityRecord.mActivityRecordInputSinkEnabled) {
++                || !mActivityRecord.mActivityRecordInputSinkEnabled
++                || !mActivityRecord.isTouchable()) {
+             // Set to non-touchable, so the touch events can pass through.
+             mInputWindowHandleWrapper.setInputConfigMasked(InputConfig.NOT_TOUCHABLE,
+                     InputConfig.NOT_TOUCHABLE);
+diff --git a/services/core/java/com/android/server/wm/WindowContainer.java b/services/core/java/com/android/server/wm/WindowContainer.java
+index 5824fcf6c687eaa9443fa651f4a1f7610711a5d1..585a312114443fafbfe82d93cd5b325f801d02d6 100644
+--- a/services/core/java/com/android/server/wm/WindowContainer.java
++++ b/services/core/java/com/android/server/wm/WindowContainer.java
+@@ -64,6 +64,7 @@ import android.content.pm.ActivityInfo.ScreenOrientation;
+ import android.content.res.Configuration;
+ import android.graphics.Point;
+ import android.graphics.Rect;
++import android.gui.TrustedOverlay;
+ import android.internal.perfetto.protos.Windowmanagerservice.WindowContainerProto;
+ import android.os.Debug;
+ import android.os.IBinder;
+@@ -247,6 +248,9 @@ class WindowContainer<E extends WindowContainer> extends ConfigurationContainer<
+ 
+     private boolean mIsFocusable = true;
+ 
++    /** Whether the windows of this container take touches (WindowContainerTransaction). */
++    private boolean mIsTouchable = true;
++
+     /**
+      * This indicates whether this window is visible by policy. This can precede physical
+      * visibility ({@link #isVisible} - whether it has a surface showing on the screen) in
+@@ -1354,6 +1358,31 @@ class WindowContainer<E extends WindowContainer> extends ConfigurationContainer<
+         return true;
+     }
+ 
++    /**
++     * Returns {@code true} if the windows of this container take touches: not when the organizer
++     * shows this container or a parent inside its own system UI, which owns the touches there.
++     */
++    boolean isTouchable() {
++        final WindowContainer parent = getParent();
++        return mIsTouchable && (parent == null || parent.isTouchable());
++    }
++
++    /**
++     * Sets whether the windows of this container and its children take touches. Not touchable,
++     * the container's surface is a trusted overlay for input, and so is everything in it.
++     */
++    boolean setTouchable(boolean touchable) {
++        if (mIsTouchable == touchable) {
++            return false;
++        }
++        mIsTouchable = touchable;
++        if (mSurfaceControl != null) {
++            getPendingTransaction().setTrustedOverlay(mSurfaceControl, touchable
++                    ? TrustedOverlay.UNSET : TrustedOverlay.ENABLED);
++        }
++        return true;
++    }
++
+     /**
+      * @return Whether this child is on top of the window hierarchy.
+      */
+diff --git a/services/core/java/com/android/server/wm/WindowOrganizerController.java b/services/core/java/com/android/server/wm/WindowOrganizerController.java
+index 2339875b4c8cc8cefa2a67b2bae29e21a39cd64e..6d2dfedff19fa9db284178fd9974f284a9eb889c 100644
+--- a/services/core/java/com/android/server/wm/WindowOrganizerController.java
++++ b/services/core/java/com/android/server/wm/WindowOrganizerController.java
+@@ -988,6 +988,15 @@ class WindowOrganizerController extends IWindowOrganizerController.Stub
+             }
+         }
+ 
++        if ((change.getChangeMask() & WindowContainerTransaction.Change.CHANGE_TOUCHABLE) != 0) {
++            if (container.setTouchable(change.getTouchable())) {
++                final DisplayContent dc = container.getDisplayContent();
++                if (dc != null) dc.getInputMonitor().updateInputWindowsLw(true /* force */);
++                // The activities' input sinks follow on the next placement of the surfaces.
++                mService.mWindowManager.mWindowPlacerLocked.requestTraversal();
++            }
++        }
++
+         if ((change.getChangeMask()
+                 & WindowContainerTransaction.Change.CHANGE_IS_TASK_MOVE_ALLOWED) != 0) {
+             container.setIsTaskMoveAllowed(change.getIsTaskMoveAllowed());
+diff --git a/services/core/java/com/android/server/wm/WindowState.java b/services/core/java/com/android/server/wm/WindowState.java
+index dc2f6c9741e4128f82fd5fe287c069132ad548e6..3eb5639b02101c378201cdb2bcd5dd9e4c70a47d 100644
+--- a/services/core/java/com/android/server/wm/WindowState.java
++++ b/services/core/java/com/android/server/wm/WindowState.java
+@@ -3051,6 +3051,9 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
+         if (mActivityRecord == null  || mActivityRecord.getTask() == null) {
+             return true;
+         }
++        if (!mActivityRecord.isTouchable()) {
++            return false;
++        }
+         // During transient launch, the transient-hide windows are not visibleRequested
+         // or on-top but are kept focusable and thus can receive touch input.
+         if (mTransitionController.shouldKeepFocus(mActivityRecord)) {

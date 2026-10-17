@@ -21,6 +21,7 @@ import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -92,7 +93,8 @@ class DepthColumnView(context: Context, attrs: android.util.AttributeSet? = null
     fun bind(p: DepthColumnPreference) {
         pref = p
         fill(usageCard, R.string.background_usage, LujarchBackground.usageName(context, p.usage),
-            context.getString(R.string.background_usage_note), p.usageEnabled)
+            context.getString(if (p.usageEnabled) R.string.background_usage_note
+            else R.string.background_usage_fixed_note), p.usageEnabled)
         usageCard.setOnClickListener { p.onUsage() }
         fill(keepCard, R.string.background_keep,
             context.getString(if (p.kept) R.string.background_keep_on else R.string.background_keep_off),
@@ -164,6 +166,7 @@ class DepthColumnView(context: Context, attrs: android.util.AttributeSet? = null
             })
             addView(TextView(context).apply {
                 setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Medium)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             })
             addView(TextView(context).apply {
                 textSize = 11.5f
@@ -181,7 +184,8 @@ class DepthColumnView(context: Context, attrs: android.util.AttributeSet? = null
     private fun fill(card: LinearLayout, title: Int, value: CharSequence, note: CharSequence, enabled: Boolean) {
         val texts = card.findViewWithTag<LinearLayout>(TEXTS)
         (texts.getChildAt(0) as TextView).setText(title)
-        (texts.getChildAt(1) as TextView).text = if (card == keepCard) value
+        // A card that opens a page says so; one the owner cannot change does not.
+        (texts.getChildAt(1) as TextView).text = if (card == keepCard || !enabled) value
         else context.getString(R.string.background_card_value, value)
         (texts.getChildAt(2) as TextView).text = note
         card.isEnabled = enabled

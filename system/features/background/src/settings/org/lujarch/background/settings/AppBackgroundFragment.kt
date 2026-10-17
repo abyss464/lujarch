@@ -69,11 +69,10 @@ class AppBackgroundFragment : BasePreferenceFragment() {
         } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
             -1
         }
-        headerPref = screen.add(Preference(context)) {
+        headerPref = screen.add(HeaderPreference(context)) {
             key = "app"
             title = label
             setSummary(org.lujarch.settings.pages.R.string.loading)
-            isSelectable = false
             try {
                 icon = context.packageManager.getApplicationIcon(packageName)
             } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
@@ -168,9 +167,13 @@ class AppBackgroundFragment : BasePreferenceFragment() {
     ) {
         if (!pageAlive) return
         val context = prefContext
-        val parts = mutableListOf(LujarchBackground.depthName(context, a.depth))
+        val depthName = LujarchBackground.depthName(context, a.depth)
+        val parts = mutableListOf(depthName)
         if (a.memoryBytes > 0) parts += Formatter.formatShortFileSize(context, a.memoryBytes)
-        headerPref.summary = parts.joinToString(" · ") + "\n" + a.reason
+        // The reason under the depth, unless it only names the depth again.
+        val reason = a.reason?.takeIf { it.isNotEmpty() && it != depthName }
+        headerPref.summary = parts.joinToString(getString(R.string.background_separator)) +
+            (reason?.let { "\n" + it } ?: "")
         columnPref.depth = a.depth
         columnPref.usage = a.usage
         columnPref.usageEnabled = !a.usageFixed
@@ -221,10 +224,11 @@ class AppBackgroundFragment : BasePreferenceFragment() {
             processesPref.add(Preference(context)) {
                 key = "process_${p.pid}"
                 title = p.name
-                summary = getString(R.string.background_process_summary,
-                    LujarchBackground.depthName(context, p.depth), p.reason,
+                val depth = LujarchBackground.depthName(context, p.depth)
+                summary = listOfNotNull(depth, p.reason?.takeIf { it.isNotEmpty() && it != depth },
                     Formatter.formatShortFileSize(context, p.memoryBytes))
-                icon = depthMark(context, p.depth)
+                    .joinToString(getString(R.string.background_separator))
+                icon = depthIcon(context, p.depth)
                 setOnPreferenceClickListener {
                     ProcessFragment.open(requireContext(), p.pid, p.name.orEmpty(), packageName, label)
                     true

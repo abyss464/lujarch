@@ -31,6 +31,7 @@ import androidx.preference.PreferenceViewHolder
 import androidx.preference.SwitchPreferenceCompat
 import com.android.internal.app.LujarchBackground
 import com.android.internal.app.LujarchBackgroundApp
+import com.android.settingslib.widget.GroupSectionDividerMixin
 import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -194,8 +195,8 @@ class BackgroundFragment : BasePreferenceFragment() {
             }
         }
 
-    /** By depth, memory, battery use or wakeups (BG-2). */
-    class SortPreference(context: Context) : Preference(context) {
+    /** By depth, memory, battery use or wakeups (BG-2), on the page itself rather than a card. */
+    class SortPreference(context: Context) : Preference(context), GroupSectionDividerMixin {
         var selected = SORT_DEPTH
         var onSort: (Int) -> Unit = {}
 
@@ -215,6 +216,7 @@ class BackgroundFragment : BasePreferenceFragment() {
                     isSelected = i == selected
                     setBackgroundResource(R.drawable.background_sort_chip)
                     setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Small)
+                    setTextColor(context.getColorStateList(R.color.background_sort_chip_text))
                     val h = dp(context, 14f)
                     setPadding(h, dp(context, 8f), h, dp(context, 8f))
                     isClickable = true

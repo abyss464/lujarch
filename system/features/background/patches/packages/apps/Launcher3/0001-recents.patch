@@ -158,10 +158,10 @@ index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19
          springAnimation =
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f2362bbf2
+index 0000000000000000000000000000000000000000..7af6d1970c93c9481c2fc587590bf36181db5e8e
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,301 @@
+@@ -0,0 +1,336 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -197,15 +197,15 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +import com.android.internal.app.LujarchBackground
 +import com.android.internal.app.LujarchBackgroundApp
 +import com.android.internal.app.LujarchBackgroundMemory
++import com.android.internal.app.LujarchSmallWindow
 +import com.android.launcher3.R
 +import com.android.launcher3.dragndrop.DragLayer
-+import com.android.launcher3.taskbar.bubbles.BubbleActivityStarter
 +import com.android.launcher3.util.Executors.MAIN_EXECUTOR
 +import com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR
++import com.android.launcher3.views.BaseDragLayer
 +import com.android.quickstep.views.RecentsView
 +import com.android.quickstep.views.TaskView
 +import com.android.systemui.shared.system.ActivityManagerWrapper
-+import com.android.wm.shell.shared.bubbles.logging.EntryPoint
 +
 +/**
 + * Lujarch's Background in Recents: the Running layer above the cards (BG-11), the memory below
@@ -216,14 +216,16 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +class LujarchRecents(
 +    private val recentsView: RecentsView<*, *>,
 +    private val dragLayer: DragLayer,
-+    actionsSpace: () -> Int,
++    spaceBelowActions: () -> Int,
 +) {
 +    private val context: Context = recentsView.context
 +    private val handler = Handler(Looper.getMainLooper())
 +    val runningLayer = RunningLayerView(context, this)
-+    val memoryRow = MemoryRowView(context, this, actionsSpace)
++    val memoryRow = MemoryRowView(context, this, spaceBelowActions)
 +    /** The apps by "userId:package". */
 +    private var apps: Map<String, LujarchBackgroundApp> = emptyMap()
++    /** The small windows, from the Shell through Background, in the order of the screen. */
++    private var windows: List<LujarchSmallWindow> = emptyList()
 +    private var memory: LujarchBackgroundMemory? = null
 +    private var overview = false
 +    private var alpha = 0f
@@ -232,10 +234,15 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +    private var picked: Pickup? = null
 +
 +    init {
-+        dragLayer.addView(runningLayer, FrameLayout.LayoutParams(
-+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
-+        dragLayer.addView(memoryRow, FrameLayout.LayoutParams(
-+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
++        // The drag layer's own layout params: it turns others into them and drops their gravity.
++        dragLayer.addView(runningLayer, BaseDragLayer.LayoutParams(
++            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
++            gravity = Gravity.TOP
++        })
++        dragLayer.addView(memoryRow, BaseDragLayer.LayoutParams(
++            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
++            gravity = Gravity.BOTTOM
++        })
 +        runningLayer.visibility = View.INVISIBLE
 +        memoryRow.visibility = View.INVISIBLE
 +    }
@@ -274,24 +281,31 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +                    return@execute
 +                }
 +                val list = service.getApps(user, false)
++                val shown = service.smallWindows.orEmpty().filter { it.userId == user }
 +                val mem = service.memory
-+                MAIN_EXECUTOR.execute { show(list, mem) }
++                MAIN_EXECUTOR.execute { show(list, shown, mem) }
 +            } catch (e: Exception) {
 +                Log.e(TAG, "Recents: the background cannot be read", e)
 +            }
 +        }
 +    }
 +
-+    private fun show(list: Array<LujarchBackgroundApp>, mem: LujarchBackgroundMemory) {
++    private fun show(
++        list: Array<LujarchBackgroundApp>,
++        shown: List<LujarchSmallWindow>,
++        mem: LujarchBackgroundMemory,
++    ) {
 +        val byKey = HashMap<String, LujarchBackgroundApp>()
 +        list.forEach { byKey["${UserHandle.getUserId(it.uid)}:${it.packageName}"] = it }
 +        apps = byKey
++        windows = shown
 +        memory = mem
 +        val home = context.packageName
++        // An app in a small window is there as its window; the others as what they run.
 +        runningLayer.bind(list.filter {
-+            it.packageName != home && !it.settling &&
++            it.packageName != home && !it.settling && !it.smallWindow &&
 +                (it.depth == LujarchBackground.DEPTH_RUNNING || it.depth == LujarchBackground.DEPTH_MESSAGES)
-+        }.sortedWith(compareBy<LujarchBackgroundApp> { !it.smallWindow }.thenBy { it.depth }))
++        }.sortedBy { it.depth }, shown)
 +        memoryRow.bind(mem)
 +        markTaskViews()
 +        updateVisibility()
@@ -343,7 +357,8 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +        else Intent(LujarchBackground.ACTION_APP)
 +            .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
 +            .putExtra(Intent.EXTRA_USER, UserHandle.getUserHandleForUid(uid))
-+        intent.setPackage(LujarchBackground.SETTINGS_PACKAGE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
++        intent.setPackage(LujarchBackground.SETTINGS_PACKAGE)
++            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 +        try {
 +            context.startActivityAsUser(intent, UserHandle.getUserHandleForUid(maxOf(uid, 0)))
 +        } catch (e: Exception) {
@@ -363,15 +378,22 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +        }
 +    }
 +
++    /**
++     * A tap on a small window's place opens it, and Recents leaves as a tap outside the cards
++     * leaves it: the window grows out of its place over the home screen.
++     */
++    fun open(window: LujarchSmallWindow) {
++        openSmallWindow?.invoke(window.key)
++        recentsView.startHome()
++    }
++
++    /** The app of a small window, when it runs. */
++    fun appOf(window: LujarchSmallWindow): LujarchBackgroundApp? =
++        apps["${window.userId}:${window.packageName}"]
++
 +    /** A tap on the Running layer opens the app: its card's task, or the app itself. */
 +    fun open(app: LujarchBackgroundApp) {
 +        val user = UserHandle.getUserHandleForUid(app.uid)
-+        if (app.smallWindow) {
-+            launchIntent(app)?.let {
-+                BubbleActivityStarter.INSTANCE.get(context).showAppBubble(it, user, EntryPoint.LAUNCHER_ICON_MENU)
-+            }
-+            return
-+        }
 +        if (app.hasTask && app.taskId >= 0 &&
 +            ActivityManagerWrapper.getInstance().startActivityFromRecents(app.taskId, null)) {
 +            return
@@ -450,22 +472,35 @@ index 0000000000000000000000000000000000000000..bbad33a537f2229e663a26e6167d029f
 +    private fun openInSmallWindow(tv: TaskView) {
 +        runningLayer.showDropSlot(false)
 +        val task = tv.taskContainers.firstOrNull()?.task ?: return
-+        val component = task.key.component ?: return
-+        val intent = Intent(Intent.ACTION_MAIN).setComponent(component)
-+            .addCategory(Intent.CATEGORY_LAUNCHER).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-+        BubbleActivityStarter.INSTANCE.get(context)
-+            .showAppBubble(intent, UserHandle.of(task.key.userId), EntryPoint.LAUNCHER_ICON_MENU)
-+        Log.i(TAG, "Recents: ${component.packageName} opens in a small window")
++        openTaskInSmallWindow?.invoke(tv, task.key.id)
++        Log.i(TAG, "Recents: task ${task.key.id} opens in a small window")
 +    }
 +
-+    private companion object {
-+        const val TAG = "lujarch_background"
-+        const val CLEAR_STEP_MS = 90L
++    /** The Running layer laid out its small windows' places, by bubble key (WIN-11). */
++    fun onSmallWindowSlots(keys: Array<String>, slots: Array<Rect>) {
++        smallWindowSlots?.invoke(keys, slots)
++    }
++
++    companion object {
++        private const val TAG = "lujarch_background"
++        private const val CLEAR_STEP_MS = 90L
++
++        /** Where the small windows wait in the Running layer: the small windows follow it. */
++        @JvmStatic
++        var smallWindowSlots: ((Array<String>, Array<Rect>) -> Unit)? = null
++
++        /** Opens a small window by its bubble key. */
++        @JvmStatic
++        var openSmallWindow: ((String) -> Unit)? = null
++
++        /** Opens a card's task in a small window, growing out of the card. */
++        @JvmStatic
++        var openTaskInSmallWindow: ((TaskView, Int) -> Unit)? = null
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b5829707072450
+index 0000000000000000000000000000000000000000..70af0b21e88a938aaf1aab820d566b4e94b418e8
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 @@ -0,0 +1,113 @@
@@ -492,7 +527,6 @@ index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b58297
 +import android.graphics.Paint
 +import android.graphics.Rect
 +import android.graphics.RectF
-+import android.graphics.Typeface
 +import android.text.format.Formatter
 +import android.util.TypedValue
 +import android.view.Gravity
@@ -507,12 +541,13 @@ index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b58297
 +
 +/**
 + * The memory below the cards in Recents (BG-12): the same four parts as Settings > System >
-+ * Background, with Background, which opens that page.
++ * Background, with Background, which opens that page. It sits under the actions, just above the
++ * navigation.
 + */
 +class MemoryRowView(
 +    context: Context,
 +    private val recents: LujarchRecents,
-+    private val actionsSpace: () -> Int,
++    private val spaceBelowActions: () -> Int,
 +) :
 +    LinearLayout(context), Insettable {
 +    private val free = TextView(context)
@@ -526,7 +561,7 @@ index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b58297
 +            orientation = HORIZONTAL
 +            gravity = Gravity.CENTER_VERTICAL
 +        }
-+        free.typeface = Typeface.MONOSPACE
++        free.fontFeatureSettings = "tnum"
 +        free.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
 +        free.setTextColor(context.getColor(android.R.color.system_neutral1_100))
 +        top.addView(free, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
@@ -545,7 +580,7 @@ index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b58297
 +
 +    override fun setInsets(insets: Rect) {
 +        (layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-+            it.bottomMargin = actionsSpace()
++            it.bottomMargin = spaceBelowActions() + dp(8)
 +            layoutParams = it
 +        }
 +    }
@@ -584,10 +619,10 @@ index 0000000000000000000000000000000000000000..c6c626e9e4c480cc93c3b30923b58297
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef17966ee28
+index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584628c2207
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,259 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -615,6 +650,7 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +import android.view.Gravity
 +import android.view.View
 +import android.view.ViewGroup
++import android.view.ViewTreeObserver
 +import android.widget.FrameLayout
 +import android.widget.HorizontalScrollView
 +import android.widget.ImageView
@@ -623,32 +659,38 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +import android.widget.TextView
 +import com.android.internal.app.LujarchBackground
 +import com.android.internal.app.LujarchBackgroundApp
++import com.android.internal.app.LujarchSmallWindow
 +import com.android.launcher3.Insettable
 +import com.android.launcher3.R
 +
 +/**
 + * The Running layer above the cards in Recents (BG-11): every app running off screen, with its
-+ * depth's color and one word. A tap opens the app; touching and holding shows End for what the
-+ * app started itself, and Background. Open small windows come first, in [smallWindows] (WIN-11).
++ * depth's color and one word, in one row that fits between the status bar and the cards. A tap
++ * opens the app; touching and holding shows End for what the app started itself, and Background.
++ * The small windows come first, in the order of the screen, each a place that its shape flies
++ * into: a window with its live screen, a conversation as the person's picture (WIN-11); the layer
++ * tells where the places are on each frame it draws, so the shapes follow it as Recents moves it.
 + */
 +class RunningLayerView(context: Context, private val recents: LujarchRecents) :
 +    LinearLayout(context), Insettable {
 +    private val title = TextView(context)
 +    private val scroller = HorizontalScrollView(context)
 +    private val row = LinearLayout(context)
-+
-+    /**
-+     * The open small windows, first in the layer: the small windows feature puts their live
-+     * screens here (WIN-11); without them, a tile with the app's icon stands for each.
-+     */
-+    val smallWindows = LinearLayout(context)
++    private val smallWindows = LinearLayout(context)
 +    private val apps = LinearLayout(context)
 +    private val dropSlot = FrameLayout(context)
++    private val slotRect = Rect()
++    private var slotsPublished = false
++    private val publish = ViewTreeObserver.OnPreDrawListener {
++        publishSlots()
++        true
++    }
 +    var hasEntries = false
 +        private set
 +
 +    init {
-+        orientation = VERTICAL
++        orientation = HORIZONTAL
++        gravity = Gravity.CENTER_VERTICAL
 +        val side = dp(16)
 +        setPadding(side, 0, side, 0)
 +        clipToPadding = false
@@ -656,32 +698,33 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
 +        title.setTextColor(context.getColor(android.R.color.system_accent1_200))
 +        title.paint.isFakeBoldText = true
-+        addView(title)
++        addView(title, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
++            marginEnd = dp(12)
++        })
 +        scroller.isHorizontalScrollBarEnabled = false
 +        scroller.clipToPadding = false
 +        row.orientation = HORIZONTAL
++        row.gravity = Gravity.CENTER_VERTICAL
 +        smallWindows.orientation = HORIZONTAL
 +        apps.orientation = HORIZONTAL
 +        row.addView(smallWindows)
 +        row.addView(apps)
 +        dropSlot.background = GradientDrawable().apply {
-+            cornerRadius = dp(18).toFloat()
++            cornerRadius = dp(TILE_RADIUS).toFloat()
 +            setStroke(dp(2), context.getColor(android.R.color.system_accent1_200), dp(6).toFloat(), dp(4).toFloat())
 +        }
 +        dropSlot.addView(TextView(context).apply {
 +            setText(R.string.lujarch_background_drop)
-+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
++            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
 +            setTextColor(context.getColor(android.R.color.system_accent1_100))
 +            gravity = Gravity.CENTER
-+            val p = dp(6)
++            val p = dp(4)
 +            setPadding(p, p, p, p)
 +        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
 +        dropSlot.visibility = GONE
-+        row.addView(dropSlot, LayoutParams(dp(108), dp(92)).apply { marginStart = dp(8) })
++        row.addView(dropSlot, LayoutParams(dp(TILE_W), dp(ROW_H)))
 +        scroller.addView(row)
-+        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-+            topMargin = dp(6)
-+        })
++        addView(scroller, LayoutParams(0, dp(ROW_H), 1f))
 +    }
 +
 +    override fun setInsets(insets: Rect) {
@@ -691,14 +734,46 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +        }
 +    }
 +
-+    fun bind(list: List<LujarchBackgroundApp>) {
++    override fun onAttachedToWindow() {
++        super.onAttachedToWindow()
++        viewTreeObserver.addOnPreDrawListener(publish)
++    }
++
++    override fun onDetachedFromWindow() {
++        viewTreeObserver.removeOnPreDrawListener(publish)
++        super.onDetachedFromWindow()
++    }
++
++    fun bind(list: List<LujarchBackgroundApp>, windows: List<LujarchSmallWindow>) {
 +        smallWindows.removeAllViews()
 +        apps.removeAllViews()
-+        for (app in list) {
-+            (if (app.smallWindow) smallWindows else apps).addView(tile(app),
-+                LayoutParams(dp(if (app.smallWindow) 108 else 72), dp(92)).apply { marginEnd = dp(8) })
++        for (window in windows) {
++            smallWindows.addView(slot(window), LayoutParams(dp(SLOT_W), dp(ROW_H)).apply {
++                marginEnd = dp(GAP)
++            })
 +        }
-+        hasEntries = list.isNotEmpty()
++        for (app in list) {
++            apps.addView(tile(app), LayoutParams(dp(TILE_W), dp(ROW_H)).apply {
++                marginEnd = dp(GAP)
++            })
++        }
++        hasEntries = windows.isNotEmpty() || list.isNotEmpty()
++    }
++
++    /** Where each small window waits on the screen, by its bubble key (WIN-11). */
++    private fun publishSlots() {
++        if (smallWindows.childCount == 0 && !slotsPublished) return
++        slotsPublished = smallWindows.childCount > 0
++        val keys = ArrayList<String>()
++        val rects = ArrayList<Rect>()
++        for (i in 0 until smallWindows.childCount) {
++            val v = smallWindows.getChildAt(i)
++            val key = v.tag as? String ?: continue
++            if (!v.getGlobalVisibleRect(slotRect)) continue
++            keys.add(key)
++            rects.add(Rect(slotRect))
++        }
++        recents.onSmallWindowSlots(keys.toTypedArray(), rects.toTypedArray())
 +    }
 +
 +    /** While a card is held: the layer offers its place for it, last in the row. */
@@ -719,6 +794,17 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +        dropSlot.scaleY = dropSlot.scaleX
 +    }
 +
++    /** A small window's place: its shape is the window itself, flown in by the Shell. */
++    private fun slot(window: LujarchSmallWindow): View = View(context).apply {
++        tag = window.key
++        contentDescription = window.label
++        setOnClickListener { recents.open(window) }
++        setOnLongClickListener { v ->
++            recents.appOf(window)?.let { menu(v, it) }
++            true
++        }
++    }
++
 +    private fun tile(app: LujarchBackgroundApp): View {
 +        val color = LujarchBackground.depthColor(context, app.depth, app.smallWindow)
 +        return LinearLayout(context).apply {
@@ -726,13 +812,13 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +            gravity = Gravity.CENTER
 +            background = LayerDrawable(arrayOf(
 +                GradientDrawable().apply {
-+                    cornerRadius = dp(18).toFloat()
++                    cornerRadius = dp(TILE_RADIUS).toFloat()
 +                    setColor(context.getColor(android.R.color.system_neutral1_800))
 +                },
 +                GradientDrawable().apply {
 +                    setColor(color)
-+                    cornerRadii = floatArrayOf(dp(18).toFloat(), dp(18).toFloat(), dp(18).toFloat(),
-+                        dp(18).toFloat(), 0f, 0f, 0f, 0f)
++                    val r = dp(TILE_RADIUS).toFloat()
++                    cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
 +                },
 +            )).apply {
 +                setLayerHeight(1, dp(3))
@@ -742,13 +828,14 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +            addView(ImageView(context).apply {
 +                setImageDrawable(icon(app))
 +                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-+            }, LayoutParams(dp(34), dp(34)))
++            }, LayoutParams(dp(24), dp(24)).apply { topMargin = dp(3) })
 +            addView(TextView(context).apply {
 +                text = app.word
-+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
++                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
 +                setTextColor(context.getColor(android.R.color.system_neutral1_100))
 +                isSingleLine = true
-+                setPadding(dp(4), dp(6), dp(4), 0)
++                ellipsize = android.text.TextUtils.TruncateAt.END
++                setPadding(dp(4), dp(3), dp(4), 0)
 +            })
 +            contentDescription = context.getString(R.string.lujarch_background_tile, app.label, app.word)
 +            setOnClickListener { recents.open(app) }
@@ -786,6 +873,13 @@ index 0000000000000000000000000000000000000000..9eeca336ba51941a3001adad10001ef1
 +    private companion object {
 +        const val END = 1
 +        const val BACKGROUND = 2
++        /** The row fits the space between the status bar and the cards. */
++        const val ROW_H = 56
++        const val TILE_W = 64
++        /** A slot has the shape of a dock card (108 x 150 dp). */
++        const val SLOT_W = 40
++        const val GAP = 8
++        const val TILE_RADIUS = 14
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
@@ -901,7 +995,7 @@ index 0000000000000000000000000000000000000000..c24963a2141ed8a86b0ed87d2efcc0ae
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
-index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..90ea02d97dd4db23157116b9cd45ef53c0558cdc 100644
+index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25e6f370485f2e064c431158561d51a2c217f1eb 100644
 --- a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 @@ -86,6 +86,15 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
@@ -912,7 +1006,7 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..90ea02d97dd4db23157116b9cd45ef53
 +            try {
 +                mLujarchRecents = new com.android.quickstep.lujarch.LujarchRecents(this,
 +                        mContainer.getDragLayer(),
-+                        () -> mContainer.getDeviceProfile().getOverviewActionsClaimedSpace());
++                        () -> mContainer.getDeviceProfile().getOverviewActionsClaimedSpaceBelow());
 +            } catch (RuntimeException e) {
 +                android.util.Log.e("lujarch_background", "Recents shows no Background", e);
 +            }

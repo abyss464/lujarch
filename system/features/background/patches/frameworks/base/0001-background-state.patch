@@ -82,10 +82,10 @@ index b3c39ff167b2348316c3ada985924bc3ea08bb36..17c455bc279627bde46f57fc90d6aed1
      // The number of longs needed to form a full bitmask of app ops
 diff --git a/core/java/com/android/internal/app/ILujarchBackground.aidl b/core/java/com/android/internal/app/ILujarchBackground.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..44814857b933c53be38514f2563874db04c8993d
+index 0000000000000000000000000000000000000000..68604e2842105a31e149c4bd913f3bad6cb0aca5
 --- /dev/null
 +++ b/core/java/com/android/internal/app/ILujarchBackground.aidl
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,70 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -105,6 +105,7 @@ index 0000000000000000000000000000000000000000..44814857b933c53be38514f2563874db
 +package com.android.internal.app;
 +
 +import com.android.internal.app.LujarchBackgroundApp;
++import com.android.internal.app.LujarchSmallWindow;
 +import com.android.internal.app.LujarchBackgroundEvent;
 +import com.android.internal.app.LujarchBackgroundMemory;
 +import com.android.internal.app.LujarchBackgroundProcess;
@@ -142,6 +143,12 @@ index 0000000000000000000000000000000000000000..44814857b933c53be38514f2563874db
 +
 +    void closeSmallWindow(int taskId);
 +
++    /** The small windows, from the Shell that shows them, in the order of the screen. */
++    oneway void setSmallWindows(in LujarchSmallWindow[] windows);
++
++    /** The small windows as the Shell last told them. */
++    LujarchSmallWindow[] getSmallWindows();
++
 +    void endBackgroundProcesses(String packageName, int userId);
 +
 +    /** Pauses one process once; it then follows its app's choices again. */
@@ -151,10 +158,10 @@ index 0000000000000000000000000000000000000000..44814857b933c53be38514f2563874db
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackground.java b/core/java/com/android/internal/app/LujarchBackground.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..26d717a4715478345c97424d50b32a9cef7fdf76
+index 0000000000000000000000000000000000000000..2654aea244d31f9662e34bdf9d9d5efcfcaa7636
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackground.java
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,243 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -256,47 +263,52 @@ index 0000000000000000000000000000000000000000..26d717a4715478345c97424d50b32a9c
 +
 +    /**
 +     * The color of a depth, the same wherever the depth is shown: tones of the system's accent,
-+     * lighter for an app nearer to the screen.
++     * nearer to the page's own color for an app farther from the screen, and still apart from it
++     * in both the light and the dark theme. A small window is on screen.
 +     */
 +    @ColorInt
 +    public static int depthColor(Context context, int depth, boolean smallWindow) {
-+        final int res;
-+        switch (depth) {
-+            case DEPTH_ON_SCREEN:
-+                res = android.R.color.system_accent1_100;
-+                break;
-+            case DEPTH_RUNNING:
-+                res = smallWindow ? android.R.color.system_accent1_200
-+                        : android.R.color.system_accent1_300;
-+                break;
-+            case DEPTH_MESSAGES:
-+                res = android.R.color.system_accent1_400;
-+                break;
-+            case DEPTH_PAUSED:
-+                res = android.R.color.system_accent1_600;
-+                break;
-+            case DEPTH_RECLAIMED:
-+                res = android.R.color.system_accent1_800;
-+                break;
-+            default:
-+                res = android.R.color.system_accent1_900;
-+                break;
-+        }
-+        return context.getColor(res);
++        final int d = smallWindow ? DEPTH_ON_SCREEN : Math.max(0, Math.min(DEPTH_STOPPED, depth));
++        return context.getColor(accentTone((isNight(context) ? DARK_TONES : LIGHT_TONES)[d]));
 +    }
 +
 +    /** The outline of a depth's mark: only Stopped has one, dashed. */
 +    @ColorInt
 +    public static int depthOutline(Context context, int depth) {
 +        return context.getColor(depth == DEPTH_STOPPED
-+                ? android.R.color.system_accent1_600 : android.R.color.transparent);
++                ? accentTone(isNight(context) ? 400 : 500) : android.R.color.transparent);
 +    }
 +
-+    /** The text color on a depth's color. */
++    /** The text on a depth's color. */
 +    @ColorInt
 +    public static int onDepthColor(Context context, int depth) {
-+        return context.getColor(depth <= DEPTH_MESSAGES
-+                ? android.R.color.system_accent1_900 : android.R.color.system_accent1_10);
++        final int tone = (isNight(context) ? DARK_TONES : LIGHT_TONES)[
++                Math.max(0, Math.min(DEPTH_STOPPED, depth))];
++        return context.getColor(tone >= 500 ? android.R.color.system_accent1_10
++                : android.R.color.system_accent1_900);
++    }
++
++    /** Tones from On screen to Stopped. */
++    private static final int[] LIGHT_TONES = {800, 700, 600, 400, 300, 200};
++    private static final int[] DARK_TONES = {100, 200, 300, 500, 600, 700};
++
++    private static boolean isNight(Context context) {
++        return (context.getResources().getConfiguration().uiMode
++                & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
++                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
++    }
++
++    private static int accentTone(int tone) {
++        switch (tone) {
++            case 100: return android.R.color.system_accent1_100;
++            case 200: return android.R.color.system_accent1_200;
++            case 300: return android.R.color.system_accent1_300;
++            case 400: return android.R.color.system_accent1_400;
++            case 500: return android.R.color.system_accent1_500;
++            case 600: return android.R.color.system_accent1_600;
++            case 700: return android.R.color.system_accent1_700;
++            default: return android.R.color.system_accent1_800;
++        }
 +    }
 +
 +    /** The color of who caused it: You filled, System outlined, an app dashed. */
@@ -321,9 +333,7 @@ index 0000000000000000000000000000000000000000..26d717a4715478345c97424d50b32a9c
 +    /** The color of a part of the memory, the same on the Background page and in Recents. */
 +    @ColorInt
 +    public static int memoryColor(Context context, int part) {
-+        final boolean night = (context.getResources().getConfiguration().uiMode
-+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-+                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
++        final boolean night = isNight(context);
 +        switch (part) {
 +            case MEMORY_SYSTEM:
 +                return context.getColor(android.R.color.system_neutral2_500);
@@ -679,6 +689,47 @@ index 0000000000000000000000000000000000000000..31c5c5a2b4ef02d4699af24d1d5f8935
 +    /** CPU time since the thread started. */
 +    long cpuMs;
 +}
+diff --git a/core/java/com/android/internal/app/LujarchSmallWindow.aidl b/core/java/com/android/internal/app/LujarchSmallWindow.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ea4389b6b154ebdef0423f06515168dfba27da3
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchSmallWindow.aidl
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++/**
++ * A small window as the Shell shows it, an app's window or a conversation, in the order of the
++ * screen: the open window first, then the dock's cards.
++ * @hide
++ */
++@JavaDerive(equals = true, toString = true)
++parcelable LujarchSmallWindow {
++    /** The bubble's key. */
++    String key;
++    /** The app's task; -1 for a conversation that was not opened yet. */
++    int taskId = -1;
++    String packageName;
++    int userId;
++    /** The person's name for a conversation, the app's otherwise. */
++    @nullable String label;
++    boolean conversation;
++}
 diff --git a/core/java/com/android/internal/notification/SystemNotificationChannels.java b/core/java/com/android/internal/notification/SystemNotificationChannels.java
 index 970d564c9634188d58d1f4339c7a202968054db6..a6d34ba48254423b3ba7ee4db60a5826e62e8180 100644
 --- a/core/java/com/android/internal/notification/SystemNotificationChannels.java
@@ -741,94 +792,6 @@ index 86875e116a5ebda39a931cfff8c6eab98d744d33..948a5299d348104ec76460d90e7efed8
      <!-- @SystemApi @hide Allows an application to create/manage/remove tasks -->
      <permission android:name="android.permission.MANAGE_ACTIVITY_TASKS"
          android:protectionLevel="signature|recents"
-diff --git a/core/res/res/drawable/lujarch_background_chip_dashed.xml b/core/res/res/drawable/lujarch_background_chip_dashed.xml
-new file mode 100644
-index 0000000000000000000000000000000000000000..971435b7c8416fd249b40811d24d0204eabe296a
---- /dev/null
-+++ b/core/res/res/drawable/lujarch_background_chip_dashed.xml
-@@ -0,0 +1,26 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!--
-+    Copyright (C) 2026 The Lujarch Project
-+
-+    Licensed under the Apache License, Version 2.0 (the "License");
-+    you may not use this file except in compliance with the License.
-+    You may obtain a copy of the License at
-+
-+         http://www.apache.org/licenses/LICENSE-2.0
-+
-+    Unless required by applicable law or agreed to in writing, software
-+    distributed under the License is distributed on an "AS IS" BASIS,
-+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+    See the License for the specific language governing permissions and
-+    limitations under the License.
-+-->
-+<!-- Who caused it: an app, dashed; tinted. -->
-+<shape xmlns:android="http://schemas.android.com/apk/res/android"
-+    android:shape="rectangle">
-+    <stroke
-+        android:width="1.5dp"
-+        android:color="@android:color/white"
-+        android:dashWidth="3dp"
-+        android:dashGap="2dp" />
-+    <corners android:radius="5dp" />
-+</shape>
-diff --git a/core/res/res/drawable/lujarch_background_chip_filled.xml b/core/res/res/drawable/lujarch_background_chip_filled.xml
-new file mode 100644
-index 0000000000000000000000000000000000000000..12197551ba5d3dbd08bbde1995a04418dfcf5be9
---- /dev/null
-+++ b/core/res/res/drawable/lujarch_background_chip_filled.xml
-@@ -0,0 +1,22 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!--
-+    Copyright (C) 2026 The Lujarch Project
-+
-+    Licensed under the Apache License, Version 2.0 (the "License");
-+    you may not use this file except in compliance with the License.
-+    You may obtain a copy of the License at
-+
-+         http://www.apache.org/licenses/LICENSE-2.0
-+
-+    Unless required by applicable law or agreed to in writing, software
-+    distributed under the License is distributed on an "AS IS" BASIS,
-+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+    See the License for the specific language governing permissions and
-+    limitations under the License.
-+-->
-+<!-- Who caused it: You, filled; tinted. -->
-+<shape xmlns:android="http://schemas.android.com/apk/res/android"
-+    android:shape="rectangle">
-+    <solid android:color="@android:color/white" />
-+    <corners android:radius="5dp" />
-+</shape>
-diff --git a/core/res/res/drawable/lujarch_background_chip_outline.xml b/core/res/res/drawable/lujarch_background_chip_outline.xml
-new file mode 100644
-index 0000000000000000000000000000000000000000..080d6375e8c69b1000590211b7acc518daaa3de2
---- /dev/null
-+++ b/core/res/res/drawable/lujarch_background_chip_outline.xml
-@@ -0,0 +1,22 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!--
-+    Copyright (C) 2026 The Lujarch Project
-+
-+    Licensed under the Apache License, Version 2.0 (the "License");
-+    you may not use this file except in compliance with the License.
-+    You may obtain a copy of the License at
-+
-+         http://www.apache.org/licenses/LICENSE-2.0
-+
-+    Unless required by applicable law or agreed to in writing, software
-+    distributed under the License is distributed on an "AS IS" BASIS,
-+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+    See the License for the specific language governing permissions and
-+    limitations under the License.
-+-->
-+<!-- Who caused it: System, outlined; tinted. -->
-+<shape xmlns:android="http://schemas.android.com/apk/res/android"
-+    android:shape="rectangle">
-+    <stroke android:width="1.5dp" android:color="@android:color/white" />
-+    <corners android:radius="5dp" />
-+</shape>
 diff --git a/core/res/res/drawable/lujarch_background_dot.xml b/core/res/res/drawable/lujarch_background_dot.xml
 new file mode 100644
 index 0000000000000000000000000000000000000000..693726078c3598fcf25bc81d7c83af723875f459
@@ -994,10 +957,10 @@ index 0000000000000000000000000000000000000000..6716f3caee1d28579f44990b1d55b3d6
 +</LinearLayout>
 diff --git a/core/res/res/layout/lujarch_background_row.xml b/core/res/res/layout/lujarch_background_row.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..e194bbb43911a8f9e1c748d85b34b2877b4a7def
+index 0000000000000000000000000000000000000000..8f2cbfb77210d26864a52d1694ae2a8ec50f2cf0
 --- /dev/null
 +++ b/core/res/res/layout/lujarch_background_row.xml
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,92 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1020,7 +983,7 @@ index 0000000000000000000000000000000000000000..e194bbb43911a8f9e1c748d85b34b287
 +    android:id="@+id/lujarch_background_row"
 +    android:layout_width="match_parent"
 +    android:layout_height="wrap_content"
-+    android:minHeight="48dp"
++    android:minHeight="44dp"
 +    android:gravity="center_vertical"
 +    android:orientation="horizontal">
 +
@@ -1057,10 +1020,9 @@ index 0000000000000000000000000000000000000000..e194bbb43911a8f9e1c748d85b34b287
 +                android:id="@+id/lujarch_background_who"
 +                android:layout_width="wrap_content"
 +                android:layout_height="wrap_content"
-+                android:paddingStart="5dp"
-+                android:paddingEnd="5dp"
 +                android:singleLine="true"
-+                android:textSize="11sp" />
++                android:fontFamily="sans-serif-medium"
++                android:textAppearance="@style/TextAppearance.DeviceDefault.Notification" />
 +
 +            <TextView
 +                android:id="@+id/lujarch_background_reason"
@@ -1093,7 +1055,7 @@ index 0000000000000000000000000000000000000000..e194bbb43911a8f9e1c748d85b34b287
 +</LinearLayout>
 diff --git a/core/res/res/values-ja/lujarch_background_strings.xml b/core/res/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..dd900d0acc03eacdcd12e455878aa9148c8ebe94
+index 0000000000000000000000000000000000000000..43650fa41150bc090573e7dfa7876200472e82dc
 --- /dev/null
 +++ b/core/res/res/values-ja/lujarch_background_strings.xml
 @@ -0,0 +1,179 @@
@@ -1156,8 +1118,8 @@ index 0000000000000000000000000000000000000000..dd900d0acc03eacdcd12e455878aa914
 +    <string name="lujarch_background_end_low_memory">"メモリ不足"</string>
 +    <string name="lujarch_background_end_too_many">"バックグラウンドのアプリが多すぎます"</string>
 +    <string name="lujarch_background_end_unused">"しばらく使われていません"</string>
-+    <string name="lujarch_background_end_card">"あなたがカードを閉じました"</string>
-+    <string name="lujarch_background_end_you">"あなたが終了しました"</string>
++    <string name="lujarch_background_end_card">"カードを閉じました"</string>
++    <string name="lujarch_background_end_you">"終了しました"</string>
 +    <string name="lujarch_background_end_restricted">"制限のため、バックグラウンドで実行されません"</string>
 +    <string name="lujarch_background_end_self">"アプリ自身が終了しました"</string>
 +    <string name="lujarch_background_end_crash">"動作が停止しました"</string>
@@ -1278,7 +1240,7 @@ index 0000000000000000000000000000000000000000..dd900d0acc03eacdcd12e455878aa914
 +</resources>
 diff --git a/core/res/res/values-zh-rCN/lujarch_background_strings.xml b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..52aaf8e47bd2f16d1cd1d81951ed12dfac4abe06
+index 0000000000000000000000000000000000000000..d1172323ffded134eeb853fe5f4f2dadbddf11b4
 --- /dev/null
 +++ b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
 @@ -0,0 +1,179 @@
@@ -1341,8 +1303,8 @@ index 0000000000000000000000000000000000000000..52aaf8e47bd2f16d1cd1d81951ed12df
 +    <string name="lujarch_background_end_low_memory">"内存不足"</string>
 +    <string name="lujarch_background_end_too_many">"后台应用太多"</string>
 +    <string name="lujarch_background_end_unused">"一段时间没用"</string>
-+    <string name="lujarch_background_end_card">"你关闭了它的卡片"</string>
-+    <string name="lujarch_background_end_you">"你结束了它"</string>
++    <string name="lujarch_background_end_card">"卡片已关闭"</string>
++    <string name="lujarch_background_end_you">"已结束"</string>
 +    <string name="lujarch_background_end_restricted">"受限，它不在后台运行"</string>
 +    <string name="lujarch_background_end_self">"它自己退出了"</string>
 +    <string name="lujarch_background_end_crash">"它停止运行了"</string>
@@ -1463,7 +1425,7 @@ index 0000000000000000000000000000000000000000..52aaf8e47bd2f16d1cd1d81951ed12df
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_strings.xml b/core/res/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..bf05a86d17ffd9ae98df4d10350e0fec8406f243
+index 0000000000000000000000000000000000000000..8ad128176fc85535702853461d8b37fd335e25c3
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_strings.xml
 @@ -0,0 +1,184 @@
@@ -1526,8 +1488,8 @@ index 0000000000000000000000000000000000000000..bf05a86d17ffd9ae98df4d10350e0fec
 +    <string name="lujarch_background_end_low_memory">low memory</string>
 +    <string name="lujarch_background_end_too_many">too many apps in the background</string>
 +    <string name="lujarch_background_end_unused">not used for a while</string>
-+    <string name="lujarch_background_end_card">you closed its card</string>
-+    <string name="lujarch_background_end_you">you ended it</string>
++    <string name="lujarch_background_end_card">card closed</string>
++    <string name="lujarch_background_end_you">ended</string>
 +    <string name="lujarch_background_end_restricted">Restricted, so it does not run in the background</string>
 +    <string name="lujarch_background_end_self">it ended itself</string>
 +    <string name="lujarch_background_end_crash">it stopped working</string>
@@ -1653,10 +1615,10 @@ index 0000000000000000000000000000000000000000..bf05a86d17ffd9ae98df4d10350e0fec
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_symbols.xml b/core/res/res/values/lujarch_background_symbols.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..34e0fb15a412175b66186d442f459c0501e80cbd
+index 0000000000000000000000000000000000000000..37a35386f6ba5a535ae515ca23d28eae270a257d
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_symbols.xml
-@@ -0,0 +1,188 @@
+@@ -0,0 +1,185 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1824,9 +1786,6 @@ index 0000000000000000000000000000000000000000..34e0fb15a412175b66186d442f459c05
 +    <java-symbol type="layout" name="lujarch_background_notification" />
 +    <java-symbol type="layout" name="lujarch_background_notification_small" />
 +    <java-symbol type="layout" name="lujarch_background_row" />
-+    <java-symbol type="drawable" name="lujarch_background_chip_filled" />
-+    <java-symbol type="drawable" name="lujarch_background_chip_outline" />
-+    <java-symbol type="drawable" name="lujarch_background_chip_dashed" />
 +    <java-symbol type="drawable" name="lujarch_background_dot" />
 +    <java-symbol type="drawable" name="stat_sys_lujarch_background" />
 +    <java-symbol type="id" name="lujarch_background_action" />
@@ -1971,10 +1930,10 @@ index 8f0a95e785ee992380737bd29b3027e327b0c6c1..9414f2bcf55beccfb23d6679eb2f3063
                  PerfettoTrace.instant(FREEZER_CATEGORY, "unfreeze")
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundNotices.java b/services/core/java/com/android/server/am/LujarchBackgroundNotices.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..f68ab9a07eeef18c3daaec7851af9026683793cb
+index 0000000000000000000000000000000000000000..a3a52e66e726a45ac05efd104de669be74c73667
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundNotices.java
-@@ -0,0 +1,523 @@
+@@ -0,0 +1,518 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2002,7 +1961,6 @@ index 0000000000000000000000000000000000000000..f68ab9a07eeef18c3daaec7851af9026
 +import android.content.Context;
 +import android.content.Intent;
 +import android.content.IntentFilter;
-+import android.content.res.ColorStateList;
 +import android.os.BatteryConsumer;
 +import android.os.Binder;
 +import android.os.Handler;
@@ -2046,7 +2004,8 @@ index 0000000000000000000000000000000000000000..f68ab9a07eeef18c3daaec7851af9026
 +    private static final String EXTRA_COMPONENT = "component";
 +
 +    /** Rows the notification shows; the rest are counted. */
-+    private static final int MAX_ROWS = 7;
++    /** Rows that fit the height the shade gives an expanded custom notification. */
++    private static final int MAX_ROWS = 4;
 +    private static final long UPDATE_DELAY_MS = 1_000;
 +    /** At most one ended alert per app in this time. */
 +    private static final long ENDED_INTERVAL_MS = 60 * 60_000L;
@@ -2288,23 +2247,18 @@ index 0000000000000000000000000000000000000000..f68ab9a07eeef18c3daaec7851af9026
 +        return row;
 +    }
 +
++    /** Who caused it, as a word in its color: a notification keeps to text. */
 +    private void who(RemoteViews row, int who, String name) {
-+        final int color = LujarchBackground.whoColor(mContext, who);
 +        row.setTextViewText(R.id.lujarch_background_who, name);
-+        row.setInt(R.id.lujarch_background_who, "setBackgroundResource",
-+                who == LujarchBackground.WHO_YOU ? R.drawable.lujarch_background_chip_filled
-+                        : who == LujarchBackground.WHO_SYSTEM
-+                        ? R.drawable.lujarch_background_chip_outline
-+                        : R.drawable.lujarch_background_chip_dashed);
-+        row.setColorStateList(R.id.lujarch_background_who, "setBackgroundTintList",
-+                ColorStateList.valueOf(color));
-+        row.setTextColor(R.id.lujarch_background_who, who == LujarchBackground.WHO_YOU
-+                ? mContext.getColor(android.R.color.system_accent1_0) : color);
++        row.setTextColor(R.id.lujarch_background_who, LujarchBackground.whoColor(mContext, who));
 +    }
 +
 +    private void action(RemoteViews row, int label, PendingIntent pi) {
 +        row.setViewVisibility(R.id.lujarch_background_action, View.VISIBLE);
 +        row.setTextViewText(R.id.lujarch_background_action, mContext.getString(label));
++        // The accent of the shade's theme, as the notification's own actions have it.
++        row.setColorStateListAttr(R.id.lujarch_background_action, "setTextColor",
++                android.R.attr.colorAccent);
 +        row.setOnClickPendingIntent(R.id.lujarch_background_action, pi);
 +    }
 +
@@ -3063,10 +3017,10 @@ index 0000000000000000000000000000000000000000..05291830dc02a0add62323bef8cf616b
 +}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundService.java b/services/core/java/com/android/server/am/LujarchBackgroundService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6627a7520
+index 0000000000000000000000000000000000000000..6153f8254f540b163174bb55143416afc29fc51f
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundService.java
-@@ -0,0 +1,2469 @@
+@@ -0,0 +1,2542 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -3145,6 +3099,7 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +import com.android.internal.app.LujarchBackgroundProcess;
 +import com.android.internal.app.LujarchBackgroundReason;
 +import com.android.internal.app.LujarchBackgroundThread;
++import com.android.internal.app.LujarchSmallWindow;
 +import com.android.internal.os.BackgroundThread;
 +import com.android.server.am.LujarchBackgroundRecord.Event;
 +
@@ -3253,6 +3208,10 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +    private LujarchBackgroundUsage mUsage;
 +    private AppOpsManager mAppOps;
 +    private IDeviceIdleController mDeviceIdle;
++    /** The system's own allowlist, read on the handler: a check may hold ActivityManager's locks. */
++    private volatile ArraySet<String> mSystemAllowlist = new ArraySet<>();
++    /** Whether a system app is part of the system rather than an app the owner opens. */
++    private final ArrayMap<String, Boolean> mSystemsOwn = new ArrayMap<>();
 +    private volatile boolean mReady;
 +
 +    private final Object mLock = new Object();
@@ -3262,6 +3221,9 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +    private final ArraySet<Integer> mPausedByYou = new ArraySet<>();
 +    /** "userId:package" of apps in a small window, to the window's task. */
 +    private final ArrayMap<String, Integer> mSmallWindows = new ArrayMap<>();
++    /** The tasks the Shell shows in small windows (WIN-1). */
++    private final ArraySet<Integer> mSmallWindowTasks = new ArraySet<>();
++    private LujarchSmallWindow[] mShellWindows = new LujarchSmallWindow[0];
 +    /** "userId:package" of apps with a card in Recents, to the card's task. */
 +    private final ArrayMap<String, Integer> mRecents = new ArrayMap<>();
 +    /** The last depth of each app, for its record. */
@@ -3364,6 +3326,7 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +                mAppOps = mContext.getSystemService(AppOpsManager.class);
 +                mDeviceIdle = IDeviceIdleController.Stub.asInterface(
 +                        ServiceManager.getService(Context.DEVICE_IDLE_CONTROLLER));
++                readSystemAllowlist();
 +                readChoices();
 +                watch();
 +                mUsage = new LujarchBackgroundUsage(mContext, this, mAm);
@@ -3451,16 +3414,45 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +    }
 +
 +    private boolean isSystemAllowlisted(String packageName) {
++        return mSystemAllowlist.contains(packageName);
++    }
++
++    private void readSystemAllowlist() {
++        final ArraySet<String> set = new ArraySet<>();
 +        try {
 +            for (String p : mDeviceIdle.getSystemPowerWhitelist()) {
-+                if (p.equals(packageName)) {
-+                    return true;
-+                }
++                set.add(p);
 +            }
 +        } catch (RemoteException e) {
 +            Slog.w(TAG, "the system allowlist cannot be read", e);
 +        }
-+        return false;
++        mSystemAllowlist = set;
++    }
++
++    /**
++     * A system app without an entry in the launcher is part of the system (a provider, a
++     * module's service, a keyboard): its processes are the system's own (BG-2).
++     */
++    private boolean isSystemsOwn(ApplicationInfo info, int userId) {
++        if ((info.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
++            return false;
++        }
++        final String key = userId + ":" + info.packageName;
++        synchronized (mSystemsOwn) {
++            final Boolean known = mSystemsOwn.get(key);
++            if (known != null) {
++                return known;
++            }
++        }
++        final Intent launcher = new Intent(Intent.ACTION_MAIN)
++                .addCategory(Intent.CATEGORY_LAUNCHER).setPackage(info.packageName);
++        final boolean own = mContext.getPackageManager().queryIntentActivitiesAsUser(launcher,
++                PackageManager.MATCH_DIRECT_BOOT_AWARE | PackageManager.MATCH_DIRECT_BOOT_UNAWARE,
++                userId).isEmpty();
++        synchronized (mSystemsOwn) {
++            mSystemsOwn.put(key, own);
++        }
++        return own;
 +    }
 +
 +    private void watch() {
@@ -3547,12 +3539,16 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +    private void updateTasks() {
 +        final ArrayMap<String, Integer> small = new ArrayMap<>();
 +        final ArrayMap<String, Integer> recents = new ArrayMap<>();
++        final ArraySet<Integer> smallTasks;
++        synchronized (mLock) {
++            smallTasks = new ArraySet<>(mSmallWindowTasks);
++        }
 +        final long ident = Binder.clearCallingIdentity();
 +        try {
 +            for (ActivityManager.RunningTaskInfo t : mAm.mActivityTaskManager.getTasks(
 +                    100, false, false, android.view.Display.INVALID_DISPLAY)) {
 +                final String pkg = taskPackage(t);
-+                if (pkg != null && isSmallWindow(t)) {
++                if (pkg != null && smallTasks.contains(t.taskId)) {
 +                    small.put(LujarchBackgroundRecord.key(t.userId, pkg), t.taskId);
 +                }
 +            }
@@ -3577,11 +3573,6 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +            mRecents.clear();
 +            mRecents.putAll(recents);
 +        }
-+    }
-+
-+    /** A task shown in a small window: an app bubble (WIN-1). */
-+    private static boolean isSmallWindow(ActivityManager.RunningTaskInfo t) {
-+        return t.isAppBubble;
 +    }
 +
 +    @Nullable
@@ -3668,6 +3659,7 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +    void onAllowlistChanged() {
 +        if (mReady) {
 +            mHandler.post(() -> {
++                readSystemAllowlist();
 +                updateHolds(null);
 +                changed();
 +            });
@@ -4153,10 +4145,14 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +            t.since = d.time;
 +            t.onScreen = false;
 +        }
-+        if (whoCause[0] == LujarchBackground.WHO_SYSTEM && mNotices != null) {
++        // Only the owner's own choices are alerted; an update ends an app on the owner's behalf.
++        if (whoCause[0] == LujarchBackground.WHO_SYSTEM && whoCause[1] != C_END_UPDATE
++                && mNotices != null) {
 +            final int usage = usageOf(d.uid, d.packageName);
 +            final boolean kept = isKept(d.uid, d.packageName);
-+            if (kept || usage == LujarchBackground.USAGE_UNRESTRICTED
++            final boolean ownersUnrestricted = usage == LujarchBackground.USAGE_UNRESTRICTED
++                    && !isSystemAllowlisted(d.packageName);
++            if (kept || ownersUnrestricted
 +                    || usage == LujarchBackground.USAGE_MESSAGES && d.messages) {
 +                mNotices.alertEnded(d.uid, d.packageName, kept ? -1 : usage, whoCause[1], d.time,
 +                        d.messages);
@@ -4295,7 +4291,8 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +        p.system = p.persistent || UserHandle.getAppId(app.info.uid) < Process.FIRST_APPLICATION_UID;
 +        p.home = app.getWindowProcessController().isHomeProcess();
 +        p.procState = app.getProcState();
-+        p.top = p.procState <= PROCESS_STATE_TOP || p.procState == PROCESS_STATE_TOP_SLEEPING;
++        // Persistent processes rank above the top app without being on screen.
++        p.top = p.procState == PROCESS_STATE_TOP || p.procState == PROCESS_STATE_TOP_SLEEPING;
 +        p.visible = app.getHasVisibleActivities();
 +        p.fgs = app.mServices.hasForegroundServices();
 +        p.fgsTypes = app.mServices.getForegroundServiceTypes();
@@ -4398,7 +4395,8 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +                s.whoPackage = "android";
 +            }
 +        } else if ((p.hold & LUJARCH_HOLD_UNRESTRICTED) != 0) {
-+            s.who = LujarchBackground.WHO_YOU;
++            s.who = isSystemAllowlisted(p.packageName) ? LujarchBackground.WHO_SYSTEM
++                    : LujarchBackground.WHO_YOU;
 +            s.cause = C_UNRESTRICTED;
 +        } else if (p.executing) {
 +            s.who = LujarchBackground.WHO_APP;
@@ -4538,7 +4536,8 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +            final ArrayList<Proc> own = byApp.getOrDefault(pkg, new ArrayList<>());
 +            final boolean system = (info.flags & ApplicationInfo.FLAG_PERSISTENT) != 0
 +                    || UserHandle.getAppId(info.uid) < Process.FIRST_APPLICATION_UID
-+                    || own.stream().anyMatch(p -> p.system);
++                    || own.stream().anyMatch(p -> p.system)
++                    || isSystemsOwn(info, userId);
 +            if (system && !withSystem && only == null) {
 +                continue;
 +            }
@@ -4721,8 +4720,9 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +                        w.text(C_KEPT, null, null, p.userId)));
 +            }
 +            if ((p.hold & LUJARCH_HOLD_UNRESTRICTED) != 0 && s.cause != C_UNRESTRICTED) {
-+                reasons.add(reason(LujarchBackground.WHO_YOU,
-+                        w.who(LujarchBackground.WHO_YOU, null, p.userId),
++                final int who = isSystemAllowlisted(p.packageName) ? LujarchBackground.WHO_SYSTEM
++                        : LujarchBackground.WHO_YOU;
++                reasons.add(reason(who, w.who(who, null, p.userId),
 +                        w.text(C_UNRESTRICTED, null, null, p.userId)));
 +            }
 +            if (p.sourcePackage != null && s.cause != C_USED_BY && s.cause != C_USED_BY_OWN) {
@@ -5161,7 +5161,7 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +                res = R.string.lujarch_background_p_cached;
 +            }
 +            final String raw = (p.adjType != null ? p.adjType + ", " : "") + "oom_adj " + adj
-+                    + ", " + ProcessList.makeProcStateString(p.procState);
++                    + ", " + ProcessList.makeProcStateString(p.procState).trim();
 +            return c.getString(R.string.lujarch_background_priority, c.getString(res), raw);
 +        }
 +
@@ -5442,6 +5442,33 @@ index 0000000000000000000000000000000000000000..2e6a8cce3487fafbd02a90327b833db6
 +            closeTask(taskId);
 +        } finally {
 +            Binder.restoreCallingIdentity(ident);
++        }
++    }
++
++    @Override
++    public void setSmallWindows(LujarchSmallWindow[] windows) {
++        enforce();
++        synchronized (mLock) {
++            mShellWindows = windows != null ? windows.clone() : new LujarchSmallWindow[0];
++            mSmallWindowTasks.clear();
++            for (LujarchSmallWindow w : mShellWindows) {
++                if (w.taskId >= 0) {
++                    mSmallWindowTasks.add(w.taskId);
++                }
++            }
++        }
++        mHandler.post(() -> {
++            updateTasks();
++            updateHolds(null);
++            changed();
++        });
++    }
++
++    @Override
++    public LujarchSmallWindow[] getSmallWindows() {
++        enforce();
++        synchronized (mLock) {
++            return mShellWindows.clone();
 +        }
 +    }
 +

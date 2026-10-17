@@ -60,10 +60,9 @@ class ProcessFragment : BasePreferenceFragment() {
         packageName = args.getString(AppBackgroundFragment.ARG_PACKAGE).orEmpty()
         label = args.getString(AppBackgroundFragment.ARG_LABEL) ?: packageName
         val context = prefContext
-        idPref = screen.add(Preference(context)) {
+        idPref = screen.add(HeaderPreference(context)) {
             key = "process"
             title = args.getString(ARG_NAME)
-            isSelectable = false
         }
         nowPref = screen.add(NowPreference(context)) { key = "now" }
         reasonsPref = screen.add(PreferenceCategory(context)) {

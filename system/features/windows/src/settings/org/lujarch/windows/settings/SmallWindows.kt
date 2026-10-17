@@ -18,6 +18,8 @@ package org.lujarch.windows.settings
 
 import android.app.INotificationManager
 import android.app.NotificationManager
+import android.app.people.ConversationChannel
+import android.app.people.IPeopleManager
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Context
@@ -272,10 +274,16 @@ class SmallWindowsFragment : BasePreferenceFragment() {
                 INotificationManager.Stub.asInterface(
                     ServiceManager.getService(Context.NOTIFICATION_SERVICE))
             val pm = context.packageManager
+            // An app's conversations: those given settings of their own, and the recent ones.
             val seen = LinkedHashMap<String, Int>()
             val conversations = nm.getConversations(false).list as List<*>
             for (c in conversations.filterIsInstance<ConversationChannelWrapper>()) {
                 seen.putIfAbsent(c.pkg, c.uid)
+            }
+            val people =
+                IPeopleManager.Stub.asInterface(ServiceManager.getService(Context.PEOPLE_SERVICE))
+            for (c in people.recentConversations.list.filterIsInstance<ConversationChannel>()) {
+                c.shortcutInfo?.let { seen.putIfAbsent(it.`package`, c.uid) }
             }
             val collator = Collator.getInstance()
             seen.mapNotNull { (pkg, uid) ->

@@ -40,12 +40,13 @@
     <string name="background_after">"画面から離れた後"</string>
     <string name="background_usage">"バックグラウンドでの使用"</string>
     <string name="background_usage_note">"とどまる最も浅い深さ"</string>
+    <string name="background_usage_fixed_note">"システムが設定"</string>
     <string name="background_usage_messages_summary">"メッセージの接続を保持するプロセスだけが実行され、他のプロセスはメッセージで復帰するまで一時停止します。"</string>
     <string name="background_usage_fixed">"このアプリは制限なしのままです。システムに必要です。"</string>
     <string name="background_keep">"保持"</string>
     <string name="background_keep_note">"沈む最も深い深さ"</string>
-    <string name="background_keep_on">"オン\u30fb回収されません"</string>
-    <string name="background_keep_off">"オフ\u30fb回収されることがあります"</string>
+    <string name="background_keep_on">"回収されない"</string>
+    <string name="background_keep_off">"回収されうる"</string>
     <string name="background_autostart">"自動起動"</string>
     <string name="background_autostart_note">"回収後に起動できるもの"</string>
     <string name="background_autostart_allow">"許可する"</string>
@@ -69,7 +70,7 @@
     <string name="background_processes">"プロセス"</string>
     <string name="background_processes_count">"プロセス\u30fb%1$d"</string>
     <string name="background_no_processes">"実行中のプロセスはありません"</string>
-    <string name="background_process_summary">"%1$s\u30fb%2$s\u30fb%3$s"</string>
+    <string name="background_separator">"\u30fb"</string>
     <string name="background_last_day">"過去 24 時間"</string>
     <string name="background_day_on_screen">"画面に表示"</string>
     <string name="background_day_running">"バックグラウンドで実行"</string>

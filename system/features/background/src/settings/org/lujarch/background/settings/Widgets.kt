@@ -23,6 +23,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.text.format.Formatter
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -37,12 +38,33 @@ import com.android.internal.app.LujarchBackground
 import com.android.internal.app.LujarchBackgroundMemory
 
 /** The theme's color of secondary text. */
-internal fun secondaryText(context: Context): ColorStateList? {
-    val a = context.obtainStyledAttributes(intArrayOf(android.R.attr.textColorSecondary))
+internal fun secondaryText(context: Context): ColorStateList? =
+    themeColor(context, android.R.attr.textColorSecondary)
+
+internal fun primaryText(context: Context): ColorStateList? =
+    themeColor(context, android.R.attr.textColorPrimary)
+
+private fun themeColor(context: Context, attr: Int): ColorStateList? {
+    val a = context.obtainStyledAttributes(intArrayOf(attr))
     try {
         return a.getColorStateList(0)
     } finally {
         a.recycle()
+    }
+}
+
+/** What a page is about, at its top: an app or a process, its name over what it is now. */
+class HeaderPreference(context: Context) : Preference(context) {
+    init {
+        isSelectable = false
+        isPersistent = false
+    }
+
+    override fun onBindViewHolder(holder: PreferenceViewHolder) {
+        super.onBindViewHolder(holder)
+        // Preference gives an unselectable row's title the summary's color; this one is a name.
+        val title = holder.findViewById(android.R.id.title) as? TextView ?: return
+        primaryText(context)?.let { title.setTextColor(it) }
     }
 }
 
@@ -83,6 +105,14 @@ fun depthMark(context: Context, depth: Int, smallWindow: Boolean = false): Drawa
         }
     }
 
+/** A depth's mark as a list icon: the dot at its own size, in the icon's 24 dp. */
+fun depthIcon(context: Context, depth: Int): Drawable {
+    val dot = depthMark(context, depth).mutate() as GradientDrawable
+    dot.setSize(dp(context, 10f), dp(context, 10f))
+    val inset = dp(context, 7f)
+    return InsetDrawable(dot, inset)
+}
+
 /** The memory in use as four parts, as a bar with its legend (BG-2). */
 class MemoryPreference(context: Context) : Preference(context) {
     var memory: LujarchBackgroundMemory? = null
@@ -120,15 +150,24 @@ class MemoryPreference(context: Context) : Preference(context) {
                     Formatter.formatShortFileSize(context, parts[part]))
                 setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Small)
                 secondaryText(context)?.let { setTextColor(it) }
-                setCompoundDrawablesRelativeWithIntrinsicBounds(square(context, LujarchBackground.memoryColor(context, part)), null, null, null)
+                setCompoundDrawablesRelativeWithIntrinsicBounds(square(context, part), null, null, null)
                 compoundDrawablePadding = dp(context, 6f)
                 gravity = Gravity.CENTER_VERTICAL
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
     }
 
-    private fun square(context: Context, color: Int): Drawable = GradientDrawable().apply {
-        setColor(color)
+    /**
+     * A part's mark: its color as in the bar; Free, the bar's empty track, is an outline in the
+     * legend's color.
+     */
+    private fun square(context: Context, part: Int): Drawable = GradientDrawable().apply {
+        val color = LujarchBackground.memoryColor(context, part)
+        if (part == LujarchBackground.MEMORY_FREE) {
+            setStroke(dp(context, 1.5f), secondaryText(context)?.defaultColor ?: color)
+        } else {
+            setColor(color)
+        }
         cornerRadius = dp(context, 2f).toFloat()
         val s = dp(context, 10f)
         setSize(s, s)
@@ -275,7 +314,12 @@ class TilesPreference(context: Context) : Preference(context) {
         var row: LinearLayout? = null
         tiles.forEachIndexed { i, (title, value) ->
             if (i % 3 == 0) {
-                row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                // A title over two lines does not push its figure below the others of the row.
+                row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    isBaselineAligned = false
+                    gravity = Gravity.BOTTOM
+                }
                 grid.addView(row)
             }
             row!!.addView(LinearLayout(context).apply {
@@ -289,6 +333,7 @@ class TilesPreference(context: Context) : Preference(context) {
                 addView(TextView(context).apply {
                     text = value
                     setTextAppearance(android.R.style.TextAppearance_DeviceDefault_Medium)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
                 })
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
@@ -330,6 +375,10 @@ class NowPreference(context: Context) : Preference(context) {
             (holder.findViewById(id) as TextView).setTextColor(on)
         }
         (holder.findViewById(R.id.background_now_state) as TextView).text = state
-        (holder.findViewById(R.id.background_now_text) as TextView).text = text
+        // The reason under the depth, unless it only names the depth again.
+        val reason = text?.takeIf { it.isNotEmpty() && it.toString() != state.toString() }
+        val reasonView = holder.findViewById(R.id.background_now_text) as TextView
+        reasonView.text = reason
+        reasonView.visibility = if (reason == null) View.GONE else View.VISIBLE
     }
 }

@@ -58,10 +58,10 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dc
              ti.onLauncherStop();
 diff --git a/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b009c56c022
+index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9bab122212
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,111 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -81,11 +81,12 @@ index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b00
 +package com.android.quickstep
 +
 +import android.content.Context
++import android.graphics.Rect
 +import android.provider.Settings
-+import android.util.Log
 +import com.android.launcher3.LauncherState
 +import com.android.launcher3.statemanager.StateManager
 +import com.android.launcher3.uioverrides.QuickstepLauncher
++import com.android.quickstep.lujarch.LujarchRecents
 +import com.android.quickstep.views.TaskView
 +
 +/**
@@ -93,7 +94,6 @@ index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b00
 + * Settings > Display > Small windows, and opening a Recents task in a small window.
 + */
 +object LujarchSmallWindows {
-+    private const val TAG = "lujarch_windows"
 +    private const val KEY_HOME = "lujarch_windows_home"
 +    private const val KEY_RECENTS = "lujarch_windows_recents"
 +
@@ -110,16 +110,41 @@ index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b00
 +    @JvmStatic fun isRecentsEntryOn(context: Context): Boolean = on(context, KEY_RECENTS)
 +
 +    private var recentsShown = false
++    private var slotKeys = emptyArray<String>()
++    private var slots = emptyArray<Rect>()
 +
 +    private fun reportRecents(context: Context, shown: Boolean) {
 +        if (shown == recentsShown) return
 +        recentsShown = shown
-+        SystemUiProxy.INSTANCE.get(context).setSmallWindowsRecentsShown(shown)
++        SystemUiProxy.INSTANCE.get(context).setSmallWindowsRecentsShown(shown, slotKeys, slots)
 +    }
 +
 +    /** While Recents shows, the small windows wait in its Running layer (WIN-11). */
 +    @JvmStatic
 +    fun followRecents(launcher: QuickstepLauncher) {
++        // Linux in front of the home screen: the small windows step aside (LNX-3). The face is
++        // made once the home screen's views are, after this.
++        launcher.rootView.post {
++            val face = launcher.linuxFace ?: return@post
++            val proxy = SystemUiProxy.INSTANCE.get(launcher)
++            face.onFront = { front -> proxy.setSmallWindowsHidden(front) }
++            proxy.setSmallWindowsHidden(face.inFront)
++        }
++        // The Running layer lays out where each small window waits; the Shell flies them there.
++        LujarchRecents.smallWindowSlots = { keys, rects ->
++            if (!keys.contentEquals(slotKeys) || !rects.contentEquals(slots)) {
++                slotKeys = keys
++                slots = rects
++                if (recentsShown) {
++                    SystemUiProxy.INSTANCE.get(launcher)
++                        .setSmallWindowsRecentsShown(true, keys, rects)
++                }
++            }
++        }
++        LujarchRecents.openSmallWindow = { key ->
++            SystemUiProxy.INSTANCE.get(launcher).openSmallWindow(key)
++        }
++        LujarchRecents.openTaskInSmallWindow = { taskView, taskId -> openTask(taskView, taskId) }
 +        launcher.stateManager.addStateListener(
 +            object : StateManager.StateListener<LauncherState> {
 +                override fun onStateTransitionStart(toState: LauncherState) =
@@ -136,39 +161,48 @@ index 0000000000000000000000000000000000000000..7721910f9659bbc2c3c48692f6094b00
 +    fun onLauncherStopped(launcher: QuickstepLauncher) = reportRecents(launcher, false)
 +
 +    /**
-+     * Opens the task of a Recents card in a small window: the task comes forward as a tap on its
-+     * card brings it, then the Shell turns it into a small window.
++     * Opens the task of a Recents card in a small window: the window grows out of the card, and
++     * Recents leaves as a tap outside the cards leaves it.
 +     */
 +    @JvmStatic
 +    fun openTask(taskView: TaskView, taskId: Int) {
-+        val proxy = SystemUiProxy.INSTANCE.get(taskView.context)
-+        val launched = taskView.launchWithAnimation()
-+        if (launched == null) {
-+            Log.w(TAG, "task $taskId did not launch; it opens in a small window as it is")
-+            proxy.showTaskInSmallWindow(taskId)
-+            return
-+        }
-+        launched.add { proxy.showTaskInSmallWindow(taskId) }
++        val from = Rect()
++        val shown = taskView.getGlobalVisibleRect(from)
++        SystemUiProxy.INSTANCE.get(taskView.context)
++            .showTaskInSmallWindow(taskId, if (shown) from else null)
++        taskView.recentsView?.startHome()
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/SystemUiProxy.kt b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-index 097c61f47a235d8b0118244e1d323d7c01eb4223..b6f7cb7918e865cd14475a06d701d5c687d43792 100644
+index 097c61f47a235d8b0118244e1d323d7c01eb4223..0a4c59804246bd2325d4657eea39f9b928ff941f 100644
 --- a/quickstep/src/com/android/quickstep/SystemUiProxy.kt
 +++ b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-@@ -785,6 +785,18 @@ constructor(
+@@ -785,6 +785,30 @@ constructor(
              bubbles?.showAppBubble(intent, user, entryPoint, bubbleBarLocation)
          }
  
 +    /** Tells the Shell whether Recents shows, for the small windows to wait in it. */
-+    fun setSmallWindowsRecentsShown(shown: Boolean) =
++    fun setSmallWindowsRecentsShown(shown: Boolean, keys: Array<String>, slots: Array<Rect>) =
 +        executeWithErrorLog({ "Failed call setRecentsShown" }) {
-+            bubbles?.setRecentsShown(shown)
++            bubbles?.setRecentsShown(shown, keys, slots)
 +        }
 +
-+    /** Tells the Shell to show a running task in a small window. */
-+    fun showTaskInSmallWindow(taskId: Int) =
++    /** Tells the Shell to open the small window of a bubble, from its place in Recents. */
++    fun openSmallWindow(key: String) =
++        executeWithErrorLog({ "Failed call openSmallWindow" }) {
++            bubbles?.openSmallWindow(key)
++        }
++
++    /** Tells the Shell whether Linux is in front, for the small windows to step aside. */
++    fun setSmallWindowsHidden(hidden: Boolean) =
++        executeWithErrorLog({ "Failed call setSmallWindowsHidden" }) {
++            bubbles?.setSmallWindowsHidden(hidden)
++        }
++
++    /** Tells the Shell to show a running task in a small window, growing out of from. */
++    fun showTaskInSmallWindow(taskId: Int, from: Rect?) =
 +        executeWithErrorLog({ "Failed call showTaskInSmallWindow" }) {
-+            bubbles?.showTaskInSmallWindow(taskId)
++            bubbles?.showTaskInSmallWindow(taskId, from)
 +        }
 +
      /** Tells SysUI to show the expanded view. */

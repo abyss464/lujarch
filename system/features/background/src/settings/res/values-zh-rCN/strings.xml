@@ -40,12 +40,13 @@
     <string name="background_after">"离开以后"</string>
     <string name="background_usage">"后台使用"</string>
     <string name="background_usage_note">"最高停在哪"</string>
+    <string name="background_usage_fixed_note">"由系统设定"</string>
     <string name="background_usage_messages_summary">"只让持有消息连接的进程运行，其余进程暂停，直到收到消息时被唤醒。"</string>
     <string name="background_usage_fixed">"此应用保持无限制：系统需要它。"</string>
     <string name="background_keep">"保留"</string>
     <string name="background_keep_note">"最深沉到哪"</string>
-    <string name="background_keep_on">"开 \u00b7 不会被回收"</string>
-    <string name="background_keep_off">"关 \u00b7 可能被回收"</string>
+    <string name="background_keep_on">"不会被回收"</string>
+    <string name="background_keep_off">"可能被回收"</string>
     <string name="background_autostart">"自启动"</string>
     <string name="background_autostart_note">"沉到底后谁能叫醒它"</string>
     <string name="background_autostart_allow">"允许"</string>
@@ -69,7 +70,7 @@
     <string name="background_processes">"进程"</string>
     <string name="background_processes_count">"进程 \u00b7 %1$d"</string>
     <string name="background_no_processes">"没有进程在运行"</string>
-    <string name="background_process_summary">"%1$s \u00b7 %2$s \u00b7 %3$s"</string>
+    <string name="background_separator">"\u0020\u00b7\u0020"</string>
     <string name="background_last_day">"过去 24 小时"</string>
     <string name="background_day_on_screen">"在屏幕上"</string>
     <string name="background_day_running">"在后台运行"</string>

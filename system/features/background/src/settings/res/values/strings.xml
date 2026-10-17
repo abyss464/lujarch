@@ -40,12 +40,13 @@
     <string name="background_after">After it leaves the screen</string>
     <string name="background_usage">Background usage</string>
     <string name="background_usage_note">The highest depth it stays at</string>
+    <string name="background_usage_fixed_note">Set by the system</string>
     <string name="background_usage_messages_summary">Only its process that holds the connection for its messages runs; the rest pause until a message wakes them.</string>
     <string name="background_usage_fixed">This app stays Unrestricted: the system needs it.</string>
     <string name="background_keep">Keep</string>
     <string name="background_keep_note">The deepest it sinks</string>
-    <string name="background_keep_on">On \u00b7 never reclaimed</string>
-    <string name="background_keep_off">Off \u00b7 can be reclaimed</string>
+    <string name="background_keep_on">Never reclaimed</string>
+    <string name="background_keep_off">Can be reclaimed</string>
     <string name="background_autostart">Autostart</string>
     <string name="background_autostart_note">Who may wake it once reclaimed</string>
     <string name="background_autostart_allow">Allow</string>
@@ -69,7 +70,7 @@
     <string name="background_processes">Processes</string>
     <string name="background_processes_count">Processes \u00b7 %1$d</string>
     <string name="background_no_processes">No process runs</string>
-    <string name="background_process_summary">%1$s \u00b7 %2$s \u00b7 %3$s</string>
+    <string name="background_separator">"\u0020\u00b7\u0020"</string>
     <string name="background_last_day">Last 24 hours</string>
     <string name="background_day_on_screen">On screen</string>
     <string name="background_day_running">Running in the background</string>

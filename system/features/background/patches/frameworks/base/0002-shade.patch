@@ -467,6 +467,47 @@ index 7295df17c64bbea7fde88629c22f26edadbf2390..5360582dd640aafb261c625180521233
          if (NmContextualDisplayLaunch.isEnabled) {
              mCoordinators.add(highlightsCoordinator)
          }
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
+index 9e41b5f36d4494e09ff57ad24f539c8df4663874..48365478ff503af9c2145ec03b0015e13bb5bbab 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
+@@ -20,6 +20,8 @@ import android.annotation.NonNull;
+ import android.annotation.Nullable;
+ import android.app.NotificationChannel;
+ 
++import com.android.internal.notification.SystemNotificationChannels;
++
+ import com.android.systemui.plugins.statusbar.StatusBarStateController;
+ import com.android.systemui.statusbar.notification.collection.BundleEntry;
+ import com.android.systemui.statusbar.notification.collection.ListEntry;
+@@ -186,6 +188,12 @@ public class RankingCoordinator implements Coordinator {
+                 "SilentSectionComparator") {
+             @Override
+             public int compare(@NonNull PipelineEntry o1, @NonNull PipelineEntry o2) {
++                // Lujarch's Background notification is the last of the shade (BG-8).
++                final boolean background1 = isLujarchBackground(o1);
++                final boolean background2 = isLujarchBackground(o2);
++                if (background1 != background2) {
++                    return background1 ? 1 : -1;
++                }
+                 boolean isBundle1 = o1 instanceof BundleEntry;
+                 boolean isBundle2 = o2 instanceof BundleEntry;
+                 if (isBundle1 && isBundle2) {
+@@ -215,6 +223,14 @@ public class RankingCoordinator implements Coordinator {
+         }
+     };
+ 
++    private static boolean isLujarchBackground(PipelineEntry entry) {
++        final ListEntry listEntry = entry.asListEntry();
++        final NotificationEntry notif = listEntry != null ? listEntry.getRepresentativeEntry() : null;
++        return notif != null && "android".equals(notif.getSbn().getPackageName())
++                && SystemNotificationChannels.LUJARCH_BACKGROUND.equals(
++                        notif.getSbn().getNotification().getChannelId());
++    }
++
+     private final NotifSectioner mMinimizedNotifSectioner = new NotifSectioner("Minimized",
+             NotificationPriorityBucketKt.BUCKET_SILENT) {
+         @Override
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
 index a8998e2a8c632f3e6c50caa4d7214ef46d53afbc..a11b0db63ea823bec0b2f205e2c4a469ebc39b3a 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
