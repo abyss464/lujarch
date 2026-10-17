@@ -204,7 +204,7 @@ jobs = 0              # 0: derived from memory
 memory_high = ""      # empty: derived from free memory
 memory_max = ""       # empty: derived from free memory; a build waits until enough is free
 highmem_jobs = 3
-lock = "..."          # one lock for every Android build on the computer
+lock = "..."          # one lock for every Android build on the computer; its queue beside it
 
 [vm]
 cpus = 4              # the virtual device's CPUs, memory and data partition

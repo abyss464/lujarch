@@ -86,9 +86,17 @@ def log(message):
     print(f"[lujarch] {message}", file=sys.stderr, flush=True)
 
 
+class Refusal(SystemExit):
+    """What die() ends the command with: exit status 1, and the message it said."""
+
+    def __init__(self, message):
+        super().__init__(1)
+        self.message = message
+
+
 def die(message):
     print(f"[lujarch] {message}", file=sys.stderr, flush=True)
-    sys.exit(1)
+    raise Refusal(message)
 
 
 def git(*args, cwd=ROOT):
@@ -2160,13 +2168,93 @@ def build_lock(host):
     return lock
 
 
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
+def queued_build(host, device, modules):
+    """Takes the build lock for a request to build DEVICE's MODULES (all of it when none are
+    named). Requests that wait for the lock together are built together: the first to take it
+    builds every waiting request of its device in one build, and each other one ends with that
+    build's result. A request is served only by a build that starts after it was made, so that
+    the build holds every change saved before the request. Returns the lock, the modules to build
+    and the requests the build serves; ends the command when another build served it."""
+    if os.environ.get(BUILD_LOCK_FD):
+        return build_lock(host), modules, []
+    queue = host.path_of("build", "lock").parent / "build-queue"
+    queue.mkdir(parents=True, exist_ok=True)
+    request = queue / f"{device}-{os.getpid()}-{time.time_ns()}.request"
+    request.write_text(json.dumps({"pid": os.getpid(), "modules": modules}) + "\n")
+    lock = build_lock(host)
+    result = request.with_suffix(".result")
+    if not request.exists() and result.is_file():
+        served = json.loads(result.read_text())
+        result.unlink()
+        lock.close()
+        if served["status"]:
+            die(f"the build that served this request (process {served['by']}) failed: "
+                f"{served['said']}")
+        log(f"built by the build of process {served['by']}, which served the requests that "
+            f"waited with this one; log {served['log']}")
+        sys.exit(0)
+    if not request.exists():
+        # The build that took the request ended without a result; this one builds it.
+        request.write_text(json.dumps({"pid": os.getpid(), "modules": modules}) + "\n")
+    for path in queue.glob("*.result"):
+        if not alive(int(path.name.split("-")[-2])):
+            path.unlink(missing_ok=True)
+    served, wanted = [], []
+    for path in sorted(queue.glob(f"{device}-*.request")):
+        try:
+            entry = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        path.unlink(missing_ok=True)
+        if entry["pid"] == os.getpid() or not alive(entry["pid"]):
+            continue
+        served.append(path.with_suffix(".result"))
+        wanted.append(entry["modules"])
+    if not served:
+        return lock, modules, []
+    merged = [] if not modules or not all(wanted) else list(
+        dict.fromkeys(modules + [m for w in wanted for m in w]))
+    log(f"building {len(served)} more requests of {device} that waited for the lock in this "
+        f"build: {' '.join(merged) or 'all of it'}")
+    return lock, merged, served
+
+
 def cmd_build(args):
     host = Host()
+    lock, args.modules, served = queued_build(host, args.device, args.modules)
+    status, said = 1, "the build was stopped"
+    try:
+        status = build_device(host, args)
+        said = ""
+    except Refusal as refusal:
+        said = refusal.message
+        raise
+    except SystemExit as stop:
+        status = stop.code if isinstance(stop.code, int) else 1
+        raise
+    finally:
+        for path in served:
+            path.write_text(json.dumps({"by": os.getpid(), "status": status, "said": said,
+                                        "log": str(getattr(args, "logfile", ""))}) + "\n")
+        lock.close()
+    return status
+
+
+def build_device(host, args):
     tree = host.tree
     device = device_config(args.device)
     variant = lock_file()["build"]["variant"]
     lunch = f"{device['product']}-{release_config(tree)}-{variant}"
-    lock = build_lock(host)
 
     if not args.modules and device.get("platform") == "cuttlefish":
         args.modules = ["droid", "out/host/linux-x86/cvd-host_package.tar.gz"]
@@ -2191,7 +2279,7 @@ def cmd_build(args):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    logfile = logs / f"build-{args.device}-{stamp}.log"
+    logfile = args.logfile = logs / f"build-{args.device}-{stamp}.log"
     info = device_info_path(host, args.device)
     info.parent.mkdir(parents=True, exist_ok=True)
     product_out_file = info.with_suffix(".product_out")
@@ -2673,6 +2761,47 @@ def unpacked_files(info):
     return sorted(found)
 
 
+# Properties a build writes with the time it ran: a property file that differs from what the
+# device runs only in these has nothing to copy.
+BUILD_STAMP_RE = re.compile(r"(?:^|\.)(?:date|date\.utc|fingerprint|thumbprint|description|"
+                            r"display\.id|version\.incremental|uuid)$")
+
+
+def since_booted(host, host_out, info):
+    """The files of the vm build that the images the running device booted lack or hold with
+    other content, whether a module build installed them or a full build packed them since; the
+    files those images hold that the build no longer packs; and the files a full build packed
+    since. A property file whose properties differ from the device's own only in when the build
+    ran is not among them."""
+    product = Path(info["product_out"])
+    booted = host.out / VM_DIR / "images"
+
+    def listing(base, name):
+        try:
+            return {e["Name"].lstrip("/"): e["SHA256"]
+                    for e in json.loads((base / name).read_text())}
+        except OSError:
+            return None
+
+    unpacked, packed, removed = set(unpacked_files(info)), set(), set()
+    for name in {**VM_PARTITIONS, **VM_RAMDISKS}.values():
+        now, then = listing(product, name), listing(booted, name)
+        if now is None or then is None:
+            continue
+        packed |= {f for f, digest in now.items() if then.get(f) != digest}
+        removed |= {f for f in then if f not in now}
+    changed = unpacked | packed
+    props = [f for f in changed if f.endswith((".prop", "prop.default"))]
+    if props:
+        running = dict(re.findall(r"^\[([^\]]+)\]: \[(.*)\]$",
+                                  adb(host_out, "shell", "getprop").stdout, re.M))
+        for f in props:
+            built = dict(re.findall(r"^([^#=\s][^=]*)=(.*)$", (product / f).read_text(), re.M))
+            if all(running.get(k) == v or BUILD_STAMP_RE.search(k) for k, v in built.items()):
+                changed.discard(f)
+    return sorted(changed), sorted(removed), packed - unpacked
+
+
 def listed(files, most=20):
     return "\n".join([f"  {f}" for f in files[:most]]
                      + ([f"  and {len(files) - most} more"] if len(files) > most else []))
@@ -2712,7 +2841,7 @@ def device_differs(host_out, product, files):
 def moved_resource_ids(host, host_out, product, files):
     """Of these files, the framework's resource packages (the .apk files of a partition's
     framework/) whose built copy gives one of the device copy's resource ids to another resource
-    or to none, with how many: the apps and the system server hold those ids as compiled."""
+    or to none, each with how many: the apps and the system server hold those ids as compiled."""
     packages = [f for f in files
                 if partition_path(f).startswith("framework/") and f.endswith(".apk")]
     if not packages:
@@ -2741,7 +2870,7 @@ def moved_resource_ids(host, host_out, product, files):
             held, built = ids(copy), ids(product / rel)
             count = sum(1 for number, name in held.items() if built.get(number) != name)
             if count:
-                moved.append(f"{rel} ({count} ids)")
+                moved.append((rel, count))
     return moved
 
 
@@ -2870,6 +2999,7 @@ def vm_sync(host, info, host_out, modules):
     it starts, for files no known reader reads, and when a replaced program still runs."""
     product = Path(info["product_out"])
     mods = Modules(host, product)
+    removed, packed = [], set()
     if modules:
         synced, files, unknown = module_files(mods, modules)
         if unknown:
@@ -2877,14 +3007,15 @@ def vm_sync(host, info, host_out, modules):
         if not files:
             die("the modules install nothing into the image")
     else:
-        synced, files = [], unpacked_files(info)
-        if not files:
-            log("the images hold every installed file; nothing to copy")
+        synced, (files, removed, packed) = [], since_booted(host, host_out, info)
+        if not files and not removed:
+            log("the device runs every file of the build; nothing to copy")
             return 0
-        boot = [f for f in files if f.split("/", 1)[0] in VM_RAMDISKS]
+        boot = [f for f in files + removed if f.split("/", 1)[0] in VM_RAMDISKS]
         if boot:
-            die(f"the boot images lack these files, which only a build packs "
-                f"(lujarch build vm):\n{listed(boot)}")
+            die(f"the boot images' ramdisks differ from the ones the device booted in these "
+                f"files, which only a build packs and a start boots (lujarch build vm, lujarch "
+                f"vm stop, lujarch vm start):\n{listed(boot)}")
     missing = [f for f in files if not os.path.lexists(product / f)]
     if missing:
         die(f"not built: {', '.join(missing)} (lujarch build vm {' '.join(modules)})")
@@ -2892,12 +3023,21 @@ def vm_sync(host, info, host_out, modules):
         provision(host_out)
     changed = device_differs(host_out, product, files)
     log(f"the device holds {len(files) - len(changed)} of the {len(files)} files as built")
-    moved = moved_resource_ids(host, host_out, product, changed)
+    if removed:
+        script = 'while read -r f; do [ -e "$f" ] || [ -L "$f" ] && echo "$f"; done'
+        held = adb(host_out, "shell", script, input="".join(f"/{f}\n" for f in removed),
+                   timeout=120).stdout
+        removed = [f for f in removed if f"/{f}" in held.split("\n")]
+    # A full build packed its apps with the resource ids of the framework it packed: copied
+    # together, and read anew by the restart its framework files bring, they agree.
+    moved = [f"{rel} ({count} ids)" for rel, count in moved_resource_ids(host, host_out, product,
+                                                                         changed)
+             if rel not in packed]
     if moved:
         die("the build moves resource ids that the running system's apps and system server hold "
-            f"as compiled, in:\n{listed(moved)}\nthese come only with a full build and a fresh "
-            "start: lujarch build vm, lujarch vm stop, lujarch vm start")
-    if changed:
+            f"as compiled, in:\n{listed(moved)}\nthese come only with a full build: lujarch "
+            "build vm, then lujarch vm sync")
+    if changed or removed:
         remount = adb(host_out, "remount", timeout=300)
         said = (remount.stdout + remount.stderr).strip()
         if remount.returncode and "reboot" not in said.lower():
@@ -2924,15 +3064,21 @@ def vm_sync(host, info, host_out, modules):
         if push.returncode:
             die(f"adb push {rel}: {(push.stdout + push.stderr).strip()}")
         log(f"copied /{rel}")
-    if changed:
+    for rel in removed:
+        gone = adb(host_out, "shell", "rm", "-f", "/" + rel)
+        if gone.returncode:
+            die(f"rm /{rel}: {(gone.stdout + gone.stderr).strip()}")
+        log(f"removed /{rel}, which the build no longer packs")
+    if changed or removed:
         state = device_state_path(host)
         record = json.loads(state.read_text()) if state.is_file() else {"image": None}
-        record["synced"] = sorted(set(record.get("synced", [])) | set(synced or ["unpacked files"]))
+        brought = synced or [f"the build {info['commit']} ({info['built']})"]
+        record["synced"] = sorted(set(record.get("synced", [])) | set(brought))
         state.write_text(json.dumps(record, indent=2) + "\n")
     services = mods.services(changed) if changed else {}
     needed = set().union(*services.values())
-    framework = [f for f in changed if partition_path(f).startswith(READ_BY_FRAMEWORK)]
-    at_start = [f for f in changed if partition_path(f).startswith(READ_AT_START)
+    framework = [f for f in changed + removed if partition_path(f).startswith(READ_BY_FRAMEWORK)]
+    at_start = [f for f in changed + removed if partition_path(f).startswith(READ_AT_START)
                 or f.endswith(".prop")
                 or not (f in framework or f in needed or partition_path(f).startswith(CODE))]
     restarted = []
@@ -2968,7 +3114,8 @@ def vm_sync(host, info, host_out, modules):
         # update changes it; a copy keeps it, so the index is dropped and built from the copies.
         adb(host_out, "shell", "pm", "clear", "com.android.settings.intelligence")
     log(f"synced {len(files)} files{' of ' + ' '.join(synced) if synced else ''}, "
-        f"copied {len(changed)}; restarted {', '.join(restarted) or 'nothing'}; "
+        f"copied {len(changed)}{f', removed {len(removed)}' if removed else ''}; "
+        f"restarted {', '.join(restarted) or 'nothing'}; "
         f"adb 127.0.0.1:{ADB_PORT}")
     return 0
 

@@ -13,6 +13,10 @@ a Xiaomi 13. Only what depends on the Xiaomi 13's hardware, and module tests, re
 - `tools/lujarch check`.
 - The tree is synced to `upstream.xml` and patched per `system/order`.
 - Both devices build: `fuxi` to compilation and static checks, `vm` to a bootable image.
+- One build runs on the computer at a time. Requests of `tools/lujarch build` that wait for it
+  are built together when it ends: one build of every module they name (all of the device when
+  one of them names none), which starts after each of them was made and whose result each of
+  them ends with.
 - Static checks: the SELinux policy with its neverallow rules, VINTF compatibility, the
   privileged-permission allowlists, every pin in `lock.toml` matching its hash.
 - Host tests of each feature.
@@ -36,8 +40,12 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   and every wait for the device to come back, with the crash that ended its first start.
 - `tools/lujarch vm sync <module>...` copies what the named modules install (with the modules
   they require) into the running virtual device after `tools/lujarch build vm <module>...`;
-  `tools/lujarch vm sync` alone copies the files the images lack, except those of the boot
-  images' ramdisks, which only a full build packs. It copies only the files the device lacks or
+  `tools/lujarch vm sync` alone brings the running device to the `vm` build as it is: it copies
+  the files that the images the device booted lack or hold with other content, whether module
+  builds installed them or a full build packed them since, and removes the files the build no
+  longer packs. A property file that differs from the device's properties only in when the
+  build ran is left as it is; a change of the boot images' ramdisks comes only with a full build
+  and a new `vm start`. It copies only the files the device lacks or
   holds with other content, keeps the device's data, and restarts what reads the copied files,
   naming each restart: the init services whose modules install or require them; the framework
   (zygote, system_server and the apps) for apps, overlays, permissions and the system
@@ -51,8 +59,9 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   not copied with the unit runs without that compiled code. The SELinux policy of `system_ext`
   is the module `selinux_policy_system_ext`. A framework resource package (an `.apk` in a
   partition's `framework/`) whose build gives one of the device's resource ids to another
-  resource is not copied: the apps and the system server hold those ids as compiled, so it comes
-  only with a full build and a fresh `vm start`.
+  resource is not copied after a module build: the apps and the system server hold those ids as
+  compiled. It is copied when a full build packed it since the device started, with the rest of
+  that build, whose apps hold its ids, and the device restarts.
 - `tools/lujarch vm screenshot [PATH]` writes what the virtual device's display shows, as the
   browser view shows it, to PATH (`.png`, `.jpg` or `.webp`; `<out>/vm/screenshots/` by
   default); `--frames N --interval S` takes N frames S seconds apart, for animations.
