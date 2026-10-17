@@ -544,6 +544,11 @@ class TerminalActivity : LinuxActivity(), TerminalViewClient, TerminalSessionCli
     override fun copyModeChanged(copyMode: Boolean) {}
 
     override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
+        // Ctrl+Alt+F1 on a hardware keyboard leaves Linux for the home screen.
+        if (e.isCtrlPressed && e.isAltPressed && keyCode == KeyEvent.KEYCODE_F1) {
+            startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return true
+        }
         val tab = current
         if (tab != null && tab.ended && keyCode == KeyEvent.KEYCODE_ENTER) {
             closeTab(tab)
