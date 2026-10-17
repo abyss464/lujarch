@@ -216,7 +216,7 @@ Lock keeps the app's restricted settings closed even where Android would open th
 
 ### PERM-15 Autostart
 
-- Home: Settings > Apps > (app) > App battery usage > Autostart
+- Home: Settings > Apps > (app) > Background > Autostart
 - Switch: Allow, Ask every time, Don't allow
 - Default: Allow
 - Verify: vm

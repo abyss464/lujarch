@@ -183,3 +183,38 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Charging | 充电 | 充電 |
 | Back gesture | 返回手势 | 「戻る」ジェスチャー |
 | Volume | 音量 | 音量 |
+| Small windows | 小窗 | 小ウィンドウ |
+| Small window | 小窗 | 小ウィンドウ |
+| Use small windows | 使用小窗 | 小ウィンドウを使用 |
+| Open in small window | 在小窗中打开 | 小ウィンドウで開く |
+| Release to open in a small window | 松手即在小窗中打开 | 指を離すと小ウィンドウで開きます |
+| Move to dock | 收进停靠条 | ドックに移動 |
+| Move to dock when the app below is touched | 碰到下面的应用时收进停靠条 | 下のアプリに触れたらドックに移動 |
+| Live previews in the dock | 停靠条显示实时画面 | ドックにライブプレビューを表示 |
+| At most | 同时最多 | 最大数 |
+| All conversations | 所有对话 | すべての会話 |
+| Selected conversations | 所选对话 | 選択した会話 |
+| Dock | 停靠条 | ドック |
+| Rail | 细轨 | レール |
+| Background | 后台 | バックグラウンド |
+| Background alerts | 后台提醒 | バックグラウンドのアラート |
+| Background usage | 后台使用 | バックグラウンドでの使用 |
+| Messages only | 仅接收消息 | メッセージのみ |
+| Keep | 保留 | 保持 |
+| Kept | 已保留 | 保持中 |
+| Running | 运行中 | 実行中 |
+| Paused | 已暂停 | 一時停止中 |
+| Reclaimed | 已回收 | 回収済み |
+| Stopped | 已停止 | 停止済み |
+| Opens again | 将重新打开 | 再度開きます |
+| What happened | 最近发生的事 | 最近の出来事 |
+| You | 你 | あなた |
+| System | 系统 | システム |
+| Show system processes | 显示系统进程 | システム プロセスを表示 |
+| End background processes | 结束后台进程 | バックグラウンド プロセスを終了 |
+| Pause this process | 暂停这个进程 | このプロセスを一時停止 |
+| End this process | 结束这个进程 | このプロセスを終了 |
+| Fold into Background | 收进后台 | バックグラウンドにまとめる |
+| It can do this | 它可以这样 | このままにする |
+| Show running apps | 显示运行中的应用 | 実行中のアプリを表示 |
+| Show memory | 显示内存 | メモリを表示 |
