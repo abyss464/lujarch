@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Recents reads where every app is in the background (BG-11, BG-12). A missing entry stops
-    system_server at boot.
+    The privileged permissions Background adds to the apps that show it: Recents (BG-11, BG-12),
+    its pages in Lujarch Settings (BG-2 to BG-7) and the Background notification in SystemUI
+    (BG-8). A missing entry stops system_server at boot.
 -->
 <permissions>
     <privapp-permissions package="com.android.launcher3">
+        <permission name="android.permission.LUJARCH_BACKGROUND" />
+    </privapp-permissions>
+    <privapp-permissions package="org.lujarch.settings">
+        <permission name="android.permission.FORCE_STOP_PACKAGES" />
+        <permission name="android.permission.LUJARCH_BACKGROUND" />
+        <permission name="android.permission.PACKAGE_USAGE_STATS" />
+        <permission name="android.permission.READ_NETWORK_USAGE_HISTORY" />
+    </privapp-permissions>
+    <privapp-permissions package="com.android.systemui">
         <permission name="android.permission.LUJARCH_BACKGROUND" />
     </privapp-permissions>
 </permissions>
