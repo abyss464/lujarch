@@ -177,7 +177,8 @@ the Running layer as one row.
 - Verify: vm
 
 Below the cards, the memory as the same four parts as BG-5, with Memory, which opens Settings >
-System > Memory.
+System > Memory. Android's Screenshot sits on the same line between the free memory and Memory,
+in Memory's type and color; when the line has no room for its label, it shows its icon alone.
 
 ## Alerts
 
