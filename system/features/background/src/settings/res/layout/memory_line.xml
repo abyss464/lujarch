@@ -27,14 +27,14 @@
     android:paddingBottom="6dp">
 
     <ImageView
-        android:id="@+id/background_line_mark"
+        android:id="@+id/memory_line_mark"
         android:layout_width="10dp"
         android:layout_height="10dp"
         android:layout_marginEnd="12dp"
         android:importantForAccessibility="no" />
 
     <TextView
-        android:id="@+id/background_line_lead"
+        android:id="@+id/memory_line_lead"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="48dp"
@@ -44,7 +44,7 @@
         android:textColor="?android:attr/textColorSecondary" />
 
     <TextView
-        android:id="@+id/background_line_who"
+        android:id="@+id/memory_line_who"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="10dp"
@@ -52,7 +52,7 @@
         android:textSize="11.5sp" />
 
     <TextView
-        android:id="@+id/background_line_text"
+        android:id="@+id/memory_line_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
@@ -60,7 +60,7 @@
         android:textColor="?android:attr/textColorPrimary" />
 
     <TextView
-        android:id="@+id/background_line_value"
+        android:id="@+id/memory_line_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"

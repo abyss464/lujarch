@@ -14,7 +14,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<!-- A depth's group: its mark, name, count and what it means (BG-2). -->
+<!-- A group of apps: its state's mark, name, count and what it means (BG-5). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -26,13 +26,13 @@
     android:paddingBottom="6dp">
 
     <ImageView
-        android:id="@+id/background_header_dot"
+        android:id="@+id/memory_header_dot"
         android:layout_width="12dp"
         android:layout_height="12dp"
         android:importantForAccessibility="no" />
 
     <TextView
-        android:id="@+id/background_header_name"
+        android:id="@+id/memory_header_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
@@ -41,7 +41,7 @@
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/background_header_count"
+        android:id="@+id/memory_header_count"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -49,7 +49,7 @@
         android:textColor="?android:attr/textColorSecondary" />
 
     <TextView
-        android:id="@+id/background_header_note"
+        android:id="@+id/memory_header_note"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"

@@ -216,16 +216,22 @@ Lock keeps the app's restricted settings closed even where Android would open th
 
 ### PERM-15 Autostart
 
-- Home: Settings > Apps > (app) > Background > Autostart
+- Home: Settings > Apps > (app) > Permissions > Autostart
 - Switch: Allow, Ask every time, Don't allow
 - Default: Allow
 - Verify: vm
 
-Covers the system starting an app that is not running, for a broadcast: at boot, for an alarm or
-for a push message. Don't allow: the app starts only when the user opens it or another app opens
-it, and push messages that arrive while it is not running can be lost. The row's summary says
-so. Ask every time asks as PERM-11 says; until the answer, the app is still started for an alarm
-clock it set and for a high-priority push message (CORE-13), and for nothing else.
+Covers the system starting an app that is not running: for a broadcast (at boot, for an alarm or
+for a push message) and for another app's call (binding or starting one of its services, or
+opening its content provider). Don't allow: the app starts only when the user opens it, and push
+messages that arrive while it is not running can be lost. The row's summary says so. Ask every
+time asks as PERM-11 says; until the answer, the app is still started for an alarm clock it set and
+for a high-priority push message (CORE-13), and for nothing else; another app's call counts as
+Don't allow, as it happens out of sight. The system itself and the roles it binds for the owner
+(input method, accessibility, autofill, notification listener, wallpaper, account sync, device
+admin) are not covered. The page lists the starts it stopped and allowed in the last 7 days, each
+with who asked and how (push, alarm, broadcast, service, content provider), and the apps this app
+woke. App battery usage shows the count and leads here.
 
 ### PERM-16 Network access is chosen in Mobile data & Wi-Fi
 

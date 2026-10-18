@@ -14,7 +14,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<!-- A process's depth now, on the depth's color (BG-7). -->
+<!-- A process's run state now, on the state's color (BG-7). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -24,7 +24,7 @@
     android:paddingBottom="8dp">
 
     <LinearLayout
-        android:id="@+id/background_now_card"
+        android:id="@+id/memory_card_card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -34,21 +34,21 @@
         android:paddingBottom="16dp">
 
         <TextView
-            android:id="@+id/background_now_label"
+            android:id="@+id/memory_card_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/background_now"
+            android:text="@string/memory_now_title"
             android:textSize="12.5sp" />
 
         <TextView
-            android:id="@+id/background_now_state"
+            android:id="@+id/memory_card_state"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/background_now_text"
+            android:id="@+id/memory_card_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="13.5sp" />

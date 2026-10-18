@@ -2,16 +2,22 @@
 table = "secure"
 type = "bool"
 default = false
-item = "BG-2"
+item = "BG-5"
 
 [recents_running]
 table = "secure"
 type = "bool"
 default = true
-item = "BG-11"
+item = "BG-8"
+
+[recents_state]
+table = "secure"
+type = "bool"
+default = true
+item = "BG-10"
 
 [recents_memory]
 table = "secure"
 type = "bool"
 default = true
-item = "BG-12"
+item = "BG-11"

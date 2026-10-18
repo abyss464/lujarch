@@ -4365,10 +4365,10 @@ index 90f9eeb1868ef5f056fcdaede1ea9440077a4fbf..73e8508a298d7363fc2f168b38886f36
              // This touch session has already resulted in shade expansion. Ignore everything else.
              if (event.getActionMasked() != MotionEvent.ACTION_DOWN
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
-index 5360582dd640aafb261c625180521233d55f9697..8b6f406716e09cfe82e6e4f0a85d0bd5865dd010 100644
+index 7295df17c64bbea7fde88629c22f26edadbf2390..c88f445b3d07fff1e28355e2600aaaa7a761ce48 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
-@@ -25,6 +25,7 @@ import com.android.systemui.statusbar.notification.collection.PipelineDumper
+@@ -24,6 +24,7 @@ import com.android.systemui.statusbar.notification.collection.PipelineDumper
  import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
  import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifSectioner
  import com.android.systemui.statusbar.notification.collection.provider.SectionStyleProvider
@@ -4376,22 +4376,22 @@ index 5360582dd640aafb261c625180521233d55f9697..8b6f406716e09cfe82e6e4f0a85d0bd5
  import com.android.systemui.statusbar.notification.shared.NotificationMinimalism
  import javax.inject.Inject
  
-@@ -72,6 +73,7 @@ constructor(
+@@ -70,6 +71,7 @@ constructor(
+     summarizationCoordinator: SummarizationCoordinator,
      highlightsCoordinator: HighlightsCoordinator,
      hsuCoordinator: HsuCoordinator,
-     lujarchFoldCoordinator: LujarchFoldCoordinator,
 +    smallWindowsNotifications: LujarchSmallWindowsNotifications,
  ) : NotifCoordinators {
  
      private val mCoreCoordinators: MutableList<CoreCoordinator> = ArrayList()
-@@ -113,6 +115,7 @@ constructor(
+@@ -111,6 +113,7 @@ constructor(
          mCoordinators.add(bundleCoordinator)
          mCoordinators.add(summarizationCoordinator)
          mCoordinators.add(statsLoggerCoordinator)
 +        mCoordinators.add(smallWindowsNotifications)
-         mCoordinators.add(lujarchFoldCoordinator)
          if (NmContextualDisplayLaunch.isEnabled) {
              mCoordinators.add(highlightsCoordinator)
+         }
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java
 index be7b65e1302883f98424275b1462fdd8c6334417..a31eb2dad43751a8f5453bfcb6909cbaa28f33c5 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/headsup/HeadsUpTouchHelper.java

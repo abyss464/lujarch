@@ -1,9 +1,22 @@
-diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 8c09c25d40e23304ef869d7810c71cbff3883f1b..f49b2a2840aa6f52ca25b55d9d6efa2972ea3036 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -113,6 +113,8 @@
+     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+     <uses-permission android:name="android.permission.MANAGE_APP_OPS_RESTRICTIONS"/>
+     <uses-permission android:name="android.permission.MANAGE_APP_OPS_MODES" />
++    <!-- Lujarch's Background (BG-2, BG-6). -->
++    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
+     <uses-permission android:name="android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS"/>
+     <uses-permission android:name="android.permission.READ_PRINT_SERVICES" />
+     <uses-permission android:name="android.permission.NETWORK_SETTINGS" />
+diff --git a/res/layout/lujarch_run_state.xml b/res/layout/lujarch_run_state.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..6fdc2f63669cd2f7a2b4b4cf354e1e7b493b020e
+index 0000000000000000000000000000000000000000..4e863fc0f75cddb660ab3bca2155ae48738a3b2b
 --- /dev/null
-+++ b/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
++++ b/res/layout/lujarch_run_state.xml
+@@ -0,0 +1,25 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -20,17 +33,76 @@ index 0000000000000000000000000000000000000000..6fdc2f63669cd2f7a2b4b4cf354e1e7b
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<!-- Lujarch's Background (BG-1): the run state's lines, drawn into the frame. -->
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/lujarch_run_state"
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
++    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
++    android:paddingTop="8dp"
++    android:paddingBottom="8dp" />
+diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed6814dff25abb089fd70eaca7c7f192df53d8d6
+--- /dev/null
++++ b/res/values-ja/lujarch_background_strings.xml
+@@ -0,0 +1,49 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Background in Settings (target/background.md). -->
 +<resources>
-+    <string name="lujarch_background_title">"バックグラウンド"</string>
-+    <string name="lujarch_background_link_summary">"バックグラウンドでの使用、保持、自動起動"</string>
++    <string name="lujarch_background_run_state">"実行状態"</string>
++    <string name="lujarch_background_memory_average">"平均 %1$s"</string>
++    <string name="lujarch_background_memory_kept">"%1$s · 保持中"</string>
++    <string name="lujarch_background_chosen">"指定したプロセス"</string>
++    <string name="lujarch_background_optimized_summary">"画面を離れて 10 秒後に一時停止し、バックグラウンドのタスクはシステムが調整します"</string>
++    <string name="lujarch_background_chosen_summary">"チェックしたプロセスは画面を離れても動き続け、それ以外は「最適化」と同じです"</string>
++    <string name="lujarch_background_unrestricted_summary">"フォアグラウンドと同じように動作し、一時停止されません。メモリが不足すると回収されることがあります"</string>
++    <string name="lujarch_background_footer">"「バックグラウンドでの使用を許可」をオフにすると制限になります。画面を離れるとすぐに一時停止し、バックグラウンドでタスクを実行せず、ブロードキャストでも起動しません。"</string>
++    <string name="lujarch_background_processes">"実行し続けるプロセス"</string>
++    <string name="lujarch_background_main_process">"メイン プロセス"</string>
++    <string name="lujarch_background_not_running">"実行されていません"</string>
++    <string name="lujarch_background_connected">"ネットワークに接続中"</string>
++    <string name="lujarch_background_suggested">"おすすめ"</string>
++    <string name="lujarch_background_add_main">"メイン プロセスも指定"</string>
++    <string name="lujarch_background_not_now">"今はしない"</string>
++    <string name="lujarch_background_level_suggestion">"%1$s · 提案があります"</string>
++    <string name="lujarch_background_after_leaving">"画面を離れたあと"</string>
++    <string name="lujarch_background_autostart">"自動起動"</string>
++    <string name="lujarch_background_allow">"許可"</string>
++    <string name="lujarch_background_ask">"毎回確認する"</string>
++    <string name="lujarch_background_dont_allow">"許可しない"</string>
++    <string name="lujarch_background_keep">"保持"</string>
++    <string name="lujarch_background_kept_on">"はい。履歴のカード メニューで設定します"</string>
++    <string name="lujarch_background_kept_off">"いいえ。履歴のカード メニューで設定します"</string>
++    <plurals name="lujarch_background_reclaimed">
++        <item quantity="other">"%1$d 回回収"</item>
++    </plurals>
++    <plurals name="lujarch_background_woken">
++        <item quantity="other">"%1$d 回再開"</item>
++    </plurals>
 +</resources>
 diff --git a/res/values-zh-rCN/lujarch_background_strings.xml b/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..6faaa257dfe6c56403dec81febf66358b157ea3d
+index 0000000000000000000000000000000000000000..6f189bf551997559451e3eb63c355c2825243bfc
 --- /dev/null
 +++ b/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,49 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -47,17 +119,45 @@ index 0000000000000000000000000000000000000000..6faaa257dfe6c56403dec81febf66358
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<!-- Lujarch's Background in Settings (target/background.md). -->
 +<resources>
-+    <string name="lujarch_background_title">"后台"</string>
-+    <string name="lujarch_background_link_summary">"后台使用、保留和自启动"</string>
++    <string name="lujarch_background_run_state">"运行状态"</string>
++    <string name="lujarch_background_memory_average">"平均 %1$s"</string>
++    <string name="lujarch_background_memory_kept">"%1$s · 已保留"</string>
++    <string name="lujarch_background_chosen">"指定进程"</string>
++    <string name="lujarch_background_optimized_summary">"离开屏幕 10 秒后暂停；后台任务由系统安排"</string>
++    <string name="lujarch_background_chosen_summary">"勾选的进程在离开屏幕后继续运行，其余同“优化”"</string>
++    <string name="lujarch_background_unrestricted_summary">"像在前台一样运行，从不暂停；内存不足时仍可能被回收"</string>
++    <string name="lujarch_background_footer">"关闭“允许后台使用”即为受限：离开屏幕后立即暂停，不在后台运行任务，也不会因广播而启动。"</string>
++    <string name="lujarch_background_processes">"保持运行的进程"</string>
++    <string name="lujarch_background_main_process">"主进程"</string>
++    <string name="lujarch_background_not_running">"未运行"</string>
++    <string name="lujarch_background_connected">"有网络连接"</string>
++    <string name="lujarch_background_suggested">"建议勾选"</string>
++    <string name="lujarch_background_add_main">"一起指定主进程"</string>
++    <string name="lujarch_background_not_now">"不用了"</string>
++    <string name="lujarch_background_level_suggestion">"%1$s · 有一条建议"</string>
++    <string name="lujarch_background_after_leaving">"离开屏幕以后"</string>
++    <string name="lujarch_background_autostart">"自启动"</string>
++    <string name="lujarch_background_allow">"允许"</string>
++    <string name="lujarch_background_ask">"每次都询问"</string>
++    <string name="lujarch_background_dont_allow">"不允许"</string>
++    <string name="lujarch_background_keep">"保留"</string>
++    <string name="lujarch_background_kept_on">"是。在最近任务的卡片菜单里设置"</string>
++    <string name="lujarch_background_kept_off">"否。在最近任务的卡片菜单里设置"</string>
++    <plurals name="lujarch_background_reclaimed">
++        <item quantity="other">"回收 %1$d 次"</item>
++    </plurals>
++    <plurals name="lujarch_background_woken">
++        <item quantity="other">"被叫醒 %1$d 次"</item>
++    </plurals>
 +</resources>
 diff --git a/res/values/lujarch_background_strings.xml b/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..b564244b859df78c0503584426344b6898aad6b4
+index 0000000000000000000000000000000000000000..b79bd79e537e7c928e6ff239becfe11002b2e113
 --- /dev/null
 +++ b/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,51 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -74,66 +174,238 @@ index 0000000000000000000000000000000000000000..b564244b859df78c0503584426344b68
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-3): App battery usage leads to the app's Background page. -->
++<!-- Lujarch's Background in Settings (target/background.md). -->
 +<resources>
-+    <string name="lujarch_background_title">Background</string>
-+    <string name="lujarch_background_link_summary">Background usage, Keep and Autostart</string>
++    <string name="lujarch_background_run_state">Run state</string>
++    <string name="lujarch_background_memory_average">Average %1$s</string>
++    <string name="lujarch_background_memory_kept">%1$s · Kept</string>
++    <string name="lujarch_background_chosen">Chosen processes</string>
++    <string name="lujarch_background_optimized_summary">Paused 10 seconds after it leaves the screen; the system schedules its background tasks</string>
++    <string name="lujarch_background_chosen_summary">The processes you tick keep running after it leaves the screen; the rest is as Optimized</string>
++    <string name="lujarch_background_unrestricted_summary">Runs as in the foreground and is never paused; it can still be reclaimed when memory runs low</string>
++    <string name="lujarch_background_footer">With Allow background usage off the app is restricted: it is paused as soon as it leaves the screen, runs no background tasks and is not started for broadcasts.</string>
++    <string name="lujarch_background_processes">Processes to keep running</string>
++    <string name="lujarch_background_main_process">Main process</string>
++    <string name="lujarch_background_not_running">Not running</string>
++    <string name="lujarch_background_connected">Holds a network connection</string>
++    <string name="lujarch_background_suggested">Suggested</string>
++    <string name="lujarch_background_add_main">Add the main process</string>
++    <string name="lujarch_background_not_now">Not now</string>
++    <string name="lujarch_background_level_suggestion">%1$s · a suggestion waits</string>
++    <string name="lujarch_background_after_leaving">After it leaves the screen</string>
++    <string name="lujarch_background_autostart">Autostart</string>
++    <string name="lujarch_background_allow">Allow</string>
++    <string name="lujarch_background_ask">Ask every time</string>
++    <string name="lujarch_background_dont_allow">Don’t allow</string>
++    <string name="lujarch_background_keep">Keep</string>
++    <string name="lujarch_background_kept_on">Yes. Set in its card menu in Recents</string>
++    <string name="lujarch_background_kept_off">No. Set in its card menu in Recents</string>
++    <plurals name="lujarch_background_reclaimed">
++        <item quantity="one">Reclaimed %1$d time</item>
++        <item quantity="other">Reclaimed %1$d times</item>
++    </plurals>
++    <plurals name="lujarch_background_woken">
++        <item quantity="one">Woken %1$d time</item>
++        <item quantity="other">Woken %1$d times</item>
++    </plurals>
 +</resources>
 diff --git a/res/xml/development_settings.xml b/res/xml/development_settings.xml
-index a04c5c779d63f797d0a51dbd8a38d5ef51cc14f0..6e7984a5c6be15cf6eaa619effd17f10255a3f2f 100644
+index a04c5c779d63f797d0a51dbd8a38d5ef51cc14f0..448238385bf5c405696d14c862bf425224a336e5 100644
 --- a/res/xml/development_settings.xml
 +++ b/res/xml/development_settings.xml
-@@ -23,12 +23,6 @@
+@@ -23,11 +23,14 @@
          android:key="debug_misc_category"
          android:order="100">
  
--        <Preference
--            android:key="memory"
++        <!-- Lujarch's Background (BG-5): Memory is Settings > System > Memory. -->
+         <Preference
+             android:key="memory"
 -            android:title="@string/memory_settings_title"
 -            android:summary="@string/summary_placeholder"
 -            android:fragment="com.android.settings.applications.ProcessStatsSummary" />
--
++            android:title="@string/memory_settings_title">
++            <intent
++                android:action="org.lujarch.background.action.MEMORY"
++                android:targetPackage="org.lujarch.settings" />
++        </Preference>
+ 
          <com.android.settings.BugreportPreference
              android:key="bugreport"
-             android:title="@*android:string/bugreport_title"
-@@ -85,12 +79,6 @@
+@@ -85,11 +88,15 @@
              android:title="@string/enable_16k_pages"
              android:summary="@string/enable_16k_pages_summary"/>
  
--        <Preference
--            android:key="running_apps"
--            android:title="@string/runningservices_settings_title"
++        <!-- Lujarch's Background (BG-5): Running services is Settings > System > Memory. -->
+         <Preference
+             android:key="running_apps"
+             android:title="@string/runningservices_settings_title"
 -            android:summary="@string/runningservices_settings_summary"
 -            android:fragment="com.android.settings.applications.RunningServices" />
--
++            android:summary="@string/runningservices_settings_summary">
++            <intent
++                android:action="org.lujarch.background.action.MEMORY"
++                android:targetPackage="org.lujarch.settings" />
++        </Preference>
+ 
          <com.android.settings.development.ColorModePreference
              android:key="picture_color_mode"
-             android:title="@string/picture_color_mode"
 diff --git a/res/xml/lujarch_battery_app.xml b/res/xml/lujarch_battery_app.xml
-index eba7f9bda3b269059f46d177eff38b6a44babf1a..7af95d4096df66d626a2fb9c734e2dfd8805e808 100644
+index eba7f9bda3b269059f46d177eff38b6a44babf1a..b1325de31b57ec42dd13306746bf70882ff62ad5 100644
 --- a/res/xml/lujarch_battery_app.xml
 +++ b/res/xml/lujarch_battery_app.xml
-@@ -48,14 +48,15 @@
+@@ -39,7 +39,7 @@
+ 
      <PreferenceCategory
-         android:key="lujarch_app_timeline" />
+         android:key="lujarch_app_states"
+-        android:title="@string/lujarch_battery_states" />
++        android:title="@string/lujarch_background_run_state" />
  
-+    <!-- Lujarch's Background (BG-3): its choices are on the app's Background page. -->
      <PreferenceCategory
-         android:title="@string/manager_battery_usage_category_title"
--        android:key="background_usage_allowability_category"
--        settings:controller="com.android.settings.fuelgauge.BackgroundUsageAllowabilityPreferenceController">
-+        android:key="lujarch_background_category">
+         android:key="lujarch_app_off"
+diff --git a/res/xml/power_background_usage_detail.xml b/res/xml/power_background_usage_detail.xml
+index ef48cee72284bf07a9075c1be769387d09d4f6b4..656b3df5e99913d10aac5e1755b1e4f30c197ccd 100644
+--- a/res/xml/power_background_usage_detail.xml
++++ b/res/xml/power_background_usage_detail.xml
+@@ -35,16 +35,31 @@
+         <com.android.settings.fuelgauge.WarningFrameSelectorPreference
+             android:key="optimized_preference"
+             android:title="@string/manager_battery_usage_optimized_title"
+-            android:summary="@string/manager_battery_usage_optimized_summary"/>
++            android:summary="@string/lujarch_background_optimized_summary"/>
++
++        <!-- Lujarch's Background (BG-2): Chosen processes, between Optimized and
++             Unrestricted. -->
++        <com.android.settings.fuelgauge.WarningFrameSelectorPreference
++            android:key="lujarch_chosen_preference"
++            android:title="@string/lujarch_background_chosen"
++            android:summary="@string/lujarch_background_chosen_summary"/>
  
--        <com.android.settingslib.PrimarySwitchPreference
--            android:key="background_usage_allowability_switch"
--            android:title="@string/manager_battery_usage_allow_background_usage_title"/>
-+        <Preference
-+            android:key="lujarch_background"
-+            android:title="@string/lujarch_background_title"
-+            android:summary="@string/lujarch_background_link_summary" />
+         <com.android.settings.fuelgauge.WarningFrameSelectorPreference
+             android:key="unrestricted_preference"
+             android:title="@string/manager_battery_usage_unrestricted_title"
+-            android:summary="@string/manager_battery_usage_unrestricted_summary_v2"/>
++            android:summary="@string/lujarch_background_unrestricted_summary"/>
+     </com.android.settingslib.widget.UntitledPreferenceCategory>
  
-     </PreferenceCategory>
++    <PreferenceCategory
++        android:key="lujarch_chosen_processes"
++        android:title="@string/lujarch_background_processes" />
++
++    <PreferenceCategory
++        android:key="lujarch_after_leaving"
++        android:title="@string/lujarch_background_after_leaving" />
++
+     <com.android.settingslib.widget.FooterPreference
+         android:key="app_usage_footer_preference"
+-        android:title="@string/manager_battery_usage_footer"
++        android:title="@string/lujarch_background_footer"
+         settings:searchable="false"/>
+ </PreferenceScreen>
+\ No newline at end of file
+diff --git a/src/com/android/settings/applications/appinfo/AppMemoryPreferenceController.java b/src/com/android/settings/applications/appinfo/AppMemoryPreferenceController.java
+index 19e8ebbb29765856ee511adbfc66769b8533a329..aeea2eafe00989fd7224bd1b9ea2c7ad7dfffeed 100644
+--- a/src/com/android/settings/applications/appinfo/AppMemoryPreferenceController.java
++++ b/src/com/android/settings/applications/appinfo/AppMemoryPreferenceController.java
+@@ -17,16 +17,21 @@
+ package com.android.settings.applications.appinfo;
  
+ import android.app.Activity;
++import android.app.AppOpsManager;
++import android.content.ActivityNotFoundException;
+ import android.content.Context;
++import android.content.Intent;
+ import android.content.pm.PackageInfo;
+ import android.os.AsyncTask;
++import android.os.UserHandle;
+ import android.text.format.Formatter;
++import android.util.Log;
+ 
+ import androidx.preference.Preference;
+ import androidx.preference.PreferenceScreen;
+ 
++import com.android.internal.app.LujarchBackground;
+ import com.android.settings.R;
+-import com.android.settings.SettingsActivity;
+ import com.android.settings.applications.ProcStatsData;
+ import com.android.settings.applications.ProcStatsEntry;
+ import com.android.settings.applications.ProcStatsPackageEntry;
+@@ -35,7 +40,6 @@ import com.android.settings.core.BasePreferenceController;
+ import com.android.settingslib.core.lifecycle.Lifecycle;
+ import com.android.settingslib.core.lifecycle.LifecycleObserver;
+ import com.android.settingslib.core.lifecycle.events.OnResume;
+-import com.android.settingslib.development.DevelopmentSettingsEnabler;
+ 
+ public class AppMemoryPreferenceController extends BasePreferenceController
+         implements LifecycleObserver, OnResume {
+@@ -80,17 +84,21 @@ public class AppMemoryPreferenceController extends BasePreferenceController
+             if (mParent.getActivity() == null) {
+                 return;
+             }
++            // Lujarch's Background (BG-6): the average use and whether the app is kept; the row
++            // opens the app's memory page.
++            mStats = entry;
++            final String use;
+             if (entry != null) {
+-                mStats = entry;
+-                mPreference.setEnabled(true);
+                 double amount = Math.max(entry.getRunWeight(), entry.getBgWeight())
+                         * mStatsManager.getMemInfo().getWeightToRam();
+-                mPreference.setSummary(mContext.getString(R.string.memory_use_summary,
+-                        Formatter.formatShortFileSize(mContext, (long) amount)));
++                use = mContext.getString(R.string.lujarch_background_memory_average,
++                        Formatter.formatShortFileSize(mContext, (long) amount));
+             } else {
+-                mPreference.setEnabled(false);
+-                mPreference.setSummary(mContext.getString(R.string.no_memory_use_summary));
++                use = mContext.getString(R.string.no_memory_use_summary);
+             }
++            mPreference.setEnabled(true);
++            mPreference.setSummary(isKept()
++                    ? mContext.getString(R.string.lujarch_background_memory_kept, use) : use);
+         }
+     }
+ 
+@@ -109,8 +117,17 @@ public class AppMemoryPreferenceController extends BasePreferenceController
+             return UNSUPPORTED_ON_DEVICE;
+         }
+ 
+-        return DevelopmentSettingsEnabler.isDevelopmentSettingsEnabled(mContext)
+-                ? AVAILABLE : CONDITIONALLY_UNAVAILABLE;
++        return AVAILABLE;
++    }
++
++    private boolean isKept() {
++        final PackageInfo info = mParent.getPackageInfo();
++        if (info == null) {
++            return false;
++        }
++        return mContext.getSystemService(AppOpsManager.class).unsafeCheckOpRawNoThrow(
++                AppOpsManager.OP_LUJARCH_KEEP, info.applicationInfo.uid, info.packageName)
++                == AppOpsManager.MODE_ALLOWED;
+     }
+ 
+     @Override
+@@ -121,9 +138,17 @@ public class AppMemoryPreferenceController extends BasePreferenceController
+ 
+     @Override
+     public boolean handlePreferenceTreeClick(Preference preference) {
+-        if (KEY_MEMORY.equals(preference.getKey())) {
+-            ProcessStatsBase.launchMemoryDetail((SettingsActivity) mParent.getActivity(),
+-                    mStatsManager.getMemInfo(), mStats, false);
++        final PackageInfo info = mParent.getPackageInfo();
++        if (KEY_MEMORY.equals(preference.getKey()) && info != null) {
++            final Intent intent = new Intent(LujarchBackground.ACTION_APP_MEMORY)
++                    .setPackage(LujarchBackground.SETTINGS_PACKAGE)
++                    .putExtra(Intent.EXTRA_PACKAGE_NAME, info.packageName)
++                    .putExtra(Intent.EXTRA_USER, UserHandle.of(UserHandle.myUserId()));
++            try {
++                mContext.startActivity(intent);
++            } catch (ActivityNotFoundException e) {
++                Log.e("lujarch_background", "no memory page for " + info.packageName, e);
++            }
+             return true;
+         }
+         return false;
 diff --git a/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java b/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java
 index 0d6ff75450c7f3b4b0be913be4838974df635a16..abc024fbb0407ff45ab901118cf83d7977c4a52c 100644
 --- a/src/com/android/settings/development/DevelopmentSettingsDashboardFragment.java
@@ -154,32 +426,260 @@ index 0d6ff75450c7f3b4b0be913be4838974df635a16..abc024fbb0407ff45ab901118cf83d79
          controllers.add(new DefaultLaunchPreferenceController(context, "demo_mode"));
          controllers.add(new DefaultLaunchPreferenceController(context, "quick_settings_tiles"));
          controllers.add(new DefaultLaunchPreferenceController(context, "feature_flags_dashboard"));
-diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-index b76a5a80f93b35fdc986b872a1448addf1fff09b..e41a8d3a8221c23de80d927d1d05b5c4fa36a2e9 100644
---- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-+++ b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetail.java
-@@ -352,12 +352,9 @@ public class AdvancedPowerUsageDetail extends DashboardFragment
-                         bundle,
-                         bundle.getInt(EXTRA_UID, 0),
-                         packageName));
--        controllers.add(
--                new BackgroundUsageAllowabilityPreferenceController(
--                        context,
--                        /* dashboardFragment= */ this,
--                        KEY_BACKGROUND_USAGE_ALLOWABILITY_CATEGORY,
--                        mBatteryOptimizeUtils));
-+        // Lujarch's Background (BG-3): the choices of how the app runs off screen live on its
-+        // Background page, which this row opens.
-+        controllers.add(new LujarchBackgroundLinkController(context, packageName));
+diff --git a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetailActivity.java b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetailActivity.java
+index 3ef2c0cda3f16969ce95a49229923f7a233ea9fb..5ebbffb97ca1a775b8df5f921e229d16d0e31dfd 100644
+--- a/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetailActivity.java
++++ b/src/com/android/settings/fuelgauge/AdvancedPowerUsageDetailActivity.java
+@@ -29,6 +29,7 @@ import android.util.Log;
  
-         return controllers;
+ import androidx.appcompat.app.AppCompatActivity;
+ 
++import com.android.internal.app.LujarchBackground;
+ import com.android.settings.R;
+ import com.android.settings.Utils;
+ import com.android.settings.core.SubSettingLauncher;
+@@ -60,9 +61,28 @@ public class AdvancedPowerUsageDetailActivity extends AppCompatActivity {
+                 Log.w(TAG, "Cannot find package: " + packageName, e);
+             }
+ 
++            // Lujarch's Background (BG-2): the app's Allow background usage, its home.
++            final boolean background = intent.getBooleanExtra(
++                    LujarchBackground.EXTRA_ALLOW_BACKGROUND_USAGE, false);
++            if (background) {
++                args.putString(PowerBackgroundUsageDetail.EXTRA_PACKAGE_NAME, packageName);
++                args.putInt(PowerBackgroundUsageDetail.EXTRA_UID, args.getInt(EXTRA_UID, 0));
++                args.putString(PowerBackgroundUsageDetail.EXTRA_LAUNCH_SOURCE,
++                        PowerBackgroundUsageDetail.LaunchSourceType.INTENT.name());
++                try {
++                    args.putString(PowerBackgroundUsageDetail.EXTRA_LABEL, packageManager
++                            .getApplicationInfo(packageName, 0).loadLabel(packageManager)
++                            .toString());
++                } catch (PackageManager.NameNotFoundException e) {
++                    Log.w(TAG, "Cannot find package: " + packageName, e);
++                }
++            }
+             new SubSettingLauncher(this)
+-                    .setDestination(AdvancedPowerUsageDetail.class.getName())
+-                    .setTitleRes(R.string.battery_details_title)
++                    .setDestination(background ? PowerBackgroundUsageDetail.class.getName()
++                            : AdvancedPowerUsageDetail.class.getName())
++                    .setTitleRes(background
++                            ? R.string.manager_battery_usage_allow_background_usage_settings_title
++                            : R.string.battery_details_title)
+                     .setArguments(args)
+                     .setSourceMetricsCategory(SettingsEnums.APPLICATIONS_INSTALLED_APP_DETAILS)
+                     .addFlags(intent.getFlags())
+diff --git a/src/com/android/settings/fuelgauge/BackgroundUsageAllowabilityPreferenceController.java b/src/com/android/settings/fuelgauge/BackgroundUsageAllowabilityPreferenceController.java
+index f9a9e0f9f7b16f0661e7691f98ad0c58c74f49e5..5d8d01f96d1f767348c06a8ad34b0a3178d4f5e3 100644
+--- a/src/com/android/settings/fuelgauge/BackgroundUsageAllowabilityPreferenceController.java
++++ b/src/com/android/settings/fuelgauge/BackgroundUsageAllowabilityPreferenceController.java
+@@ -18,6 +18,8 @@ package com.android.settings.fuelgauge;
+ 
+ import android.content.Context;
+ import android.os.Bundle;
++import android.os.RemoteException;
++import android.os.UserHandle;
+ import android.util.Log;
+ 
+ import androidx.annotation.NonNull;
+@@ -26,6 +28,8 @@ import androidx.annotation.VisibleForTesting;
+ import androidx.preference.Preference;
+ import androidx.preference.PreferenceScreen;
+ 
++import com.android.internal.app.ILujarchBackground;
++import com.android.internal.app.LujarchBackground;
+ import com.android.settings.R;
+ import com.android.settings.core.BasePreferenceController;
+ import com.android.settings.core.PreferenceControllerMixin;
+@@ -142,5 +146,38 @@ public class BackgroundUsageAllowabilityPreferenceController extends BasePrefere
+         }
+         mBackgroundUsageAllowabilityPreference.setChecked(
+                 optimizationMode != BatteryOptimizeUtils.MODE_RESTRICTED);
++        if (mBackgroundUsageAllowabilityPreference.isEnabled()) {
++            mBackgroundUsageAllowabilityPreference.setSummary(lujarchSummary(optimizationMode));
++        }
++    }
++
++    /** Lujarch's Background (BG-2, BG-3): the level, and the suggestion that waits. */
++    private String lujarchSummary(int optimizationMode) {
++        final int usage;
++        switch (optimizationMode) {
++            case BatteryOptimizeUtils.MODE_UNRESTRICTED:
++                usage = LujarchBackground.USAGE_UNRESTRICTED;
++                break;
++            case BatteryOptimizeUtils.MODE_CHOSEN:
++                usage = LujarchBackground.USAGE_CHOSEN;
++                break;
++            case BatteryOptimizeUtils.MODE_RESTRICTED:
++                usage = LujarchBackground.USAGE_RESTRICTED;
++                break;
++            default:
++                usage = LujarchBackground.USAGE_OPTIMIZED;
++                break;
++        }
++        final String level = LujarchBackground.usageName(mContext, usage);
++        final ILujarchBackground service = LujarchBackground.get();
++        try {
++            if (service != null && service.getSuggestion(mBatteryOptimizeUtils.getPackageName(),
++                    UserHandle.myUserId()) != null) {
++                return mContext.getString(R.string.lujarch_background_level_suggestion, level);
++            }
++        } catch (RemoteException | RuntimeException e) {
++            Log.e(TAG, "cannot read the suggestion", e);
++        }
++        return level;
      }
-diff --git a/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java b/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java
+ }
+diff --git a/src/com/android/settings/fuelgauge/BatteryOptimizationModePreferenceController.java b/src/com/android/settings/fuelgauge/BatteryOptimizationModePreferenceController.java
+index 7eaa507f355b0397ec84443ccd828a305245a20d..da06a7cb5fa08555d0855101642e7926ed0c5a61 100644
+--- a/src/com/android/settings/fuelgauge/BatteryOptimizationModePreferenceController.java
++++ b/src/com/android/settings/fuelgauge/BatteryOptimizationModePreferenceController.java
+@@ -40,11 +40,15 @@ public class BatteryOptimizationModePreferenceController extends BasePreferenceC
+ 
+     @VisibleForTesting static final String KEY_OPTIMIZED_PREF = "optimized_preference";
+     @VisibleForTesting static final String KEY_UNRESTRICTED_PREF = "unrestricted_preference";
++    static final String KEY_CHOSEN_PREF = "lujarch_chosen_preference";
+ 
+     private final BatteryOptimizeUtils mBatteryOptimizeUtils;
+     @Nullable @VisibleForTesting MainSwitchPreference mBackgroundUsageAllowabilityPreference;
+     @Nullable @VisibleForTesting SelectorWithWidgetPreference mOptimizedPreference;
+     @Nullable @VisibleForTesting SelectorWithWidgetPreference mUnrestrictedPreference;
++    @Nullable SelectorWithWidgetPreference mChosenPreference;
++    /** Lujarch's Background (BG-2): the processes of Chosen processes and the rows below. */
++    @Nullable LujarchBackgroundUsageController mLujarch;
+     @Nullable @VisibleForTesting String mHintPrefKey;
+     @Nullable @VisibleForTesting String mHintText;
+ 
+@@ -77,6 +81,7 @@ public class BatteryOptimizationModePreferenceController extends BasePreferenceC
+                 screen.findPreference(KEY_BACKGROUND_USAGE_ALLOWABILITY_SWITCH);
+         mOptimizedPreference = screen.findPreference(KEY_OPTIMIZED_PREF);
+         mUnrestrictedPreference = screen.findPreference(KEY_UNRESTRICTED_PREF);
++        mChosenPreference = screen.findPreference(KEY_CHOSEN_PREF);
+         initPreferences();
+         initPreferenceHint(screen);
+     }
+@@ -85,13 +90,15 @@ public class BatteryOptimizationModePreferenceController extends BasePreferenceC
+     void initPreferences() {
+         if (mBackgroundUsageAllowabilityPreference == null
+                 || mOptimizedPreference == null
+-                || mUnrestrictedPreference == null) {
++                || mUnrestrictedPreference == null
++                || mChosenPreference == null) {
+             return;
+         }
+         final boolean isEnabled = mBatteryOptimizeUtils.isOptimizeModeMutable();
+         mBackgroundUsageAllowabilityPreference.setEnabled(isEnabled);
+         mOptimizedPreference.setEnabled(isEnabled);
+         mUnrestrictedPreference.setEnabled(isEnabled);
++        mChosenPreference.setEnabled(isEnabled);
+         if (isEnabled) {
+             mBackgroundUsageAllowabilityPreference.setOnPreferenceChangeListener(
+                     (preference, isAllowBackground) -> {
+@@ -111,6 +118,11 @@ public class BatteryOptimizationModePreferenceController extends BasePreferenceC
+                         handleBatteryOptimizeModeUpdated(BatteryOptimizeUtils.MODE_UNRESTRICTED);
+                         return true;
+                     });
++            mChosenPreference.setOnPreferenceClickListener(
++                    preference -> {
++                        handleBatteryOptimizeModeUpdated(BatteryOptimizeUtils.MODE_CHOSEN);
++                        return true;
++                    });
+         }
+     }
+ 
+@@ -129,13 +141,19 @@ public class BatteryOptimizationModePreferenceController extends BasePreferenceC
+     void updatePreferences(int optimizationMode) {
+         if (mBackgroundUsageAllowabilityPreference == null
+                 || mOptimizedPreference == null
+-                || mUnrestrictedPreference == null) {
++                || mUnrestrictedPreference == null
++                || mChosenPreference == null) {
+             return;
+         }
+         final boolean isAllowBackground = optimizationMode != BatteryOptimizeUtils.MODE_RESTRICTED;
+         mBackgroundUsageAllowabilityPreference.setChecked(isAllowBackground);
+         mOptimizedPreference.setEnabled(isAllowBackground);
+         mUnrestrictedPreference.setEnabled(isAllowBackground);
++        mChosenPreference.setEnabled(isAllowBackground);
++        mChosenPreference.setChecked(optimizationMode == BatteryOptimizeUtils.MODE_CHOSEN);
++        if (mLujarch != null) {
++            mLujarch.refresh(optimizationMode);
++        }
+         mOptimizedPreference.setChecked(optimizationMode == BatteryOptimizeUtils.MODE_OPTIMIZED);
+         mUnrestrictedPreference.setChecked(
+                 optimizationMode == BatteryOptimizeUtils.MODE_UNRESTRICTED);
+diff --git a/src/com/android/settings/fuelgauge/BatteryOptimizeUtils.java b/src/com/android/settings/fuelgauge/BatteryOptimizeUtils.java
+index 9e6dbc5ab8f011f17203c6044277f0bfd90fec1e..2b313b7f498095aaf0dca0cf9218c60352a8ac68 100644
+--- a/src/com/android/settings/fuelgauge/BatteryOptimizeUtils.java
++++ b/src/com/android/settings/fuelgauge/BatteryOptimizeUtils.java
+@@ -75,6 +75,11 @@ public class BatteryOptimizeUtils {
+     public static final int MODE_RESTRICTED = 1;
+     public static final int MODE_UNRESTRICTED = 2;
+     public static final int MODE_OPTIMIZED = 3;
++    /**
++     * Lujarch's Background (BG-2): Chosen processes, Optimized with the processes the owner
++     * ticked kept running, marked by its op.
++     */
++    public static final int MODE_CHOSEN = 4;
+ 
+     @IntDef(
+             prefix = {"MODE_"},
+@@ -83,6 +88,7 @@ public class BatteryOptimizeUtils {
+                 MODE_RESTRICTED,
+                 MODE_UNRESTRICTED,
+                 MODE_OPTIMIZED,
++                MODE_CHOSEN,
+             })
+     @Retention(RetentionPolicy.SOURCE)
+     static @interface OptimizationMode {}
+@@ -130,7 +136,16 @@ public class BatteryOptimizeUtils {
+                 String.format(
+                         "refresh %s state, allowlisted = %s, mode = %d",
+                         mPackageName, mAllowListed, mMode));
+-        return getAppOptimizationMode(mMode, mAllowListed, ignoreUnknownMode);
++        final int mode = getAppOptimizationMode(mMode, mAllowListed, ignoreUnknownMode);
++        return mode == MODE_OPTIMIZED && isChosen(mAppOpsManager, mUid, mPackageName)
++                ? MODE_CHOSEN : mode;
++    }
++
++    /** Lujarch's Background (BG-2): the app is set to Chosen processes. */
++    static boolean isChosen(AppOpsManager appOpsManager, int uid, String packageName) {
++        return packageName != null && appOpsManager.unsafeCheckOpRawNoThrow(
++                AppOpsManager.OP_LUJARCH_CHOSEN_PROCESSES, uid, packageName)
++                == AppOpsManager.MODE_ALLOWED;
+     }
+ 
+     /** Gets the {@link OptimizationMode} for associated app. */
+@@ -258,7 +273,7 @@ public class BatteryOptimizeUtils {
+                             allowlistBackend.isAllowlisted(info.packageName, info.uid),
+                             /* ignoreUnknownMode= */ false);
+             // Ignores default optimized state or system/default apps.
+-            if (optimizationMode == MODE_OPTIMIZED
++            if (optimizationMode == MODE_OPTIMIZED && !isChosen(aom, info.uid, info.packageName)
+                     || isSystemOrDefaultApp(
+                             context, allowlistBackend, info.packageName, info.uid)) {
+                 continue;
+@@ -343,6 +358,14 @@ public class BatteryOptimizeUtils {
+                 batteryUtils,
+                 powerAllowlistBackend,
+                 action);
++        // Lujarch's Background (BG-2): Chosen processes is Optimized with its op.
++        try {
++            context.getSystemService(AppOpsManager.class).setMode(
++                    AppOpsManager.OP_LUJARCH_CHOSEN_PROCESSES, uid, packageName,
++                    mode == MODE_CHOSEN ? AppOpsManager.MODE_ALLOWED : AppOpsManager.MODE_IGNORED);
++        } catch (RuntimeException e) {
++            Log.e(TAG, "set Chosen processes failed for " + packageName, e);
++        }
+     }
+ 
+     private static void setAppOptimizationModeInternal(
+diff --git a/src/com/android/settings/fuelgauge/LujarchBackgroundUsageController.java b/src/com/android/settings/fuelgauge/LujarchBackgroundUsageController.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..b85cca300a642c45ef000241856b99603de61d9a
+index 0000000000000000000000000000000000000000..e01a6b16a2f5db83f31bdf1d0a88b60c0b06d2cc
 --- /dev/null
-+++ b/src/com/android/settings/fuelgauge/LujarchBackgroundLinkController.java
-@@ -0,0 +1,67 @@
++++ b/src/com/android/settings/fuelgauge/LujarchBackgroundUsageController.java
+@@ -0,0 +1,326 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -198,31 +698,84 @@ index 0000000000000000000000000000000000000000..b85cca300a642c45ef000241856b9960
 +
 +package com.android.settings.fuelgauge;
 +
++import android.app.AppOpsManager;
 +import android.content.ActivityNotFoundException;
 +import android.content.Context;
 +import android.content.Intent;
++import android.net.NetworkPolicyManager;
++import android.net.Uri;
++import android.os.Handler;
++import android.os.Looper;
++import android.os.RemoteException;
 +import android.os.UserHandle;
-+import android.text.TextUtils;
++import android.provider.Settings;
++import android.text.format.Formatter;
 +import android.util.Log;
 +
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++import androidx.preference.CheckBoxPreference;
 +import androidx.preference.Preference;
++import androidx.preference.PreferenceCategory;
++import androidx.preference.PreferenceScreen;
 +
++import com.android.internal.app.ILujarchBackground;
 +import com.android.internal.app.LujarchBackground;
++import com.android.internal.app.LujarchBackgroundApp;
++import com.android.internal.app.LujarchBackgroundProcess;
++import com.android.internal.app.LujarchBackgroundSuggestion;
++import com.android.settings.R;
++import com.android.settings.applications.AppInfoBase;
 +import com.android.settings.core.BasePreferenceController;
++import com.android.settings.datausage.AppDataUsage;
++import com.android.settingslib.widget.BannerMessagePreference;
++
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.List;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
 +
 +/**
-+ * App battery usage > Background: the app's battery figures stay here, its choices of how it runs
-+ * off screen are on its Background page, which this row opens (BG-3).
++ * Lujarch's Background (BG-2, BG-3) on Allow background usage: with Chosen processes, the app's
++ * processes to tick, each with its memory and whether it holds a network connection, the ones
++ * holding one suggested, and a broken choice's suggestion; below, After it leaves the screen: the
++ * app's Autostart, Alarms & reminders, Long background tasks, Background data and Keep, each
++ * leading to its own home.
 + */
-+public class LujarchBackgroundLinkController extends BasePreferenceController {
++public class LujarchBackgroundUsageController extends BasePreferenceController {
 +    private static final String TAG = "lujarch_background";
-+    static final String KEY = "lujarch_background";
++    static final String KEY = "lujarch_chosen_processes";
++    private static final String KEY_AFTER = "lujarch_after_leaving";
++    private static final String AUTOSTART_GROUP = "lujarch:autostart";
 +
 +    private final String mPackageName;
++    private final int mUid;
++    private final Fragment mFragment;
++    private final Handler mHandler = new Handler(Looper.getMainLooper());
++    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
++    @Nullable private PreferenceCategory mProcesses;
++    @Nullable private PreferenceCategory mAfter;
++    private int mMode = BatteryOptimizeUtils.MODE_UNKNOWN;
 +
-+    public LujarchBackgroundLinkController(Context context, String packageName) {
++    /** What the page shows, read off the main thread. */
++    private static final class Model {
++        @Nullable LujarchBackgroundApp app;
++        @Nullable LujarchBackgroundSuggestion suggestion;
++        int autostart;
++        int alarms;
++        int longJobs;
++        boolean backgroundData;
++        boolean kept;
++    }
++
++    public LujarchBackgroundUsageController(Context context, Fragment fragment, String packageName,
++            int uid) {
 +        super(context, KEY);
++        mFragment = fragment;
 +        mPackageName = packageName;
++        mUid = uid;
 +    }
 +
 +    @Override
@@ -231,19 +784,849 @@ index 0000000000000000000000000000000000000000..b85cca300a642c45ef000241856b9960
 +    }
 +
 +    @Override
-+    public boolean handlePreferenceTreeClick(Preference preference) {
-+        if (!TextUtils.equals(preference.getKey(), KEY)) {
-+            return false;
-+        }
-+        final Intent intent = new Intent(LujarchBackground.ACTION_APP)
-+                .setPackage(LujarchBackground.SETTINGS_PACKAGE)
-+                .putExtra(Intent.EXTRA_PACKAGE_NAME, mPackageName)
-+                .putExtra(Intent.EXTRA_USER, UserHandle.of(UserHandle.myUserId()));
++    public void displayPreference(@NonNull PreferenceScreen screen) {
++        super.displayPreference(screen);
++        mProcesses = screen.findPreference(KEY);
++        mAfter = screen.findPreference(KEY_AFTER);
++    }
++
++    @Override
++    public void updateState(@NonNull Preference preference) {
++        refresh(new BatteryOptimizeUtils(mContext, mUid, mPackageName).getAppOptimizationMode());
++    }
++
++    /** The level changed on the page: the processes show only for Chosen processes. */
++    void refresh(int mode) {
++        mMode = mode;
 +        try {
-+            mContext.startActivity(intent);
-+        } catch (ActivityNotFoundException e) {
-+            Log.e(TAG, "no Background page for " + mPackageName, e);
++            mExecutor.execute(() -> {
++                final Model m = load();
++                mHandler.post(() -> bind(m));
++            });
++        } catch (RuntimeException e) {
++            Log.e(TAG, "the page is gone", e);
 +        }
-+        return true;
++    }
++
++    private Model load() {
++        final Model m = new Model();
++        final int userId = UserHandle.getUserId(mUid);
++        final ILujarchBackground service = LujarchBackground.get();
++        if (service == null) {
++            Log.e(TAG, "the Background service is not running");
++        } else {
++            try {
++                m.app = service.getApp(mPackageName, userId);
++                m.suggestion = service.getSuggestion(mPackageName, userId);
++            } catch (RemoteException | RuntimeException e) {
++                Log.e(TAG, "cannot read " + mPackageName, e);
++            }
++        }
++        final AppOpsManager ops = mContext.getSystemService(AppOpsManager.class);
++        m.autostart = ops.unsafeCheckOpRawNoThrow(AppOpsManager.OP_LUJARCH_AUTOSTART, mUid,
++                mPackageName);
++        m.alarms = ops.unsafeCheckOpRawNoThrow(AppOpsManager.OP_SCHEDULE_EXACT_ALARM, mUid,
++                mPackageName);
++        m.longJobs = ops.unsafeCheckOpRawNoThrow(AppOpsManager.OP_RUN_USER_INITIATED_JOBS, mUid,
++                mPackageName);
++        m.kept = ops.unsafeCheckOpRawNoThrow(AppOpsManager.OP_LUJARCH_KEEP, mUid, mPackageName)
++                == AppOpsManager.MODE_ALLOWED;
++        m.backgroundData = (NetworkPolicyManager.from(mContext).getUidPolicy(mUid)
++                & NetworkPolicyManager.POLICY_REJECT_METERED_BACKGROUND) == 0;
++        return m;
++    }
++
++    private void bind(Model m) {
++        if (mProcesses == null || mAfter == null) {
++            return;
++        }
++        bindProcesses(m);
++        bindAfter(m);
++    }
++
++    private void bindProcesses(Model m) {
++        mProcesses.removeAll();
++        final boolean chosen = mMode == BatteryOptimizeUtils.MODE_CHOSEN;
++        mProcesses.setVisible(chosen || m.suggestion != null);
++        if (m.suggestion != null) {
++            final BannerMessagePreference banner = new BannerMessagePreference(mContext);
++            banner.setKey("lujarch_suggestion");
++            banner.setTitle(m.suggestion.title);
++            banner.setSummary(m.suggestion.text);
++            banner.setPositiveButtonText(R.string.lujarch_background_add_main);
++            banner.setPositiveButtonOnClickListener(v -> answer(true));
++            banner.setNegativeButtonText(R.string.lujarch_background_not_now);
++            banner.setNegativeButtonOnClickListener(v -> answer(false));
++            banner.setOrder(0);
++            mProcesses.addPreference(banner);
++        }
++        if (!chosen || m.app == null || m.app.processNames == null) {
++            return;
++        }
++        final List<String> ticked = m.app.chosen != null
++                ? new ArrayList<>(Arrays.asList(m.app.chosen)) : new ArrayList<>();
++        final List<String> connected = m.app.connected != null
++                ? Arrays.asList(m.app.connected) : List.of();
++        int order = 1;
++        for (String name : m.app.processNames) {
++            final CheckBoxPreference row = new CheckBoxPreference(mContext);
++            row.setKey("lujarch_process_" + name);
++            row.setOrder(order++);
++            row.setPersistent(false);
++            row.setTitle(name.equals(mPackageName)
++                    ? mContext.getString(R.string.lujarch_background_main_process) : name);
++            final List<String> parts = new ArrayList<>();
++            final long bytes = memoryOf(m.app, name);
++            parts.add(bytes > 0 ? Formatter.formatShortFileSize(mContext, bytes)
++                    : mContext.getString(R.string.lujarch_background_not_running));
++            if (connected.contains(name)) {
++                parts.add(mContext.getString(R.string.lujarch_background_connected));
++                if (!ticked.contains(name)) {
++                    parts.add(mContext.getString(R.string.lujarch_background_suggested));
++                }
++            }
++            row.setSummary(String.join(" · ", parts));
++            row.setChecked(ticked.contains(name));
++            row.setOnPreferenceChangeListener((p, value) -> {
++                if ((Boolean) value) {
++                    ticked.add(name);
++                } else {
++                    ticked.remove(name);
++                }
++                choose(ticked.toArray(new String[0]));
++                return true;
++            });
++            mProcesses.addPreference(row);
++        }
++    }
++
++    /** A process's memory by its short name: the package for the main process. */
++    private long memoryOf(LujarchBackgroundApp app, String name) {
++        long bytes = 0;
++        if (app.processes != null) {
++            for (LujarchBackgroundProcess p : app.processes) {
++                final String shortName = p.name == null || p.name.equals(mPackageName)
++                        ? mPackageName
++                        : p.name.startsWith(mPackageName + ":")
++                                ? p.name.substring(mPackageName.length()) : p.name;
++                if (shortName.equals(name)) {
++                    bytes += p.memoryBytes;
++                }
++            }
++        }
++        return bytes;
++    }
++
++    private void bindAfter(Model m) {
++        mAfter.removeAll();
++        final int userId = UserHandle.getUserId(mUid);
++        add(R.string.lujarch_background_autostart,
++                mContext.getString(m.autostart == AppOpsManager.MODE_ALLOWED
++                        ? R.string.lujarch_background_allow
++                        : m.autostart == AppOpsManager.MODE_DEFAULT
++                                ? R.string.lujarch_background_ask
++                                : R.string.lujarch_background_dont_allow),
++                () -> start(new Intent(Intent.ACTION_MANAGE_APP_PERMISSION)
++                        .putExtra(Intent.EXTRA_PACKAGE_NAME, mPackageName)
++                        .putExtra(Intent.EXTRA_PERMISSION_GROUP_NAME, AUTOSTART_GROUP)
++                        .putExtra(Intent.EXTRA_USER, UserHandle.of(userId))));
++        add(com.android.settingslib.R.string.alarms_and_reminders_title, allowed(m.alarms == AppOpsManager.MODE_ALLOWED),
++                () -> start(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
++                        Uri.fromParts("package", mPackageName, null))));
++        add(R.string.long_background_tasks_label,
++                allowed(m.longJobs == AppOpsManager.MODE_ALLOWED),
++                () -> start(new Intent(Settings.ACTION_MANAGE_APP_LONG_RUNNING_JOBS,
++                        Uri.fromParts("package", mPackageName, null))));
++        add(R.string.data_usage_app_restrict_background, allowed(m.backgroundData),
++                () -> AppInfoBase.startAppInfoFragment(AppDataUsage.class,
++                        mContext.getString(R.string.data_usage_app_restrict_background), mPackageName,
++                        mUid, mFragment, /* request= */ 0, getMetricsCategory()));
++        final Preference keep = add(R.string.lujarch_background_keep,
++                mContext.getString(m.kept ? R.string.lujarch_background_kept_on
++                        : R.string.lujarch_background_kept_off), null);
++        keep.setSelectable(false);
++    }
++
++    private String allowed(boolean allowed) {
++        return mContext.getString(allowed ? R.string.app_permission_summary_allowed
++                : R.string.app_permission_summary_not_allowed);
++    }
++
++    private Preference add(int title, String summary, @Nullable Runnable open) {
++        final Preference row = new Preference(mContext);
++        row.setKey("lujarch_after_" + title);
++        row.setTitle(title);
++        row.setSummary(summary);
++        row.setOrder(mAfter.getPreferenceCount());
++        if (open != null) {
++            row.setOnPreferenceClickListener(p -> {
++                open.run();
++                return true;
++            });
++        }
++        mAfter.addPreference(row);
++        return row;
++    }
++
++    private void start(Intent intent) {
++        try {
++            mContext.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++        } catch (ActivityNotFoundException e) {
++            Log.e(TAG, "cannot open " + intent.getAction(), e);
++        }
++    }
++
++    private void choose(String[] names) {
++        mExecutor.execute(() -> {
++            final ILujarchBackground service = LujarchBackground.get();
++            try {
++                if (service == null) {
++                    throw new IllegalStateException("the Background service is not running");
++                }
++                service.setChosenProcesses(mPackageName, UserHandle.getUserId(mUid), names);
++            } catch (RemoteException | RuntimeException e) {
++                Log.e(TAG, "cannot choose the processes of " + mPackageName, e);
++            }
++        });
++    }
++
++    private void answer(boolean accept) {
++        mExecutor.execute(() -> {
++            final ILujarchBackground service = LujarchBackground.get();
++            try {
++                if (service == null) {
++                    throw new IllegalStateException("the Background service is not running");
++                }
++                service.answerSuggestion(mPackageName, UserHandle.getUserId(mUid), accept);
++            } catch (RemoteException | RuntimeException e) {
++                Log.e(TAG, "cannot answer the suggestion for " + mPackageName, e);
++            }
++            mHandler.post(() -> refresh(new BatteryOptimizeUtils(mContext, mUid, mPackageName)
++                    .getAppOptimizationMode()));
++        });
 +    }
 +}
+diff --git a/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java b/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..5a98f8c42d83d236a260b4ebf4f14011e0d8276f
+--- /dev/null
++++ b/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java
+@@ -0,0 +1,224 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.fuelgauge;
++
++import android.app.AlertDialog;
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Paint;
++import android.graphics.RectF;
++import android.text.format.DateFormat;
++import android.util.TypedValue;
++import android.view.MotionEvent;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.FrameLayout;
++
++import androidx.preference.Preference;
++import androidx.preference.PreferenceViewHolder;
++
++import com.android.internal.app.LujarchBackground;
++import com.android.internal.app.LujarchBackgroundEvent;
++import com.android.internal.app.LujarchBackgroundRun;
++import com.android.settings.R;
++
++import java.util.ArrayList;
++import java.util.Date;
++import java.util.List;
++
++/**
++ * Lujarch's Background (BG-1): the app's run state as one line per process through the chosen
++ * day or hour, each minute in its state's color, with a mark at each reclaim; touching a line
++ * opens what happened there, who did it and why.
++ */
++public class LujarchRunStatePreference extends Preference {
++    private static final long MINUTE_MS = 60_000;
++
++    private LujarchBackgroundRun[] mRuns = new LujarchBackgroundRun[0];
++    private LujarchBackgroundEvent[] mEvents = new LujarchBackgroundEvent[0];
++    private long mDayStart;
++    private int mFrom;
++    private int mTo = LujarchBackground.RUN_MINUTES;
++    private String mPackageName = "";
++
++    public LujarchRunStatePreference(Context context) {
++        super(context);
++        setLayoutResource(R.layout.lujarch_run_state);
++        setSelectable(false);
++        setPersistent(false);
++    }
++
++    /** The lines of the minutes from..to of the day that starts at dayStart. */
++    public void setLines(String packageName, LujarchBackgroundRun[] runs,
++            LujarchBackgroundEvent[] events, long dayStart, int from, int to) {
++        mPackageName = packageName;
++        mRuns = runs;
++        mEvents = events;
++        mDayStart = dayStart;
++        mFrom = from;
++        mTo = Math.max(from + 1, to);
++        notifyChanged();
++    }
++
++    @Override
++    public void onBindViewHolder(PreferenceViewHolder holder) {
++        super.onBindViewHolder(holder);
++        final FrameLayout frame = (FrameLayout) holder.findViewById(R.id.lujarch_run_state);
++        frame.removeAllViews();
++        frame.addView(new Lines(getContext()), new FrameLayout.LayoutParams(
++                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
++    }
++
++    private float dp(float v) {
++        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
++                getContext().getResources().getDisplayMetrics());
++    }
++
++    private String name(LujarchBackgroundRun run) {
++        return run.name.equals(mPackageName)
++                ? getContext().getString(R.string.lujarch_background_main_process) : run.name;
++    }
++
++    private String time(int minute) {
++        return DateFormat.getTimeFormat(getContext()).format(
++                new Date(mDayStart + minute * MINUTE_MS));
++    }
++
++    /** What happened on a line near a minute, newest first. */
++    private void showAt(LujarchBackgroundRun run, int minute) {
++        final int near = Math.max(5, (mTo - mFrom) / 48);
++        final List<String> lines = new ArrayList<>();
++        final String state = run.minutes.length > minute && run.minutes[minute] != 0
++                ? LujarchBackground.stateName(getContext(), run.minutes[minute]) : null;
++        if (state != null) {
++            lines.add(time(minute) + "  " + state);
++        }
++        for (LujarchBackgroundEvent e : mEvents) {
++            final int m = (int) ((e.timeMillis - mDayStart) / MINUTE_MS);
++            if (Math.abs(m - minute) > near) {
++                continue;
++            }
++            if (e.process != null && !e.process.equals(run.name)
++                    && !(run.name.equals(mPackageName) && e.process.equals(mPackageName))) {
++                continue;
++            }
++            lines.add(time(m) + "  " + (e.whoName != null ? e.whoName + " · " : "") + e.text);
++        }
++        new AlertDialog.Builder(getContext())
++                .setTitle(name(run))
++                .setMessage(String.join("\n", lines))
++                .setPositiveButton(android.R.string.ok, null)
++                .show();
++    }
++
++    /** The lines, each under its process's name, over the axis of the time. */
++    private final class Lines extends View {
++        private final Paint mFill = new Paint(Paint.ANTI_ALIAS_FLAG);
++        private final Paint mText = new Paint(Paint.ANTI_ALIAS_FLAG);
++        private final RectF mRect = new RectF();
++        private final float mLabel = dp(18);
++        private final float mBar = dp(10);
++        private final float mGap = dp(10);
++        private final float mAxis = dp(18);
++
++        Lines(Context context) {
++            super(context);
++            mText.setTextSize(dp(12));
++            final android.content.res.TypedArray a = context.obtainStyledAttributes(
++                    new int[] {android.R.attr.textColorSecondary});
++            mText.setColor(a.getColor(0, 0xFF888888));
++            a.recycle();
++        }
++
++        @Override
++        protected void onMeasure(int widthSpec, int heightSpec) {
++            final int h = (int) (mRuns.length * (mLabel + mBar + mGap) + mAxis);
++            setMeasuredDimension(MeasureSpec.getSize(widthSpec), h);
++        }
++
++        private float x(int minute) {
++            return (minute - mFrom) * (float) getWidth() / (mTo - mFrom);
++        }
++
++        @Override
++        protected void onDraw(Canvas canvas) {
++            float y = 0;
++            final float r = mBar / 2;
++            for (LujarchBackgroundRun run : mRuns) {
++                canvas.drawText(name(run), 0, y + mLabel - dp(5), mText);
++                final float top = y + mLabel;
++                int i = mFrom;
++                while (i < mTo) {
++                    final byte state = i < run.minutes.length ? run.minutes[i] : 0;
++                    int j = i;
++                    while (j < mTo && (j < run.minutes.length ? run.minutes[j] : 0) == state) {
++                        j++;
++                    }
++                    if (state != 0) {
++                        mFill.setColor(LujarchBackground.stateColor(getContext(), state));
++                        mRect.set(x(i), top, Math.max(x(i) + 1, x(j)), top + mBar);
++                        canvas.drawRoundRect(mRect, r, r, mFill);
++                    }
++                    i = j;
++                }
++                // A mark at each reclaim of this process.
++                mFill.setColor(0xFFFFFFFF);
++                for (LujarchBackgroundEvent e : mEvents) {
++                    if (e.kind != LujarchBackground.EVENT_ENDED) {
++                        continue;
++                    }
++                    final boolean mine = e.process == null ? run.name.equals(mPackageName)
++                            : e.process.equals(run.name);
++                    final int m = (int) ((e.timeMillis - mDayStart) / MINUTE_MS);
++                    if (mine && m >= mFrom && m < mTo) {
++                        canvas.drawRect(x(m) - dp(1), top - dp(2), x(m) + dp(1),
++                                top + mBar + dp(2), mFill);
++                    }
++                }
++                y += mLabel + mBar + mGap;
++            }
++            // The axis: the start, the quarters and the end of the span.
++            final int span = mTo - mFrom;
++            for (int q = 0; q <= 4; q++) {
++                final int minute = mFrom + span * q / 4;
++                final String label = span >= 23 * 60
++                        ? String.format(java.util.Locale.ROOT, "%02d", minute / 60)
++                        : time(minute);
++                final float w = mText.measureText(label);
++                final float lx = Math.max(0, Math.min(getWidth() - w, x(minute) - w / 2));
++                canvas.drawText(label, lx, y + mAxis - dp(4), mText);
++            }
++        }
++
++        @Override
++        public boolean onTouchEvent(MotionEvent event) {
++            if (event.getAction() == MotionEvent.ACTION_DOWN) {
++                return true;
++            }
++            if (event.getAction() != MotionEvent.ACTION_UP || mRuns.length == 0) {
++                return super.onTouchEvent(event);
++            }
++            final int line = (int) (event.getY() / (mLabel + mBar + mGap));
++            if (line < 0 || line >= mRuns.length) {
++                return true;
++            }
++            final int minute = mFrom + (int) (event.getX() / getWidth() * (mTo - mFrom));
++            showAt(mRuns[line], Math.max(mFrom, Math.min(mTo - 1, minute)));
++            return true;
++        }
++    }
++}
+diff --git a/src/com/android/settings/fuelgauge/PowerBackgroundUsageDetail.java b/src/com/android/settings/fuelgauge/PowerBackgroundUsageDetail.java
+index f2bc80b388778db208eaf870b8f5d49f804906bf..114bbb45d899bd163c14077122ce40b6f82f88f0 100644
+--- a/src/com/android/settings/fuelgauge/PowerBackgroundUsageDetail.java
++++ b/src/com/android/settings/fuelgauge/PowerBackgroundUsageDetail.java
+@@ -153,14 +153,20 @@ public class PowerBackgroundUsageDetail extends DashboardFragment {
+         final String hintPrefKey = bundle.getString(EXTRA_HINT_PREF_KEY);
+         final String hintText = bundle.getString(EXTRA_HINT_TEXT);
+ 
+-        final List<AbstractPreferenceController> controllers = new ArrayList<>(1);
+-        controllers.add(
++        final List<AbstractPreferenceController> controllers = new ArrayList<>(2);
++        final BatteryOptimizationModePreferenceController modes =
+                 new BatteryOptimizationModePreferenceController(
+                         context,
+                         KEY_BATTERY_OPTIMIZATION_MODE_CATEGORY,
+                         mBatteryOptimizeUtils,
+                         hintPrefKey,
+-                        hintText));
++                        hintText);
++        // Lujarch's Background (BG-2): the processes of Chosen processes and After it leaves the
++        // screen follow the level chosen above.
++        modes.mLujarch = new LujarchBackgroundUsageController(context, this,
++                bundle.getString(EXTRA_PACKAGE_NAME), bundle.getInt(EXTRA_UID, 0));
++        controllers.add(modes);
++        controllers.add(modes.mLujarch);
+ 
+         return controllers;
+     }
+diff --git a/src/com/android/settings/fuelgauge/batteryusage/BatteryOptimizationModeCache.java b/src/com/android/settings/fuelgauge/batteryusage/BatteryOptimizationModeCache.java
+index 076676d0eabc09058790801c62cc65ee5a9a9bf7..180d583261d1fa440868f5da260aa94d4cf04aa7 100644
+--- a/src/com/android/settings/fuelgauge/batteryusage/BatteryOptimizationModeCache.java
++++ b/src/com/android/settings/fuelgauge/batteryusage/BatteryOptimizationModeCache.java
+@@ -46,13 +46,15 @@ final class BatteryOptimizationModeCache {
+         if (!mBatteryOptimizeModeCache.contains(uid)) {
+             final BatteryOptimizeUtils batteryOptimizeUtils =
+                     new BatteryOptimizeUtils(mContext, uid, packageName);
++            final int mode = batteryOptimizeUtils.getAppOptimizationMode(
++                    /* refreshList= */ false, /* ignoreUnknownMode= */ false);
++            // Lujarch's Background (BG-2): the record knows Chosen processes as Optimized.
+             mBatteryOptimizeModeCache.put(
+                     uid,
+                     Pair.create(
+                             BatteryOptimizationMode.forNumber(
+-                                    batteryOptimizeUtils.getAppOptimizationMode(
+-                                            /* refreshList= */ false,
+-                                            /* ignoreUnknownMode= */ false)),
++                                    mode == BatteryOptimizeUtils.MODE_CHOSEN
++                                            ? BatteryOptimizeUtils.MODE_OPTIMIZED : mode),
+                             batteryOptimizeUtils.isOptimizeModeMutable()));
+         }
+         final Pair<BatteryOptimizationMode, Boolean> batteryOptimizeModeInfo =
+diff --git a/src/com/android/settings/lujarch/battery/RecordAppPageController.java b/src/com/android/settings/lujarch/battery/RecordAppPageController.java
+index 8a5bf57e2bc7c3199e902865951ba213bf589fac..dc55b7c6c5e666a223de6100c1e8922db35c37cb 100644
+--- a/src/com/android/settings/lujarch/battery/RecordAppPageController.java
++++ b/src/com/android/settings/lujarch/battery/RecordAppPageController.java
+@@ -16,16 +16,25 @@
+ package com.android.settings.lujarch.battery;
+ 
+ import android.content.Context;
++import android.content.Intent;
+ import android.os.BatteryConsumer;
+ import android.os.Handler;
+ import android.os.Looper;
++import android.os.RemoteException;
++import android.os.UserHandle;
++import android.util.Log;
+ 
+ import androidx.preference.Preference;
+ import androidx.preference.PreferenceCategory;
+ import androidx.preference.PreferenceScreen;
+ 
++import com.android.internal.app.ILujarchBackground;
++import com.android.internal.app.LujarchBackground;
++import com.android.internal.app.LujarchBackgroundEvent;
++import com.android.internal.app.LujarchBackgroundRun;
+ import com.android.settings.R;
+ import com.android.settings.Utils;
++import com.android.settings.fuelgauge.LujarchRunStatePreference;
+ import com.android.settings.fuelgauge.batteryusage.PowerGaugePreference;
+ import com.android.settingslib.core.AbstractPreferenceController;
+ import com.android.settingslib.core.lifecycle.Lifecycle;
+@@ -34,7 +43,9 @@ import com.android.settingslib.core.lifecycle.events.OnDestroy;
+ import com.android.settingslib.core.lifecycle.events.OnResume;
+ 
+ import java.util.ArrayList;
++import java.util.LinkedHashMap;
+ import java.util.List;
++import java.util.Map;
+ import java.util.concurrent.ExecutorService;
+ import java.util.concurrent.Executors;
+ 
+@@ -56,6 +67,8 @@ public final class RecordAppPageController extends AbstractPreferenceController
+     private static final String KEY_TIMELINE = "lujarch_app_timeline";
+     private static final int MAX_TIMELINE_ROWS = 300;
+     private static final int MAX_TAGS = 4;
++    private static final int MAX_EVENTS = 2000;
++    private static final String TAG = "lujarch_background";
+ 
+     /** Colors of the power components, in the order of the rows. */
+     private static final int[] PALETTE = {
+@@ -72,6 +85,7 @@ public final class RecordAppPageController extends AbstractPreferenceController
+     private PreferenceCategory mComponents;
+     private RecordSegmentsPreference mSegments;
+     private PreferenceCategory mStates;
++    private LujarchRunStatePreference mRunState;
+     private PreferenceCategory mOff;
+     private PreferenceCategory mTimeline;
+ 
+@@ -86,6 +100,8 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         String widget;
+         /** The color square of a power component (its share in the bar), or 0. */
+         int color;
++        /** What a tap opens, or null. */
++        Intent intent;
+     }
+ 
+     /** Everything the page shows, built on a background thread. */
+@@ -96,6 +112,12 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         float[] segmentWeights = new float[0];
+         int[] segmentColors = new int[0];
+         List<Row> states = new ArrayList<>();
++        /** Lujarch's Background (BG-1): the lines of the run state in the selection. */
++        LujarchBackgroundRun[] runs = new LujarchBackgroundRun[0];
++        LujarchBackgroundEvent[] runEvents = new LujarchBackgroundEvent[0];
++        long runDay;
++        int runFrom;
++        int runTo;
+         List<Row> off = new ArrayList<>();
+         String timelineTitle;
+         List<Row> timeline = new ArrayList<>();
+@@ -135,6 +157,10 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         mTimeline = screen.findPreference(KEY_TIMELINE);
+         mComponents.setOrderingAsAdded(false);
+         mStates.setOrderingAsAdded(false);
++        mRunState = new LujarchRunStatePreference(mContext);
++        mRunState.setKey("lujarch_run_state");
++        mRunState.setOrder(0);
++        mStates.addPreference(mRunState);
+         mOff.setOrderingAsAdded(false);
+         mTimeline.setOrderingAsAdded(false);
+     }
+@@ -229,8 +255,8 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         m.chart.hours = hd;
+         m.chart.legendColors = new int[] {accent, muted};
+         m.chart.legendTexts = new String[] {
+-                mContext.getString(R.string.lujarch_battery_legend_foreground),
+-                mContext.getString(R.string.lujarch_battery_legend_background)};
++                LujarchBackground.stateName(mContext, LujarchBackground.RUN_FOREGROUND),
++                LujarchBackground.stateName(mContext, LujarchBackground.RUN_BACKGROUND)};
+         m.chart.dayListener = i -> {
+             if (mSelDay != i) {
+                 mSelDay = i;
+@@ -266,11 +292,10 @@ public final class RecordAppPageController extends AbstractPreferenceController
+             final Row r = new Row();
+             r.title = componentName(c.comp);
+             r.summary = RecordPageController.join(
+-                    state(R.string.lujarch_battery_state_fg, c.byState[0] + c.byState[
++                    state(LujarchBackground.RUN_FOREGROUND, c.byState[0] + c.byState[
+                             BatteryConsumer.PROCESS_STATE_FOREGROUND]),
+-                    state(R.string.lujarch_battery_state_fgs, c.byState[
+-                            BatteryConsumer.PROCESS_STATE_FOREGROUND_SERVICE]),
+-                    state(R.string.lujarch_battery_state_bg, c.byState[
++                    state(LujarchBackground.RUN_BACKGROUND, c.byState[
++                            BatteryConsumer.PROCESS_STATE_FOREGROUND_SERVICE] + c.byState[
+                             BatteryConsumer.PROCESS_STATE_BACKGROUND] + c.byState[
+                             BatteryConsumer.PROCESS_STATE_CACHED]));
+             r.widget = RecordFormat.mah(mContext, c.mah);
+@@ -301,25 +326,8 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         }
+         m.header = header.toString();
+ 
+-        // How long and how much in each process state.
+-        final RecordStore.State[] states = store.states(mUid, range[0], range[1]);
+-        final int[] stateOrder = {BatteryConsumer.PROCESS_STATE_FOREGROUND,
+-                BatteryConsumer.PROCESS_STATE_FOREGROUND_SERVICE,
+-                BatteryConsumer.PROCESS_STATE_BACKGROUND, BatteryConsumer.PROCESS_STATE_CACHED};
+-        final int[] stateNames = {R.string.lujarch_battery_state_fg,
+-                R.string.lujarch_battery_state_fgs, R.string.lujarch_battery_state_bg,
+-                R.string.lujarch_battery_state_cached};
+-        for (int i = 0; i < stateOrder.length; i++) {
+-            final RecordStore.State s = states[stateOrder[i]];
+-            if (s.ms <= 0 && s.mah < 0.5) {
+-                continue;
+-            }
+-            final Row r = new Row();
+-            r.title = mContext.getString(stateNames[i]);
+-            r.summary = RecordFormat.duration(mContext, s.ms);
+-            r.widget = RecordFormat.mah(mContext, s.mah);
+-            m.states.add(r);
+-        }
++        // Lujarch's Background (BG-1): the run state takes the place of the process states.
++        runStateRows(m, range);
+ 
+         // What it did while the screen was off.
+         offRows(m, store, range);
+@@ -336,11 +344,124 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         return m;
+     }
+ 
+-    private String state(int nameRes, double mah) {
++    private String state(int runState, double mah) {
+         if (mah < 0.5) {
+             return null;
+         }
+-        return mContext.getString(nameRes) + " " + RecordFormat.mah(mContext, mah);
++        return LujarchBackground.stateName(mContext, runState) + " "
++                + RecordFormat.mah(mContext, mah);
++    }
++
++    /**
++     * Lujarch's Background (BG-1): the run state of the app's processes in the selection, from
++     * the system's lines: the time in each state with the processes that were in it, the
++     * reclaims by reason, and the times it was woken, which lead to its Autostart.
++     */
++    private void runStateRows(Model m, long[] range) {
++        final ILujarchBackground service = LujarchBackground.get();
++        if (service == null || mPackage == null) {
++            Log.e(TAG, "the Background service is not running");
++            return;
++        }
++        final int userId = UserHandle.getUserId(mUid);
++        final long dayStart = java.time.Instant.ofEpochMilli(range[0])
++                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
++                .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
++        final LujarchBackgroundRun[] runs;
++        final LujarchBackgroundEvent[] events;
++        try {
++            runs = service.getRunState(mPackage, userId, dayStart);
++            events = service.getEvents(mPackage, userId, range[0], MAX_EVENTS);
++        } catch (RemoteException | RuntimeException e) {
++            Log.e(TAG, "cannot read the run state of " + mPackage, e);
++            return;
++        }
++        final int from = (int) Math.max(0, (range[0] - dayStart) / 60_000);
++        final int to = (int) Math.min(LujarchBackground.RUN_MINUTES, (range[1] - dayStart) / 60_000);
++        m.runs = runs;
++        m.runEvents = events;
++        m.runDay = dayStart;
++        m.runFrom = from;
++        m.runTo = to;
++        final String separator = mContext.getString(R.string.lujarch_battery_list_separator);
++        for (int state = LujarchBackground.RUN_FOREGROUND; state <= LujarchBackground.RUN_STOPPED;
++                state++) {
++            final int[] minutes = new int[1];
++            final List<String> who = new ArrayList<>();
++            for (LujarchBackgroundRun run : runs) {
++                int n = 0;
++                for (int i = from; i < to && i < run.minutes.length; i++) {
++                    if (run.minutes[i] == state) {
++                        n++;
++                    }
++                }
++                if (n > 0) {
++                    who.add(run.name.equals(mPackage)
++                            ? mContext.getString(R.string.lujarch_background_main_process)
++                            : run.name);
++                }
++                minutes[0] = Math.max(minutes[0], n);
++            }
++            if (minutes[0] == 0 || state == LujarchBackground.RUN_RECLAIMED
++                    || state == LujarchBackground.RUN_STOPPED) {
++                continue;
++            }
++            final Row r = new Row();
++            r.title = LujarchBackground.stateName(mContext, state);
++            r.color = LujarchBackground.stateColor(mContext, state);
++            r.summary = runs.length > 1
++                    ? RecordPageController.join(String.join(separator, who),
++                            RecordFormat.duration(mContext, minutes[0] * 60_000L))
++                    : RecordFormat.duration(mContext, minutes[0] * 60_000L);
++            m.states.add(r);
++        }
++        final Map<String, Integer> ended = new LinkedHashMap<>();
++        final Map<String, Integer> woken = new LinkedHashMap<>();
++        int endedCount = 0;
++        int wokenCount = 0;
++        for (LujarchBackgroundEvent e : events) {
++            if (e.timeMillis >= range[1]) {
++                continue;
++            }
++            final int count = Math.max(1, e.count);
++            final String reason = e.reason != null ? e.reason : "";
++            if (e.kind == LujarchBackground.EVENT_ENDED) {
++                ended.merge(reason, count, Integer::sum);
++                endedCount += count;
++            } else if (e.kind == LujarchBackground.EVENT_WOKEN
++                    || e.kind == LujarchBackground.EVENT_STARTED) {
++                woken.merge(reason, count, Integer::sum);
++                wokenCount += count;
++            }
++        }
++        if (endedCount > 0) {
++            final Row r = new Row();
++            r.title = mContext.getResources().getQuantityString(
++                    R.plurals.lujarch_background_reclaimed, endedCount, endedCount);
++            r.summary = counts(ended, separator);
++            m.states.add(r);
++        }
++        if (wokenCount > 0) {
++            final Row r = new Row();
++            r.title = mContext.getResources().getQuantityString(
++                    R.plurals.lujarch_background_woken, wokenCount, wokenCount);
++            r.summary = counts(woken, separator);
++            r.intent = new Intent(Intent.ACTION_MANAGE_APP_PERMISSION)
++                    .putExtra(Intent.EXTRA_PACKAGE_NAME, mPackage)
++                    .putExtra(Intent.EXTRA_PERMISSION_GROUP_NAME, "lujarch:autostart")
++                    .putExtra(Intent.EXTRA_USER, UserHandle.of(userId));
++            m.states.add(r);
++        }
++    }
++
++    /** "called while paused 27 · low memory 3": each reason with its count. */
++    private static String counts(Map<String, Integer> byReason, String separator) {
++        final List<String> parts = new ArrayList<>();
++        for (Map.Entry<String, Integer> e : byReason.entrySet()) {
++            parts.add(e.getKey().isEmpty() ? String.valueOf(e.getValue())
++                    : e.getKey() + " " + e.getValue());
++        }
++        return String.join(" · ", parts);
+     }
+ 
+     private void offRows(Model m, RecordStore store, long[] range) {
+@@ -555,8 +676,10 @@ public final class RecordAppPageController extends AbstractPreferenceController
+         mSegments.setSegments(m.segmentWeights, m.segmentColors);
+         mComponents.setVisible(!m.components.isEmpty());
+         fill(mComponents, m.components, 1);
+-        mStates.setVisible(!m.states.isEmpty());
+-        fill(mStates, m.states, 0);
++        mStates.setVisible(!m.states.isEmpty() || m.runs.length > 0);
++        mRunState.setLines(mPackage, m.runs, m.runEvents, m.runDay, m.runFrom, m.runTo);
++        mRunState.setVisible(m.runs.length > 0);
++        fill(mStates, m.states, 1);
+         mOff.setVisible(!m.off.isEmpty());
+         fill(mOff, m.off, 0);
+         mTimeline.setTitle(m.timelineTitle);
+@@ -584,7 +707,10 @@ public final class RecordAppPageController extends AbstractPreferenceController
+                 d.setSize(size, size);
+                 p.setIcon(d);
+             }
+-            p.setSelectable(false);
++            p.setSelectable(row.intent != null);
++            if (row.intent != null) {
++                p.setIntent(row.intent);
++            }
+             p.setKey(category.getKey() + "_" + order);
+             p.setOrder(order++);
+             category.addPreference(p);
+diff --git a/src/com/android/settings/spa/app/battery/BatteryOptimizationModeAppListPageProvider.kt b/src/com/android/settings/spa/app/battery/BatteryOptimizationModeAppListPageProvider.kt
+index 5c27f5bfad0f8087d32abcbf01312b0e3be0e8b9..f6e7a6b035d8e80c5aaff8263d6a00b507766889 100644
+--- a/src/com/android/settings/spa/app/battery/BatteryOptimizationModeAppListPageProvider.kt
++++ b/src/com/android/settings/spa/app/battery/BatteryOptimizationModeAppListPageProvider.kt
+@@ -23,6 +23,7 @@ import android.os.Bundle
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.res.stringResource
+ import androidx.core.os.bundleOf
++import com.android.internal.app.LujarchBackground
+ import com.android.settings.R
+ import com.android.settings.Utils
+ import com.android.settings.core.SubSettingLauncher
+@@ -113,6 +114,8 @@ class BatteryOptimizationModeAppListModel(
+                     appOptimizationMode == BatteryOptimizeUtils.MODE_RESTRICTED
+                 OptimizationModeSpinnerItem.Optimized ->
+                     appOptimizationMode == BatteryOptimizeUtils.MODE_OPTIMIZED
++                OptimizationModeSpinnerItem.Chosen ->
++                    appOptimizationMode == BatteryOptimizeUtils.MODE_CHOSEN
+                 OptimizationModeSpinnerItem.Unrestricted ->
+                     appOptimizationMode == BatteryOptimizeUtils.MODE_UNRESTRICTED
+                 else -> (true)
+@@ -132,6 +135,18 @@ class BatteryOptimizationModeAppListModel(
+             !app.enabled -> {
+                 summary += context.getString(com.android.settingslib.R.string.disabled)
+             }
++
++            // Lujarch's Background (BG-2): every app with its level.
++            else -> {
++                summary += LujarchBackground.usageName(context, when (
++                    BatteryOptimizeUtils(context, app.uid, app.packageName)
++                        .getAppOptimizationMode(/* refreshList */ false, /* ignoreUnknownMode */ true)) {
++                    BatteryOptimizeUtils.MODE_UNRESTRICTED -> LujarchBackground.USAGE_UNRESTRICTED
++                    BatteryOptimizeUtils.MODE_CHOSEN -> LujarchBackground.USAGE_CHOSEN
++                    BatteryOptimizeUtils.MODE_RESTRICTED -> LujarchBackground.USAGE_RESTRICTED
++                    else -> LujarchBackground.USAGE_OPTIMIZED
++                })
++            }
+         }
+         summary
+     }
+@@ -159,5 +174,6 @@ private enum class OptimizationModeSpinnerItem(val stringResId: Int) {
+     All(R.string.filter_all_apps),
+     Restricted(R.string.filter_battery_restricted_title),
+     Optimized(R.string.filter_battery_optimized_title),
++    Chosen(R.string.lujarch_background_chosen),
+     Unrestricted(R.string.filter_battery_unrestricted_title);
+ }
