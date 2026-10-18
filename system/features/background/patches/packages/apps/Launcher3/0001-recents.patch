@@ -2231,10 +2231,32 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25f40d984042f7ffd720bca2cc7fb2bf
              LauncherState state = getStateManager().getState();
              boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..8c6bbe75a3c2a2e689d03d64e08b0763974a623f 100644
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9ae018856 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 +++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-@@ -333,6 +333,12 @@ constructor(
+@@ -18,11 +18,13 @@ package com.android.quickstep.views
+ 
+ import android.animation.AnimatorSet
+ import android.app.ActivityTaskManager.INVALID_TASK_ID
++import android.graphics.RectF
+ import android.util.Log
+ import android.view.View
+ import androidx.core.animation.addListener
+ import androidx.core.graphics.toRectF
+ import androidx.core.view.children
++import androidx.core.view.doOnPreDraw
+ import androidx.dynamicanimation.animation.FloatPropertyCompat
+ import androidx.dynamicanimation.animation.FloatValueHolder
+ import androidx.dynamicanimation.animation.SpringAnimation
+@@ -37,6 +39,7 @@ import com.android.launcher3.util.DynamicResource
+ import com.android.launcher3.util.MSDLPlayerWrapper
+ import com.android.launcher3.views.ActivityContext
+ import com.android.quickstep.SystemUiProxy
++import com.android.quickstep.lujarch.LujarchRecents
+ import com.android.quickstep.util.TaskGridNavHelper
+ import com.android.quickstep.views.RecentsView.RECENTS_SCALE_PROPERTY
+ import com.android.quickstep.views.RecentsView.TAG
+@@ -333,6 +336,12 @@ constructor(
  
      /** Dismisses all */
      fun dismissAllTasks() {
@@ -2247,6 +2269,101 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..8c6bbe75a3c2a2e689d03d64e08b0763
          val allDismissSprings =
              recentsView.mUtils.taskViews
                  .reversed()
+@@ -974,6 +983,9 @@ constructor(
+ 
+             // Page snapping and relayout to run after all animations have completed.
+             val onFinishComplete = {
++                // Lujarch's Background (BG-10): the folded cards' places before the relayout.
++                val lujarchPlaces = lujarchCardPlaces(dismissedTaskView)
++
+                 // Reset task translations as they may have updated via the dismiss animations.
+                 resetTaskVisuals()
+ 
+@@ -1006,6 +1018,7 @@ constructor(
+ 
+                 // Update the UI after removal and snap to page.
+                 updateUiAfterTaskRemoval(dismissedTaskView, pageToSnapTo, isDismissingHomeTask)
++                lujarchFollowRelayout(lujarchPlaces)
+ 
+                 if (!dismissingForSplitSelection) {
+                     InteractionJankMonitorWrapper.end(Cuj.CUJ_LAUNCHER_OVERVIEW_TASK_DISMISS)
+@@ -1021,6 +1034,67 @@ constructor(
+         }
+     }
+ 
++    /**
++     * Lujarch's Background (BG-10): where each folded card shows, by its id, as its centre and
++     * width on screen; null when Recents is not folded.
++     */
++    private fun lujarchCardPlaces(dismissedTaskView: TaskView?): Map<Int, FloatArray>? {
++        with(recentsView) {
++            if (!LujarchRecents.foldsIntoRows((mContainer as ActivityContext).getDeviceProfile())) {
++                return null
++            }
++            return mUtils.taskViews
++                .filter { it != dismissedTaskView }
++                .associate { it.taskViewId to lujarchPlace(it) }
++        }
++    }
++
++    private fun lujarchPlace(taskView: TaskView): FloatArray {
++        val r = RectF(0f, 0f, taskView.width.toFloat(), taskView.height.toFloat())
++        taskView.matrix.mapRect(r)
++        r.offset(taskView.left.toFloat() - recentsView.scrollX, taskView.top.toFloat())
++        return floatArrayOf(r.centerX(), r.centerY(), r.width())
++    }
++
++    /**
++     * Once the cards are laid out again after a dismissal, each one moves from where it showed to
++     * its new place, growing or shrinking into its new size, instead of jumping there.
++     */
++    private fun lujarchFollowRelayout(places: Map<Int, FloatArray>?) {
++        if (places.isNullOrEmpty()) return
++        recentsView.doOnPreDraw {
++            val moves =
++                recentsView.mUtils.taskViews.mapNotNull { taskView ->
++                    val from = places[taskView.taskViewId] ?: return@mapNotNull null
++                    val width = taskView.width * taskView.scaleX
++                    val scale = if (width > 0f) from[2] / width else 1f
++                    TaskView.DISMISS_SCALE.set(taskView, scale)
++                    val to = lujarchPlace(taskView)
++                    val dx = from[0] - to[0]
++                    val dy = from[1] - to[1]
++                    if (abs(dx) < 1f && abs(dy) < 1f && abs(scale - 1f) < 0.01f) {
++                        TaskView.DISMISS_SCALE.set(taskView, 1f)
++                        return@mapNotNull null
++                    }
++                    floatArrayOf(dx, dy, scale) to taskView
++                }
++            if (moves.isEmpty()) return@doOnPreDraw
++            val apply = { left: Float ->
++                for ((move, taskView) in moves) {
++                    taskView.primaryDismissTranslationProperty.setValue(taskView, move[0] * left)
++                    taskView.secondaryDismissTranslationProperty.setValue(taskView, move[1] * left)
++                    TaskView.DISMISS_SCALE.set(taskView, 1f + (move[2] - 1f) * left)
++                }
++            }
++            apply(1f)
++            SpringAnimation(FloatValueHolder(LUJARCH_SPAN))
++                .setSpring(createExpressiveGridReflowSpringForce(finalPosition = 0f))
++                .addUpdateListener { _, value, _ -> apply(value / LUJARCH_SPAN) }
++                .addEndListener { _, _, _, _ -> apply(0f) }
++                .start()
++        }
++    }
++
+     /**
+      * Caches the groupTask before removing it. As the deskId might become invalid by
+      * removeViewInLayout called on the dismissed task. It might happen before
+@@ -1474,6 +1548,8 @@ constructor(
+         // The additional damping to apply to tasks further from the dismissed task.
+         private const val ADDITIONAL_DISMISS_DAMPING_RATIO = 0.15f
+         private const val RECENTS_SCALE_SPRING_MULTIPLIER = 1000f
++        /** The span a follow-through spring runs over, wide enough for its default precision. */
++        private const val LUJARCH_SPAN = 1000f
+         private const val DEFAULT_DISMISS_THRESHOLD_FRACTION = 0.5f
+         private const val SPEED_UP_STIFFNESS = 100_000f
+     }
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
 index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170dca28b2a 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
