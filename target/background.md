@@ -117,14 +117,27 @@ ends it once, recorded as You; it then follows the app's choices again.
 - Default: on
 - Verify: vm
 
-Above the cards, the Running layer shows everything that runs off screen with one word for why:
-what the app runs itself (Navigating, Playing, a download), Small window, Unrestricted and Chosen
+Above the cards, the Running layer shows everything that runs off screen with one word for why: what
+the app runs itself (Navigating, Playing, a download), Small window, Unrestricted and Chosen
 processes, in that order; it scrolls sideways when it is longer than the screen, and it stays when
 Recents has no cards. A tap opens the app. Touching and holding shows a menu in the card menu's
-style: End running for what the app started itself; the small window's own Full screen, Move to
-dock and Close for a small window; and for an app running because of the owner's choice no End
-running but Background usage, which leads home. Every menu has App info. With the layer off it is not drawn and the
-shade's footer shows Android's own active apps button and dialog.
+style: End running for what the app started itself; the small window's own Full screen, Move to dock
+and Close for a small window; and for an app running because of the owner's choice no End running
+but Background usage, which leads home. Every menu has App info. With the layer off it is not drawn
+and the shade's footer shows Android's own active apps button and dialog.
+
+When Recents opens, the tiles come out of the status bar: each leaves it a little, moves along to
+above its own place and drops into it, the one going furthest first, and the layer's name shows
+once they have passed; a small window's tile comes from the window itself (WIN-11). When Recents
+closes they go back up into the status bar over the app that opens. Clear all sends them up first
+and brings them down again when it is done.
+
+A card lifted toward the layer parts it. Once the card's top is within 80 dp of the layer, the
+tiles in its way fold into their icons and slide aside to both sides of the card, the nearest
+first, settling in about half a second however fast the finger moves; until the way is clear the
+card waits at the layer's edge, so it never covers a tile and never passes under one. When the card
+is gone or back in its place, the tiles slide back from the gap outward, overshoot a little and
+open again.
 
 ### BG-9 The shade's footer leads to Running
 
@@ -147,13 +160,14 @@ layer is on, and the system has no notification of its own listing what runs.
 
 While a gesture moves the cards and in quick switch, Recents is Android's single row. When it
 settles, the current card keeps Android's size at the right, and the earlier cards fold into two
-rows to its left, each column top then bottom, older to the left, scrolling sideways, with Clear
-all at the far left (hidden when every card is kept). A card shows the app's memory while it is in
-memory, Keep's mark, and for a reclaimed app a dimmed screen, a dashed outline and Opens again.
-Its menu has Android's items, Open in small window and Keep, and below a divider the app's
-background usage level and memory, each leading home. The fold follows Android's own transition
-to the grid; the layers fade in after it; tapping a card fades them out and opens it as Android
-does. In landscape the same structure holds, the Running layer as one row.
+rows to its left, each column top then bottom, older to the left, scrolling sideways, with Clear all
+at the far left (hidden when every card is kept). A card shows the app's memory while it is in
+memory, Keep's mark, and for a reclaimed app a dimmed screen, a dashed outline and Opens again. Its
+menu has Android's items, Open in small window and Keep, and below a divider the app's background
+usage level and memory, each leading home. The fold follows Android's own transition to the grid;
+the memory fades in after it and the Running layer arrives as BG-8 says; tapping a card fades the
+memory and the cards' marks out and opens it as Android does. In landscape the same structure holds,
+the Running layer as one row.
 
 ### BG-11 Recents shows the memory
 

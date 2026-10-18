@@ -55,15 +55,15 @@ touch to the app below.
 - Default: none
 - Verify: vm
 
-The dock is a stack of cards against the right edge of the screen, with nothing drawn behind
-them: each card floats over the app on screen with its own shadow, overlaps the next, and is
-turned slightly towards the middle of the screen. An app's card shows the app's whole live
-screen, scaled to fit inside the card with empty margins beside it, and its icon in a lower
-corner; a conversation's card shows the person's picture, the number of unread
-messages and the last message. The newest card is on top. A tap on a card opens it, and the window
-that was open becomes the top card. Dragging a card into the middle of the screen opens it there;
-dragging it onto the circle that appears at the bottom closes it; dropping it on the dock puts it
-in that place of the stack.
+The dock is a stack of cards against the right edge of the screen, with nothing drawn behind them:
+each card floats over the app on screen with its own shadow, a small gap from the next, and is
+turned slightly towards the middle of the screen. Every card has the same place in the stack: an
+app's card is the app's whole live screen scaled to fit that place, in the screen's own shape with
+nothing drawn beside it, and its icon in a lower corner; a conversation's card shows the person's
+picture, the number of unread messages and the last message. The newest card is on top. A tap on a
+card opens it, and the window that was open becomes the top card. Touching and holding a card takes
+it out of the stack: dragging it into the middle of the screen opens it there, onto the circle that
+appears at the bottom closes it, and back onto the dock puts it in that place of the stack.
 
 ### WIN-5 The dock moves anywhere and rests at an edge
 
@@ -72,11 +72,15 @@ in that place of the stack.
 - Default: none
 - Verify: vm
 
-A handle above the top card moves the whole dock: the dock follows the finger anywhere on the
-screen, its cards trailing one after another, and on letting go it settles against the nearer
-side edge at the height where it was let go, carried on by the fling, as Android's own bubbles
-do; on the left edge its cards turn the other way. The dock keeps its edge and height until it is
-moved again.
+The handle above the top card, or a drag on any card, moves the whole dock: the dock follows the
+finger anywhere on the screen, its cards trailing one after another, and on letting go it settles
+against the nearer side edge at the height where it was let go, carried on by the fling, as
+Android's own bubbles do; on the left edge its cards turn the other way. Picking the dock up turns
+its cards square to the screen and lifts them; while it moves, each card hangs from its top edge and
+swings against its sideways motion, more the further down the stack, and swings out and settles when
+it stops. On letting go the cards land one after another, overshoot the edge a little and turn back
+towards the middle. Dropping the dock on the circle that appears at the bottom closes every small
+window. The dock keeps its edge and height until it is moved again.
 
 ### WIN-6 The dock folds into a rail
 
@@ -85,7 +89,7 @@ moved again.
 - Default: none
 - Verify: vm
 
-Pushing the dock's handle past the screen's edge folds the dock into a rail 34 dp wide holding a
+Pushing the dock more than halfway past the screen's edge folds it into a rail 34 dp wide holding a
 22 dp icon for each card; a conversation with unread messages has a ring round its picture. A
 tap on the rail unfolds the dock. Dragging the rail moves it anywhere on the screen, its icons
 trailing one after another, and on letting go it settles against the nearer side edge, carried
@@ -119,11 +123,11 @@ and becomes an ordinary card in Recents; its app keeps running.
 - Default: off
 - Verify: vm
 
-Every move, resize, opening, folding and change of edge follows one spring that slightly
-overshoots and settles in about half a second. A card opening into a window and a window going to
-the dock are one shape changing its place, size, corners and turn, not a fade. Cards moving
-together follow each other at 35 ms intervals. While a finger holds a window, a card or the dock,
-it follows the finger without delay.
+Every move, resize, opening, folding and change of edge follows one spring that slightly overshoots
+and settles in about half a second. A card opening into a window and a window going to the dock are
+one shape changing its place, size, corners and turn, not a fade. Cards moving together follow each
+other at 35 ms intervals. While a finger holds a window or a single card, it follows the finger
+without delay; the dock follows it on a stiff spring, a little behind, its cards trailing.
 
 ## Opening a small window
 
@@ -145,9 +149,11 @@ every app.
 - Default: on
 - Verify: vm
 
-Dragging a card in Recents into the Running layer (BG-8) opens the app in a small window; the
-card's menu has Open in small window. While Recents is shown, the open window and the dock fly
-into the Running layer and fly back when Recents closes.
+Dragging a card in Recents into the Running layer (BG-8) opens the app in a small window; the card's
+menu has Open in small window. While the gesture to Recents moves the cards, the open window and the
+dock's cards go part of their way to their tiles in the Running layer (BG-8); when Recents settles
+they fly on into the tiles, each one shape changing its place, size, corners and turn, and when
+Recents closes they fly back.
 
 ### WIN-12 From a notification
 
