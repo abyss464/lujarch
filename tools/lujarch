@@ -13,7 +13,9 @@
   lujarch vm start|stop|status      the virtual device
   lujarch vm sync [MODULE...]       copy built modules, or what its images lack, into the running
                                     virtual device
-  lujarch vm screenshot [PATH]      write what the virtual device's display shows
+  lujarch vm screenshot [PATH]      write what the virtual device's display shows, turned as
+                                    the screen is
+  lujarch vm swipe X1 Y1 X2 Y2      one finger on its screen, with --press, --move, --hold
   lujarch test [SELECTOR...]        run the tests of the target's items on the virtual device
   lujarch test --script FILE [ARG...]
                                     run a Python file on the virtual device as a test runs
@@ -3126,10 +3128,35 @@ def vm_sync(host, info, host_out, modules):
 SCREENSHOT_FORMATS = (".png", ".jpg", ".webp")
 
 
-def vm_screenshot(host, path, frames, interval):
+def vm_adb(host):
+    """adb for the virtual device: the build's own when unpacked, without unpacking it."""
+    return [adb_binary(host.out / "vm" / "host"), "-s", f"127.0.0.1:{ADB_PORT}"]
+
+
+def orientation_query(host):
+    """The display's turn as input sees it (0 to 3, quarter turns counterclockwise), started
+    now and read with orientation_of(): the turn the screen's content and its touch
+    coordinates have."""
+    return subprocess.Popen(
+        [*vm_adb(host), "shell", "dumpsys input | grep -m1 -o "
+         "'Viewport INTERNAL: displayId=0,.* orientation=[0-3]'"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+
+
+def orientation_of(query):
+    out, _ = query.communicate(timeout=30)
+    m = re.search(r"orientation=([0-3])$", out.strip())
+    if not m:
+        die("the display's rotation was not read (adb shell dumpsys input)")
+    return int(m.group(1))
+
+
+def vm_screenshot(host, path, frames, interval, sheet):
     """Writes what the virtual device's display shows, composited as the browser view shows it:
     SystemUI's screen decorations and the boot animation included, which adb's screencap leaves
-    out. Several frames start interval seconds apart and are numbered PATH-01, PATH-02, ..."""
+    out, turned as the screen is turned at that frame (the display itself is always captured
+    upright). Several frames start interval seconds apart and are numbered PATH-01, PATH-02, ...;
+    sheet adds PATH-sheet, the frames side by side."""
     if container_state() != "running":
         die("the virtual device is not running (lujarch vm start)")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -3141,14 +3168,19 @@ def vm_screenshot(host, path, frames, interval):
                    for i in range(1, frames + 1)]
     else:
         targets = [target]
+    if sheet and not shutil.which("magick"):
+        die("joining frames needs ImageMagick (magick)")
     target.parent.mkdir(parents=True, exist_ok=True)
     # The streamer in the container writes the file; the runtime home is the one directory both
     # sides see.
     home = host.out / VM_DIR / "home"
     staged = home / f".screenshot-{os.getpid()}{target.suffix}"
+    turns = []
     start = time.monotonic()
     for i, dest in enumerate(targets):
         time.sleep(max(0.0, start + i * interval - time.monotonic()))
+        # Read beside the capture, so that it does not delay the frames.
+        query = orientation_query(host)
         try:
             run = subprocess.run(
                 ["docker", "exec", "-e", "HOME=/cf/home", "-e", f"CUTTLEFISH_INSTANCE={VM_INSTANCE}",
@@ -3158,12 +3190,69 @@ def vm_screenshot(host, path, frames, interval):
         except subprocess.TimeoutExpired:
             run = None
         if run is None or run.returncode or not staged.is_file():
+            query.kill()
             said = "no answer in 60 s" if run is None else (run.stdout + run.stderr).strip()
             launcher = home / "cuttlefish" / "instances" / f"cvd-{VM_INSTANCE}" / "logs" / "launcher.log"
             die(f"the display was not captured: {said}\nIt is captured by the streamer "
                 f"(/cf/host/bin/webRTC); log {launcher}")
         shutil.move(staged, dest)
+        turns.append(orientation_of(query))
+    if any(turns) and not shutil.which("magick"):
+        die("turning a frame needs ImageMagick (magick)")
+
+    def turn(item):
+        dest, quarter = item
+        if quarter:
+            r = subprocess.run(["magick", str(dest), "-rotate", str(-90 * quarter), str(dest)],
+                               capture_output=True, text=True)
+            if r.returncode:
+                die(f"{dest.name} was not turned: {r.stderr.strip()}")
+
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(turn, zip(targets, turns)))
+    for dest in targets:
         print(dest, flush=True)
+    if sheet:
+        joined = target.with_name(f"{target.stem}-sheet{target.suffix}")
+        # Each frame at a quarter of its size, as it is turned, labelled with its name.
+        r = subprocess.run(["magick", "montage", "-label", "%t", "-pointsize", "20",
+                            "-fill", "white", *map(str, targets), "-resize", "25%",
+                            "-tile", "4x", "-geometry", "+4+4", "-background", "#444",
+                            "-depth", "8", str(joined)], capture_output=True, text=True)
+        if r.returncode:
+            die(f"{joined.name} was not written: {r.stderr.strip()}")
+        print(joined, flush=True)
+    return 0
+
+
+def vm_swipe(host, x1, y1, x2, y2, press, move, hold):
+    """One finger on the virtual device's screen: down at x1, y1 and still for press seconds,
+    moved to x2, y2 over move seconds, resting there for hold seconds, lifted. Coordinates are
+    the screen's as it is turned now. `input swipe` lifts the finger as it arrives, still moving,
+    so what waits for the finger to rest (Recents from the gesture bar) never sees it."""
+    if container_state() != "running":
+        die("the virtual device is not running (lujarch vm start)")
+    span = max(1, round(move * 1000))
+    # The device's shell counts in 32 bits: milliseconds within a day and a bit, and where the
+    # finger is follows the clock, however long each event takes to inject.
+    script = f"""clock() {{ t=${{EPOCHREALTIME/./}}; now=$((10#${{t:5:8}})); }}
+input motionevent DOWN {x1} {y1}
+sleep {press}
+clock; start=$now
+while :; do
+  clock; e=$(( (now - start + 100000000) % 100000000 ))
+  [ $e -ge {span} ] && break
+  input motionevent MOVE $(({x1} + ({x2 - x1}) * e / {span})) $(({y1} + ({y2 - y1}) * e / {span}))
+done
+input motionevent MOVE {x2} {y2}
+sleep {hold}
+input motionevent UP {x2} {y2}
+"""
+    r = subprocess.run([*vm_adb(host), "shell", "sh"], input=script,
+                       capture_output=True, text=True, timeout=60 + press + move + hold)
+    said = (r.stdout + r.stderr).strip()
+    if r.returncode or said:
+        die(f"the swipe was not made: {said or f'adb exited {r.returncode}'}")
     return 0
 
 
@@ -3234,7 +3323,9 @@ def cmd_desktop(args):
 def cmd_vm(args):
     host = Host()
     if args.action == "screenshot":
-        return vm_screenshot(host, args.path, args.frames, args.interval)
+        return vm_screenshot(host, args.path, args.frames, args.interval, args.sheet)
+    if args.action == "swipe":
+        return vm_swipe(host, *args.points, args.press, args.move, args.hold)
     info, host_out, home, common = vm_paths(host)
     state = container_state()
     if args.action == "stop":
@@ -3810,6 +3901,16 @@ def main():
     shot.add_argument("--frames", type=int, default=1, help="how many frames to take")
     shot.add_argument("--interval", type=float, default=0.5,
                       help="seconds from the start of one frame to the next")
+    shot.add_argument("--sheet", action="store_true",
+                      help="also write PATH-sheet: the frames side by side, a quarter size")
+    swipe = vm.add_parser("swipe", help="one finger: down, still, moved, resting, lifted")
+    swipe.add_argument("points", nargs=4, type=int, metavar=("X1", "Y1", "X2", "Y2"),
+                       help="from and to, in the screen's pixels as it is turned now")
+    swipe.add_argument("--press", type=float, default=0.0,
+                       help="seconds still where it goes down (a long press: 0.8)")
+    swipe.add_argument("--move", type=float, default=0.5, help="seconds moving")
+    swipe.add_argument("--hold", type=float, default=0.0,
+                       help="seconds resting at the end before the lift (Recents: 1)")
     args = parser.parse_args()
     return {
         "check": cmd_check, "status": cmd_status, "pin": cmd_pin, "sync": cmd_sync,

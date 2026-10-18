@@ -297,10 +297,13 @@ class Device:
 
     def drag(self, x1, y1, x2, y2, hold=1.0, move=0.8):
         """A finger pressed at x1, y1 for hold seconds, moved to x2, y2 over move seconds,
-        resting there a moment, then lifted, as one gesture."""
-        done = self._reader(f"drag {x1} {y1} {x2} {y2} {int(hold * 1000)} {int(move * 1000)}\n"
-                            .encode(), timeout=30)
-        check(done and done.strip() == "ok", f"dragged from {x1}, {y1} to {x2}, {y2}")
+        resting there a moment, then lifted, as one gesture (tools/lujarch vm swipe)."""
+        r = subprocess.run([TOOL, "vm", "swipe", str(x1), str(y1), str(x2), str(y2),
+                            "--press", str(hold), "--move", str(move), "--hold", "0.6"],
+                           capture_output=True, text=True, timeout=60 + hold + move)
+        said = r.stderr.strip()
+        check(r.returncode == 0,
+              f"dragged from {x1}, {y1} to {x2}, {y2}{f' ({said})' if said else ''}")
         time.sleep(1)
 
     def ui(self, tries=3, windows=False):

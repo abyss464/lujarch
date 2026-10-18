@@ -64,10 +64,17 @@ computer under KVM. Its screen copies the phone's resolution, density and refres
   that build, whose apps hold its ids, and the device restarts.
 - `tools/lujarch vm screenshot [PATH]` writes what the virtual device's display shows, as the
   browser view shows it, to PATH (`.png`, `.jpg` or `.webp`; `<out>/vm/screenshots/` by
-  default); `--frames N --interval S` takes N frames S seconds apart, for animations.
+  default), turned as the screen is turned at that frame; `--frames N --interval S` takes N
+  frames S seconds apart, for animations, and `--sheet` adds PATH-sheet, the frames side by side
+  at a quarter size.
   `adb exec-out screencap` renders the layers itself: it leaves out SystemUI's screen decorations
   and the boot animation, and shows the dimmed background behind a dialog, which the display
   shows black.
+- `tools/lujarch vm swipe X1 Y1 X2 Y2` moves one finger across the screen, in its pixels as it
+  is turned now: `--press S` keeps it still where it goes down (a long press), `--move S` moves
+  it, `--hold S` rests it at the end before the lift. `adb shell input swipe` lifts the finger
+  while it still moves, so what waits for a finger at rest, such as Recents from the gesture
+  bar, never sees one. The test library's drags are made by it.
 
 The virtual device has no Xiaomi hardware, no Qualcomm TEE, no bootloader of its own, no Google
 apps, no arm64-only programs, and no real performance or battery.
