@@ -213,6 +213,58 @@ index 577777013ad3306cfd8362fc973af33f0965e567..ef03af48b221cd99b9634a095935a97d
          )
  }
  
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+index edb13e16cd9d115df4ddc763d8844a583f806dfb..bc5ca6ed1f4b21daacff0b71e226c874199aa24e 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
++++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+@@ -41,6 +41,7 @@ import static com.android.launcher3.LauncherState.HOTSEAT_ICONS;
+ import static com.android.launcher3.LauncherState.NORMAL;
+ import static com.android.launcher3.LauncherState.NO_OFFSET;
+ import static com.android.launcher3.LauncherState.OVERVIEW;
++import static com.android.launcher3.LauncherState.OVERVIEW_MODAL_TASK;
+ import static com.android.launcher3.LauncherState.OVERVIEW_SPLIT_SELECT;
+ import static com.android.launcher3.Utilities.isRtl;
+ import static com.android.launcher3.anim.AnimatorListeners.forEndCallback;
+@@ -158,6 +159,7 @@ import com.android.launcher3.statehandlers.LauncherDepthController;
+ import com.android.launcher3.statemanager.StateManager;
+ import com.android.launcher3.statemanager.StateManager.AtomicAnimationFactory;
+ import com.android.launcher3.statemanager.StateManager.StateHandler;
++import com.android.launcher3.states.RotationHelper;
+ import com.android.launcher3.taskbar.TaskbarInteractor;
+ import com.android.launcher3.taskbar.TaskbarUiState;
+ import com.android.launcher3.taskbar.TaskbarUiStateMonitor;
+@@ -676,10 +678,31 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+         removeBackAnimationCallback(mSplitSelectStateController.getSplitBackHandler());
+     }
+ 
++    private static boolean isSettledRecents(LauncherState state) {
++        return state == OVERVIEW || state == OVERVIEW_MODAL_TASK || state == OVERVIEW_SPLIT_SELECT;
++    }
++
++    @Override
++    public void onStateSetStart(LauncherState state) {
++        super.onStateSetStart(state);
++        if (isSettledRecents(getStateManager().getCurrentStableState())
++                && !isSettledRecents(state)) {
++            getRotationHelper().setCurrentStateRequest(RotationHelper.REQUEST_NONE);
++        }
++    }
++
+     @Override
+     public void onStateSetEnd(LauncherState state) {
+         super.onStateSetEnd(state);
+         handlePendingActivityRequest();
++        if (isSettledRecents(state)) {
++            // Settled Recents turns with the screen as apps do, so that in landscape it is laid
++            // out in landscape instead of drawn sideways in a portrait window.
++            getRotationHelper().setCurrentStateRequest(RotationHelper.REQUEST_ROTATE);
++            if (state == OVERVIEW) {
++                ((RecentsView<?, ?>) getOverviewPanel()).lujarchTurnWithScreen();
++            }
++        }
+ 
+         switch (state.ordinal) {
+             case HINT_STATE_ORDINAL: {
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java b/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
 index e890b5e2fe0cd054e32e22d403212ab333fa55ab..83a9bdab3027b79852eb437f8d2bc1ca331f7790 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
@@ -510,10 +562,10 @@ index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc3038078
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bcdbc16513
+index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf75794bf7e
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,552 @@
+@@ -0,0 +1,581 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -571,6 +623,7 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +class LujarchRecents(
 +    private val recentsView: RecentsView<*, *>,
 +    private val dragLayer: DragLayer,
++    actions: View,
 +    spaceBelowActions: () -> Int,
 +) {
 +    private val context: Context = recentsView.context
@@ -607,6 +660,9 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +        })
 +        runningLayer.visibility = View.INVISIBLE
 +        memoryRow.visibility = View.INVISIBLE
++        actions.findViewById<android.widget.TextView>(R.id.action_screenshot)?.let {
++            memoryRow.join(it)
++        }
 +        runningLayer.onArrival = { updateVisibility() }
 +        if (runningSpace != 0) recentsView.lujarchRelayout()
 +    }
@@ -648,6 +704,23 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +        } else {
 +            runningLayer.leave()
 +            fadeMemory(0f, FADE_OUT_MS, 0L)
++        }
++        updateVisibility()
++    }
++
++    /**
++     * Recents is drawn sideways in a portrait window, or no longer. Nothing of Background is shown
++     * sideways: once settled Recents has turned with the screen, the Running layer arrives and the
++     * memory fades in as on settling.
++     */
++    fun onSideways(value: Boolean) {
++        if (sideways == value) return
++        sideways = value
++        if (!value && settled) {
++            runningLayer.reset()
++            runningLayer.arrive(ARRIVE_DELAY_MS)
++            memoryShown = 0f
++            fadeMemory(1f, MEMORY_IN_MS, MEMORY_IN_DELAY_MS)
 +        }
 +        updateVisibility()
 +    }
@@ -735,11 +808,12 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +        val shown = overview && alpha > 0f
 +        memoryRow.alpha = alpha * memoryShown
 +        // The Running layer moves by itself, into the status bar and out of it.
-+        runningLayer.visibility = if (showRunning && runningLayer.hasEntries &&
++        runningLayer.visibility = if (showRunning && runningLayer.hasEntries && !sideways &&
 +            (overview || runningLayer.isMoving)) View.VISIBLE else View.INVISIBLE
 +        if (!overview && !runningLayer.isMoving) runningLayer.reset()
-+        memoryRow.visibility = if (shown && showMemory && memory != null && memoryShown > 0f)
-+            View.VISIBLE else View.INVISIBLE
++        memoryRow.visibility = if (shown && showMemory && memory != null && memoryShown > 0f &&
++            !sideways) View.VISIBLE else View.INVISIBLE
++        memoryRow.shown = showMemory && memory != null
 +    }
 +
 +    /** Reads where every app is now, off the main thread, and shows it. */
@@ -1000,10 +1074,17 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +        @Volatile
 +        private var runningSpace = 0
 +
-+        /** A phone's Recents folds into two rows when it settles (BG-10). */
++        /** Recents is drawn sideways in a portrait window, in a swipe from an app in landscape. */
++        @Volatile
++        private var sideways = false
++
++        /**
++         * A phone's Recents folds into two rows when it settles (BG-10), once it is laid out in
++         * the screen's rotation.
++         */
 +        @JvmStatic
 +        fun foldsIntoRows(dp: com.android.launcher3.DeviceProfile): Boolean =
-+            rowsOn && !dp.deviceProperties.isLargeScreen
++            rowsOn && !dp.deviceProperties.isLargeScreen && !sideways
 +
 +        /** The height the Running layer takes above a phone's cards, in pixels (BG-8). */
 +        @JvmStatic
@@ -1068,10 +1149,10 @@ index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bc
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d1f04a43f
+index 0000000000000000000000000000000000000000..468f29cce4f50e6f17a77d1c4e783c76c2c50196
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,228 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1108,9 +1189,9 @@ index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d
 +import com.android.launcher3.R
 +
 +/**
-+ * The memory below the cards in Recents (BG-12): the same four parts as Settings > System >
-+ * Background, with Background, which opens that page. It sits under the actions, just above the
-+ * navigation.
++ * The memory below the cards in Recents (BG-11): the same four parts as Settings > System >
++ * Memory, with Memory, which opens that page. Its line carries Android's Screenshot between the
++ * free memory and Memory, in Memory's type; the label is left out when the line has no room.
 + */
 +class MemoryRowView(
 +    context: Context,
@@ -1119,38 +1200,146 @@ index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d
 +) :
 +    LinearLayout(context), Insettable {
 +    private val free = TextView(context)
++    private val open = TextView(context)
++    private val line = LinearLayout(context)
 +    private val bar = Bar(context)
++    private var screenshot: TextView? = null
++    private var screenshotLabel: CharSequence = ""
++    /** The row is on in Recents, so Screenshot shares its line. */
++    var shown = false
++        set(value) {
++            if (field == value) return
++            field = value
++            align()
++        }
 +
 +    init {
 +        orientation = VERTICAL
-+        val side = dp(16)
-+        setPadding(side, 0, side, dp(4))
-+        val top = LinearLayout(context).apply {
-+            orientation = HORIZONTAL
-+            gravity = Gravity.CENTER_VERTICAL
-+        }
++        val side = 16.dp
++        setPadding(side, 0, side, 4.dp)
++        line.orientation = HORIZONTAL
++        line.gravity = Gravity.CENTER_VERTICAL
 +        free.fontFeatureSettings = "tnum"
 +        free.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
 +        free.setTextColor(context.getColor(android.R.color.system_neutral1_100))
-+        top.addView(free, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-+        top.addView(TextView(context).apply {
-+            text = context.getString(R.string.lujarch_background_open, context.getString(R.string.lujarch_background_memory))
-+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
-+            setTextColor(context.getColor(android.R.color.system_accent1_200))
-+            val p = dp(10)
-+            setPadding(p, dp(6), p, dp(6))
-+            isClickable = true
-+            setOnClickListener { recents.openMemory() }
++        free.maxLines = 1
++        line.addView(free, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
++        open.text = context.getString(R.string.lujarch_background_open,
++            context.getString(R.string.lujarch_background_memory))
++        styleAction(open)
++        open.setOnClickListener { recents.openMemory() }
++        line.addView(open)
++        addView(line)
++        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, BAR_DP.dp).apply {
++            topMargin = BAR_GAP_DP.dp
 +        })
-+        addView(top)
-+        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(8)).apply { topMargin = dp(4) })
++        addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> align() }
++    }
++
++    /** A text action of the row: Memory's type and color, with a light ripple. */
++    private fun styleAction(view: TextView) {
++        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
++        view.typeface = android.graphics.Typeface.DEFAULT
++        view.isAllCaps = false
++        view.setTextColor(context.getColor(android.R.color.system_accent1_200))
++        view.setPadding(10.dp, 6.dp, 10.dp, 6.dp)
++        view.minHeight = 0
++        view.minimumHeight = 0
++        view.minWidth = 0
++        view.minimumWidth = 0
++        view.maxLines = 1
++        val a = context.obtainStyledAttributes(
++            intArrayOf(android.R.attr.selectableItemBackgroundBorderless))
++        view.background = a.getDrawable(0)
++        a.recycle()
++        view.isClickable = true
++    }
++
++    /**
++     * Android's Screenshot joins the line: in Memory's type, its icon tinted the same, and the row
++     * moves so that its line runs through the button's middle.
++     */
++    fun join(button: TextView) {
++        screenshot = button
++        screenshotLabel = button.text
++        styleAction(button)
++        val tint = android.content.res.ColorStateList.valueOf(
++            context.getColor(android.R.color.system_accent1_200))
++        button.compoundDrawableTintList = tint
++        button.compoundDrawablesRelative[0]?.mutate()?.let {
++            it.setBounds(0, 0, ICON_DP.dp, ICON_DP.dp)
++            button.setCompoundDrawablesRelative(it, null, null, null)
++        }
++        button.compoundDrawablePadding = 6.dp
++        button.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> align() }
 +    }
 +
 +    override fun setInsets(insets: Rect) {
-+        (layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-+            it.bottomMargin = spaceBelowActions() + dp(8)
-+            layoutParams = it
++        place()
++    }
++
++    /** The row's bottom margin: its line through Screenshot's middle, above the navigation. */
++    private fun place() {
++        val lp = layoutParams as? ViewGroup.MarginLayoutParams ?: return
++        val floor = spaceBelowActions() + 8.dp
++        val parent = parent as? View
++        val button = screenshot
++        var margin = floor
++        if (button != null && parent != null && button.height > 0 && parent.height > 0) {
++            val middle = topIn(button, parent) + button.height / 2
++            val lineHeight = line.measuredHeight.takeIf { it > 0 } ?: open.measuredHeight
++            val aligned = parent.height - middle - lineHeight / 2 - (BAR_GAP_DP + BAR_DP).dp -
++                paddingBottom
++            if (aligned > floor) margin = aligned
 +        }
++        if (lp.bottomMargin != margin) {
++            lp.bottomMargin = margin
++            layoutParams = lp
++        }
++    }
++
++    /** Places the row on Screenshot's line and gives Screenshot its label when it has room. */
++    private fun align() {
++        place()
++        val button = screenshot ?: return
++        val parent = parent as? View ?: return
++        var room = true
++        if (shown && button.width > 0) {
++            val middle = leftIn(button, parent) + button.width / 2
++            val half = (button.paint.measureText(screenshotLabel.toString()) + ICON_DP.dp +
++                6.dp + 20.dp) / 2
++            val freeEnd = left + line.left + free.left + free.paddingLeft +
++                free.paint.measureText(free.text.toString())
++            val openStart = left + line.left + open.left
++            room = middle - half >= freeEnd + 12.dp && middle + half <= openStart
++        }
++        val label = if (room) screenshotLabel else ""
++        if (button.text.toString() != label.toString()) {
++            button.text = label
++            button.compoundDrawablePadding = if (room) 6.dp else 0
++            button.contentDescription = screenshotLabel
++        }
++    }
++
++    /** A view's top within an ancestor by layout alone, without the moves of the transitions. */
++    private fun topIn(view: View, ancestor: View): Int {
++        var y = 0
++        var v: View? = view
++        while (v != null && v !== ancestor) {
++            y += v.top
++            v = v.parent as? View
++        }
++        return y
++    }
++
++    private fun leftIn(view: View, ancestor: View): Int {
++        var x = 0
++        var v: View? = view
++        while (v != null && v !== ancestor) {
++            x += v.left
++            v = v.parent as? View
++        }
++        return x
 +    }
 +
 +    fun bind(m: LujarchBackgroundMemory) {
@@ -1159,9 +1348,16 @@ index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d
 +            Formatter.formatShortFileSize(context, m.totalBytes))
 +        bar.memory = m
 +        bar.invalidate()
++        align()
 +    }
 +
-+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
++    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
++
++    private companion object {
++        const val BAR_DP = 8
++        const val BAR_GAP_DP = 4
++        const val ICON_DP = 18
++    }
 +
 +    private class Bar(context: Context) : View(context) {
 +        var memory: LujarchBackgroundMemory? = null
@@ -2178,8 +2374,39 @@ index 0000000000000000000000000000000000000000..6c20bc797abe9609f365e1124ef7cc9f
 +        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 +    }
 +}
+diff --git a/quickstep/src/com/android/quickstep/util/RecentsOrientedState.java b/quickstep/src/com/android/quickstep/util/RecentsOrientedState.java
+index ab1e1b089637d14fedc136b04a9a09559221f41b..2f9ef65327dcc7696dc537cae7bae5bec2249e69 100644
+--- a/quickstep/src/com/android/quickstep/util/RecentsOrientedState.java
++++ b/quickstep/src/com/android/quickstep/util/RecentsOrientedState.java
+@@ -272,7 +272,16 @@ public class RecentsOrientedState implements LauncherPrefChangeListener {
+     }
+ 
+     private boolean shouldUseRealOrientation() {
+-        return isRecentsActivityRotationAllowed() || isLauncherFixedLandscape();
++        return isRecentsActivityRotationAllowed() || isLauncherFixedLandscape()
++                || isRecentsActivityRotated();
++    }
++
++    /**
++     * Whether Recents' own window is rotated, as it is when settled Recents turns with the
++     * screen: it is then laid out in that rotation.
++     */
++    private boolean isRecentsActivityRotated() {
++        return mRecentsRotation > ROTATION_0;
+     }
+ 
+     @SurfaceRotation
+@@ -440,7 +449,7 @@ public class RecentsOrientedState implements LauncherPrefChangeListener {
+                 // fake landscape which happens when the rotation is not ROTATION_0 unless
+                 // rotation is allowed
+                 && (getTouchRotation() != ROTATION_0 || getRecentsActivityRotation() != ROTATION_0)
+-                && !isRecentsActivityRotationAllowed();
++                && !shouldUseRealOrientation();
+     }
+ 
+     /**
 diff --git a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
-index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25f40d984042f7ffd720bca2cc7fb2bfc7f83948 100644
+index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..d9346e100ac745efe30d70e87ae17bad0ff5dec0 100644
 --- a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 @@ -86,6 +86,15 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
@@ -2189,7 +2416,7 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25f40d984042f7ffd720bca2cc7fb2bf
 +        if (mLujarchRecents == null) {
 +            try {
 +                mLujarchRecents = new com.android.quickstep.lujarch.LujarchRecents(this,
-+                        mContainer.getDragLayer(),
++                        mContainer.getDragLayer(), actionsView,
 +                        () -> mContainer.getDeviceProfile().getOverviewActionsClaimedSpaceBelow());
 +            } catch (RuntimeException e) {
 +                android.util.Log.e("lujarch_background", "Recents shows no Background", e);
@@ -2365,10 +2592,21 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
          private const val SPEED_UP_STIFFNESS = 100_000f
      }
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
-index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170dca28b2a 100644
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45ff63e699 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
-@@ -1581,7 +1581,7 @@ public abstract class RecentsView<
+@@ -920,6 +920,10 @@ public abstract class RecentsView<
+                 5 /* max size */, desktopViewPoolInitialSize);
+ 
+         setOrientationHandler(mOrientationState.getOrientationHandler());
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onSideways(
++                    getPagedOrientationHandler() != RecentsPagedOrientationHandler.PORTRAIT);
++        }
+         mIsRtl = getPagedOrientationHandler().getRecentsRtlSetting(getResources());
+         setLayoutDirection(mIsRtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+         mSplitPlaceholderSize = getResources().getDimensionPixelSize(
+@@ -1581,7 +1585,7 @@ public abstract class RecentsView<
      @Override
      protected boolean isSignificantMove(float absoluteDelta, int pageOrientedSize) {
          DeviceProfile deviceProfile = mContainer.getDeviceProfile();
@@ -2377,7 +2615,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
              return super.isSignificantMove(absoluteDelta, pageOrientedSize);
          }
  
-@@ -2000,6 +2000,9 @@ public abstract class RecentsView<
+@@ -2000,6 +2004,9 @@ public abstract class RecentsView<
          mAppliedTaskListChangeId = taskListChangeId;
          resetTaskVisuals();
          onTaskStackUpdated();
@@ -2387,7 +2625,29 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
          updateEnabledOverlays();
          if (isPageScrollsInitialized()) {
              onPageScrollsInitialized();
-@@ -2290,7 +2293,7 @@ public abstract class RecentsView<
+@@ -2163,6 +2170,10 @@ public abstract class RecentsView<
+         RecentsPagedOrientationHandler oldOrientationHandler = getPagedOrientationHandler();
+         setOrientationHandler(mOrientationState.getOrientationHandler());
+ 
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onSideways(
++                    getPagedOrientationHandler() != RecentsPagedOrientationHandler.PORTRAIT);
++        }
+         mIsRtl = getPagedOrientationHandler().getRecentsRtlSetting(getResources());
+         setLayoutDirection(mIsRtl
+                 ? View.LAYOUT_DIRECTION_RTL
+@@ -2183,6 +2194,10 @@ public abstract class RecentsView<
+             if (isOrientationHandlerChanged) {
+                 logOrientationChanged();
+             }
++            if (mLujarchTurning
++                    && getPagedOrientationHandler() == RecentsPagedOrientationHandler.PORTRAIT) {
++                lujarchTurned();
++            }
+         }
+ 
+         mActionsView.updateHiddenFlags(
+@@ -2290,7 +2305,7 @@ public abstract class RecentsView<
       */
      private float getTaskAlignmentTranslationY() {
          DeviceProfile deviceProfile = mContainer.getDeviceProfile();
@@ -2396,7 +2656,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
              return deviceProfile.getOverviewProfile().getRowSpacing();
          }
          return 0f;
-@@ -2393,7 +2396,7 @@ public abstract class RecentsView<
+@@ -2393,7 +2408,7 @@ public abstract class RecentsView<
  
      @Override
      protected int getDestinationPage(int scaledScroll) {
@@ -2405,7 +2665,51 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
              return super.getDestinationPage(scaledScroll);
          }
          if (!isPageScrollsInitialized()) {
-@@ -3248,8 +3251,16 @@ public abstract class RecentsView<
+@@ -2715,6 +2730,43 @@ public abstract class RecentsView<
+         }
+     }
+ 
++    /**
++     * Lujarch: settled Recents turns with the screen. Drawn sideways in a portrait window, its
++     * running task becomes its screenshot and the gesture's transition ends, so that the launcher
++     * takes the screen's rotation and Recents is laid out in it.
++     */
++    public void lujarchTurnWithScreen() {
++        if (getPagedOrientationHandler() == RecentsPagedOrientationHandler.PORTRAIT) {
++            return;
++        }
++        mLujarchTurning = true;
++        AnimatorSet out = setRecentsChangedOrientation(true /* fadeOut */);
++        out.addListener(AnimatorListeners.forSuccessCallback(() -> {
++            switchToScreenshot(() -> finishRecentsAnimation(true /* toHome */,
++                    null /* onFinishComplete */));
++            // Recents comes back as it was if the screen does not turn.
++            postDelayed(() -> {
++                if (mLujarchTurning) {
++                    lujarchTurned();
++                }
++            }, LUJARCH_TURN_TIMEOUT_MS);
++        }));
++        out.start();
++    }
++
++    /** Lujarch: Recents has turned with the screen and comes back in the state it is in. */
++    private void lujarchTurned() {
++        mLujarchTurning = false;
++        setOverviewGridEnabled(getStateManager().getState().displayOverviewTasksAsGrid(
++                mContainer.getDeviceProfile()));
++        getStateManager().reapplyState();
++        setRecentsChangedOrientation(false /* fadeOut */).start();
++    }
++
++    private boolean mLujarchTurning;
++
++    private static final long LUJARCH_TURN_TIMEOUT_MS = 700;
++
+     private void animateRotation(int newRotation) {
+         AbstractFloatingView.closeAllOpenViewsExcept(mContainer, false, TYPE_REBIND_SAFE);
+         AnimatorSet pa = setRecentsChangedOrientation(true);
+@@ -3248,8 +3300,16 @@ public abstract class RecentsView<
              mAddDesktopButton.setGridTranslationX(translationX);
          }
  
@@ -2423,7 +2727,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
          mClearAllButton.setGridScrollOffset(
                  mIsRtl ? mLastComputedTaskSize.left - mLastComputedGridSize.left
                          : mLastComputedTaskSize.right - mLastComputedGridSize.right);
-@@ -3641,6 +3652,9 @@ public abstract class RecentsView<
+@@ -3641,6 +3701,9 @@ public abstract class RecentsView<
              mEmptyIcon.setAlpha(alphaInt);
          }
          mActionsView.getContentAlpha().updateValue(mContentAlpha);
@@ -2433,7 +2737,18 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
  
          if (alpha > 0) {
              setVisibility(VISIBLE);
-@@ -3759,7 +3773,56 @@ public abstract class RecentsView<
+@@ -3678,6 +3741,10 @@ public abstract class RecentsView<
+     protected void onConfigurationChanged(Configuration newConfig) {
+         super.onConfigurationChanged(newConfig);
+         updateRecentsRotation();
++        if (mOrientationState.getOrientationHandler() != getPagedOrientationHandler()) {
++            // Lujarch: Recents turned with the screen and is laid out in its real rotation.
++            updateOrientationHandler();
++        }
+         onOrientationChanged();
+         updateEmptyMessageConfiguration();
+         if (enableLowResThumbnailPreloading()) {
+@@ -3759,7 +3826,56 @@ public abstract class RecentsView<
       * returns true.
       */
      public boolean canRemoveTaskView(TaskView taskView) {
