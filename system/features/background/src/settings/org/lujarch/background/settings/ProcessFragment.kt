@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.lujarch.background.settings
 
-import android.app.usage.NetworkStats
-import android.app.usage.NetworkStatsManager
+import android.app.ActivityManager
+import android.app.AlertDialog
 import android.content.Context
-import android.net.ConnectivityManager
 import android.os.Bundle
 import android.text.format.Formatter
 import androidx.preference.Preference
@@ -37,61 +35,81 @@ import org.lujarch.settings.pages.BasePreferenceFragment
 import org.lujarch.settings.pages.Pages
 
 /**
- * Settings > Apps > (app) > Background > (process) (BG-7): the process's depth, the reasons it
- * is there with who caused each and the system's priority, what it uses in the last 24 hours,
- * its threads by CPU time, read only; Pause this process and End this process act once.
+ * Settings > System > Memory > (app) > (process) (BG-7): the process's state and why, in plain
+ * words with who caused it; its memory as actual use, resident and compressed; its place in the
+ * order of reclaiming with the system's score in brackets; its CPU time today; its threads by
+ * CPU time, read only. End this process ends it once; Force stop is Android's. One of Lujarch's
+ * system services has no app: its page has neither.
  */
 class ProcessFragment : BasePreferenceFragment() {
     private var pid = 0
-    private lateinit var packageName: String
+    /** The app's package; null for one of Lujarch's system services. */
+    private var packageName: String? = null
     private var label = ""
     private lateinit var idPref: Preference
     private lateinit var nowPref: NowPreference
     private lateinit var reasonsPref: PreferenceCategory
-    private lateinit var usePref: TilesPreference
+    private lateinit var memoryPref: Preference
+    private lateinit var reclaimPref: Preference
+    private lateinit var cpuPref: Preference
     private lateinit var threadsPref: PreferenceCategory
-    private lateinit var actionsPref: ActionButtonsPreference
+    private var actionsPref: ActionButtonsPreference? = null
     private var loop: Job? = null
     private var gone = false
+    private var allThreads = false
 
     override fun buildScreen(screen: PreferenceScreen, savedInstanceState: Bundle?) {
         val args = requireArguments()
         pid = args.getInt(ARG_PID)
-        packageName = args.getString(AppBackgroundFragment.ARG_PACKAGE).orEmpty()
-        label = args.getString(AppBackgroundFragment.ARG_LABEL) ?: packageName
+        packageName = args.getString(AppMemoryFragment.ARG_PACKAGE)
+        val name = args.getString(ARG_NAME).orEmpty()
+        label = args.getString(AppMemoryFragment.ARG_LABEL) ?: name
         val context = prefContext
         idPref = screen.add(HeaderPreference(context)) {
             key = "process"
-            title = args.getString(ARG_NAME)
+            title = title(context, name, packageName, label)
         }
         nowPref = screen.add(NowPreference(context)) { key = "now" }
         reasonsPref = screen.add(PreferenceCategory(context)) {
             key = "reasons"
-            setTitle(R.string.background_process_why)
+            setTitle(R.string.memory_process_why)
         }
-        val use = screen.add(PreferenceCategory(context)) {
-            key = "use"
-            setTitle(R.string.background_process_use)
+        val use = screen.add(PreferenceCategory(context)) { key = "use" }
+        memoryPref = use.add(Preference(context)) {
+            key = "memory"
+            setTitle(R.string.memory_title)
+            isSelectable = false
         }
-        usePref = use.add(TilesPreference(context)) { key = "use_tiles" }
+        reclaimPref = use.add(Preference(context)) {
+            key = "reclaim_order"
+            setTitle(R.string.memory_process_reclaim)
+            isSelectable = false
+        }
+        cpuPref = use.add(Preference(context)) {
+            key = "cpu"
+            setTitle(R.string.memory_process_cpu)
+            isSelectable = false
+        }
         threadsPref = screen.add(PreferenceCategory(context)) {
             key = "threads"
-            setTitle(R.string.background_process_threads)
+            setTitle(R.string.memory_process_threads)
         }
-        actionsPref = screen.add(ActionButtonsPreference(context)) {
-            key = "process_actions"
-            setButton1Text(R.string.background_pause_process)
-            setButton1Icon(R.drawable.ic_background_pause)
-            setButton1OnClickListener { perform(PAUSE) }
-            setButton2Text(R.string.background_end_process)
-            setButton2Icon(R.drawable.ic_background_end)
-            setButton2OnClickListener { perform(END) }
+        val pkg = packageName
+        if (pkg != null) {
+            actionsPref = screen.add(ActionButtonsPreference(context)) {
+                key = "process_actions"
+                setButton1Text(R.string.memory_end_process)
+                setButton1Icon(R.drawable.ic_memory_end)
+                setButton1OnClickListener { end() }
+                setButton2Text(R.string.memory_force_stop)
+                setButton2Icon(R.drawable.ic_memory_force_stop)
+                setButton2OnClickListener { confirmForceStop(pkg) }
+            }
         }
         screen.add(FooterPreference(context)) {
             key = "process_footer"
-            title = getString(R.string.background_process_footer, label)
-            setLearnMoreText(getString(R.string.background_process_footer_link, label))
-            setLearnMoreAction { AppBackgroundFragment.open(requireContext(), packageName, label) }
+            title = if (pkg != null) getString(R.string.memory_process_footer, label)
+                else getString(R.string.memory_service_footer)
         }
     }
 
@@ -115,31 +133,28 @@ class ProcessFragment : BasePreferenceFragment() {
     }
 
     private suspend fun load() {
-        val p = attempt("process", R.string.background_error_load) {
+        val p = attempt("process", R.string.memory_error_load) {
             BackgroundClient.call { it.getProcess(pid) }
         }
+        if (!pageAlive) return
         if (p == null) {
-            if (!pageAlive) return
-            nowPref.depth = LujarchBackground.DEPTH_RECLAIMED
-            nowPref.state = LujarchBackground.depthName(prefContext, LujarchBackground.DEPTH_RECLAIMED)
-            nowPref.text = getString(R.string.background_process_gone)
+            nowPref.state = LujarchBackground.RUN_RECLAIMED.toInt()
+            nowPref.stateName = LujarchBackground.stateName(prefContext, nowPref.state)
+            nowPref.text = getString(R.string.memory_process_gone)
             nowPref.update()
-            actionsPref.setButton1Enabled(false)
-            actionsPref.setButton2Enabled(false)
+            actionsPref?.setButton1Enabled(false)
             gone = true
             return
         }
-        val network = orNull("network use") { networkUse(requireContext(), p.uid) }
-        render(p, network)
+        render(p)
     }
 
-    private fun render(p: LujarchBackgroundProcess, network: Long?) {
-        if (!pageAlive) return
+    private fun render(p: LujarchBackgroundProcess) {
         val context = prefContext
-        idPref.summary = getString(R.string.background_process_id, p.pid, p.uid,
-            AppBackgroundFragment.duration(context, System.currentTimeMillis() - p.startedMillis))
-        nowPref.depth = p.depth
-        nowPref.state = LujarchBackground.depthName(context, p.depth)
+        idPref.summary = packageName?.let { getString(R.string.memory_process_id, it, p.pid) }
+            ?: getString(R.string.memory_service_id, p.pid)
+        nowPref.state = p.state
+        nowPref.stateName = LujarchBackground.stateName(context, p.state)
         nowPref.text = p.reason
         nowPref.update()
         reasonsPref.removeAll()
@@ -151,19 +166,29 @@ class ProcessFragment : BasePreferenceFragment() {
                 text = r.text
             }
         }
+        memoryPref.summary = getString(R.string.memory_process_memory,
+            Formatter.formatShortFileSize(context, p.memoryBytes),
+            Formatter.formatShortFileSize(context, p.rssBytes),
+            Formatter.formatShortFileSize(context, p.swapBytes))
+        val order = if (p.reclaimOrder > 0) getString(R.string.memory_reclaim_order, p.reclaimOrder)
+            else null
+        reclaimPref.summary = listOfNotNull(order, p.priority).joinToString("\n")
+        reclaimPref.isVisible = order != null || p.priority != null
+        cpuPref.summary = getString(R.string.memory_process_cpu_today, cpu(context, p.cpuMs))
+
         val threads = p.threads ?: emptyArray()
-        usePref.tiles = listOf(
-            getString(R.string.background_use_memory) to Formatter.formatShortFileSize(context, p.memoryBytes),
-            getString(R.string.background_use_swap) to Formatter.formatShortFileSize(context, p.swapBytes),
-            getString(R.string.background_use_cpu) to cpu(context, p.cpuMs),
-            getString(R.string.background_use_wakeups) to
-                resources.getQuantityString(R.plurals.background_times, p.wakeups, p.wakeups),
-            getString(R.string.background_use_network) to
-                (network?.let { Formatter.formatShortFileSize(context, it) } ?: "—"),
-            getString(R.string.background_use_threads) to threads.size.toString(),
-        )
+        threadsPref.title = resources.getQuantityString(R.plurals.memory_process_threads_count,
+            threads.size, threads.size)
         threadsPref.removeAll()
-        threads.take(MAX_THREADS).forEachIndexed { i, t ->
+        if (p.frozen) {
+            threadsPref.add(Preference(context)) {
+                key = "threads_paused"
+                setSummary(R.string.memory_process_threads_paused)
+                isSelectable = false
+            }
+        }
+        val shown = if (allThreads) threads.size else minOf(threads.size, FEW_THREADS)
+        threads.take(shown).forEachIndexed { i, t ->
             threadsPref.add(LinePreference(context)) {
                 key = "thread_$i"
                 showWho = false
@@ -172,54 +197,74 @@ class ProcessFragment : BasePreferenceFragment() {
                 value = cpu(context, t.cpuMs)
             }
         }
-        actionsPref.setButton1Enabled(!p.frozen && p.depth != LujarchBackground.DEPTH_ON_SCREEN)
-        actionsPref.setButton2Enabled(true)
-    }
-
-    /** The app's use of the networks in the last 24 hours (the kernel counts it per app, not per process). */
-    private suspend fun networkUse(context: Context, uid: Int): Long = withContext(Dispatchers.IO) {
-        val nsm = context.getSystemService(NetworkStatsManager::class.java)!!
-        val end = System.currentTimeMillis()
-        val start = end - DAY_MS
-        var total = 0L
-        for (type in intArrayOf(ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE)) {
-            nsm.queryDetailsForUid(type, null, start, end, uid).use { stats ->
-                val bucket = NetworkStats.Bucket()
-                while (stats.hasNextBucket()) {
-                    stats.getNextBucket(bucket)
-                    total += bucket.rxBytes + bucket.txBytes
+        if (shown < threads.size) {
+            threadsPref.add(Preference(context)) {
+                key = "threads_all"
+                title = resources.getQuantityString(R.plurals.memory_process_threads_all,
+                    threads.size, threads.size)
+                setOnPreferenceClickListener {
+                    allThreads = true
+                    render(p)
+                    true
                 }
             }
         }
-        total
+        actionsPref?.setButton1Enabled(true)
     }
 
-    private fun perform(what: Int) {
+    private fun end() {
         launchUi {
-            act(if (what == PAUSE) R.string.background_error_pause else R.string.background_error_end) {
-                BackgroundClient.call { if (what == PAUSE) it.pauseProcess(pid) else it.endProcess(pid) }
+            act(R.string.memory_error_end) {
+                BackgroundClient.call { it.endProcess(pid) }
             }
             delay(1_000)
             load()
         }
     }
 
+    /** Android's force stop, with Android's own question first. */
+    private fun confirmForceStop(pkg: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.memory_force_stop_title)
+            .setMessage(R.string.memory_force_stop_text)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                launchUi {
+                    act(R.string.memory_error_end) {
+                        withContext(Dispatchers.IO) {
+                            requireContext().getSystemService(ActivityManager::class.java)!!
+                                .forceStopPackage(pkg)
+                        }
+                    }
+                    delay(1_000)
+                    load()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun cpu(context: Context, ms: Long): String =
-        if (ms < 60_000) context.getString(R.string.background_duration_seconds, ms / 1000)
-        else AppBackgroundFragment.duration(context, ms)
+        if (ms < 60_000) context.getString(R.string.memory_duration_seconds, ms / 1000)
+        else AppMemoryFragment.duration(context, ms)
 
     companion object {
         const val ARG_PID = "pid"
         const val ARG_NAME = "name"
-        private const val PAUSE = 1
-        private const val END = 2
         private const val REFRESH_MS = 5_000L
-        private const val DAY_MS = 24 * 60 * 60 * 1000L
-        private const val MAX_THREADS = 20
+        private const val FEW_THREADS = 5
 
-        fun open(context: Context, pid: Int, name: String, packageName: String, label: String?) {
-            Pages.open(context, ProcessFragment::class.java, R.string.background_process_title, title = name,
-                arguments = AppBackgroundFragment.args(packageName, label).apply {
+        /** "WeChat · Main process" for an app's process; a service by its own name. */
+        private fun title(context: Context, name: String, packageName: String?, label: String): String =
+            if (packageName == null) name
+            else context.getString(R.string.memory_process_of, label,
+                AppMemoryFragment.processLabel(context, name, packageName))
+
+        /** An app's process page; packageName null for one of Lujarch's system services. */
+        fun open(context: Context, pid: Int, name: String, packageName: String?, label: String?) {
+            Pages.open(context, ProcessFragment::class.java, R.string.memory_process_title,
+                arguments = Bundle().apply {
+                    putString(AppMemoryFragment.ARG_PACKAGE, packageName)
+                    putString(AppMemoryFragment.ARG_LABEL, label)
                     putInt(ARG_PID, pid)
                     putString(ARG_NAME, name)
                 })

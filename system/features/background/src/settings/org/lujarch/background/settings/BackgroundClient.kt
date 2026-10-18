@@ -33,7 +33,7 @@ object BackgroundClient {
     /** The service could not be reached. */
     class Unavailable(cause: Throwable? = null) : Exception("Background is not available", cause), Failure {
         override fun describe(context: Context): String =
-            context.getString(R.string.background_error_unavailable)
+            context.getString(R.string.memory_error_unavailable)
 
         override val details: String? = cause?.toString()
         override val unavailable: Boolean = true

@@ -213,7 +213,7 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Keep | 保留 | 保持 |
 | Remove keep | 取消保留 | 保持を解除 |
 | Kept | 已保留 | 保持中 |
-| Opens again | 将重新打开 | 再度開きます |
+| Opens again | 打开时重新加载 | 開くと再読み込み |
 | You | 你 | あなた |
 | System | 系统 | システム |
 | Memory | 内存 | メモリ |

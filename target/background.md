@@ -52,7 +52,7 @@ level; Battery manager > Restricted apps opens that list filtered to Restricted.
 When a process the owner chose keeps calling the app's paused main process, which the system then
 ends (five times in 10 minutes), or a chosen process ends without the system ending it, the page
 shows a suggestion under the level: what happened, with the times, and Add the main process. The
-same suggestion arrives as an alert (BG-11); acting on it or dismissing it in either place removes
+same suggestion arrives as an alert (BG-12); acting on it or dismissing it in either place removes
 both. Nothing changes until the owner acts. Each app gets at most one suggestion a day for each
 cause.
 

@@ -1,84 +1,22 @@
 diff --git a/packages/SystemUI/AndroidManifest.xml b/packages/SystemUI/AndroidManifest.xml
-index a83e306e053c9057aab10ffea49a47e9e24b1a90..a23b0fc047c674c0473667ea96392b0fa649dc62 100644
+index a83e306e053c9057aab10ffea49a47e9e24b1a90..fc281713a6217c8788a9fae9f20b717603f5597b 100644
 --- a/packages/SystemUI/AndroidManifest.xml
 +++ b/packages/SystemUI/AndroidManifest.xml
 @@ -308,6 +308,8 @@
  
      <!-- Listen app op changes -->
      <uses-permission android:name="android.permission.WATCH_APPOPS" />
-+    <!-- Lujarch's Background: Fold into Background (BG-9). -->
++    <!-- Lujarch's Background: the shade's Running · N (BG-9). -->
 +    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
      <uses-permission android:name="android.permission.OBSERVE_GRANT_REVOKE_PERMISSIONS" />
      <!-- For handling silent audio recordings -->
      <uses-permission android:name="android.permission.MODIFY_AUDIO_ROUTING" />
-diff --git a/packages/SystemUI/res/layout/lujarch_background_fold_row.xml b/packages/SystemUI/res/layout/lujarch_background_fold_row.xml
-new file mode 100644
-index 0000000000000000000000000000000000000000..8b75cf974922770c51b7910222abeff5d7223177
---- /dev/null
-+++ b/packages/SystemUI/res/layout/lujarch_background_fold_row.xml
-@@ -0,0 +1,56 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!--
-+    Copyright (C) 2026 The Lujarch Project
-+
-+    Licensed under the Apache License, Version 2.0 (the "License");
-+    you may not use this file except in compliance with the License.
-+    You may obtain a copy of the License at
-+
-+         http://www.apache.org/licenses/LICENSE-2.0
-+
-+    Unless required by applicable law or agreed to in writing, software
-+    distributed under the License is distributed on an "AS IS" BASIS,
-+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+    See the License for the specific language governing permissions and
-+    limitations under the License.
-+-->
-+<!-- Fold into Background (BG-9), in a running notification's long-press menu. -->
-+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-+    android:id="@+id/lujarch_background_fold"
-+    android:layout_width="match_parent"
-+    android:layout_height="wrap_content"
-+    android:minHeight="56dp"
-+    android:layout_marginTop="8dp"
-+    android:paddingStart="16dp"
-+    android:paddingEnd="8dp"
-+    android:gravity="center_vertical"
-+    android:orientation="horizontal"
-+    android:background="@drawable/ripple_drawable">
-+
-+    <LinearLayout
-+        android:layout_width="0dp"
-+        android:layout_height="wrap_content"
-+        android:layout_weight="1"
-+        android:orientation="vertical">
-+
-+        <TextView
-+            android:id="@+id/lujarch_background_fold_title"
-+            android:layout_width="match_parent"
-+            android:layout_height="wrap_content"
-+            android:text="@string/lujarch_background_fold"
-+            android:textAppearance="@style/TextAppearance.NotificationImportanceButton" />
-+
-+        <TextView
-+            android:layout_width="match_parent"
-+            android:layout_height="wrap_content"
-+            android:text="@string/lujarch_background_fold_summary"
-+            android:textAppearance="@style/TextAppearance.NotificationImportanceDetail" />
-+    </LinearLayout>
-+
-+    <Switch
-+        android:id="@+id/lujarch_background_fold_switch"
-+        android:layout_width="wrap_content"
-+        android:layout_height="wrap_content"
-+        android:layout_marginStart="12dp"
-+        android:contentDescription="@string/lujarch_background_fold" />
-+</LinearLayout>
 diff --git a/packages/SystemUI/res/values-ja/lujarch_background_strings.xml b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..d5af7930401967ff4582d8c2fd6f573bedd8ff2e
+index 0000000000000000000000000000000000000000..0d7393203c5f31a32788b7f287f7280744f6e101
 --- /dev/null
 +++ b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -95,17 +33,18 @@ index 0000000000000000000000000000000000000000..d5af7930401967ff4582d8c2fd6f573b
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
 +<resources>
-+    <string name="lujarch_background_fold">"バックグラウンドにまとめる"</string>
-+    <string name="lujarch_background_fold_summary">"「バックグラウンド」の通知の 1 行として表示します。サービスは実行を続けます"</string>
++    <plurals name="lujarch_background_running">
++        <item quantity="other">"実行中 · %d"</item>
++    </plurals>
 +</resources>
 diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..32fd7dc8d68206aef577a48997c670e73b988b75
+index 0000000000000000000000000000000000000000..582f18a737bd8a3ffff6604fbc1e2f3a4d532c2d
 --- /dev/null
 +++ b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -122,17 +61,18 @@ index 0000000000000000000000000000000000000000..32fd7dc8d68206aef577a48997c670e7
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
 +<resources>
-+    <string name="lujarch_background_fold">"收进后台"</string>
-+    <string name="lujarch_background_fold_summary">"在“后台”通知里显示为一行，服务照常运行"</string>
++    <plurals name="lujarch_background_running">
++        <item quantity="other">"运行中 · %d"</item>
++    </plurals>
 +</resources>
 diff --git a/packages/SystemUI/res/values/lujarch_background_strings.xml b/packages/SystemUI/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..53b75b4c8f60e371369a575219df1f3d24f6f103
+index 0000000000000000000000000000000000000000..81535293c0c93a421e7608434c3652fc7287a01c
 --- /dev/null
 +++ b/packages/SystemUI/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,23 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -149,17 +89,19 @@ index 0000000000000000000000000000000000000000..53b75b4c8f60e371369a575219df1f3d
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): Fold into Background. -->
++<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
 +<resources>
-+    <string name="lujarch_background_fold">Fold into Background</string>
-+    <string name="lujarch_background_fold_summary">Show it as a line in the Background notification; its service keeps running</string>
++    <plurals name="lujarch_background_running">
++        <item quantity="one">Running · %d</item>
++        <item quantity="other">Running · %d</item>
++    </plurals>
 +</resources>
-diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt
+diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..26ea39d63cd4787c3288ebef6363604c02963eab
+index 0000000000000000000000000000000000000000..806aae68c17a3201c6fbb64867bdb60959cf8dcc
 --- /dev/null
-+++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFold.kt
-@@ -0,0 +1,118 @@
++++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt
+@@ -0,0 +1,121 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -175,354 +117,281 @@ index 0000000000000000000000000000000000000000..26ea39d63cd4787c3288ebef6363604c
 + * See the License for the specific language governing permissions and
 + * limitations under the License.
 + */
-+
 +package com.android.systemui.lujarch.background
 +
-+import android.app.AppOpsManager
-+import android.app.Notification
 +import android.content.Context
-+import android.content.pm.PackageManager
-+import android.os.AsyncTask
-+import android.os.UserHandle
-+import android.service.notification.StatusBarNotification
++import android.database.ContentObserver
++import android.os.RemoteException
++import android.provider.Settings
 +import android.util.Log
-+import android.view.LayoutInflater
-+import android.view.View
-+import android.view.ViewGroup
-+import android.widget.Switch
-+import android.widget.TextView
++import com.android.internal.app.ILujarchBackground
++import com.android.internal.app.ILujarchBackgroundListener
 +import com.android.internal.app.LujarchBackground
-+import com.android.systemui.res.R
-+import com.android.systemui.statusbar.phone.SystemUIDialog
++import kotlinx.coroutines.CoroutineDispatcher
++import kotlinx.coroutines.channels.awaitClose
++import kotlinx.coroutines.delay
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.callbackFlow
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.flowOn
++import kotlinx.coroutines.launch
++
++/** What Recents' Running layer shows, for the shade's footer (BG-9). */
++data class LujarchRunningModel(val count: Int, val unseen: Boolean)
 +
 +/**
-+ * Fold into Background (BG-9): an app's ongoing notification of a foreground service shows as a
-+ * line inside the Background notification instead of on its own, by the owner's choice per app.
-+ * The choice is in the notification's long-press menu, and in the same menu on its line.
++ * The shade's Running · N (BG-9): the count of what Recents' Running layer shows and whether
++ * something started running since Recents last showed it, as Background tells it.
 + */
-+object LujarchFold {
++object LujarchRunning {
 +    private const val TAG = "lujarch_background"
++    private const val RETRY_MS = 5_000L
 +
-+    /** An ongoing notification of a foreground service: what folds. */
-+    fun isFoldable(sbn: StatusBarNotification): Boolean {
-+        val n = sbn.notification
-+        return sbn.packageName != "android" &&
-+            n.flags and Notification.FLAG_FOREGROUND_SERVICE != 0 &&
-+            n.flags and Notification.FLAG_ONGOING_EVENT != 0
-+    }
++    /** Whether Recents shows its Running layer; while it does not, the footer is Android's. */
++    fun isLayerOn(context: Context): Boolean =
++        Settings.Secure.getInt(
++            context.contentResolver,
++            LujarchBackground.SETTING_RECENTS_RUNNING,
++            1,
++        ) != 0
 +
-+    fun isFolded(context: Context, uid: Int, packageName: String): Boolean =
-+        context.getSystemService(AppOpsManager::class.java)!!
-+            .unsafeCheckOpRawNoThrow(AppOpsManager.OPSTR_LUJARCH_FOLD, uid, packageName) ==
-+            AppOpsManager.MODE_ALLOWED
++    /** The Running layer's count, or null while that layer is off or Background is away. */
++    fun flow(context: Context, bgDispatcher: CoroutineDispatcher): Flow<LujarchRunningModel?> =
++        callbackFlow<LujarchRunningModel?> {
++                var service: ILujarchBackground? = null
++                val listener =
++                    object : ILujarchBackgroundListener.Stub() {
++                        override fun onRunningChanged(count: Int, unseen: Boolean) {
++                            trySend(if (isLayerOn(context)) LujarchRunningModel(count, unseen) else null)
++                        }
++                    }
 +
-+    /** Sets the choice through Background, off the main thread; failures are logged. */
-+    fun setFolded(packageName: String, uid: Int, folded: Boolean) {
-+        AsyncTask.THREAD_POOL_EXECUTOR.execute {
-+            try {
-+                val service = LujarchBackground.get()
-+                if (service == null) {
-+                    Log.e(TAG, "Fold into Background for $packageName: Background is not available")
++                fun unregister() {
++                    try {
++                        service?.removeRunningListener(listener)
++                    } catch (e: RemoteException) {
++                        Log.w(TAG, "the shade cannot stop listening to Background", e)
++                    }
++                    service = null
++                }
++
++                suspend fun register() {
++                    while (service == null) {
++                        val s = LujarchBackground.get()
++                        if (s != null) {
++                            try {
++                                s.addRunningListener(listener)
++                                service = s
++                                return
++                            } catch (e: RemoteException) {
++                                Log.w(TAG, "the shade cannot listen to Background", e)
++                            } catch (e: SecurityException) {
++                                Log.e(TAG, "the shade may not listen to Background", e)
++                                return
++                            }
++                        }
++                        delay(RETRY_MS)
++                    }
++                }
++
++                val observer =
++                    object : ContentObserver(null) {
++                        override fun onChange(selfChange: Boolean) {
++                            if (isLayerOn(context)) {
++                                launch { register() }
++                            } else {
++                                unregister()
++                                trySend(null)
++                            }
++                        }
++                    }
++                context.contentResolver.registerContentObserver(
++                    Settings.Secure.getUriFor(LujarchBackground.SETTING_RECENTS_RUNNING),
++                    false,
++                    observer,
++                )
++                if (isLayerOn(context)) {
++                    register()
 +                } else {
-+                    service.setFolded(packageName, UserHandle.getUserId(uid), folded)
++                    trySend(null)
 +                }
-+            } catch (e: Exception) {
-+                Log.e(TAG, "Fold into Background for $packageName failed", e)
++                awaitClose {
++                    context.contentResolver.unregisterContentObserver(observer)
++                    unregister()
++                }
 +            }
-+        }
-+    }
-+
-+    /** Adds the Fold into Background row to a notification's long-press menu, for what folds. */
-+    fun bindGuts(info: ViewGroup, sbn: StatusBarNotification) {
-+        val controls = info.findViewById<ViewGroup>(R.id.inline_controls) ?: return
-+        var row = controls.findViewById<View>(R.id.lujarch_background_fold)
-+        if (!isFoldable(sbn)) {
-+            row?.visibility = View.GONE
-+            return
-+        }
-+        if (row == null) {
-+            row = LayoutInflater.from(info.context)
-+                .inflate(R.layout.lujarch_background_fold_row, controls, false)
-+            controls.addView(row, controls.indexOfChild(controls.findViewById(R.id.bottom_buttons)))
-+        }
-+        bindRow(row!!, sbn.packageName, sbn.uid)
-+    }
-+
-+    private fun bindRow(row: View, packageName: String, uid: Int) {
-+        row.visibility = View.VISIBLE
-+        val toggle = row.findViewById<Switch>(R.id.lujarch_background_fold_switch)
-+        toggle.setOnCheckedChangeListener(null)
-+        toggle.isChecked = isFolded(row.context, uid, packageName)
-+        toggle.setOnCheckedChangeListener { _, on -> setFolded(packageName, uid, on) }
-+        row.setOnClickListener { toggle.toggle() }
-+    }
-+
-+    /** The menu of a folded line in the Background notification: the same choice. */
-+    fun showMenu(context: Context, packageName: String, uid: Int) {
-+        val label = try {
-+            val pm = context.packageManager
-+            pm.getApplicationInfoAsUser(packageName, 0, UserHandle.getUserId(uid)).loadLabel(pm)
-+        } catch (e: PackageManager.NameNotFoundException) {
-+            Log.w(TAG, "$packageName is not installed", e)
-+            return
-+        }
-+        val dialog = SystemUIDialog(context)
-+        val row = LayoutInflater.from(dialog.context).inflate(R.layout.lujarch_background_fold_row, null)
-+        bindRow(row, packageName, uid)
-+        row.findViewById<TextView>(R.id.lujarch_background_fold_title).text =
-+            context.getString(R.string.lujarch_background_fold)
-+        dialog.setTitle(label)
-+        dialog.setView(row)
-+        dialog.setPositiveButton(R.string.inline_done_button, null)
-+        dialog.setShowForAllUsers(true)
-+        dialog.show()
-+    }
++            .distinctUntilChanged()
++            .flowOn(bgDispatcher)
 +}
-diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt
-new file mode 100644
-index 0000000000000000000000000000000000000000..cba2d432a7076201ac08e26c4543c7f95a1484db
---- /dev/null
-+++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchFoldCoordinator.kt
-@@ -0,0 +1,112 @@
-+/*
-+ * Copyright (C) 2026 The Lujarch Project
-+ *
-+ * Licensed under the Apache License, Version 2.0 (the "License");
-+ * you may not use this file except in compliance with the License.
-+ * You may obtain a copy of the License at
-+ *
-+ *      http://www.apache.org/licenses/LICENSE-2.0
-+ *
-+ * Unless required by applicable law or agreed to in writing, software
-+ * distributed under the License is distributed on an "AS IS" BASIS,
-+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+ * See the License for the specific language governing permissions and
-+ * limitations under the License.
-+ */
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt b/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
+index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..7eeaec08574d6a9ab6d4f119797b8719c75efb7f 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
+@@ -156,6 +156,8 @@ constructor(
+     private val dumpManager: DumpManager,
+     private val systemUIDialogFactory: SystemUIDialog.Factory,
+     private val shadeDialogContextRepository: ShadeDialogContextInteractor,
++    @com.android.systemui.dagger.qualifiers.Application private val appContext: Context,
++    private val recents: dagger.Lazy<java.util.Optional<com.android.systemui.recents.Recents>>,
+ ) : Dumpable, FgsManagerController {
+ 
+     companion object {
+@@ -312,7 +314,14 @@ constructor(
+                 object : BroadcastReceiver() {
+                     override fun onReceive(context: Context, intent: Intent) {
+                         if (intent.action == Intent.ACTION_SHOW_FOREGROUND_SERVICE_MANAGER) {
+-                            showDialog(null)
++                            if (com.android.systemui.lujarch.background.LujarchRunning
++                                    .isLayerOn(appContext)) {
++                                // Lujarch's Background (BG-8): what runs is shown in Recents'
++                                // Running layer.
++                                recents.get().ifPresent { it.showRecentApps(false) }
++                            } else {
++                                showDialog(null)
++                            }
+                         }
+                     }
+                 },
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
+index a3cdd7341281a898ca15bf1a6f7520c65a13e424..a2b9b1df06c13de5f070e9b3453d733fc05e8967 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
+@@ -34,19 +34,24 @@ import com.android.systemui.dagger.SysUISingleton
+ import com.android.systemui.dagger.qualifiers.Background
+ import com.android.systemui.globalactions.GlobalActionsDialogLite
+ import com.android.systemui.globalactions.shared.model.GlobalActionsEvent
++import com.android.systemui.lujarch.background.LujarchRunning
++import com.android.systemui.lujarch.background.LujarchRunningModel
+ import com.android.systemui.plugins.ActivityStarter
+ import com.android.systemui.qs.FgsManagerController
+ import com.android.systemui.qs.QSSecurityFooterUtils
+ import com.android.systemui.qs.footer.data.model.UserSwitcherStatusModel
+ import com.android.systemui.qs.footer.data.repository.ForegroundServicesRepository
+ import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig
++import com.android.systemui.recents.Recents
+ import com.android.systemui.security.data.repository.SecurityRepository
++import com.android.systemui.shade.ShadeController
+ import com.android.systemui.shade.ShadeDisplayAware
+ import com.android.systemui.statusbar.policy.DeviceProvisionedController
+ import com.android.systemui.statusbar.policy.KeyguardStateController;
+ import com.android.systemui.supervision.data.repository.SupervisionRepository
+ import com.android.systemui.user.data.repository.UserSwitcherRepository
+ import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
++import java.util.Optional
+ import javax.inject.Inject
+ import kotlinx.coroutines.CoroutineDispatcher
+ import kotlinx.coroutines.flow.Flow
+@@ -84,6 +89,12 @@ interface FooterActionsInteractor {
+     /** Show the foreground services dialog. */
+     fun showForegroundServicesDialog(expandable: Expandable)
+ 
++    /** What Recents' Running layer shows; null while that layer is off (Lujarch, BG-9). */
++    val lujarchRunning: Flow<LujarchRunningModel?>
 +
-+package com.android.systemui.lujarch.background
++    /** Closes the shade and shows Recents with its Running layer (Lujarch, BG-9). */
++    fun showRunning()
 +
-+import android.app.AppOpsManager
-+import android.content.BroadcastReceiver
-+import android.content.Context
-+import android.content.Intent
-+import android.content.IntentFilter
-+import android.os.Handler
-+import android.util.ArraySet
-+import android.util.Log
-+import com.android.internal.app.LujarchBackground
-+import com.android.systemui.dagger.qualifiers.Main
-+import com.android.systemui.statusbar.notification.collection.NotifPipeline
-+import com.android.systemui.statusbar.notification.collection.NotificationEntry
-+import com.android.systemui.statusbar.notification.collection.coordinator.Coordinator
-+import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
-+import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifFilter
-+import javax.inject.Inject
+     /** Show the power menu dialog. */
+     fun showPowerMenuDialog(
+         globalActionsDialogLite: GlobalActionsDialogLite,
+@@ -116,6 +127,8 @@ constructor(
+     broadcastDispatcher: BroadcastDispatcher,
+     @Background bgDispatcher: CoroutineDispatcher,
+     @ShadeDisplayAware private val context: Context,
++    private val recents: dagger.Lazy<Optional<Recents>>,
++    private val shadeController: dagger.Lazy<ShadeController>,
+ ) : FooterActionsInteractor {
+     override val securityButtonConfig: Flow<SecurityButtonConfig?> =
+         securityRepository.security.combine(supervisionRepository.supervision) {
+@@ -160,6 +173,14 @@ constructor(
+         fgsManagerController.showDialog(expandable)
+     }
+ 
++    override val lujarchRunning: Flow<LujarchRunningModel?> =
++        LujarchRunning.flow(context, bgDispatcher)
 +
-+/**
-+ * Fold into Background (BG-9): the running notifications of the apps folded into Background are
-+ * not shown on their own; the Background notification shows them as lines, and the menu of a
-+ * line comes here.
-+ */
-+@CoordinatorScope
-+class LujarchFoldCoordinator
-+@Inject
-+constructor(
-+    private val context: Context,
-+    @Main private val mainHandler: Handler,
-+) : Coordinator {
-+    private val folded = ArraySet<String>()
-+    private val appOps = context.getSystemService(AppOpsManager::class.java)!!
-+
-+    private val filter =
-+        object : NotifFilter("LujarchFoldFilter") {
-+            override fun shouldFilterOut(entry: NotificationEntry, now: Long): Boolean {
-+                val sbn = entry.sbn
-+                return LujarchFold.isFoldable(sbn) &&
-+                    synchronized(folded) { folded.contains("${sbn.uid}:${sbn.packageName}") }
-+            }
-+        }
-+
-+    override fun attach(pipeline: NotifPipeline) {
-+        pipeline.addPreGroupFilter(filter)
-+        try {
-+            watch()
-+        } catch (e: RuntimeException) {
-+            Log.e(TAG, "Fold into Background is not watched", e)
-+        }
++    override fun showRunning() {
++        shadeController.get().animateCollapseShade()
++        recents.get().ifPresent { it.showRecentApps(false) }
 +    }
 +
-+    private fun watch() {
-+        read()
-+        appOps.startWatchingMode(AppOpsManager.OPSTR_LUJARCH_FOLD, null) { _, _ ->
-+            mainHandler.post {
-+                read()
-+                filter.invalidateList("lujarch fold changed")
-+            }
+     override fun showPowerMenuDialog(
+         globalActionsDialogLite: GlobalActionsDialogLite,
+         expandable: Expandable,
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
+index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..ea921794a775917ca7f28c23637a860504db0fc6 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
+@@ -231,6 +231,21 @@ fun createFooterActionsViewModel(
+         )
+     }
+ 
++    fun onLujarchRunningClicked(expandable: Expandable) {
++        if (falsingManager.isFalseTap(FalsingManager.LOW_PENALTY)) {
++            return
 +        }
-+        context.registerReceiverForAllUsers(
-+            object : BroadcastReceiver() {
-+                override fun onReceive(c: Context, intent: Intent) {
-+                    val pkg = intent.getStringExtra(Intent.EXTRA_PACKAGE_NAME) ?: return
-+                    LujarchFold.showMenu(context, pkg, intent.getIntExtra("uid", -1))
-+                }
++
++        activityStarter.dismissKeyguardThenExecute(
++            {
++                footerActionsInteractor.showRunning()
++                false /* if the dismiss should be deferred */
 +            },
-+            IntentFilter(ACTION_FOLD_MENU),
-+            LujarchBackground.PERMISSION,
-+            mainHandler,
-+            Context.RECEIVER_EXPORTED,
++            null /* cancelAction */,
++            true, /* afterKeyguardGone */
 +        )
 +    }
 +
-+    private fun read() {
-+        val now = ArraySet<String>()
-+        try {
-+            appOps.getPackagesForOps(intArrayOf(AppOpsManager.OP_LUJARCH_FOLD))?.forEach { p ->
-+                if (p.ops.any { it.mode == AppOpsManager.MODE_ALLOWED }) {
-+                    now.add("${p.uid}:${p.packageName}")
-+                }
-+            }
-+        } catch (e: RuntimeException) {
-+            Log.e(TAG, "the apps folded into Background cannot be read", e)
-+        }
-+        synchronized(folded) {
-+            folded.clear()
-+            folded.addAll(now)
-+        }
-+    }
-+
-+    private companion object {
-+        const val TAG = "lujarch_background"
-+        const val ACTION_FOLD_MENU = "org.lujarch.background.action.FOLD_MENU"
-+    }
-+}
-diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
-index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..8af2321766c6b1634e013036149cd6adac61850b 100644
---- a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
-+++ b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
-@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
- import kotlinx.coroutines.flow.StateFlow
- import kotlinx.coroutines.flow.asStateFlow
- import kotlinx.coroutines.flow.combine
-+import kotlinx.coroutines.flow.flowOf
- import kotlinx.coroutines.flow.distinctUntilChanged
- import kotlinx.coroutines.flow.map
- import kotlinx.coroutines.isActive
-@@ -264,27 +265,9 @@ fun createFooterActionsViewModel(
-             }
-             .distinctUntilChanged()
- 
--    val foregroundServices =
--        combine(
--                footerActionsInteractor.foregroundServicesCount,
--                footerActionsInteractor.hasNewForegroundServices,
--                security,
--                textFeedbackInteractor.textFeedback,
+     fun onUserSwitcherClicked(expandable: Expandable) {
+         if (falsingManager.isFalseTap(FalsingManager.LOW_PENALTY)) {
+             return
+@@ -270,7 +285,19 @@ fun createFooterActionsViewModel(
+                 footerActionsInteractor.hasNewForegroundServices,
+                 security,
+                 textFeedbackInteractor.textFeedback,
 -            ) { foregroundServicesCount, hasNewChanges, securityModel, textFeedbackModel ->
--                if (foregroundServicesCount <= 0) {
--                    return@combine null
--                }
--
--                foregroundServicesButtonViewModel(
--                    qsThemedContext,
--                    foregroundServicesCount,
--                    securityModel,
--                    textFeedbackModel,
--                    hasNewChanges,
--                    ::onForegroundServiceButtonClicked,
--                )
--            }
--            .distinctUntilChanged()
-+    // Lujarch's Background (BG-8): the Background notification lists the active apps; the
-+    // footer has no button for them.
-+    val foregroundServices: Flow<FooterActionsForegroundServicesButtonViewModel?> = flowOf(null)
- 
-     val userSwitcher =
-         userSwitcherViewModel(qsThemedContext, footerActionsInteractor, ::onUserSwitcherClicked)
-diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
-index 7295df17c64bbea7fde88629c22f26edadbf2390..5360582dd640aafb261c625180521233d55f9697 100644
---- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
-+++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/NotifCoordinators.kt
-@@ -17,6 +17,7 @@ package com.android.systemui.statusbar.notification.collection.coordinator
- 
- import android.multiuser.Flags
- import android.os.UserManager
-+import com.android.systemui.lujarch.background.LujarchFoldCoordinator
- import com.android.systemui.notifications.intelligence.rules.shared.NmContextualDisplayLaunch
- import com.android.systemui.statusbar.notification.collection.NotifPipeline
- import com.android.systemui.statusbar.notification.collection.PipelineDumpable
-@@ -70,6 +71,7 @@ constructor(
-     summarizationCoordinator: SummarizationCoordinator,
-     highlightsCoordinator: HighlightsCoordinator,
-     hsuCoordinator: HsuCoordinator,
-+    lujarchFoldCoordinator: LujarchFoldCoordinator,
- ) : NotifCoordinators {
- 
-     private val mCoreCoordinators: MutableList<CoreCoordinator> = ArrayList()
-@@ -111,6 +113,7 @@ constructor(
-         mCoordinators.add(bundleCoordinator)
-         mCoordinators.add(summarizationCoordinator)
-         mCoordinators.add(statsLoggerCoordinator)
-+        mCoordinators.add(lujarchFoldCoordinator)
-         if (NmContextualDisplayLaunch.isEnabled) {
-             mCoordinators.add(highlightsCoordinator)
-         }
-diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
-index 9e41b5f36d4494e09ff57ad24f539c8df4663874..48365478ff503af9c2145ec03b0015e13bb5bbab 100644
---- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
-+++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/collection/coordinator/RankingCoordinator.java
-@@ -20,6 +20,8 @@ import android.annotation.NonNull;
- import android.annotation.Nullable;
- import android.app.NotificationChannel;
- 
-+import com.android.internal.notification.SystemNotificationChannels;
-+
- import com.android.systemui.plugins.statusbar.StatusBarStateController;
- import com.android.systemui.statusbar.notification.collection.BundleEntry;
- import com.android.systemui.statusbar.notification.collection.ListEntry;
-@@ -186,6 +188,12 @@ public class RankingCoordinator implements Coordinator {
-                 "SilentSectionComparator") {
-             @Override
-             public int compare(@NonNull PipelineEntry o1, @NonNull PipelineEntry o2) {
-+                // Lujarch's Background notification is the last of the shade (BG-8).
-+                final boolean background1 = isLujarchBackground(o1);
-+                final boolean background2 = isLujarchBackground(o2);
-+                if (background1 != background2) {
-+                    return background1 ? 1 : -1;
++                footerActionsInteractor.lujarchRunning,
++            ) { foregroundServicesCount, hasNewChanges, securityModel, textFeedbackModel, running ->
++                if (running != null) {
++                    // Lujarch's Background (BG-9): Running · N leads to Recents' Running layer.
++                    return@combine if (running.count <= 0) null
++                    else lujarchRunningButtonViewModel(
++                        qsThemedContext,
++                        running,
++                        securityModel,
++                        textFeedbackModel,
++                        ::onLujarchRunningClicked,
++                    )
 +                }
-                 boolean isBundle1 = o1 instanceof BundleEntry;
-                 boolean isBundle2 = o2 instanceof BundleEntry;
-                 if (isBundle1 && isBundle2) {
-@@ -215,6 +223,14 @@ public class RankingCoordinator implements Coordinator {
-         }
-     };
+                 if (foregroundServicesCount <= 0) {
+                     return@combine null
+                 }
+@@ -384,6 +411,29 @@ fun foregroundServicesButtonViewModel(
+     )
+ }
  
-+    private static boolean isLujarchBackground(PipelineEntry entry) {
-+        final ListEntry listEntry = entry.asListEntry();
-+        final NotificationEntry notif = listEntry != null ? listEntry.getRepresentativeEntry() : null;
-+        return notif != null && "android".equals(notif.getSbn().getPackageName())
-+                && SystemNotificationChannels.LUJARCH_BACKGROUND.equals(
-+                        notif.getSbn().getNotification().getChannelId());
-+    }
++/** Lujarch's Background (BG-9): the footer's Running · N. */
++fun lujarchRunningButtonViewModel(
++    qsThemedContext: Context,
++    running: com.android.systemui.lujarch.background.LujarchRunningModel,
++    securityModel: FooterActionsSecurityButtonViewModel?,
++    textFeedbackModel: TextFeedbackModel,
++    onClick: (Expandable) -> Unit,
++): FooterActionsForegroundServicesButtonViewModel {
++    val text =
++        qsThemedContext.resources.getQuantityString(
++            R.plurals.lujarch_background_running,
++            running.count,
++            running.count,
++        )
++    return FooterActionsForegroundServicesButtonViewModel(
++        foregroundServicesCount = running.count,
++        text = text,
++        displayText = securityModel == null && textFeedbackModel == TextFeedbackModel.NoFeedback,
++        hasNewChanges = running.unseen,
++        onClick = { _, expandable -> onClick(expandable) },
++    )
++}
 +
-     private final NotifSectioner mMinimizedNotifSectioner = new NotifSectioner("Minimized",
-             NotificationPriorityBucketKt.BUCKET_SILENT) {
-         @Override
-diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
-index a8998e2a8c632f3e6c50caa4d7214ef46d53afbc..a11b0db63ea823bec0b2f205e2c4a469ebc39b3a 100644
---- a/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
-+++ b/packages/SystemUI/src/com/android/systemui/statusbar/notification/row/NotificationInfo.java
-@@ -289,6 +289,13 @@ public class NotificationInfo extends LinearLayout implements NotificationGuts.G
- 
-         int behavior = getAlertingBehavior();
-         applyAlertingBehavior(behavior, false /* userTriggered */);
-+
-+        // Lujarch's Background (BG-9): a running notification folds into Background.
-+        try {
-+            com.android.systemui.lujarch.background.LujarchFold.INSTANCE.bindGuts(this, mSbn);
-+        } catch (RuntimeException e) {
-+            android.util.Log.e("lujarch_background", "Fold into Background is not offered", e);
-+        }
-     }
- 
-     @SuppressLint("WrongThread")
+ fun userSwitcherButtonViewModel(
+     qsThemedContext: Context,
+     status: UserSwitcherStatusModel.Enabled,

@@ -14,7 +14,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<!-- The memory in use as four parts (BG-2). -->
+<!-- The device's memory as four parts and the compressed swap (BG-5). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -34,11 +34,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/background_memory"
+            android:text="@string/memory_device"
             android:textAppearance="?android:attr/textAppearanceListItem" />
 
         <TextView
-            android:id="@+id/background_memory_free"
+            android:id="@+id/memory_parts_free"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
@@ -46,15 +46,24 @@
     </LinearLayout>
 
     <org.lujarch.background.settings.MemoryBarView
-        android:id="@+id/background_memory_bar"
+        android:id="@+id/memory_parts_bar"
         android:layout_width="match_parent"
         android:layout_height="14dp"
         android:layout_marginTop="12dp" />
 
     <LinearLayout
-        android:id="@+id/background_memory_legend"
+        android:id="@+id/memory_parts_legend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:orientation="horizontal" />
+
+    <TextView
+        android:id="@+id/memory_parts_swap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="?android:attr/textColorSecondary"
+        android:visibility="gone" />
 </LinearLayout>

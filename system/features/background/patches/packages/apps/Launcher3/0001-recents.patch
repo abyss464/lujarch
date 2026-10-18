@@ -11,12 +11,47 @@ index e8d372c65f275842115fbccf8c3037c88fe81ae3..cf34d76d6ffcc19fc2bcadf2c64698ad
      <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"/>
      <uses-permission android:name="android.permission.STATUS_BAR"/>
      <uses-permission android:name="android.permission.STATUS_BAR_SERVICE"/>
+diff --git a/quickstep/res/drawable/lujarch_ic_keep.xml b/quickstep/res/drawable/lujarch_ic_keep.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ad7ce48fbe70559bb20da8e9fd9896eb6981e6b7
+--- /dev/null
++++ b/quickstep/res/drawable/lujarch_ic_keep.xml
+@@ -0,0 +1,29 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Keep (BG-4): a push pin. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="960"
++    android:viewportHeight="960"
++    android:tint="@color/materialColorOnSurface">
++    <group android:translateY="960">
++        <path
++            android:fillColor="@android:color/white"
++            android:pathData="M640,-760v280l68,68q6,6 9,13.5t3,15.5v23q0,17 -11.5,28.5T680,-320H520v234q0,17 -11.5,28.5T480,-46q-17,0 -28.5,-11.5T440,-86v-234H280q-17,0 -28.5,-11.5T240,-360v-23q0,-8 3,-15.5t9,-13.5l68,-68v-280q-17,0 -28.5,-11.5T280,-800q0,-17 11.5,-28.5T320,-840h320q17,0 28.5,11.5T680,-800q0,17 -11.5,28.5T640,-760ZM354,-400h252l-46,-46v-314H400v314l-46,46Z" />
++    </group>
++</vector>
 diff --git a/quickstep/res/values-ja/lujarch_background_strings.xml b/quickstep/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..21e323c39fec663c6c5bb5fce8d853219c3213ff
+index 0000000000000000000000000000000000000000..9577138b6e34a3a33bcf1800c4d0ecd977cebfd6
 --- /dev/null
 +++ b/quickstep/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -38,19 +73,22 @@ index 0000000000000000000000000000000000000000..21e323c39fec663c6c5bb5fce8d85321
 +    <string name="lujarch_background_running">"実行中"</string>
 +    <string name="lujarch_background_drop">"指を離すと小ウィンドウで開きます"</string>
 +    <string name="lujarch_background_tile">"%1$s、%2$s"</string>
-+    <string name="lujarch_background_end">"終了"</string>
-+    <string name="lujarch_background_title">"バックグラウンド"</string>
++    <string name="lujarch_background_end">"実行を終了"</string>
++    <string name="lujarch_background_usage">"バックグラウンドでの使用"</string>
++    <string name="lujarch_background_memory">"メモリ"</string>
 +    <string name="lujarch_background_open">"%1$s ›"</string>
 +    <string name="lujarch_background_free_of">"空き %1$s / %2$s"</string>
-+    <string name="lujarch_background_opens_again">"再度開きます"</string>
-+    <string name="lujarch_background_kept_toast">"保持中: アプリのバックグラウンドのページでオフにできます"</string>
++    <string name="lujarch_background_opens_again">"開くと再読み込み"</string>
++    <string name="lujarch_background_kept_toast">"保持中 · カード メニューで解除できます"</string>
++    <string name="lujarch_background_keep">"保持"</string>
++    <string name="lujarch_background_remove_keep">"保持を解除"</string>
 +</resources>
 diff --git a/quickstep/res/values-zh-rCN/lujarch_background_strings.xml b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..e38614d9bd98b845774939422bded1e4f4ae2e9e
+index 0000000000000000000000000000000000000000..b9935231327b86d2bef657856539360d9e828927
 --- /dev/null
 +++ b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -72,12 +110,15 @@ index 0000000000000000000000000000000000000000..e38614d9bd98b845774939422bded1e4
 +    <string name="lujarch_background_running">"运行中"</string>
 +    <string name="lujarch_background_drop">"松手即在小窗中打开"</string>
 +    <string name="lujarch_background_tile">"%1$s，%2$s"</string>
-+    <string name="lujarch_background_end">"结束"</string>
-+    <string name="lujarch_background_title">"后台"</string>
++    <string name="lujarch_background_end">"结束运行"</string>
++    <string name="lujarch_background_usage">"后台使用"</string>
++    <string name="lujarch_background_memory">"内存"</string>
 +    <string name="lujarch_background_open">"%1$s ›"</string>
 +    <string name="lujarch_background_free_of">"可用 %1$s / %2$s"</string>
-+    <string name="lujarch_background_opens_again">"将重新打开"</string>
-+    <string name="lujarch_background_kept_toast">"已保留：可在应用的后台页面中关闭"</string>
++    <string name="lujarch_background_opens_again">"打开时重新加载"</string>
++    <string name="lujarch_background_kept_toast">"已保留 · 可在卡片菜单里取消保留"</string>
++    <string name="lujarch_background_keep">"保留"</string>
++    <string name="lujarch_background_remove_keep">"取消保留"</string>
 +</resources>
 diff --git a/quickstep/res/values/lujarch_background_ids.xml b/quickstep/res/values/lujarch_background_ids.xml
 new file mode 100644
@@ -108,10 +149,10 @@ index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18
 +</resources>
 diff --git a/quickstep/res/values/lujarch_background_strings.xml b/quickstep/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..74c01d51b0fac65b0cf6ca76beca738b55995cb3
+index 0000000000000000000000000000000000000000..57af46dd353f6f53d7eca8816a66f7b7aecf2a5a
 --- /dev/null
 +++ b/quickstep/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -133,13 +174,28 @@ index 0000000000000000000000000000000000000000..74c01d51b0fac65b0cf6ca76beca738b
 +    <string name="lujarch_background_running">Running</string>
 +    <string name="lujarch_background_drop">Release to open in a small window</string>
 +    <string name="lujarch_background_tile">%1$s, %2$s</string>
-+    <string name="lujarch_background_end">End</string>
-+    <string name="lujarch_background_title">Background</string>
++    <string name="lujarch_background_end">End running</string>
++    <string name="lujarch_background_usage">Background usage</string>
++    <string name="lujarch_background_memory">Memory</string>
 +    <string name="lujarch_background_open">%1$s ›</string>
 +    <string name="lujarch_background_free_of">Free %1$s / %2$s</string>
 +    <string name="lujarch_background_opens_again">Opens again</string>
-+    <string name="lujarch_background_kept_toast">Kept: turn it off in the app’s Background page</string>
++    <string name="lujarch_background_kept_toast">Kept · remove it in the card menu</string>
++    <string name="lujarch_background_keep">Keep</string>
++    <string name="lujarch_background_remove_keep">Remove keep</string>
 +</resources>
+diff --git a/quickstep/src/com/android/launcher3/dagger/Modules.kt b/quickstep/src/com/android/launcher3/dagger/Modules.kt
+index 577777013ad3306cfd8362fc973af33f0965e567..ef03af48b221cd99b9634a095935a97da596ff8b 100644
+--- a/quickstep/src/com/android/launcher3/dagger/Modules.kt
++++ b/quickstep/src/com/android/launcher3/dagger/Modules.kt
+@@ -347,6 +347,7 @@ object TaskOverlayModule {
+             TaskShortcutFactory.SAVE_APP_PAIR,
+             TaskShortcutFactory.SCREENSHOT,
+             TaskShortcutFactory.MODAL,
++            TaskShortcutFactory.LUJARCH_KEEP,
+         )
+ }
+ 
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
 index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19af6b25ee 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
@@ -156,12 +212,118 @@ index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19
          val dismissThreshold = (DISMISS_THRESHOLD_FRACTION * dismissLength * verticalFactor).toInt()
          val finalPosition = if (isDismissing) (dismissLength * verticalFactor).toFloat() else 0f
          springAnimation =
+diff --git a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
+index a8ac4e021d9af5498e918b9232569482864ce4bf..40a4d6049c8110dde40c813997e2b25d6e8e4f49 100644
+--- a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
++++ b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
+@@ -495,4 +495,15 @@ public interface TaskShortcutFactory {
+             return createSingletonShortcutList(modalStateSystemShortcut);
+         }
+     };
++
++    /** Lujarch's Background (BG-4): Keep and Remove keep. */
++    TaskShortcutFactory LUJARCH_KEEP = new TaskShortcutFactory() {
++        @Override
++        @SuppressWarnings({"unchecked", "rawtypes"})
++        public List<SystemShortcut> getShortcuts(RecentsViewContainer container,
++                TaskContainer taskContainer) {
++            return (List) com.android.quickstep.lujarch.LujarchKeep.shortcuts(container,
++                    taskContainer);
++        }
++    };
+ }
+diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchKeep.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchKeep.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc303807842eb92f7
+--- /dev/null
++++ b/quickstep/src/com/android/quickstep/lujarch/LujarchKeep.kt
+@@ -0,0 +1,80 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.quickstep.lujarch
++
++import android.app.AppOpsManager
++import android.os.UserHandle
++import android.util.Log
++import android.view.View
++import com.android.internal.app.LujarchBackground
++import com.android.launcher3.R
++import com.android.launcher3.popup.SystemShortcut
++import com.android.launcher3.util.Executors.MAIN_EXECUTOR
++import com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR
++import com.android.quickstep.views.RecentsViewContainer
++import com.android.quickstep.views.TaskContainer
++
++/** Keep and Remove keep in a card's menu, Keep's home (BG-4). */
++object LujarchKeep {
++    private const val TAG = "lujarch_background"
++
++    /** The card's Keep or Remove keep; none for a task without an app the owner can keep. */
++    @JvmStatic
++    fun shortcuts(container: RecentsViewContainer, taskContainer: TaskContainer): List<SystemShortcut<*>>? {
++        val key = taskContainer.task.key
++        val context = container.asContext()
++        val uid = try {
++            context.packageManager.getApplicationInfoAsUser(key.packageName, 0, key.userId).uid
++        } catch (e: Exception) {
++            Log.w(TAG, "Recents: no app for ${key.packageName}", e)
++            return null
++        }
++        if (UserHandle.getAppId(uid) < android.os.Process.FIRST_APPLICATION_UID) return null
++        val kept = context.getSystemService(AppOpsManager::class.java)!!.unsafeCheckOpRawNoThrow(
++            AppOpsManager.OP_LUJARCH_KEEP, uid, key.packageName) == AppOpsManager.MODE_ALLOWED
++        return listOf(Shortcut(container, taskContainer, key.packageName, key.userId, kept))
++    }
++
++    private class Shortcut(
++        container: RecentsViewContainer,
++        taskContainer: TaskContainer,
++        private val packageName: String,
++        private val userId: Int,
++        private val kept: Boolean,
++    ) : SystemShortcut<RecentsViewContainer>(
++        R.drawable.lujarch_ic_keep,
++        if (kept) R.string.lujarch_background_remove_keep else R.string.lujarch_background_keep,
++        container, taskContainer.itemInfo, taskContainer.taskView,
++    ) {
++        override fun onClick(view: View) {
++            dismissTaskMenuView()
++            UI_HELPER_EXECUTOR.execute {
++                try {
++                    LujarchBackground.get()?.setKept(packageName, userId, !kept)
++                        ?: Log.e(TAG, "Recents: the Background service is not running")
++                } catch (e: Exception) {
++                    Log.e(TAG, "Recents: Keep for $packageName failed", e)
++                }
++                MAIN_EXECUTOR.execute { refresh?.invoke() }
++            }
++        }
++    }
++
++    /** Reads the apps again, so that the card shows its mark. */
++    @JvmStatic
++    var refresh: (() -> Unit)? = null
++}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d62e11961
+index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901dc4cac75a
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,343 @@
+@@ -0,0 +1,356 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -184,6 +346,7 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +import android.content.Context
 +import android.content.Intent
 +import android.graphics.Rect
++import android.net.Uri
 +import android.os.Handler
 +import android.os.Looper
 +import android.os.UserHandle
@@ -234,6 +397,7 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +    private var picked: Pickup? = null
 +
 +    init {
++        LujarchKeep.refresh = { refresh() }
 +        // The drag layer's own layout params: it turns others into them and drops their gravity.
 +        dragLayer.addView(runningLayer, BaseDragLayer.LayoutParams(
 +            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -304,8 +468,8 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +        // An app in a small window is there as its window; the others as what they run.
 +        runningLayer.bind(list.filter {
 +            it.packageName != home && !it.settling && !it.smallWindow &&
-+                (it.depth == LujarchBackground.DEPTH_RUNNING || it.depth == LujarchBackground.DEPTH_MESSAGES)
-+        }.sortedBy { it.depth }, shown)
++                it.state == LujarchBackground.RUN_BACKGROUND.toInt()
++        }, shown)
 +        memoryRow.bind(mem)
 +        markTaskViews()
 +        updateVisibility()
@@ -317,7 +481,7 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +            for (tv in recentsView.taskViews) {
 +                val app = appOf(tv)
 +                TaskMarks.mark(tv, kept = app?.kept == true,
-+                    reclaimed = app?.depth == LujarchBackground.DEPTH_RECLAIMED)
++                    reclaimed = app?.state == LujarchBackground.RUN_RECLAIMED.toInt())
 +                installPickup(tv)
 +            }
 +        } catch (e: RuntimeException) {
@@ -351,18 +515,29 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +        return true
 +    }
 +
-+    /** Opens the Background page of an app, or Settings > System > Background. */
-+    fun openBackground(packageName: String?, uid: Int) {
-+        val intent = if (packageName == null) Intent(LujarchBackground.ACTION_BACKGROUND)
-+        else Intent(LujarchBackground.ACTION_APP)
-+            .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
-+            .putExtra(Intent.EXTRA_USER, UserHandle.getUserHandleForUid(uid))
-+        intent.setPackage(LujarchBackground.SETTINGS_PACKAGE)
-+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
++    /** Settings > System > Memory (BG-11). */
++    fun openMemory() {
++        start(Intent(LujarchBackground.ACTION_MEMORY).setPackage(LujarchBackground.SETTINGS_PACKAGE), 0)
++    }
++
++    /** The app's Allow background usage, its home (BG-8). */
++    fun openBackgroundUsage(packageName: String, uid: Int) {
++        start(Intent(Settings.ACTION_VIEW_ADVANCED_POWER_USAGE_DETAIL)
++            .setData(Uri.fromParts("package", packageName, null))
++            .putExtra(LujarchBackground.EXTRA_ALLOW_BACKGROUND_USAGE, true), uid)
++    }
++
++    fun openAppInfo(packageName: String, uid: Int) {
++        start(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
++            .setData(Uri.fromParts("package", packageName, null)), uid)
++    }
++
++    private fun start(intent: Intent, uid: Int) {
++        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 +        try {
 +            context.startActivityAsUser(intent, UserHandle.getUserHandleForUid(maxOf(uid, 0)))
 +        } catch (e: Exception) {
-+            Log.e(TAG, "Recents: the Background page cannot be opened", e)
++            Log.e(TAG, "Recents: ${intent.action} cannot be opened", e)
 +        }
 +    }
 +
@@ -507,7 +682,7 @@ index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..70af0b21e88a938aaf1aab820d566b4e94b418e8
+index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d1f04a43f
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 @@ -0,0 +1,113 @@
@@ -573,13 +748,13 @@ index 0000000000000000000000000000000000000000..70af0b21e88a938aaf1aab820d566b4e
 +        free.setTextColor(context.getColor(android.R.color.system_neutral1_100))
 +        top.addView(free, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
 +        top.addView(TextView(context).apply {
-+            text = context.getString(R.string.lujarch_background_open, context.getString(R.string.lujarch_background_title))
++            text = context.getString(R.string.lujarch_background_open, context.getString(R.string.lujarch_background_memory))
 +            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
 +            setTextColor(context.getColor(android.R.color.system_accent1_200))
 +            val p = dp(10)
 +            setPadding(p, dp(6), p, dp(6))
 +            isClickable = true
-+            setOnClickListener { recents.openBackground(null, -1) }
++            setOnClickListener { recents.openMemory() }
 +        })
 +        addView(top)
 +        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(8)).apply { topMargin = dp(4) })
@@ -626,10 +801,10 @@ index 0000000000000000000000000000000000000000..70af0b21e88a938aaf1aab820d566b4e
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584628c2207
+index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2dd0e0956
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,263 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -672,7 +847,7 @@ index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584
 +
 +/**
 + * The Running layer above the cards in Recents (BG-11): every app running off screen, with its
-+ * depth's color and one word, in one row that fits between the status bar and the cards. A tap
++ * state's color and one word, in one row that fits between the status bar and the cards. A tap
 + * opens the app; touching and holding shows End for what the app started itself, and Background.
 + * The small windows come first, in the order of the screen, each a place that its shape flies
 + * into: a window with its live screen, a conversation as the person's picture (WIN-11); the layer
@@ -813,7 +988,7 @@ index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584
 +    }
 +
 +    private fun tile(app: LujarchBackgroundApp): View {
-+        val color = LujarchBackground.depthColor(context, app.depth, app.smallWindow)
++        val color = LujarchBackground.stateColor(context, app.state)
 +        return LinearLayout(context).apply {
 +            orientation = VERTICAL
 +            gravity = Gravity.CENTER
@@ -855,12 +1030,15 @@ index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584
 +
 +    private fun menu(anchor: View, app: LujarchBackgroundApp) {
 +        val popup = PopupMenu(context, anchor)
++        // What the app started itself has End running; a run the owner chose leads to its home.
 +        if (app.ownService) popup.menu.add(0, END, 0, R.string.lujarch_background_end)
-+        popup.menu.add(0, BACKGROUND, 1, R.string.lujarch_background_title)
++        else popup.menu.add(0, BACKGROUND, 0, R.string.lujarch_background_usage)
++        popup.menu.add(0, APP_INFO, 1, R.string.app_info_drop_target_label)
 +        popup.setOnMenuItemClickListener {
 +            when (it.itemId) {
 +                END -> recents.end(app)
-+                else -> recents.openBackground(app.packageName, app.uid)
++                APP_INFO -> recents.openAppInfo(app.packageName, app.uid)
++                else -> recents.openBackgroundUsage(app.packageName, app.uid)
 +            }
 +            true
 +        }
@@ -880,6 +1058,7 @@ index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584
 +    private companion object {
 +        const val END = 1
 +        const val BACKGROUND = 2
++        const val APP_INFO = 3
 +        /** The row fits the space between the status bar and the cards. */
 +        const val ROW_H = 56
 +        const val TILE_W = 64
@@ -891,7 +1070,7 @@ index 0000000000000000000000000000000000000000..1d9d161e9ee26086152619b834331584
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..c24963a2141ed8a86b0ed87d2efcc0ae50c196fd
+index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb542fef6a5
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
 @@ -0,0 +1,106 @@
@@ -978,7 +1157,7 @@ index 0000000000000000000000000000000000000000..c24963a2141ed8a86b0ed87d2efcc0ae
 +                fill.color = 0x8C000000.toInt()
 +                r.set(card)
 +                canvas.drawRoundRect(r, radius, radius, fill)
-+                dashed.color = LujarchBackground.depthColor(context, LujarchBackground.DEPTH_PAUSED, false)
++                dashed.color = LujarchBackground.stateColor(context, LujarchBackground.RUN_PAUSED.toInt())
 +                r.inset(dashed.strokeWidth / 2, dashed.strokeWidth / 2)
 +                canvas.drawRoundRect(r, radius, radius, dashed)
 +                text.color = context.getColor(android.R.color.system_accent1_100)
