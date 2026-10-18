@@ -562,10 +562,10 @@ index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc3038078
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf75794bf7e
+index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979f53fe98f
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,581 @@
+@@ -0,0 +1,590 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -695,7 +695,7 @@ index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf7
 +    private fun settle(settles: Boolean) {
 +        if (settles == settled) return
 +        settled = settles
-+        recentsSettled?.invoke(settles)
++        reportWindows()
 +        if (settles) {
 +            refresh()
 +            runningLayer.arrive(ARRIVE_DELAY_MS)
@@ -716,6 +716,7 @@ index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf7
 +    fun onSideways(value: Boolean) {
 +        if (sideways == value) return
 +        sideways = value
++        reportWindows()
 +        if (!value && settled) {
 +            runningLayer.reset()
 +            runningLayer.arrive(ARRIVE_DELAY_MS)
@@ -725,11 +726,19 @@ index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf7
 +        updateVisibility()
 +    }
 +
++    /**
++     * The small windows fly into their tiles only once Recents stands with the screen: their
++     * tasks showing while the swipe's transition still runs would end it before Recents turns.
++     */
++    private fun reportWindows() {
++        recentsSettled?.invoke(settled && !sideways)
++    }
++
 +    /** A card opens: the memory and the cards' marks fade out and the layer goes up. */
 +    fun onCardLaunch() {
 +        if (!settled) return
 +        settled = false
-+        recentsSettled?.invoke(false)
++        reportWindows()
 +        runningLayer.leave()
 +        fadeMemory(0f, FADE_OUT_MS, 0L)
 +        fadeMarks(0f, FADE_OUT_MS)
@@ -1110,7 +1119,7 @@ index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf7
 +        /** The swipe's progress towards Recents while the finger moves, 0 to 1. */
 +        @JvmStatic
 +        fun onSwipe(progress: Float) {
-+            if (swiping) swipeProgress?.invoke(progress.coerceIn(0f, 1f))
++            if (swiping && !sideways) swipeProgress?.invoke(progress.coerceIn(0f, 1f))
 +        }
 +
 +        /** The swipe ends: towards Recents it settles, else what moved with it goes back. */
@@ -1118,7 +1127,7 @@ index 0000000000000000000000000000000000000000..d679057a538176c4648a4f8db0e2caf7
 +        fun onSwipeEnd(recents: LujarchRecents?, toRecents: Boolean) {
 +            if (!swiping) return
 +            swiping = false
-+            if (!toRecents) swipeProgress?.invoke(0f)
++            if (!toRecents && !sideways) swipeProgress?.invoke(0f)
 +            recents?.settle(toRecents)
 +        }
 +
