@@ -25,13 +25,16 @@ conversations that would open in a small window arrive as notifications.
 - Default: none
 - Verify: vm
 
-Dragging the handle moves the window anywhere on the screen. Dragging its lower right corner
-scales the window and the app in it together, keeping the app's layout. Dragging its right or
-bottom edge changes the window's width or height alone: the app lays itself out at the new size,
-and an app that cannot is shown whole inside the window with empty margins. A window is at least
-160 dp wide and stays 12 dp inside the screen's edges; dragging an edge or the corner past that
-limit and letting go shows the app full screen. A tap on the handle opens its menu: Full screen,
-Move to dock, Close. Full screen turns the small window back into an ordinary app in Recents.
+Dragging the handle moves the window anywhere on the screen. Dragging any of its four edges
+changes its width or height, and dragging any of its four corners changes both: the app lays
+itself out at the new size, so any width and height between the minimum and the screen can be
+reached, and an app that cannot is shown whole inside the window with empty margins. Each edge
+and corner takes a drag that starts within 16 dp of it. A window is at least 160 dp wide and
+stays 12 dp inside the screen's edges; dragging an edge or a corner past that limit and letting go
+shows the app full screen. A tap on the handle opens its menu: Full screen, Move to dock, Close.
+Full screen turns the small window back into an ordinary app in Recents: the window grows into
+the full screen from where it is. Opening the app from its icon on the home screen or in the app
+drawer does the same, also while its window waits in the dock or the rail.
 
 ### WIN-3 Touching the app below moves the window to the dock
 
@@ -54,23 +57,26 @@ touch to the app below.
 
 The dock is a stack of cards against the right edge of the screen, with nothing drawn behind
 them: each card floats over the app on screen with its own shadow, overlaps the next, and is
-turned slightly towards the middle of the screen. An app's card shows the app's live screen and
-its icon in a lower corner; a conversation's card shows the person's picture, the number of unread
+turned slightly towards the middle of the screen. An app's card shows the app's whole live
+screen, scaled to fit inside the card with empty margins beside it, and its icon in a lower
+corner; a conversation's card shows the person's picture, the number of unread
 messages and the last message. The newest card is on top. A tap on a card opens it, and the window
 that was open becomes the top card. Dragging a card into the middle of the screen opens it there;
 dragging it onto the circle that appears at the bottom closes it; dropping it on the dock puts it
 in that place of the stack.
 
-### WIN-5 The dock moves along the edge and to the other edge
+### WIN-5 The dock moves anywhere and rests at an edge
 
 - Home: the dock
 - Switch: none
 - Default: none
 - Verify: vm
 
-A handle above the top card moves the whole dock: dragging it up or down moves the dock along the
-edge; letting go past the middle of the screen moves it to the other edge, where its cards turn
-the other way. The dock keeps its edge and height until it is moved again.
+A handle above the top card moves the whole dock: the dock follows the finger anywhere on the
+screen, its cards trailing one after another, and on letting go it settles against the nearer
+side edge at the height where it was let go, carried on by the fling, as Android's own bubbles
+do; on the left edge its cards turn the other way. The dock keeps its edge and height until it is
+moved again.
 
 ### WIN-6 The dock folds into a rail
 
@@ -81,8 +87,10 @@ the other way. The dock keeps its edge and height until it is moved again.
 
 Pushing the dock's handle past the screen's edge folds the dock into a rail 34 dp wide holding a
 22 dp icon for each card; a conversation with unread messages has a ring round its picture. A
-tap on the rail unfolds the dock; dragging the rail moves it along the edge. Apps in the rail
-count as in the background (BG-1); conversations in it still receive messages.
+tap on the rail unfolds the dock. Dragging the rail moves it anywhere on the screen, its icons
+trailing one after another, and on letting go it settles against the nearer side edge, carried
+on by the fling, as Android's own bubbles do. Apps in the rail count as in the background
+(BG-1); conversations in it still receive messages.
 
 ### WIN-7 Cards show the live screen
 
