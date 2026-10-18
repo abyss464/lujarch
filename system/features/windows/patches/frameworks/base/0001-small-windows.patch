@@ -1015,10 +1015,10 @@ index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..625784a524b57936cfd7c381d7e98ca9
 \ No newline at end of file
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..a5f0059043d7b2914e5c472f90126f6a9aec9997
+index 0000000000000000000000000000000000000000..133adea8c121611c00a2877c463659f996b38b87
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
-@@ -0,0 +1,555 @@
+@@ -0,0 +1,558 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1123,6 +1123,8 @@ index 0000000000000000000000000000000000000000..a5f0059043d7b2914e5c472f90126f6a
 +     */
 +    var anchorRight = false
 +    var anchorBottom = false
++    /** Whether the window has the landscape shape its app asks for. */
++    var landscape = false
 +
 +    var listener: BubbleTaskViewListener? = null
 +    /** The app's task, once created. */
@@ -1437,8 +1439,9 @@ index 0000000000000000000000000000000000000000..a5f0059043d7b2914e5c472f90126f6a
 +            h / (LujarchSmallWindowsView.CARD_H * density)))
 +        val size = 22f * density * k
 +        val margin = 8f * density * k
-+        // In the lower corner towards the middle of the screen.
-+        val left = if (item.turn.value >= 0f) margin else width - margin - size
++        // In the lower corner towards the middle of the screen from the dock's side, which
++        // changes only when the dock lands: a card's turn crosses zero as it moves.
++        val left = if (host.dockRight) margin else width - margin - size
 +        val top = h - margin - size
 +        fill.color = withAlpha(Color.WHITE, a * 0.9f)
 +        canvas.drawCircle(left + size / 2, top + size / 2, size / 2 + 2f * density * k, fill)
@@ -2005,10 +2008,10 @@ index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c4
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd00fece7e8
+index 0000000000000000000000000000000000000000..7d44b5b2128be638ab4381379f649ee80f4be588
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
-@@ -0,0 +1,2282 @@
+@@ -0,0 +1,2308 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2032,6 +2035,7 @@ index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd0
 +import android.app.ActivityTaskManager.INVALID_TASK_ID
 +import android.app.WindowConfiguration
 +import android.content.Context
++import android.content.pm.ActivityInfo
 +import android.graphics.Canvas
 +import android.graphics.Color
 +import android.graphics.Paint
@@ -2391,6 +2395,7 @@ index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd0
 +            BubbleTaskViewListener(context, btv, item.view, manager,
 +                object : BubbleTaskViewListener.Callback {
 +                    override fun onTaskCreated() {
++                        followOrientation(item, item.taskView?.taskInfo)
 +                        onContentDrawn(item, true)
 +                        reportWindows()
 +                    }
@@ -2402,7 +2407,8 @@ index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd0
 +                        if (item === open) controller.collapseStack()
 +                    }
 +
-+                    override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) {}
++                    override fun onTaskInfoChanged(taskInfo: ActivityManager.RunningTaskInfo) =
++                        followOrientation(item, taskInfo)
 +                })
 +        item.listener?.setBubble(item.bubble)
 +    }
@@ -2562,17 +2568,37 @@ index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd0
 +    private fun cardH(item: LujarchSmallWindowItem?): Float =
 +        if (item == null || item.layoutH == 0) dp(CARD_H) else item.layoutH * cardScale(item)
 +
++    /**
++     * A new window: an app that asks for landscape is laid out at the screen turned on its side,
++     * any other at the screen's width and [WINDOW_ASPECT] times it high.
++     */
 +    private fun initWindow(item: LujarchSmallWindowItem) {
-+        val w = if (width > 0) width else resources.displayMetrics.widthPixels
-+        val h = if (height > 0) height else resources.displayMetrics.heightPixels
++        val sw = if (width > 0) width else resources.displayMetrics.widthPixels
++        val sh = if (height > 0) height else resources.displayMetrics.heightPixels
++        val short = min(sw, sh)
++        val w = if (item.landscape) max(sw, sh) else short
++        val h = if (item.landscape) short else (short * WINDOW_ASPECT).roundToInt()
 +        item.layoutW = w
 +        item.layoutH = h
 +        item.taskW = w
 +        item.taskH = h
-+        item.winScale = dp(WINDOW_W) / w
++        item.winScale = dp(if (item.landscape) WINDOW_W_LANDSCAPE else WINDOW_W) / w
 +        item.winX = dp(WINDOW_X)
 +        item.winY = dp(WINDOW_Y)
 +        fitWindow(item)
++    }
++
++    /** Gives the window the shape of the orientation its app asks for, once the task tells it. */
++    private fun followOrientation(item: LujarchSmallWindowItem, task: ActivityManager.RunningTaskInfo?) {
++        val orientation = task?.topActivityInfo?.screenOrientation ?: return
++        val landscape = ActivityInfo.isFixedOrientationLandscape(orientation)
++        if (landscape == item.landscape) return
++        if (!landscape && !ActivityInfo.isFixedOrientationPortrait(orientation)) return
++        item.landscape = landscape
++        initWindow(item)
++        item.taskView?.layoutParams = LayoutParams(item.taskW, item.taskH)
++        item.view.requestLayout()
++        place(animate = true)
 +    }
 +
 +    /** Keeps the window at least 160 dp wide and 12 dp inside the screen's edges (WIN-2). */
@@ -4206,7 +4232,10 @@ index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd0
 +        const val HANDLE_H = 26f
 +        const val HEADER = 22f
 +        const val WINDOW_RADIUS = 22f
-+        const val WINDOW_W = 258f
++        const val WINDOW_W = 280f
++        /** A window's height for its width, for an app that does not ask for landscape. */
++        const val WINDOW_ASPECT = 1.6f
++        const val WINDOW_W_LANDSCAPE = 400f
 +        const val WINDOW_X = 12f
 +        const val WINDOW_Y = 124f
 +        const val MIN_W = 160f

@@ -2375,7 +2375,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170
  
      @Override
 diff --git a/quickstep/src/com/android/quickstep/views/TaskView.kt b/quickstep/src/com/android/quickstep/views/TaskView.kt
-index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..1eface8b4173264536e8b328cf5ec890d9a9fc6c 100644
+index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec49ce1e0b 100644
 --- a/quickstep/src/com/android/quickstep/views/TaskView.kt
 +++ b/quickstep/src/com/android/quickstep/views/TaskView.kt
 @@ -150,7 +150,12 @@ constructor(
@@ -2411,7 +2411,32 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..1eface8b4173264536e8b328cf5ec890
              val boxWidth: Int
              val boxHeight: Int
  
-@@ -1305,6 +1311,7 @@ constructor(
+@@ -1222,6 +1228,24 @@ constructor(
+             width = expectedWidth
+             height = expectedHeight
+         }
++        // Lujarch's Background (BG-10): a card in the rows keeps its chip within its width.
++        if (taskContainers.size == 1 && this::orientedState.isInitialized) {
++            val margins =
++                (resources.getDimensionPixelSize(
++                    R.dimen.task_thumbnail_icon_menu_expanded_top_start_margin
++                ) +
++                    resources.getDimensionPixelSize(
++                        R.dimen.task_thumbnail_icon_menu_background_margin_top_start
++                    )) * 2
++            val maxWidth =
++                if (foldsIntoGrid && !isLargeTile) expectedWidth - margins else Integer.MAX_VALUE
++            getTaskIcons().forEach { (icon, _) ->
++                if (icon.maxWidth != maxWidth) {
++                    icon.maxWidth = maxWidth
++                    icon.setIconOrientation(orientedState)
++                }
++            }
++        }
+         updateThumbnailSize()
+     }
+ 
+@@ -1305,6 +1329,7 @@ constructor(
  
      /** Launch of the current task (both live and inactive tasks) with an animation. */
      fun launchWithAnimation(): RunnableList? {
