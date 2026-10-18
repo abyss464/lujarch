@@ -145,7 +145,7 @@ every app.
 - Default: on
 - Verify: vm
 
-Dragging a card in Recents into the Running layer (BG-11) opens the app in a small window; the
+Dragging a card in Recents into the Running layer (BG-8) opens the app in a small window; the
 card's menu has Open in small window. While Recents is shown, the open window and the dock fly
 into the Running layer and fly back when Recents closes.
 

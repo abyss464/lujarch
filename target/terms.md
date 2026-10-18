@@ -196,25 +196,38 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Selected conversations | 所选对话 | 選択した会話 |
 | Dock | 停靠条 | ドック |
 | Rail | 细轨 | レール |
-| Background | 后台 | バックグラウンド |
-| Background alerts | 后台提醒 | バックグラウンドのアラート |
 | Background usage | 后台使用 | バックグラウンドでの使用 |
-| Messages only | 仅接收消息 | メッセージのみ |
-| Keep | 保留 | 保持 |
-| Kept | 已保留 | 保持中 |
-| Running | 运行中 | 実行中 |
+| Allow background usage | 允许后台使用 | バックグラウンドでの使用を許可 |
+| Restricted | 受限 | 制限 |
+| Optimized | 优化 | 最適化 |
+| Chosen processes | 指定进程 | 指定したプロセス |
+| Unrestricted | 无限制 | 制限なし |
+| After it leaves the screen | 离开屏幕以后 | 画面を離れたあと |
+| Add the main process | 一起指定主进程 | メイン プロセスも指定 |
+| Run state | 运行状态 | 実行状態 |
+| Foreground | 前台 | フォアグラウンド |
+| Running in background | 后台运行 | バックグラウンドで実行中 |
 | Paused | 已暂停 | 一時停止中 |
 | Reclaimed | 已回收 | 回収済み |
 | Stopped | 已停止 | 停止済み |
+| Keep | 保留 | 保持 |
+| Remove keep | 取消保留 | 保持を解除 |
+| Kept | 已保留 | 保持中 |
 | Opens again | 将重新打开 | 再度開きます |
-| What happened | 最近发生的事 | 最近の出来事 |
 | You | 你 | あなた |
 | System | 系统 | システム |
+| Memory | 内存 | メモリ |
+| Device memory | 设备内存 | デバイスのメモリ |
+| Apps | 应用 | アプリ |
+| Free | 可用 | 空き |
+| System services | 系统服务 | システム サービス |
 | Show system processes | 显示系统进程 | システム プロセスを表示 |
-| End background processes | 结束后台进程 | バックグラウンド プロセスを終了 |
-| Pause this process | 暂停这个进程 | このプロセスを一時停止 |
 | End this process | 结束这个进程 | このプロセスを終了 |
-| Fold into Background | 收进后台 | バックグラウンドにまとめる |
-| It can do this | 它可以这样 | このままにする |
-| Show running apps | 显示运行中的应用 | 実行中のアプリを表示 |
+| Running | 运行中 | 実行中 |
+| End running | 结束运行 | 実行を終了 |
+| View running | 查看运行中 | 実行中を表示 |
+| Background activity | 后台活动 | バックグラウンド アクティビティ |
+| Set to restricted | 设为受限 | 制限に設定 |
+| Show running | 显示“运行中” | 「実行中」を表示 |
+| Show app state | 显示应用状态 | アプリの状態を表示 |
 | Show memory | 显示内存 | メモリを表示 |
