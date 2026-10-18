@@ -93,8 +93,9 @@ Pushing the dock more than halfway past the screen's edge folds it into a rail 3
 22 dp icon for each card; a conversation with unread messages has a ring round its picture. A
 tap on the rail unfolds the dock. Dragging the rail moves it anywhere on the screen, its icons
 trailing one after another, and on letting go it settles against the nearer side edge, carried
-on by the fling, as Android's own bubbles do. Apps in the rail count as in the background
-(BG-1); conversations in it still receive messages.
+on by the fling, as Android's own bubbles do. Apps in the dock and the rail keep running and are
+never paused (Small window, BG-1); when memory runs low they are reclaimed last, with kept apps
+(BG-4). Conversations in the rail still receive messages.
 
 ### WIN-7 Cards show the live screen
 

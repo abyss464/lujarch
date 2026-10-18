@@ -18,7 +18,7 @@ A process off screen is in one of these states: Running in background (playback,
 download, Unrestricted, or a process the owner named), Paused (frozen in memory, using no CPU,
 back as it was), Reclaimed (ended; its card in Recents remains and it starts again when opened)
 or Stopped (force stopped: it does not run again until the owner opens it). On screen it is
-Foreground or Small window. Each state has its own color, the same wherever it is shown, and
+Foreground; in a small window, open or in the dock or the rail, it is Small window. Each state has its own color, the same wherever it is shown, and
 every change says who made it (You, System or the app, with the other app's name when another app
 caused it) and why, in plain words. App battery usage shows the app's run state as one line per
 process for each of the last 7 days; a mark on a line opens the reason and who.
