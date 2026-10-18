@@ -11,7 +11,7 @@ index 577777013ad3306cfd8362fc973af33f0965e567..59cc56fba38b96f4349c129558071d90
              TaskShortcutFactory.INSTALL,
              TaskShortcutFactory.FREE_FORM,
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
-index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dcc39bbda2 100644
+index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6fd0654606 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
 +++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
 @@ -196,6 +196,7 @@ import com.android.launcher3.util.WindowBlurState;
@@ -30,7 +30,17 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dc
          mSplitSelectStateController =
                  new SplitSelectStateController(this, getStateManager(),
                          getDepthController(), getStatsLogManager(),
-@@ -558,12 +560,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -474,6 +476,9 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+ 
+     @Override
+     public RunnableList startActivitySafely(View v, Intent intent, ItemInfo item) {
++        if (LujarchSmallWindows.showFullscreen(this, intent, item)) {
++            return null;
++        }
+         PredictionRowView<?> predictionRowView =
+                 getAppsView().getFloatingHeaderView().findFixedRowByType(PredictionRowView.class);
+         // Pause the prediction row updates until the transition (if it exists) ends.
+@@ -558,12 +563,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
          if (Flags.enablePrivateSpace()) {
              shortcuts.add(UNINSTALL_APP);
          }
@@ -48,7 +58,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dc
          return shortcuts.stream();
      }
  
-@@ -935,6 +939,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -935,6 +942,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
      @Override
      protected void onStop() {
          super.onStop();
@@ -58,10 +68,10 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..37de2d039ddab6a8e811b6157f8352dc
              ti.onLauncherStop();
 diff --git a/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9bab122212
+index 0000000000000000000000000000000000000000..97472415d71b23649756823e8d7cb10b4648761a
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,143 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -81,9 +91,15 @@ index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9b
 +package com.android.quickstep
 +
 +import android.content.Context
++import android.content.Intent
 +import android.graphics.Rect
++import android.os.RemoteException
 +import android.provider.Settings
++import android.util.Log
++import com.android.internal.app.LujarchBackground
++import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION
 +import com.android.launcher3.LauncherState
++import com.android.launcher3.model.data.ItemInfo
 +import com.android.launcher3.statemanager.StateManager
 +import com.android.launcher3.uioverrides.QuickstepLauncher
 +import com.android.quickstep.lujarch.LujarchRecents
@@ -94,6 +110,7 @@ index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9b
 + * Settings > Display > Small windows, and opening a Recents task in a small window.
 + */
 +object LujarchSmallWindows {
++    private const val TAG = "lujarch_windows"
 +    private const val KEY_HOME = "lujarch_windows_home"
 +    private const val KEY_RECENTS = "lujarch_windows_recents"
 +
@@ -145,6 +162,7 @@ index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9b
 +            SystemUiProxy.INSTANCE.get(launcher).openSmallWindow(key)
 +        }
 +        LujarchRecents.openTaskInSmallWindow = { taskView, taskId -> openTask(taskView, taskId) }
++        LujarchRecents.canOpenInSmallWindow = { isRecentsEntryOn(launcher) }
 +        launcher.stateManager.addStateListener(
 +            object : StateManager.StateListener<LauncherState> {
 +                override fun onStateTransitionStart(toState: LauncherState) =
@@ -154,6 +172,30 @@ index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9b
 +                    reportRecents(launcher, finalState.isRecentsViewVisible)
 +            }
 +        )
++    }
++
++    /**
++     * An app's icon on the home screen or in the app drawer opens the app full screen: when the
++     * app is in a small window, open, in the dock or in the rail, that window grows into the full
++     * screen from where it is (WIN-2). Returns whether it did.
++     */
++    @JvmStatic
++    fun showFullscreen(context: Context, intent: Intent, item: ItemInfo?): Boolean {
++        if (item == null || item.itemType != ITEM_TYPE_APPLICATION) return false
++        val app = intent.component?.packageName ?: intent.`package` ?: return false
++        val user = item.user.identifier
++        val window =
++            try {
++                LujarchBackground.get()?.smallWindows.orEmpty().firstOrNull {
++                    !it.conversation && it.packageName == app && it.userId == user
++                }
++            } catch (e: RemoteException) {
++                Log.w(TAG, "the small windows cannot be read; $app opens as usual", e)
++                null
++            } ?: return false
++        Log.i(TAG, "$app opens full screen from its small window ${window.key}")
++        SystemUiProxy.INSTANCE.get(context).moveSmallWindowToFullscreen(window.key)
++        return true
 +    }
 +
 +    /** The home screen and Recents are no longer on the screen. */
@@ -174,10 +216,10 @@ index 0000000000000000000000000000000000000000..d019ed3b0ddbe7dc5ece69d787d3da9b
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/SystemUiProxy.kt b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-index 097c61f47a235d8b0118244e1d323d7c01eb4223..0a4c59804246bd2325d4657eea39f9b928ff941f 100644
+index 097c61f47a235d8b0118244e1d323d7c01eb4223..c6ffd0472d86bc0aadb9608aab2bb0bc93f7a8e5 100644
 --- a/quickstep/src/com/android/quickstep/SystemUiProxy.kt
 +++ b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-@@ -785,6 +785,30 @@ constructor(
+@@ -785,6 +785,36 @@ constructor(
              bubbles?.showAppBubble(intent, user, entryPoint, bubbleBarLocation)
          }
  
@@ -191,6 +233,12 @@ index 097c61f47a235d8b0118244e1d323d7c01eb4223..0a4c59804246bd2325d4657eea39f9b9
 +    fun openSmallWindow(key: String) =
 +        executeWithErrorLog({ "Failed call openSmallWindow" }) {
 +            bubbles?.openSmallWindow(key)
++        }
++
++    /** Tells the Shell to show the app of a small window full screen, growing out of it. */
++    fun moveSmallWindowToFullscreen(key: String) =
++        executeWithErrorLog({ "Failed call moveSmallWindowToFullscreen" }) {
++            bubbles?.moveSmallWindowToFullscreen(key)
 +        }
 +
 +    /** Tells the Shell whether Linux is in front, for the small windows to step aside. */

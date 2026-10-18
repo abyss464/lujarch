@@ -158,10 +158,10 @@ index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19
          springAnimation =
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..7af6d1970c93c9481c2fc587590bf36181db5e8e
+index 0000000000000000000000000000000000000000..1c1af7710c1f2aea736de1e64279b86d62e11961
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,336 @@
+@@ -0,0 +1,343 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -453,6 +453,9 @@ index 0000000000000000000000000000000000000000..7af6d1970c93c9481c2fc587590bf361
 +            }
 +        }
 +        tv.setOnLongClickListener { v ->
++            if (openTaskInSmallWindow == null || canOpenInSmallWindow?.invoke() != true) {
++                return@setOnLongClickListener false
++            }
 +            picked = Pickup(tv, downX, downY, v.translationX, v.translationY)
 +            v.parent?.requestDisallowInterceptTouchEvent(true)
 +            v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(150).start()
@@ -496,6 +499,10 @@ index 0000000000000000000000000000000000000000..7af6d1970c93c9481c2fc587590bf361
 +        /** Opens a card's task in a small window, growing out of the card. */
 +        @JvmStatic
 +        var openTaskInSmallWindow: ((TaskView, Int) -> Unit)? = null
++
++        /** Whether a card dropped on the Running layer opens in a small window now (WIN-11). */
++        @JvmStatic
++        var canOpenInSmallWindow: (() -> Boolean)? = null
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
