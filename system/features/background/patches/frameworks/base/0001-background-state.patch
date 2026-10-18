@@ -3024,10 +3024,10 @@ index 0000000000000000000000000000000000000000..74b0c341c171879ac23d633c3eb3ecb9
 +}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundService.java b/services/core/java/com/android/server/am/LujarchBackgroundService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..3ac18404159a3d134745104e3c2245011f175510
+index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997bc866443d
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundService.java
-@@ -0,0 +1,3101 @@
+@@ -0,0 +1,3103 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -3061,6 +3061,7 @@ index 0000000000000000000000000000000000000000..3ac18404159a3d134745104e3c224501
 +import static com.android.server.am.psc.Constants.SERVICE_B_ADJ;
 +import static com.android.server.am.psc.Constants.VISIBLE_APP_ADJ;
 +import static com.android.server.am.psc.ProcessRecordInternal.LUJARCH_HOLD_KEPT;
++import static com.android.server.am.psc.ProcessRecordInternal.LUJARCH_HOLD_RECLAIMED_LAST;
 +import static com.android.server.am.psc.ProcessRecordInternal.LUJARCH_HOLD_CHOSEN;
 +import static com.android.server.am.psc.ProcessRecordInternal.LUJARCH_HOLD_SMALL_WINDOW;
 +import static com.android.server.am.psc.ProcessRecordInternal.LUJARCH_HOLD_UNRESTRICTED;
@@ -3769,11 +3770,12 @@ index 0000000000000000000000000000000000000000..3ac18404159a3d134745104e3c224501
 +                    final int hold = holdOf(app.uid, app.info.packageName, app.processName,
 +                            app.userId);
 +                    if (hold != app.getLujarchHold()) {
-+                        final boolean keptChanged =
-+                                ((hold ^ app.getLujarchHold()) & LUJARCH_HOLD_KEPT) != 0;
++                        final boolean lastChanged = ((hold ^ app.getLujarchHold())
++                                & LUJARCH_HOLD_RECLAIMED_LAST) != 0;
 +                        app.setLujarchHold(hold);
-+                        if (keptChanged) {
-+                            // lmkd learns the kept state now, not with the next change of adj.
++                        if (lastChanged) {
++                            // lmkd learns that it is reclaimed last now, not with the next
++                            // change of adj.
 +                            ProcessList.setOomAdj(app.getPid(), app.uid, app.getLmkdAdj());
 +                        }
 +                        mAm.mProcessStateController.enqueueUpdateTarget(app);
@@ -6508,33 +6510,34 @@ index d8e2cfaae0671d20740f11da8698eace47e925d4..4e195bce58fecdcfffba2d1af18924cf
  
      /**
 diff --git a/services/core/java/com/android/server/am/psc/OomAdjuster.java b/services/core/java/com/android/server/am/psc/OomAdjuster.java
-index f927002a8617af087288300ed8ec848ed7a416f1..225f4deb9baa63683597d3524b50d432ed0c0c37 100644
+index f927002a8617af087288300ed8ec848ed7a416f1..dcc8e25471734b4d17f85813a1d71a75721f06da 100644
 --- a/services/core/java/com/android/server/am/psc/OomAdjuster.java
 +++ b/services/core/java/com/android/server/am/psc/OomAdjuster.java
-@@ -1411,6 +1411,10 @@ public abstract class OomAdjuster {
+@@ -1411,6 +1411,11 @@ public abstract class OomAdjuster {
                      case PROCESS_STATE_CACHED_ACTIVITY:
                      case ActivityManager.PROCESS_STATE_CACHED_ACTIVITY_CLIENT:
                          mNumCachedHiddenProcs++;
-+                        if (app.isLujarchKept()) {
-+                            // Lujarch's Background: Keep (BG-4) takes no place of the others.
++                        if (app.isLujarchReclaimedLast()) {
++                            // Lujarch's Background: Keep (BG-4) and small windows (WIN-6) take
++                            // no place of the others.
 +                            break;
 +                        }
                          numCached++;
                          final int connectionGroup = psr.getConnectionGroup();
                          if (connectionGroup != 0) {
-@@ -1438,7 +1442,10 @@ public abstract class OomAdjuster {
+@@ -1438,7 +1443,10 @@ public abstract class OomAdjuster {
                          }
                          break;
                      case PROCESS_STATE_CACHED_EMPTY:
 -                        if (numEmpty > mOomConstants.mCurTrimEmptyProcesses
-+                        if (app.isLujarchKept()) {
-+                            // Lujarch's Background: Keep (BG-4) is not reclaimed as an empty
-+                            // process and takes no place of the others.
++                        if (app.isLujarchReclaimedLast()) {
++                            // Lujarch's Background: Keep (BG-4) and small windows (WIN-6) are
++                            // not reclaimed as empty processes and take no place of the others.
 +                        } else if (numEmpty > mOomConstants.mCurTrimEmptyProcesses
                                  && app.getLastActivityTime() < oldTime) {
                              app.killLocked("empty for " + ((now
                                      - app.getLastActivityTime()) / 1000) + "s",
-@@ -2138,6 +2145,10 @@ public abstract class OomAdjuster {
+@@ -2138,6 +2146,10 @@ public abstract class OomAdjuster {
              // Process is in the power allowlist.
              return CPU_TIME_REASON_ALLOW_LIST;
          }
@@ -6545,7 +6548,7 @@ index f927002a8617af087288300ed8ec848ed7a416f1..225f4deb9baa63683597d3524b50d432
          if (procState <= PROCESS_STATE_TOP && procState != PROCESS_STATE_UNKNOWN) {
              return CPU_TIME_REASON_OTHER;
          }
-@@ -2322,7 +2333,7 @@ public abstract class OomAdjuster {
+@@ -2322,7 +2334,7 @@ public abstract class OomAdjuster {
                  if (state.isZramWrittenBack()) {
                      forLmkdOnly = true;
                  }
@@ -6579,7 +6582,7 @@ index b77872ac69ad1dade8fd672b4a36dcd2d9c48e61..1f31acce7de360256cc2c53abc5c9817
              if (doingAll) {
                  app.setServiceB(mNewNumAServiceProcs > (mNumServiceProcs / 3));
 diff --git a/services/core/java/com/android/server/am/psc/ProcessRecordInternal.java b/services/core/java/com/android/server/am/psc/ProcessRecordInternal.java
-index 262bfbc052206baa6e5f777babb50ea0a3c2caad..89cac7379da1ad530f2f63c96f1c1c9b25dc00a7 100644
+index 262bfbc052206baa6e5f777babb50ea0a3c2caad..bd9c2340a168fefe5629805acd776ea671d5b9ae 100644
 --- a/services/core/java/com/android/server/am/psc/ProcessRecordInternal.java
 +++ b/services/core/java/com/android/server/am/psc/ProcessRecordInternal.java
 @@ -435,6 +435,13 @@ public abstract class ProcessRecordInternal {
@@ -6596,7 +6599,7 @@ index 262bfbc052206baa6e5f777babb50ea0a3c2caad..89cac7379da1ad530f2f63c96f1c1c9b
      /**
       * Last set OOM adjustment for this process.
       */
-@@ -950,6 +957,46 @@ public abstract class ProcessRecordInternal {
+@@ -950,6 +957,55 @@ public abstract class ProcessRecordInternal {
          return mCurAdj;
      }
  
@@ -6611,9 +6614,12 @@ index 262bfbc052206baa6e5f777babb50ea0a3c2caad..89cac7379da1ad530f2f63c96f1c1c9b
 +    /** The holds that keep a process running (it is not paused). */
 +    public static final int LUJARCH_HOLD_RUNNING =
 +            LUJARCH_HOLD_UNRESTRICTED | LUJARCH_HOLD_CHOSEN | LUJARCH_HOLD_SMALL_WINDOW;
++    /** The holds whose process is reclaimed last for memory (BG-4, WIN-6). */
++    public static final int LUJARCH_HOLD_RECLAIMED_LAST =
++            LUJARCH_HOLD_KEPT | LUJARCH_HOLD_SMALL_WINDOW;
 +    /**
-+     * The highest score lmkd has for a kept process: above it lmkd reclaims every other app off
-+     * screen first, and below it only when memory is critically low (BG-4).
++     * The highest score lmkd has for a process reclaimed last: above it lmkd reclaims every other
++     * app off screen first, and below it only when memory is critically low (BG-4, WIN-6).
 +     */
 +    public static final int LUJARCH_KEPT_LMKD_ADJ = 700;
 +
@@ -6627,17 +6633,23 @@ index 262bfbc052206baa6e5f777babb50ea0a3c2caad..89cac7379da1ad530f2f63c96f1c1c9b
 +        mLujarchHold = hold;
 +    }
 +
-+    /** The score lmkd gets: the current one, at most LUJARCH_KEPT_LMKD_ADJ for a kept process. */
++    /**
++     * The score lmkd gets: the current one, at most LUJARCH_KEPT_LMKD_ADJ for a process reclaimed
++     * last.
++     */
 +    @GuardedBy(anyOf = {"mServiceLock", "mProcLock"})
 +    public @OomAdjust int getLmkdAdj() {
-+        return (mLujarchHold & LUJARCH_HOLD_KEPT) != 0 && mCurAdj > LUJARCH_KEPT_LMKD_ADJ
++        return isLujarchReclaimedLast() && mCurAdj > LUJARCH_KEPT_LMKD_ADJ
 +                ? LUJARCH_KEPT_LMKD_ADJ : mCurAdj;
 +    }
 +
-+    /** Whether the reclaim of cached and empty processes spares this process (Keep). */
++    /**
++     * Whether the reclaim of cached and empty processes spares this process (Keep, or an app in a
++     * small window).
++     */
 +    @GuardedBy(anyOf = {"mServiceLock", "mProcLock"})
-+    public boolean isLujarchKept() {
-+        return (mLujarchHold & LUJARCH_HOLD_KEPT) != 0;
++    public boolean isLujarchReclaimedLast() {
++        return (mLujarchHold & LUJARCH_HOLD_RECLAIMED_LAST) != 0;
 +    }
 +
      @GuardedBy({"mServiceLock", "mProcLock"})
