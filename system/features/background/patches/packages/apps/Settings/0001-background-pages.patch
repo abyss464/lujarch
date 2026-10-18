@@ -13,10 +13,10 @@ index 8c09c25d40e23304ef869d7810c71cbff3883f1b..f49b2a2840aa6f52ca25b55d9d6efa29
      <uses-permission android:name="android.permission.NETWORK_SETTINGS" />
 diff --git a/res/layout/lujarch_run_state.xml b/res/layout/lujarch_run_state.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..4e863fc0f75cddb660ab3bca2155ae48738a3b2b
+index 0000000000000000000000000000000000000000..0fcb9d93793237e94b4024318da661fc642188de
 --- /dev/null
 +++ b/res/layout/lujarch_run_state.xml
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,24 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -35,7 +35,6 @@ index 0000000000000000000000000000000000000000..4e863fc0f75cddb660ab3bca2155ae48
 +-->
 +<!-- Lujarch's Background (BG-1): the run state's lines, drawn into the frame. -->
 +<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-+    android:id="@+id/lujarch_run_state"
 +    android:layout_width="match_parent"
 +    android:layout_height="wrap_content"
 +    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
@@ -1008,10 +1007,10 @@ index 0000000000000000000000000000000000000000..e01a6b16a2f5db83f31bdf1d0a88b60c
 +}
 diff --git a/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java b/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..5a98f8c42d83d236a260b4ebf4f14011e0d8276f
+index 0000000000000000000000000000000000000000..e560ba06d64f34f291ad7a733af3a05224b4c216
 --- /dev/null
 +++ b/src/com/android/settings/fuelgauge/LujarchRunStatePreference.java
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,225 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1091,7 +1090,8 @@ index 0000000000000000000000000000000000000000..5a98f8c42d83d236a260b4ebf4f14011
 +    @Override
 +    public void onBindViewHolder(PreferenceViewHolder holder) {
 +        super.onBindViewHolder(holder);
-+        final FrameLayout frame = (FrameLayout) holder.findViewById(R.id.lujarch_run_state);
++        // The frame is the row itself, whose id the binding above has replaced.
++        final FrameLayout frame = (FrameLayout) holder.itemView;
 +        frame.removeAllViews();
 +        frame.addView(new Lines(getContext()), new FrameLayout.LayoutParams(
 +                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
