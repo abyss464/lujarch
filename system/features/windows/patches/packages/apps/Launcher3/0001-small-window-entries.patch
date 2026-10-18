@@ -1,5 +1,5 @@
 diff --git a/quickstep/src/com/android/launcher3/dagger/Modules.kt b/quickstep/src/com/android/launcher3/dagger/Modules.kt
-index 577777013ad3306cfd8362fc973af33f0965e567..59cc56fba38b96f4349c129558071d90a0650825 100644
+index ef03af48b221cd99b9634a095935a97da596ff8b..9a962271a0ddf4770e4285cf19664e82e81979af 100644
 --- a/quickstep/src/com/android/launcher3/dagger/Modules.kt
 +++ b/quickstep/src/com/android/launcher3/dagger/Modules.kt
 @@ -337,6 +337,7 @@ object TaskOverlayModule {
@@ -68,10 +68,10 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
              ti.onLauncherStop();
 diff --git a/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..97472415d71b23649756823e8d7cb10b4648761a
+index 0000000000000000000000000000000000000000..55942df926162a14ae543e84e63918a7fdd73f75
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,140 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -98,9 +98,7 @@ index 0000000000000000000000000000000000000000..97472415d71b23649756823e8d7cb10b
 +import android.util.Log
 +import com.android.internal.app.LujarchBackground
 +import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION
-+import com.android.launcher3.LauncherState
 +import com.android.launcher3.model.data.ItemInfo
-+import com.android.launcher3.statemanager.StateManager
 +import com.android.launcher3.uioverrides.QuickstepLauncher
 +import com.android.quickstep.lujarch.LujarchRecents
 +import com.android.quickstep.views.TaskView
@@ -163,15 +161,14 @@ index 0000000000000000000000000000000000000000..97472415d71b23649756823e8d7cb10b
 +        }
 +        LujarchRecents.openTaskInSmallWindow = { taskView, taskId -> openTask(taskView, taskId) }
 +        LujarchRecents.canOpenInSmallWindow = { isRecentsEntryOn(launcher) }
-+        launcher.stateManager.addStateListener(
-+            object : StateManager.StateListener<LauncherState> {
-+                override fun onStateTransitionStart(toState: LauncherState) =
-+                    reportRecents(launcher, toState.isRecentsViewVisible)
-+
-+                override fun onStateTransitionComplete(finalState: LauncherState) =
-+                    reportRecents(launcher, finalState.isRecentsViewVisible)
++        // They go part of their way with the swipe to Recents and fly on when it settles.
++        LujarchRecents.recentsSettled = { settled -> reportRecents(launcher, settled) }
++        LujarchRecents.swipeProgress = { progress ->
++            if (!recentsShown) {
++                SystemUiProxy.INSTANCE.get(launcher)
++                    .setSmallWindowsRecentsProgress(progress, slotKeys, slots)
 +            }
-+        )
++        }
 +    }
 +
 +    /**
@@ -216,10 +213,10 @@ index 0000000000000000000000000000000000000000..97472415d71b23649756823e8d7cb10b
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/SystemUiProxy.kt b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-index 097c61f47a235d8b0118244e1d323d7c01eb4223..c6ffd0472d86bc0aadb9608aab2bb0bc93f7a8e5 100644
+index 097c61f47a235d8b0118244e1d323d7c01eb4223..565015e2792fa5626351035e5b66252e0a25c4b6 100644
 --- a/quickstep/src/com/android/quickstep/SystemUiProxy.kt
 +++ b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-@@ -785,6 +785,36 @@ constructor(
+@@ -785,6 +785,41 @@ constructor(
              bubbles?.showAppBubble(intent, user, entryPoint, bubbleBarLocation)
          }
  
@@ -227,6 +224,11 @@ index 097c61f47a235d8b0118244e1d323d7c01eb4223..c6ffd0472d86bc0aadb9608aab2bb0bc
 +    fun setSmallWindowsRecentsShown(shown: Boolean, keys: Array<String>, slots: Array<Rect>) =
 +        executeWithErrorLog({ "Failed call setRecentsShown" }) {
 +            bubbles?.setRecentsShown(shown, keys, slots)
++        }
++
++    fun setSmallWindowsRecentsProgress(progress: Float, keys: Array<String>, slots: Array<Rect>) =
++        executeWithErrorLog({ "Failed call setRecentsProgress" }) {
++            bubbles?.setRecentsProgress(progress, keys, slots)
 +        }
 +
 +    /** Tells the Shell to open the small window of a bubble, from its place in Recents. */
@@ -257,7 +259,7 @@ index 097c61f47a235d8b0118244e1d323d7c01eb4223..c6ffd0472d86bc0aadb9608aab2bb0bc
      fun showExpandedView() =
          executeWithErrorLog({ "Failed call showExpandedView" }) { bubbles?.showExpandedView() }
 diff --git a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
-index a8ac4e021d9af5498e918b9232569482864ce4bf..db73ab1879d59b741ddc625ffcca6c0605aa560d 100644
+index 40a4d6049c8110dde40c813997e2b25d6e8e4f49..83c580cff6bc8c8de3b6d361059c32c8718da717 100644
 --- a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
 +++ b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
 @@ -396,6 +396,40 @@ public interface TaskShortcutFactory {

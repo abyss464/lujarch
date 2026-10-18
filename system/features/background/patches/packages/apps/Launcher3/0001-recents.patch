@@ -48,10 +48,10 @@ index 0000000000000000000000000000000000000000..ad7ce48fbe70559bb20da8e9fd9896eb
 +</vector>
 diff --git a/quickstep/res/values-ja/lujarch_background_strings.xml b/quickstep/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..9577138b6e34a3a33bcf1800c4d0ecd977cebfd6
+index 0000000000000000000000000000000000000000..4874a9e1c69140b3633067520998d13051d1d0e8
 --- /dev/null
 +++ b/quickstep/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -71,6 +71,7 @@ index 0000000000000000000000000000000000000000..9577138b6e34a3a33bcf1800c4d0ecd9
 +<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_running">"実行中"</string>
++    <string name="lujarch_background_small_window">"小ウィンドウ"</string>
 +    <string name="lujarch_background_drop">"指を離すと小ウィンドウで開きます"</string>
 +    <string name="lujarch_background_tile">"%1$s、%2$s"</string>
 +    <string name="lujarch_background_end">"実行を終了"</string>
@@ -85,10 +86,10 @@ index 0000000000000000000000000000000000000000..9577138b6e34a3a33bcf1800c4d0ecd9
 +</resources>
 diff --git a/quickstep/res/values-zh-rCN/lujarch_background_strings.xml b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..b9935231327b86d2bef657856539360d9e828927
+index 0000000000000000000000000000000000000000..3cdb21f01c84231682e7cddb0fdad4390247c2c4
 --- /dev/null
 +++ b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -108,6 +109,7 @@ index 0000000000000000000000000000000000000000..b9935231327b86d2bef657856539360d
 +<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_running">"运行中"</string>
++    <string name="lujarch_background_small_window">"小窗"</string>
 +    <string name="lujarch_background_drop">"松手即在小窗中打开"</string>
 +    <string name="lujarch_background_tile">"%1$s，%2$s"</string>
 +    <string name="lujarch_background_end">"结束运行"</string>
@@ -120,6 +122,20 @@ index 0000000000000000000000000000000000000000..b9935231327b86d2bef657856539360d
 +    <string name="lujarch_background_keep">"保留"</string>
 +    <string name="lujarch_background_remove_keep">"取消保留"</string>
 +</resources>
+diff --git a/quickstep/res/values/dimens.xml b/quickstep/res/values/dimens.xml
+index 14759874569ffa26f6e123a7889c0fc4a30242d5..b90b8a885dc9f60d1910c923ffa7add61df59fae 100644
+--- a/quickstep/res/values/dimens.xml
++++ b/quickstep/res/values/dimens.xml
+@@ -50,6 +50,9 @@
+     <dimen name="overview_task_margin">16dp</dimen>
+     <!--  The horizontal space between tasks  -->
+     <dimen name="overview_page_spacing">16dp</dimen>
++    <!--  Lujarch's Background (BG-10): the two rows a phone's Recents folds into  -->
++    <dimen name="overview_grid_side_margin">16dp</dimen>
++    <dimen name="overview_grid_row_spacing">12dp</dimen>
+     <!--  The collapsed max width of the icon menu text  -->
+     <dimen name="task_thumbnail_icon_menu_text_collapsed_max_width">86dp</dimen>
+     <!--  The expanded max width of the icon menu text  -->
 diff --git a/quickstep/res/values/lujarch_background_ids.xml b/quickstep/res/values/lujarch_background_ids.xml
 new file mode 100644
 index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18a662b5f2
@@ -149,10 +165,10 @@ index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18
 +</resources>
 diff --git a/quickstep/res/values/lujarch_background_strings.xml b/quickstep/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..57af46dd353f6f53d7eca8816a66f7b7aecf2a5a
+index 0000000000000000000000000000000000000000..0ad15c1225ace5609fbba9174808ce7d88d37dc9
 --- /dev/null
 +++ b/quickstep/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -172,6 +188,7 @@ index 0000000000000000000000000000000000000000..57af46dd353f6f53d7eca8816a66f7b7
 +<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_running">Running</string>
++    <string name="lujarch_background_small_window">Small window</string>
 +    <string name="lujarch_background_drop">Release to open in a small window</string>
 +    <string name="lujarch_background_tile">%1$s, %2$s</string>
 +    <string name="lujarch_background_end">End running</string>
@@ -196,11 +213,74 @@ index 577777013ad3306cfd8362fc973af33f0965e567..ef03af48b221cd99b9634a095935a97d
          )
  }
  
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java b/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
+index e890b5e2fe0cd054e32e22d403212ab333fa55ab..83a9bdab3027b79852eb437f8d2bc1ca331f7790 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
++++ b/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
+@@ -174,7 +174,9 @@ public class OverviewState extends LauncherState {
+ 
+     @Override
+     public boolean displayOverviewTasksAsGrid(DeviceProfile deviceProfile) {
+-        return deviceProfile.getDeviceProperties().isLargeScreen();
++        // Lujarch's Background (BG-10): a phone's Recents folds into two rows when it settles.
++        return deviceProfile.getDeviceProperties().isLargeScreen()
++                || com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(deviceProfile);
+     }
+ 
+     @Override
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
-index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19af6b25ee 100644
+index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..3545ef083794d109dc75d27e8efede8c1139f443 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
 +++ b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
-@@ -323,6 +323,11 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
+@@ -95,6 +95,8 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
+     private var recentsScaleAnimation: SpringAnimation? = null
+     private var canInterceptTouch = false
+     private var isDismissing = false
++    /** Lujarch's Background (BG-8): the Running layer parting around the card. */
++    private var lujarchHold: com.android.quickstep.lujarch.RunningLayerView.Held? = null
+     private var allowDetach = true
+ 
+     init {
+@@ -228,23 +230,27 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
+ 
+         initialDisplacement =
+             taskBeingDragged.secondaryDismissTranslationProperty.get(taskBeingDragged)
++        val apply = { displacement: Float ->
++            taskBeingDragged.secondaryDismissTranslationProperty.setValue(
++                taskBeingDragged,
++                displacement,
++            )
++            if (taskBeingDragged.isRunningTask && recentsView.enableDrawingLiveTile) {
++                recentsView.runActionOnRemoteHandles { remoteTargetHandle ->
++                    remoteTargetHandle.taskViewSimulator.taskSecondaryTranslation.value =
++                        displacement
++                }
++                recentsView.redrawLiveTile()
++            }
++        }
++        lujarchHold = recentsView.mLujarchRecents?.hold(taskBeingDragged, apply)
+         taskDragDisplacementValue =
+             generateMotionValue(
+                 initialDisplacement,
+                 detachThreshold * verticalFactor,
+                 container.asContext(),
+             ) { currentDisplacement ->
+-                taskBeingDragged.secondaryDismissTranslationProperty.setValue(
+-                    taskBeingDragged,
+-                    currentDisplacement,
+-                )
+-                if (taskBeingDragged.isRunningTask && recentsView.enableDrawingLiveTile) {
+-                    recentsView.runActionOnRemoteHandles { remoteTargetHandle ->
+-                        remoteTargetHandle.taskViewSimulator.taskSecondaryTranslation.value =
+-                            currentDisplacement
+-                    }
+-                    recentsView.redrawLiveTile()
+-                }
++                apply(lujarchHold?.lift(currentDisplacement) ?: currentDisplacement)
+             }
+ 
+         // Add a tiny bit of translation Z, so that it draws on top of other views. This is relevant
+@@ -323,28 +329,44 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
          isDismissing =
              allowDetach && isFlingingTowardsDismiss ||
                  (isBeyondDismissThreshold && !isFlingingTowardsRestState)
@@ -211,7 +291,117 @@ index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..0440d81780d7df3bc4f3e76a3e77fd19
 +        }
          val dismissThreshold = (DISMISS_THRESHOLD_FRACTION * dismissLength * verticalFactor).toInt()
          val finalPosition = if (isDismissing) (dismissLength * verticalFactor).toFloat() else 0f
-         springAnimation =
+-        springAnimation =
+-            recentsView.runTaskDismissSettlingSpringAnimation(
+-                taskBeingDragged,
+-                isDismissing,
+-                RecentsDismissUtils.DismissedTaskData(
+-                    startVelocity = velocity,
+-                    dismissLength = dismissLength,
+-                    finalPosition = finalPosition,
+-                    dismissThreshold = dismissThreshold,
+-                ),
+-                /* shouldRemoveTaskView= */ isDismissing,
+-                /* isSplitSelection= */ false,
+-            )
+-        recentsScaleAnimation =
+-            recentsView.animateRecentsScale(RECENTS_SCALE_DEFAULT).addEndListener { _, _, _, _ ->
+-                recentsScaleAnimation = null
+-            }
++        val dismissing = isDismissing
++        val settle = {
++            springAnimation =
++                recentsView.runTaskDismissSettlingSpringAnimation(
++                    taskBeingDragged,
++                    dismissing,
++                    RecentsDismissUtils.DismissedTaskData(
++                        startVelocity = velocity,
++                        dismissLength = dismissLength,
++                        finalPosition = finalPosition,
++                        dismissThreshold = dismissThreshold,
++                    ),
++                    /* shouldRemoveTaskView= */ dismissing,
++                    /* isSplitSelection= */ false,
++                )
++            recentsScaleAnimation =
++                recentsView.animateRecentsScale(RECENTS_SCALE_DEFAULT).addEndListener { _, _, _, _ ->
++                    recentsScaleAnimation = null
++                }
++        }
++        // Lujarch's Background (BG-8): a card on its way out waits at the Running layer's edge
++        // until the tiles have parted.
++        val hold = lujarchHold
++        lujarchHold = null
++        if (hold != null) hold.release(dismissing, velocity, verticalFactor.toFloat(), settle)
++        else settle()
+     }
+ 
+     private fun clearState() {
++        lujarchHold?.cancel()
++        lujarchHold = null
+         detector.finishedScrolling()
+         detector.setDetectableScrollConditions(0, false)
+         taskBeingDragged?.resetViewTransforms()
+diff --git a/quickstep/src/com/android/quickstep/AbsSwipeUpHandler.java b/quickstep/src/com/android/quickstep/AbsSwipeUpHandler.java
+index afa87a5619fe4b7c7781a21b7f4aaccf677a6188..e2c0e93dc1f748c0d926496410d331af2d87a9ff 100644
+--- a/quickstep/src/com/android/quickstep/AbsSwipeUpHandler.java
++++ b/quickstep/src/com/android/quickstep/AbsSwipeUpHandler.java
+@@ -1026,6 +1026,9 @@ public abstract class AbsSwipeUpHandler<
+         }
+         updateSysUiFlags(getCurrentShiftValue());
+         applyScrollAndTransform();
++        if (isGestureOngoing()) {
++            com.android.quickstep.lujarch.LujarchRecents.onSwipe(getCurrentShiftValue());
++        }
+ 
+         updateLauncherTransitionProgress();
+     }
+@@ -1160,6 +1163,7 @@ public abstract class AbsSwipeUpHandler<
+ 
+     @UiThread
+     public void onGestureStarted(boolean isLikelyToStartNewTask) {
++        com.android.quickstep.lujarch.LujarchRecents.onSwipeStart();
+         mContainerInterface.closeOverlay();
+         TaskUtils.closeSystemWindowsAsync(CLOSE_SYSTEM_WINDOWS_REASON_RECENTS);
+ 
+@@ -1604,6 +1608,8 @@ public abstract class AbsSwipeUpHandler<
+         // Set the state, but don't notify until the animation completes
+         mGestureState.setEndTarget(endTarget, false /* isAtomic */);
+         mAnimationFactory.setEndTarget(endTarget);
++        com.android.quickstep.lujarch.LujarchRecents.onSwipeEnd(
++                mRecentsView != null ? mRecentsView.mLujarchRecents : null, endTarget == RECENTS);
+ 
+         if (mIsTransientTaskbar && mContainerInterface.getTaskbarInteractor() != null) {
+             mContainerInterface.getTaskbarInteractor()
+diff --git a/quickstep/src/com/android/quickstep/BaseContainerInterface.java b/quickstep/src/com/android/quickstep/BaseContainerInterface.java
+index 37eac47136d2815a7a9ca76aad7f6bcd40270e67..946fb9f3beebe28c16da1eae2564b7268509bda0 100644
+--- a/quickstep/src/com/android/quickstep/BaseContainerInterface.java
++++ b/quickstep/src/com/android/quickstep/BaseContainerInterface.java
+@@ -398,7 +398,8 @@ public abstract class BaseContainerInterface<STATE_TYPE extends BaseState<STATE_
+             calculateTaskSizeInternal(
+                     context,
+                     dp,
+-                    /* claimedSpaceAbove= */0,
++                    // Lujarch's Background (BG-8): the Running layer's place above the cards.
++                    com.android.quickstep.lujarch.LujarchRecents.spaceAboveCards(dp),
+                     overviewActionsClaimedSpace,
+                     res.getDimensionPixelSize(R.dimen.overview_minimum_next_prev_size) + taskMargin,
+                     maxScale,
+@@ -510,7 +511,13 @@ public abstract class BaseContainerInterface<STATE_TYPE extends BaseState<STATE_
+             RecentsPagedOrientationHandler orientationHandler) {
+         Resources res = context.getResources();
+         Rect potentialTaskRect = new Rect();
+-        calculateLargeTileSize(context, dp, potentialTaskRect);
++        if (dp.getDeviceProperties().isLargeScreen()) {
++            calculateLargeTileSize(context, dp, potentialTaskRect);
++        } else {
++            // Lujarch's Background (BG-10): on a phone the current card keeps its size and the
++            // two rows share its height.
++            calculateTaskSize(context, dp, potentialTaskRect, orientationHandler);
++        }
+ 
+         float rowHeight = (potentialTaskRect.height()
+                 - dp.getOverviewProfile().getRowSpacing()) / 2f;
 diff --git a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java b/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
 index a8ac4e021d9af5498e918b9232569482864ce4bf..40a4d6049c8110dde40c813997e2b25d6e8e4f49 100644
 --- a/quickstep/src/com/android/quickstep/TaskShortcutFactory.java
@@ -320,10 +510,10 @@ index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc3038078
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901dc4cac75a
+index 0000000000000000000000000000000000000000..278faab49bfa5159da231b7cb6b9f3bcdbc16513
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,356 @@
+@@ -0,0 +1,552 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -342,6 +532,7 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +
 +package com.android.quickstep.lujarch
 +
++import android.animation.ValueAnimator
 +import android.annotation.SuppressLint
 +import android.content.Context
 +import android.content.Intent
@@ -351,6 +542,7 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +import android.os.Looper
 +import android.os.UserHandle
 +import android.provider.Settings
++import android.text.format.Formatter
 +import android.util.Log
 +import android.view.Gravity
 +import android.view.MotionEvent
@@ -371,10 +563,10 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +import com.android.systemui.shared.system.ActivityManagerWrapper
 +
 +/**
-+ * Lujarch's Background in Recents: the Running layer above the cards (BG-11), the memory below
-+ * them (BG-12), the mark of a kept app's card, which cannot be swiped away and which Clear all
-+ * skips (BG-5), the reclaimed card's look, and a card dropped on the Running layer opening in a
-+ * small window (WIN-11). Everything comes from Background's one API.
++ * Lujarch's Background in Recents: the Running layer above the cards (BG-8), the two rows and each
++ * card's state (BG-10), the memory below them (BG-11), a kept app's card, which cannot be swiped
++ * away and which Clear all skips (BG-4), and a card dropped on the Running layer opening in a small
++ * window (WIN-11). Everything comes from Background's one API.
 + */
 +class LujarchRecents(
 +    private val recentsView: RecentsView<*, *>,
@@ -391,13 +583,19 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +    private var windows: List<LujarchSmallWindow> = emptyList()
 +    private var memory: LujarchBackgroundMemory? = null
 +    private var overview = false
++    /** Recents has settled, or is on its way to: the Running layer is down from the status bar. */
++    private var settled = false
 +    private var alpha = 0f
++    private var memoryShown = 0f
++    private var memoryAnim: ValueAnimator? = null
++    private var marksAnim: ValueAnimator? = null
 +    private var showRunning = true
 +    private var showMemory = true
 +    private var picked: Pickup? = null
 +
 +    init {
 +        LujarchKeep.refresh = { refresh() }
++        readLayout()
 +        // The drag layer's own layout params: it turns others into them and drops their gravity.
 +        dragLayer.addView(runningLayer, BaseDragLayer.LayoutParams(
 +            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -409,6 +607,8 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +        })
 +        runningLayer.visibility = View.INVISIBLE
 +        memoryRow.visibility = View.INVISIBLE
++        runningLayer.onArrival = { updateVisibility() }
++        if (runningSpace != 0) recentsView.lujarchRelayout()
 +    }
 +
 +    /** Recents opens or closes. */
@@ -418,24 +618,135 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +        updateVisibility()
 +    }
 +
++    /**
++     * The launcher moves to a state. A swipe up from an app starts the move to Recents at once;
++     * Recents settles only when the swipe ends ([onSwipeEnd]).
++     */
++    fun onStateTransitionStart(settles: Boolean) {
++        if (!swiping) settle(settles)
++    }
++
++    fun onStateTransitionComplete(settles: Boolean) {
++        swiping = false
++        settle(settles)
++    }
++
++    /**
++     * Recents settling brings the Running layer down from the status bar and fades the memory in
++     * after the fold (BG-8, BG-10), and the small windows fly into their tiles (WIN-11); leaving
++     * sends them back.
++     */
++    private fun settle(settles: Boolean) {
++        if (settles == settled) return
++        settled = settles
++        recentsSettled?.invoke(settles)
++        if (settles) {
++            refresh()
++            runningLayer.arrive(ARRIVE_DELAY_MS)
++            fadeMemory(1f, MEMORY_IN_MS, MEMORY_IN_DELAY_MS)
++            fadeMarks(1f, 0L)
++        } else {
++            runningLayer.leave()
++            fadeMemory(0f, FADE_OUT_MS, 0L)
++        }
++        updateVisibility()
++    }
++
++    /** A card opens: the memory and the cards' marks fade out and the layer goes up. */
++    fun onCardLaunch() {
++        if (!settled) return
++        settled = false
++        recentsSettled?.invoke(false)
++        runningLayer.leave()
++        fadeMemory(0f, FADE_OUT_MS, 0L)
++        fadeMarks(0f, FADE_OUT_MS)
++    }
++
++    /** Clear all: the Running layer goes up first and comes down once the cards are gone. */
++    fun onClearAll() {
++        if (!settled) return
++        val n = recentsView.taskViews.count { !isKept(it) }
++        runningLayer.clearAll(n * CLEAR_STEP_MS + CLEAR_SETTLE_MS)
++    }
++
++    /**
++     * A card is lifted to be swiped away: the Running layer parts around it and holds it back
++     * until the way is clear (BG-8). [apply] moves the card; null when nothing is in its way.
++     */
++    fun hold(tv: TaskView, apply: (Float) -> Unit): RunningLayerView.Held? {
++        if (runningLayer.visibility != View.VISIBLE ||
++            context.resources.configuration.orientation ==
++                android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
++            return null
++        }
++        val r = Rect()
++        tv.getThumbnailBounds(r, relativeToDragLayer = true)
++        val ty = tv.secondaryDismissTranslationProperty.get(tv)
++        val at = IntArray(2)
++        dragLayer.getLocationOnScreen(at)
++        return runningLayer.hold(r.top - ty + at[1], (r.left + at[0]).toFloat(),
++            (r.right + at[0]).toFloat(), apply)
++    }
++
 +    fun onContentAlpha(value: Float) {
 +        alpha = value
 +        updateVisibility()
 +    }
 +
++    private fun fadeMemory(to: Float, ms: Long, delay: Long) {
++        memoryAnim?.cancel()
++        memoryAnim = ValueAnimator.ofFloat(memoryShown, to).apply {
++            duration = ms
++            startDelay = delay
++            addUpdateListener {
++                memoryShown = it.animatedValue as Float
++                updateVisibility()
++            }
++            start()
++        }
++    }
++
++    private fun fadeMarks(to: Float, ms: Long) {
++        marksAnim?.cancel()
++        if (ms == 0L) {
++            TaskMarks.alpha = to
++            invalidateMarks()
++            return
++        }
++        marksAnim = ValueAnimator.ofFloat(TaskMarks.alpha, to).apply {
++            duration = ms
++            addUpdateListener {
++                TaskMarks.alpha = it.animatedValue as Float
++                invalidateMarks()
++            }
++            start()
++        }
++    }
++
++    private fun invalidateMarks() {
++        try {
++            recentsView.taskViews.forEach { it.invalidate() }
++        } catch (e: RuntimeException) {
++            Log.e(TAG, "Recents: the cards' marks are not redrawn", e)
++        }
++    }
++
 +    private fun updateVisibility() {
 +        val shown = overview && alpha > 0f
-+        runningLayer.alpha = alpha
-+        memoryRow.alpha = alpha
-+        runningLayer.visibility = if (shown && showRunning && runningLayer.hasEntries) View.VISIBLE else View.INVISIBLE
-+        memoryRow.visibility = if (shown && showMemory && memory != null) View.VISIBLE else View.INVISIBLE
++        memoryRow.alpha = alpha * memoryShown
++        // The Running layer moves by itself, into the status bar and out of it.
++        runningLayer.visibility = if (showRunning && runningLayer.hasEntries &&
++            (overview || runningLayer.isMoving)) View.VISIBLE else View.INVISIBLE
++        if (!overview && !runningLayer.isMoving) runningLayer.reset()
++        memoryRow.visibility = if (shown && showMemory && memory != null && memoryShown > 0f)
++            View.VISIBLE else View.INVISIBLE
 +    }
 +
 +    /** Reads where every app is now, off the main thread, and shows it. */
 +    fun refresh() {
 +        val resolver = context.contentResolver
-+        showRunning = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_RUNNING, 1) != 0
 +        showMemory = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_MEMORY, 1) != 0
++        if (readLayout()) recentsView.lujarchRelayout()
 +        val user = UserHandle.myUserId()
 +        UI_HELPER_EXECUTOR.execute {
 +            try {
@@ -480,8 +791,14 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +        try {
 +            for (tv in recentsView.taskViews) {
 +                val app = appOf(tv)
-+                TaskMarks.mark(tv, kept = app?.kept == true,
-+                    reclaimed = app?.state == LujarchBackground.RUN_RECLAIMED.toInt())
++                if (rowsOn) {
++                    val reclaimed = app?.state == LujarchBackground.RUN_RECLAIMED.toInt()
++                    val inMemory = app != null && !reclaimed && app.memoryBytes > 0
++                    TaskMarks.mark(tv, kept = app?.kept == true, reclaimed = reclaimed,
++                        memory = if (inMemory) Formatter.formatShortFileSize(context, app!!.memoryBytes) else null)
++                } else {
++                    TaskMarks.mark(tv, kept = false, reclaimed = false, memory = null)
++                }
 +                installPickup(tv)
 +            }
 +        } catch (e: RuntimeException) {
@@ -659,9 +976,78 @@ index 0000000000000000000000000000000000000000..cb759fe0d0bd2a374c76c3e76673901d
 +        smallWindowSlots?.invoke(keys, slots)
 +    }
 +
++    /**
++     * The switches that change where the cards are: the two rows (BG-10) and the Running layer's
++     * place above them (BG-8). Returns whether either changed.
++     */
++    private fun readLayout(): Boolean {
++        val resolver = context.contentResolver
++        showRunning = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_RUNNING, 1) != 0
++        val rows = Settings.Secure.getInt(resolver, LujarchBackground.SETTING_RECENTS_STATE, 1) != 0
++        val space = if (showRunning) RunningLayerView.spaceAbove(context) else 0
++        val changed = rows != rowsOn || space != runningSpace
++        rowsOn = rows
++        runningSpace = space
++        return changed
++    }
++
 +    companion object {
 +        private const val TAG = "lujarch_background"
++
++        @Volatile
++        private var rowsOn = true
++
++        @Volatile
++        private var runningSpace = 0
++
++        /** A phone's Recents folds into two rows when it settles (BG-10). */
++        @JvmStatic
++        fun foldsIntoRows(dp: com.android.launcher3.DeviceProfile): Boolean =
++            rowsOn && !dp.deviceProperties.isLargeScreen
++
++        /** The height the Running layer takes above a phone's cards, in pixels (BG-8). */
++        @JvmStatic
++        fun spaceAboveCards(dp: com.android.launcher3.DeviceProfile): Int =
++            if (dp.deviceProperties.isLargeScreen) 0 else runningSpace
++
 +        private const val CLEAR_STEP_MS = 90L
++        private const val CLEAR_SETTLE_MS = 400L
++        /** The tiles wait for the fold to settle; the memory fades in after it. */
++        private const val ARRIVE_DELAY_MS = 200L
++        private const val MEMORY_IN_MS = 250L
++        private const val MEMORY_IN_DELAY_MS = 100L
++        private const val FADE_OUT_MS = 100L
++
++        /** A swipe up from an app is moving the launcher to Recents. */
++        private var swiping = false
++
++        @JvmStatic
++        fun onSwipeStart() {
++            swiping = true
++        }
++
++        /** The swipe's progress towards Recents while the finger moves, 0 to 1. */
++        @JvmStatic
++        fun onSwipe(progress: Float) {
++            if (swiping) swipeProgress?.invoke(progress.coerceIn(0f, 1f))
++        }
++
++        /** The swipe ends: towards Recents it settles, else what moved with it goes back. */
++        @JvmStatic
++        fun onSwipeEnd(recents: LujarchRecents?, toRecents: Boolean) {
++            if (!swiping) return
++            swiping = false
++            if (!toRecents) swipeProgress?.invoke(0f)
++            recents?.settle(toRecents)
++        }
++
++        /** Recents settled or left: the small windows fly into their tiles or back. */
++        @JvmStatic
++        var recentsSettled: ((Boolean) -> Unit)? = null
++
++        /** The swipe's progress: the small windows go part of their way with it. */
++        @JvmStatic
++        var swipeProgress: ((Float) -> Unit)? = null
 +
 +        /** Where the small windows wait in the Running layer: the small windows follow it. */
 +        @JvmStatic
@@ -801,10 +1187,10 @@ index 0000000000000000000000000000000000000000..ecf82187840c5ae953c4b93e8aeeab7d
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2dd0e0956
+index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159f773d894
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,263 @@
+@@ -0,0 +1,840 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -823,19 +1209,26 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +
 +package com.android.quickstep.lujarch
 +
++import android.animation.TimeAnimator
++import android.animation.ValueAnimator
 +import android.content.Context
++import android.graphics.Canvas
++import android.graphics.Paint
 +import android.graphics.Rect
++import android.graphics.RectF
++import android.graphics.drawable.Drawable
 +import android.graphics.drawable.GradientDrawable
-+import android.graphics.drawable.LayerDrawable
 +import android.os.UserHandle
++import android.text.TextPaint
++import android.text.TextUtils
 +import android.util.TypedValue
 +import android.view.Gravity
 +import android.view.View
 +import android.view.ViewGroup
 +import android.view.ViewTreeObserver
++import android.view.animation.PathInterpolator
 +import android.widget.FrameLayout
 +import android.widget.HorizontalScrollView
-+import android.widget.ImageView
 +import android.widget.LinearLayout
 +import android.widget.PopupMenu
 +import android.widget.TextView
@@ -844,53 +1237,95 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +import com.android.internal.app.LujarchSmallWindow
 +import com.android.launcher3.Insettable
 +import com.android.launcher3.R
++import kotlin.math.PI
++import kotlin.math.abs
++import kotlin.math.cos
++import kotlin.math.exp
++import kotlin.math.floor
++import kotlin.math.max
++import kotlin.math.min
++import kotlin.math.sin
 +
 +/**
-+ * The Running layer above the cards in Recents (BG-11): every app running off screen, with its
-+ * state's color and one word, in one row that fits between the status bar and the cards. A tap
-+ * opens the app; touching and holding shows End for what the app started itself, and Background.
-+ * The small windows come first, in the order of the screen, each a place that its shape flies
-+ * into: a window with its live screen, a conversation as the person's picture (WIN-11); the layer
-+ * tells where the places are on each frame it draws, so the shapes follow it as Recents moves it.
++ * The Running layer above the cards in Recents (BG-8): everything that runs off screen, each a
++ * tile with the app's icon and one word for why, under the layer's name, in one row that scrolls
++ * sideways. A tap opens the app; touching and holding shows its menu. A small window's tile is the
++ * place its shape flies into (WIN-11): the layer tells where the places are on each frame it draws,
++ * so the shapes follow it.
++ *
++ * When Recents settles the tiles come out of the status bar, each a little out of it, along to
++ * above its own place and down into it, the one going furthest first; when Recents closes they go
++ * back up. A card lifted toward the layer parts it: the tiles fold into their icons and slide to
++ * both sides of the card on a spring of their own, and the card waits at the layer's edge until
++ * the way is clear.
 + */
 +class RunningLayerView(context: Context, private val recents: LujarchRecents) :
-+    LinearLayout(context), Insettable {
++    FrameLayout(context), Insettable {
++    private val density = resources.displayMetrics.density
 +    private val title = TextView(context)
 +    private val scroller = HorizontalScrollView(context)
 +    private val row = LinearLayout(context)
-+    private val smallWindows = LinearLayout(context)
-+    private val apps = LinearLayout(context)
 +    private val dropSlot = FrameLayout(context)
++    private val tiles = ArrayList<Tile>()
 +    private val slotRect = Rect()
 +    private var slotsPublished = false
++    private var insetTop = 0
++    private val location = IntArray(2)
 +    private val publish = ViewTreeObserver.OnPreDrawListener {
 +        publishSlots()
 +        true
 +    }
 +    var hasEntries = false
 +        private set
++    /** The tiles moved into or out of the status bar. */
++    var onArrival: (() -> Unit)? = null
++
++    // Arrival: 0 in the status bar, 1 in place.
++    private var arrival = 0f
++    private var arriving = true
++    private var arrivalAnim: ValueAnimator? = null
++    /** Clear all sends the small windows' tiles through the status bar too. */
++    private var allViaBar = false
++    /** The small windows' tiles show once their windows have landed on them. */
++    private var windowsShown = 0f
++    private var windowsAnim: ValueAnimator? = null
++
++    // Parting around a lifted card: the spring's place, speed and target, the gap it parts around.
++    private var yieldA = 0f
++    private var yieldV = 0f
++    private var yieldT = 0f
++    private var yieldDrive = false
++    private var yieldBack = false
++    private var back = 0f
++    private var backAnim: ValueAnimator? = null
++    private var gapL = 0f
++    private var gapR = 0f
++    private var yieldFrom: Array<FloatArray> = emptyArray()
++    private var held: Held? = null
++    private val ticker = TimeAnimator().apply {
++        setTimeListener { _, _, delta -> onTick(min(delta, 32L)) }
++    }
 +
 +    init {
-+        orientation = HORIZONTAL
-+        gravity = Gravity.CENTER_VERTICAL
-+        val side = dp(16)
-+        setPadding(side, 0, side, 0)
++        clipChildren = false
 +        clipToPadding = false
 +        title.setText(R.string.lujarch_background_running)
 +        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
 +        title.setTextColor(context.getColor(android.R.color.system_accent1_200))
-+        title.paint.isFakeBoldText = true
++        title.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
++        title.alpha = 0f
 +        addView(title, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-+            marginEnd = dp(12)
++            marginStart = dp(SIDE)
 +        })
 +        scroller.isHorizontalScrollBarEnabled = false
++        scroller.overScrollMode = OVER_SCROLL_NEVER
 +        scroller.clipToPadding = false
-+        row.orientation = HORIZONTAL
-+        row.gravity = Gravity.CENTER_VERTICAL
-+        smallWindows.orientation = HORIZONTAL
-+        apps.orientation = HORIZONTAL
-+        row.addView(smallWindows)
-+        row.addView(apps)
++        scroller.clipChildren = false
++        scroller.setPadding(dp(SIDE), 0, dp(SIDE), 0)
++        scroller.setOnScrollChangeListener { _, _, _, _, _ -> applyMotion() }
++        row.orientation = LinearLayout.HORIZONTAL
++        row.clipChildren = false
++        row.clipToPadding = false
 +        dropSlot.background = GradientDrawable().apply {
 +            cornerRadius = dp(TILE_RADIUS).toFloat()
 +            setStroke(dp(2), context.getColor(android.R.color.system_accent1_200), dp(6).toFloat(), dp(4).toFloat())
@@ -902,18 +1337,23 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +            gravity = Gravity.CENTER
 +            val p = dp(4)
 +            setPadding(p, p, p, p)
-+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
++        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 +        dropSlot.visibility = GONE
-+        row.addView(dropSlot, LayoutParams(dp(TILE_W), dp(ROW_H)))
-+        scroller.addView(row)
-+        addView(scroller, LayoutParams(0, dp(ROW_H), 1f))
++        row.addView(dropSlot, LinearLayout.LayoutParams(dp(TILE_W), dp(TILE_H)))
++        scroller.addView(row, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(TILE_H)))
++        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, dp(TILE_H)))
++        applyInsets()
 +    }
 +
 +    override fun setInsets(insets: Rect) {
-+        (layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-+            it.topMargin = insets.top + dp(8)
-+            layoutParams = it
-+        }
++        insetTop = insets.top
++        applyInsets()
++    }
++
++    private fun applyInsets() {
++        (title.layoutParams as LayoutParams).topMargin = insetTop + dp(LABEL_TOP)
++        (scroller.layoutParams as LayoutParams).topMargin = insetTop + dp(ROW_TOP)
++        requestLayout()
 +    }
 +
 +    override fun onAttachedToWindow() {
@@ -923,36 +1363,56 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +
 +    override fun onDetachedFromWindow() {
 +        viewTreeObserver.removeOnPreDrawListener(publish)
++        ticker.cancel()
 +        super.onDetachedFromWindow()
 +    }
 +
++    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
++        super.onLayout(changed, l, t, r, b)
++        applyMotion()
++    }
++
++    /**
++     * What runs off screen, in the order of BG-8: what the apps run themselves, the small
++     * windows, then Unrestricted and Chosen.
++     */
 +    fun bind(list: List<LujarchBackgroundApp>, windows: List<LujarchSmallWindow>) {
-+        smallWindows.removeAllViews()
-+        apps.removeAllViews()
-+        for (window in windows) {
-+            smallWindows.addView(slot(window), LayoutParams(dp(SLOT_W), dp(ROW_H)).apply {
++        for (t in tiles) row.removeView(t)
++        tiles.clear()
++        val own = list.filter { it.ownService }
++        val chosen = list.filter { !it.ownService }.sortedBy {
++            when (it.usage) {
++                LujarchBackground.USAGE_UNRESTRICTED -> 0
++                LujarchBackground.USAGE_CHOSEN -> 1
++                else -> 2
++            }
++        }
++        own.forEach { tiles.add(appTile(it)) }
++        windows.forEach { tiles.add(windowTile(it)) }
++        chosen.forEach { tiles.add(appTile(it)) }
++        var bar = 0
++        for (t in tiles) if (t.window == null) t.bar = bar++
++        for (t in tiles) if (t.window != null) t.bar = bar++
++        tiles.forEachIndexed { i, t ->
++            row.addView(t, i, LinearLayout.LayoutParams(dp(TILE_W), dp(TILE_H)).apply {
 +                marginEnd = dp(GAP)
 +            })
 +        }
-+        for (app in list) {
-+            apps.addView(tile(app), LayoutParams(dp(TILE_W), dp(ROW_H)).apply {
-+                marginEnd = dp(GAP)
-+            })
-+        }
-+        hasEntries = windows.isNotEmpty() || list.isNotEmpty()
++        hasEntries = tiles.isNotEmpty()
++        yieldFrom = emptyArray()
++        applyMotion()
 +    }
 +
 +    /** Where each small window waits on the screen, by its bubble key (WIN-11). */
 +    private fun publishSlots() {
-+        if (smallWindows.childCount == 0 && !slotsPublished) return
-+        slotsPublished = smallWindows.childCount > 0
++        val shown = tiles.filter { it.window != null }
++        if (shown.isEmpty() && !slotsPublished) return
++        slotsPublished = shown.isNotEmpty()
 +        val keys = ArrayList<String>()
 +        val rects = ArrayList<Rect>()
-+        for (i in 0 until smallWindows.childCount) {
-+            val v = smallWindows.getChildAt(i)
-+            val key = v.tag as? String ?: continue
-+            if (!v.getGlobalVisibleRect(slotRect)) continue
-+            keys.add(key)
++        for (t in shown) {
++            if (!t.getGlobalVisibleRect(slotRect)) continue
++            keys.add(t.window!!.key)
 +            rects.add(Rect(slotRect))
 +        }
 +        recents.onSmallWindowSlots(keys.toTypedArray(), rects.toTypedArray())
@@ -963,7 +1423,6 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +        dropSlot.visibility = if (show) VISIBLE else GONE
 +        if (show) {
 +            visibility = VISIBLE
-+            alpha = 1f
 +            post { scroller.fullScroll(FOCUS_RIGHT) }
 +        } else if (!hasEntries) {
 +            visibility = INVISIBLE
@@ -976,53 +1435,427 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +        dropSlot.scaleY = dropSlot.scaleX
 +    }
 +
-+    /** A small window's place: its shape is the window itself, flown in by the Shell. */
-+    private fun slot(window: LujarchSmallWindow): View = View(context).apply {
-+        tag = window.key
-+        contentDescription = window.label
-+        setOnClickListener { recents.open(window) }
++    // -----------------------------------------------------------------------------------------
++    // Arriving and leaving.
++
++    /** Recents settled: the tiles come out of the status bar, after [delay]. */
++    fun arrive(delay: Long) {
++        allViaBar = false
++        runTo(1f, delay, null)
++        windowsAnim?.cancel()
++        windowsAnim = ValueAnimator.ofFloat(windowsShown, 1f).apply {
++            duration = WINDOW_SHOW_MS
++            startDelay = WINDOW_LAND_MS
++            addUpdateListener { windowsShown = it.animatedValue as Float; applyMotion() }
++            start()
++        }
++    }
++
++    /** Recents closes: the tiles go back up into the status bar. */
++    fun leave() {
++        windowsAnim?.cancel()
++        windowsShown = 0f
++        stopParting()
++        runTo(0f, 0, null)
++    }
++
++    /** Clear all: every tile goes up first and comes down again once the cards are gone. */
++    fun clearAll(doneIn: Long) {
++        stopParting()
++        allViaBar = true
++        runTo(0f, 0) {
++            postDelayed({ if (arrival == 0f && allViaBar) arrive(0) }, doneIn)
++        }
++    }
++
++    /** Recents is gone: everything rests in the status bar. */
++    fun reset() {
++        arrivalAnim?.cancel()
++        windowsAnim?.cancel()
++        backAnim?.cancel()
++        ticker.cancel()
++        held?.cancel()
++        held = null
++        arrival = 0f
++        windowsShown = 0f
++        yieldA = 0f
++        yieldV = 0f
++        yieldDrive = false
++        yieldBack = false
++        allViaBar = false
++        applyMotion()
++    }
++
++    val isMoving: Boolean
++        get() = arrivalAnim?.isRunning == true || arrival > 0f
++
++    private fun runTo(to: Float, delay: Long, done: (() -> Unit)?) {
++        arrivalAnim?.cancel()
++        val from = arrival
++        if (from == to) {
++            done?.invoke()
++            return
++        }
++        arriving = to > from
++        val anim = ValueAnimator.ofFloat(from, to)
++        anim.duration = (span() * abs(to - from)).toLong()
++        anim.startDelay = delay
++        anim.interpolator = null
++        anim.addUpdateListener {
++            arrival = it.animatedValue as Float
++            applyMotion()
++            onArrival?.invoke()
++        }
++        if (done != null) {
++            anim.addListener(object : android.animation.AnimatorListenerAdapter() {
++                private var canceled = false
++                override fun onAnimationCancel(animation: android.animation.Animator) {
++                    canceled = true
++                }
++
++                override fun onAnimationEnd(animation: android.animation.Animator) {
++                    if (!canceled) done()
++                }
++            })
++        }
++        arrivalAnim = anim
++        anim.start()
++    }
++
++    private fun viaBar(t: Tile) = t.window == null || allViaBar
++
++    private fun barCount() = tiles.count { viaBar(it) }
++
++    private fun each() = if (arriving) ARRIVE_EACH_MS else LEAVE_EACH_MS
++
++    private fun gap() = if (arriving) ARRIVE_GAP_MS else LEAVE_GAP_MS
++
++    private fun span(): Float = each() + gap() * max(0, barCount() - 1).toFloat()
++
++    /**
++     * One tile's own progress. Arriving, the tile going furthest sets off first, so none passes
++     * one still in the status bar; leaving, the last goes first.
++     */
++    private fun progress(t: Tile): Float {
++        val n = barCount()
++        val k = if (arriving) n - 1 - t.bar else t.bar
++        return ((arrival * span() - gap() * k) / each()).coerceIn(0f, 1f)
++    }
++
++    // -----------------------------------------------------------------------------------------
++    // Parting around a lifted card.
++
++    /** Running's lowest edge with a margin, on the screen: a card above it would touch the tiles. */
++    private fun edge(): Float {
++        getLocationOnScreen(location)
++        return location[1] + scroller.top + dp(TILE_H) + dp(EDGE_MARGIN).toFloat()
++    }
++
++    private val parts: Boolean
++        get() = visibility == VISIBLE && hasEntries && arrival > 0.99f
++
++    /**
++     * A card is lifted: [top] is its top on the screen where it rests, [left] and [right] its
++     * sides. [apply] moves it; the layer calls it on each frame while it holds the card back.
++     */
++    fun hold(top: Float, left: Float, right: Float, apply: (Float) -> Unit): Held {
++        held?.cancel()
++        backAnim?.cancel()
++        yieldBack = false
++        getLocationOnScreen(location)
++        gapL = left - location[0]
++        gapR = right - location[0]
++        return Held(top, apply).also { held = it }
++    }
++
++    /** A card the layer parts around. */
++    inner class Held(private val top: Float, private val apply: (Float) -> Unit) {
++        private var want = 0f
++        private var lastWant = 0f
++        private var lastAt = 0L
++        private var vy = 0f
++        private var fly: Fly? = null
++        private var done = false
++
++        /** The finger wants the card [ty] from its place; returns where it may be. */
++        fun lift(ty: Float): Float {
++            if (done) return ty
++            val now = android.os.SystemClock.uptimeMillis()
++            if (lastAt != 0L && now > lastAt) vy = 0.6f * vy + 0.4f * (ty - lastWant) * 1000f / (now - lastAt)
++            lastAt = now
++            lastWant = ty
++            want = ty
++            if (!parts) return ty
++            // From 80 dp below the edge, judged a tenth of a second ahead by the finger's speed.
++            val ahead = top + want + min(0f, vy) * 0.1f - edge()
++            yieldT = ((dp(NEAR) - ahead) / dp(NEAR)).coerceIn(0f, 1f) * (-want / dp(10)).coerceIn(0f, 1f)
++            yieldDrive = true
++            yieldBack = false
++            if (!ticker.isStarted) ticker.start()
++            return limit(top, want)
++        }
++
++        /**
++         * The finger let go. A card on its way out flies on at the fling's speed, slowed near the
++         * edge until the way is clear, and [settle] then takes it on; a card going back settles
++         * at once and the tiles close behind it.
++         */
++        fun release(dismissing: Boolean, velocity: Float, direction: Float, settle: () -> Unit) {
++            if (done) return settle()
++            if (!dismissing || !parts) {
++                finish()
++                settle()
++                returnLayer(if (dismissing) LEAVE_RETURN_MS else BACK_RETURN_MS)
++                return
++            }
++            yieldT = 1f
++            yieldDrive = true
++            if (yieldA >= OPEN) {
++                finish()
++                settle()
++                returnLayer(LEAVE_RETURN_MS)
++                return
++            }
++            val speed = abs(velocity).coerceIn(dp(1200).toFloat(), dp(2400).toFloat())
++            fly = Fly(speed * direction, settle)
++            if (!ticker.isStarted) ticker.start()
++        }
++
++        internal fun step(ms: Long) {
++            val f = fly
++            if (f != null) {
++                val open = ((yieldA - 0.78f) / 0.2f).coerceIn(0f, 1f)
++                val near = top + want - edge() < dp(100)
++                val v = if (near) f.v * lerp(0.25f, 1f, open) else f.v
++                want += v * ms / 1000f
++                apply(limit(top, want))
++                if (yieldA >= OPEN) {
++                    finish()
++                    f.settle()
++                    returnLayer(LEAVE_RETURN_MS)
++                }
++            } else if (!done) {
++                apply(limit(top, want))
++            }
++        }
++
++        private fun finish() {
++            done = true
++            fly = null
++            if (held === this) held = null
++        }
++
++        internal fun cancel() {
++            val f = fly
++            finish()
++            f?.settle?.invoke()
++        }
++    }
++
++    private class Fly(val v: Float, val settle: () -> Unit)
++
++    /** Before the way is clear a card presses in by a few dp at most, never as far as the tiles. */
++    private fun limit(top: Float, ty: Float): Float {
++        val e = edge()
++        val pen = e - (top + ty)
++        if (pen <= 0f) return ty
++        val open = ((yieldA - 0.78f) / 0.2f).coerceIn(0f, 1f)
++        return e - lerp(dp(6) * (1f - exp(-pen / dp(20))), pen, open) - top
++    }
++
++    /** The card is gone or back: the tiles slide back from the gap outward and open again. */
++    private fun returnLayer(delay: Long) {
++        yieldDrive = false
++        yieldV = 0f
++        val a0 = yieldA
++        if (a0 <= 0f) return
++        backAnim?.cancel()
++        backAnim = ValueAnimator.ofFloat(0f, 1f).apply {
++            duration = RETURN_MS
++            startDelay = delay
++            interpolator = null
++            addUpdateListener {
++                val p = it.animatedValue as Float
++                if (!yieldBack) {
++                    yieldFrom = Array(tiles.size) { i -> stepAside(i, parted()) }
++                    yieldBack = true
++                }
++                back = p
++                yieldA = lerp(a0, 0f, p)
++                applyMotion()
++            }
++            addListener(object : android.animation.AnimatorListenerAdapter() {
++                override fun onAnimationEnd(animation: android.animation.Animator) {
++                    yieldBack = false
++                    yieldA = 0f
++                    applyMotion()
++                }
++            })
++            start()
++        }
++    }
++
++    private fun stopParting() {
++        held?.cancel()
++        held = null
++        backAnim?.cancel()
++        yieldDrive = false
++        yieldBack = false
++        yieldA = 0f
++        yieldV = 0f
++    }
++
++    private fun onTick(ms: Long) {
++        // The parting spring: critically damped, about half a second from start to rest.
++        var moving = false
++        if (yieldDrive) {
++            var left = ms / 1000f
++            while (left > 0f) {
++                val dt = min(left, 0.008f)
++                val a = -YIELD_W * YIELD_W * (yieldA - yieldT) - 2 * YIELD_W * yieldV
++                yieldV += a * dt
++                yieldA = (yieldA + yieldV * dt).coerceIn(0f, 1f)
++                left -= dt
++            }
++            moving = abs(yieldA - yieldT) > 0.002f || abs(yieldV) > 0.02f
++        }
++        held?.step(ms)
++        applyMotion()
++        if (!moving && held == null) ticker.end()
++    }
++
++    /** Where each icon goes when the layer parts around the card, and how near each tile is. */
++    private fun parted(): Parted {
++        val n = tiles.size
++        val homes = FloatArray(n) { homeX(tiles[it]) }
++        val cx = (gapL + gapR) / 2
++        val step = dp(PARTED_STEP).toFloat()
++        val fits = { w: Float -> max(0, floor((w + dp(6)) / step).toInt()) }
++        val kL = fits(gapL - dp(18))
++        val kR = fits(width - dp(8) - gapR - dp(10))
++        var m = homes.count { it < cx }
++        m = min(min(max(m, n - kR), kL), n)
++        val half = dp(ICON) / 2f
++        val at = FloatArray(n) { i ->
++            if (i < m) gapL - dp(10) - half - (m - 1 - i) * step
++            else gapR + dp(10) + half + (i - m) * step
++        }
++        val rank = IntArray(n)
++        homes.indices.sortedBy { abs(homes[it] - cx) }.forEachIndexed { k, i -> rank[i] = k }
++        return Parted(at, rank)
++    }
++
++    private class Parted(val at: FloatArray, val rank: IntArray)
++
++    /** How far a tile has stepped aside and folded into its icon, the nearest first. */
++    private fun stepAside(i: Int, g: Parted): FloatArray {
++        val y = ((yieldA - 0.08f * min(g.rank[i], 3)) / 0.76f).coerceIn(0f, 1f)
++        return floatArrayOf(smooth(y), (y / 0.6f).coerceIn(0f, 1f))
++    }
++
++    // -----------------------------------------------------------------------------------------
++    // Drawing each tile where its motion has it.
++
++    private fun homeX(t: Tile): Float =
++        scroller.left + row.left - scroller.scrollX + t.left + dp(TILE_W) / 2f
++
++    private fun applyMotion() {
++        if (tiles.isEmpty()) {
++            title.alpha = 0f
++            return
++        }
++        val homeCy = scroller.top + dp(ICON_CY).toFloat()
++        val barCy = insetTop / 2f
++        val outCy = insetTop - dp(2).toFloat()
++        val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
++        val parting = yieldA > 0f || yieldBack
++        val g = if (parting) parted() else null
++        var minP = 1f
++        tiles.forEachIndexed { i, t ->
++            val homeCx = homeX(t)
++            val p: Float
++            var cx: Float
++            var cy: Float
++            var s: Float
++            var open: Float
++            var label: Float
++            var squash = 0f
++            var shown = 1f
++            if (!viaBar(t)) {
++                p = 1f
++                shown = windowsShown
++                cx = homeCx
++                cy = homeCy
++                s = dp(ICON).toFloat()
++                open = 1f
++                label = 1f
++            } else {
++                p = progress(t)
++                minP = min(minP, p)
++                val bx = dp(BAR_X) + dp(BAR_STEP) * t.bar.toFloat()
++                val barCx = if (rtl) width - bx else bx
++                val u = if (arriving) (p / 0.6f).coerceIn(0f, 1f) else (p / 0.5f).coerceIn(0f, 1f)
++                val outP = smooth((u / 0.3f).coerceIn(0f, 1f))
++                val along = smooth(((u - 0.2f) / 0.45f).coerceIn(0f, 1f))
++                val down = smooth(((u - 0.5f) / 0.5f).coerceIn(0f, 1f))
++                cx = lerp(barCx, homeCx, along)
++                cy = lerp(barCy, outCy, outP) + (homeCy - outCy) * down
++                s = lerp(dp(BAR_ICON).toFloat(), dp(18).toFloat(), outP) + (dp(ICON) - dp(18)) * down
++                if (arriving) {
++                    val land = ((p - 0.6f) / 0.4f).coerceIn(0f, 1f)
++                    squash = if (p > 0.6f) sin(PI.toFloat() * (land / 0.45f).coerceIn(0f, 1f)) else 0f
++                    open = openOut(((p - 0.55f) / 0.45f).coerceIn(0f, 1f))
++                    label = ((p - 0.75f) / 0.25f).coerceIn(0f, 1f)
++                } else {
++                    open = STANDARD.getInterpolation(((p - 0.45f) / 0.55f).coerceIn(0f, 1f))
++                    label = ((p - 0.7f) / 0.3f).coerceIn(0f, 1f)
++                }
++            }
++            if (g != null) {
++                val f: Float
++                val fold: Float
++                if (yieldBack && i < yieldFrom.size) {
++                    // The tile nearest the gap comes back first, so no icon crosses one on its way.
++                    val u = ((back - 0.1f * min(g.rank[i], 3)) / 0.7f).coerceIn(0f, 1f)
++                    f = yieldFrom[i][0] * (1f - springOut(u))
++                    fold = yieldFrom[i][1] * (1f - springOut(((u - 0.25f) / 0.75f).coerceIn(0f, 1f)))
++                } else {
++                    val a = stepAside(i, g)
++                    f = a[0]
++                    fold = a[1]
++                }
++                cx = lerp(cx, g.at[i], f)
++                open *= 1f - fold
++                label *= (1f - fold * 2f).coerceIn(0f, 1f)
++            }
++            t.set(cx - homeCx, cy - homeCy, s, open, label, squash, shown,
++                if (p > 0f) min(1f, p * 12f) else 0f)
++        }
++        // The layer's name shows once the tiles have passed it.
++        title.alpha = ((minP - 0.4f) / 0.3f).coerceIn(0f, 1f)
++    }
++
++    // -----------------------------------------------------------------------------------------
++    // Tiles.
++
++    private fun appTile(app: LujarchBackgroundApp): Tile = Tile(context, icon(app.packageName, app.uid),
++        app.word.orEmpty(), app.ownService, null).apply {
++        contentDescription = context.getString(R.string.lujarch_background_tile, app.label, app.word)
++        setOnClickListener { recents.open(app) }
 +        setOnLongClickListener { v ->
-+            recents.appOf(window)?.let { menu(v, it) }
++            menu(v, app)
 +            true
 +        }
 +    }
 +
-+    private fun tile(app: LujarchBackgroundApp): View {
-+        val color = LujarchBackground.stateColor(context, app.state)
-+        return LinearLayout(context).apply {
-+            orientation = VERTICAL
-+            gravity = Gravity.CENTER
-+            background = LayerDrawable(arrayOf(
-+                GradientDrawable().apply {
-+                    cornerRadius = dp(TILE_RADIUS).toFloat()
-+                    setColor(context.getColor(android.R.color.system_neutral1_800))
-+                },
-+                GradientDrawable().apply {
-+                    setColor(color)
-+                    val r = dp(TILE_RADIUS).toFloat()
-+                    cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-+                },
-+            )).apply {
-+                setLayerHeight(1, dp(3))
-+                setLayerGravity(1, Gravity.TOP)
-+            }
-+            clipToOutline = true
-+            addView(ImageView(context).apply {
-+                setImageDrawable(icon(app))
-+                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-+            }, LayoutParams(dp(24), dp(24)).apply { topMargin = dp(3) })
-+            addView(TextView(context).apply {
-+                text = app.word
-+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-+                setTextColor(context.getColor(android.R.color.system_neutral1_100))
-+                isSingleLine = true
-+                ellipsize = android.text.TextUtils.TruncateAt.END
-+                setPadding(dp(4), dp(3), dp(4), 0)
-+            })
-+            contentDescription = context.getString(R.string.lujarch_background_tile, app.label, app.word)
-+            setOnClickListener { recents.open(app) }
++    private fun windowTile(window: LujarchSmallWindow): Tile {
++        val word = context.getString(R.string.lujarch_background_small_window)
++        return Tile(context, icon(window.packageName, UserHandle.getUid(window.userId, 0)), word, false,
++            window).apply {
++            contentDescription = context.getString(R.string.lujarch_background_tile, window.label, word)
++            setOnClickListener { recents.open(window) }
 +            setOnLongClickListener { v ->
-+                menu(v, app)
++                recents.appOf(window)?.let { menu(v, it) }
 +                true
 +            }
 +        }
@@ -1045,35 +1878,165 @@ index 0000000000000000000000000000000000000000..bddc00fa1e849ee23e5b41cd966fe4d2
 +        popup.show()
 +    }
 +
-+    private fun icon(app: LujarchBackgroundApp) = try {
++    private fun icon(packageName: String?, uid: Int): Drawable = try {
 +        val pm = context.packageManager
-+        val info = pm.getApplicationInfoAsUser(app.packageName, 0, UserHandle.getUserId(app.uid))
-+        pm.getUserBadgedIcon(info.loadIcon(pm), UserHandle.getUserHandleForUid(app.uid))
++        val info = pm.getApplicationInfoAsUser(packageName ?: "", 0, UserHandle.getUserId(uid))
++        pm.getUserBadgedIcon(info.loadIcon(pm), UserHandle.getUserHandleForUid(uid))
 +    } catch (e: Exception) {
 +        context.packageManager.defaultActivityIcon
 +    }
 +
-+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
++    /**
++     * One tile, drawn where its motion has it: from an icon in the status bar to the tile in its
++     * place. Its touches stay in its place.
++     */
++    private inner class Tile(
++        context: Context,
++        private val icon: Drawable,
++        word: String,
++        private val own: Boolean,
++        val window: LujarchSmallWindow?,
++    ) : View(context) {
++        var bar = 0
++        private var dx = 0f
++        private var dy = 0f
++        private var s = dp(ICON).toFloat()
++        private var open = 1f
++        private var label = 1f
++        private var squash = 0f
++        private var shown = 1f
++        private var iconAlpha = 1f
++        private val body = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            color = context.getColor(android.R.color.system_neutral1_800)
++        }
++        private val light = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            color = context.getColor(android.R.color.system_neutral1_50)
++        }
++        private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
++            color = context.getColor(android.R.color.system_neutral1_100)
++            textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10.5f, resources.displayMetrics)
++            textAlign = Paint.Align.CENTER
++        }
++        private val word: String = TextUtils.ellipsize(word, text, dp(TILE_W - 6).toFloat(),
++            TextUtils.TruncateAt.END).toString()
++        private val r = RectF()
 +
-+    private companion object {
-+        const val END = 1
-+        const val BACKGROUND = 2
-+        const val APP_INFO = 3
-+        /** The row fits the space between the status bar and the cards. */
-+        const val ROW_H = 56
-+        const val TILE_W = 64
-+        /** A slot has the shape of a dock card (108 x 150 dp). */
-+        const val SLOT_W = 40
-+        const val GAP = 8
-+        const val TILE_RADIUS = 14
++        fun set(dx: Float, dy: Float, s: Float, open: Float, label: Float, squash: Float,
++                shown: Float, iconAlpha: Float) {
++            this.dx = dx
++            this.dy = dy
++            this.s = s
++            this.open = open
++            this.label = label
++            this.squash = squash
++            this.shown = shown
++            this.iconAlpha = iconAlpha
++            invalidate()
++        }
++
++        override fun onDraw(canvas: Canvas) {
++            if (shown <= 0f) return
++            val cx = dp(TILE_W) / 2f + dx
++            val cy = dp(ICON_CY) + dy
++            val o = open.coerceIn(0f, 1.2f)
++            val bodyAlpha = (open * 4f).coerceIn(0f, 1f) * shown * (if (iconAlpha > 0f) 1f else 0f)
++            if (bodyAlpha > 0f) {
++                val w = lerp(s, dp(TILE_W).toFloat(), o)
++                val h = lerp(s, dp(TILE_H).toFloat(), o)
++                val left = lerp(cx - s / 2, cx - dp(TILE_W) / 2f, o)
++                val top = lerp(cy - s / 2, 0f, o)
++                val radius = lerp(s / 2, dp(TILE_RADIUS).toFloat(), o.coerceIn(0f, 1f))
++                r.set(left, top, left + w, top + h)
++                // What the app runs itself has a lit top edge.
++                if (own && open > 0.6f) {
++                    light.alpha = (255 * bodyAlpha).toInt()
++                    canvas.drawRoundRect(r, radius, radius, light)
++                    r.top += 1.5f * density
++                }
++                body.alpha = (255 * bodyAlpha).toInt()
++                canvas.drawRoundRect(r, radius, radius, body)
++            }
++            val a = iconAlpha * shown
++            if (a > 0f) {
++                canvas.save()
++                canvas.scale(1f + 0.08f * squash, 1f - 0.1f * squash, cx, cy + s / 2)
++                icon.setBounds((cx - s / 2).toInt(), (cy - s / 2).toInt(), (cx + s / 2).toInt(), (cy + s / 2).toInt())
++                icon.alpha = (255 * a).toInt()
++                icon.draw(canvas)
++                canvas.restore()
++            }
++            val l = label * shown
++            if (l > 0f) {
++                text.alpha = (255 * l).toInt()
++                val top = dp(LABEL_Y) + dp(4) * (1f - label)
++                canvas.drawText(word, cx, top - text.ascent(), text)
++            }
++        }
++    }
++
++    private fun dp(v: Int) = (v * density).toInt()
++
++    companion object {
++        private const val END = 1
++        private const val BACKGROUND = 2
++        private const val APP_INFO = 3
++
++        private const val SIDE = 16
++        /** The layer's name below the status bar, the tiles below it. */
++        private const val LABEL_TOP = 6
++        private const val ROW_TOP = 28
++        private const val TILE_W = 64
++        private const val TILE_H = 88
++        private const val GAP = 8
++        private const val TILE_RADIUS = 18
++        private const val ICON = 34
++        private const val ICON_CY = 33
++        private const val LABEL_Y = 58
++        /** Between the tiles and the cards: the edge a lifted card waits at, then the cards. */
++        private const val EDGE_MARGIN = 6
++        private const val CARDS_GAP = 10
++        /** Where the status bar's icons are: the first, the step between them, their size. */
++        private const val BAR_X = 76
++        private const val BAR_STEP = 18
++        private const val BAR_ICON = 14
++        /** The parting starts this far below the edge; parted icons are this far apart. */
++        private const val NEAR = 80
++        private const val PARTED_STEP = 40
++
++        private const val ARRIVE_EACH_MS = 600f
++        private const val ARRIVE_GAP_MS = 80f
++        private const val LEAVE_EACH_MS = 230f
++        private const val LEAVE_GAP_MS = 40f
++        private const val WINDOW_LAND_MS = 450L
++        private const val WINDOW_SHOW_MS = 150L
++        private const val RETURN_MS = 560L
++        private const val BACK_RETURN_MS = 150L
++        private const val LEAVE_RETURN_MS = 300L
++        private const val YIELD_W = 9f
++        private const val OPEN = 0.97f
++        private val STANDARD = PathInterpolator(0.2f, 0f, 0f, 1f)
++
++        /** The space the layer takes above a phone's cards, below the status bar, in pixels. */
++        @JvmStatic
++        fun spaceAbove(context: Context): Int =
++            ((ROW_TOP + TILE_H + EDGE_MARGIN + CARDS_GAP) * context.resources.displayMetrics.density).toInt()
++
++        private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
++
++        private fun smooth(p: Float) = p * p * (3 - 2 * p)
++
++        /** A soft spring for a tile opening out of its icon: it barely overshoots. */
++        private fun openOut(p: Float) = if (p >= 1f) 1f else 1f - exp(-6f * p) * cos(6f * p)
++
++        private fun springOut(p: Float) = if (p >= 1f) 1f else 1f - exp(-5.5f * p) * cos(8.5f * p)
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb542fef6a5
+index 0000000000000000000000000000000000000000..6c20bc797abe9609f365e1124ef7cc9f77f9dc20
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,141 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1105,14 +2068,17 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +import com.android.quickstep.views.TaskView
 +
 +/**
-+ * The marks of Background on a card in Recents: a short mark at the top corner of a kept app's
-+ * card (BG-5), and a reclaimed app's card dimmed with a dashed outline and Opens again (BG-11).
-+ * Drawn over the card, which keeps its place, size and order.
++ * The marks of Background on a card in Recents (BG-10): the app's memory while it is in memory, a
++ * short mark at the top corner of a kept app's card (BG-4), and a reclaimed app's card dimmed with
++ * a dashed outline and Opens again. Drawn over the card, which keeps its place, size and order.
 + */
 +object TaskMarks {
-+    fun mark(tv: TaskView, kept: Boolean, reclaimed: Boolean) {
++    /** The marks fade out as a card opens. */
++    var alpha = 1f
++
++    fun mark(tv: TaskView, kept: Boolean, reclaimed: Boolean, memory: String?) {
 +        val old = tv.getTag(R.id.lujarch_background_mark) as? Mark
-+        if (!kept && !reclaimed) {
++        if (!kept && !reclaimed && memory == null) {
 +            if (old != null) {
 +                tv.overlay.remove(old)
 +                tv.setTag(R.id.lujarch_background_mark, null)
@@ -1125,6 +2091,7 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +        }
 +        m.kept = kept
 +        m.reclaimed = reclaimed
++        m.memory = memory
 +        m.setBounds(0, 0, tv.width, tv.height)
 +        m.invalidateSelf()
 +    }
@@ -1132,6 +2099,7 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +    private class Mark(private val tv: TaskView) : Drawable() {
 +        var kept = false
 +        var reclaimed = false
++        var memory: String? = null
 +        private val context = tv.context
 +        private val density = context.resources.displayMetrics.density
 +        private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -1144,6 +2112,12 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +            textAlign = Paint.Align.CENTER
 +            textSize = 11f * context.resources.displayMetrics.scaledDensity
 +        }
++        private val pill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            color = context.getColor(android.R.color.system_neutral1_800)
++        }
++        private val pillText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
++            color = context.getColor(android.R.color.system_neutral1_100)
++        }
 +        private val card = Rect()
 +        private val r = RectF()
 +
@@ -1151,7 +2125,13 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +            // The card's picture, inside the task view.
 +            val snapshot = tv.taskContainers.firstOrNull()?.taskContentView ?: return
 +            card.set(snapshot.left, snapshot.top, snapshot.right, snapshot.bottom)
-+            if (card.isEmpty) return
++            if (card.isEmpty || alpha <= 0f) return
++            if (alpha < 1f) canvas.saveLayerAlpha(null, (255 * alpha).toInt())
++            drawMarks(canvas)
++            if (alpha < 1f) canvas.restore()
++        }
++
++        private fun drawMarks(canvas: Canvas) {
 +            val radius = 14 * density
 +            if (reclaimed) {
 +                fill.color = 0x8C000000.toInt()
@@ -1170,6 +2150,24 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +                r.set(card.right - w, card.top + radius, card.right.toFloat(), card.top + radius + 40 * density)
 +                canvas.drawRoundRect(r, w / 2, w / 2, fill)
 +            }
++            val m = memory ?: return
++            // The current card has it at its top corner, a folded card at its bottom corner.
++            val big = tv.isLargeTile
++            pillText.textSize = (if (big) 11f else 10f) * context.resources.displayMetrics.scaledDensity
++            val h = (if (big) 22 else 20) * density
++            val pad = (if (big) 8 else 7) * density
++            val inset = (if (big) 8 else 6) * density
++            val w = pillText.measureText(m) + pad * 2
++            if (big) {
++                r.set(card.right - inset - w, card.top + inset + 3 * density, card.right - inset,
++                    card.top + inset + 3 * density + h)
++            } else {
++                r.set(card.left + inset, card.bottom - inset - h, card.left + inset + w, card.bottom - inset)
++            }
++            pill.alpha = 240
++            canvas.drawRoundRect(r, h / 2, h / 2, pill)
++            val fm = pillText.fontMetrics
++            canvas.drawText(m, r.left + pad, r.centerY() - (fm.ascent + fm.descent) / 2, pillText)
 +        }
 +
 +        override fun setAlpha(alpha: Int) {}
@@ -1181,7 +2179,7 @@ index 0000000000000000000000000000000000000000..b39901021987904c126e2b195c0bdbb5
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
-index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25e6f370485f2e064c431158561d51a2c217f1eb 100644
+index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25f40d984042f7ffd720bca2cc7fb2bfc7f83948 100644
 --- a/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/LauncherRecentsView.java
 @@ -86,6 +86,15 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
@@ -1200,7 +2198,29 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25e6f370485f2e064c431158561d51a2
          setContentAlpha(0);
      }
  
-@@ -192,6 +201,9 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
+@@ -142,6 +151,10 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
+     @Override
+     public void onStateTransitionStart(LauncherState toState) {
+         setOverviewStateEnabled(toState.isRecentsViewVisible);
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onStateTransitionStart(toState == OVERVIEW
++                    || toState == OVERVIEW_MODAL_TASK || toState == OVERVIEW_SPLIT_SELECT);
++        }
+ 
+         if (toState.displayOverviewTasksAsGrid(mContainer.getDeviceProfile())) {
+             setOverviewGridEnabled(true);
+@@ -167,6 +180,10 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
+     @Override
+     public void onStateTransitionComplete(LauncherState finalState) {
+         mUtils.onStateTransitionComplete(finalState);
++        if (mLujarchRecents != null) {
++            mLujarchRecents.onStateTransitionComplete(finalState == OVERVIEW
++                    || finalState == OVERVIEW_MODAL_TASK || finalState == OVERVIEW_SPLIT_SELECT);
++        }
+         DesktopVisibilityController.INSTANCE.get(mContainer).onLauncherStateChanged(
+                 mContainer.getDisplayId(), finalState);
+         if (!finalState.displayOverviewTasksAsGrid(mContainer.getDeviceProfile())) {
+@@ -192,6 +209,9 @@ public class LauncherRecentsView extends RecentsView<QuickstepLauncher, Launcher
      @Override
      public void setOverviewStateEnabled(boolean enabled) {
          super.setOverviewStateEnabled(enabled);
@@ -1211,14 +2231,16 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..25e6f370485f2e064c431158561d51a2
              LauncherState state = getStateManager().getState();
              boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..3bed633553c62849e0708a4084b03439adf7850a 100644
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..8c6bbe75a3c2a2e689d03d64e08b0763974a623f 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 +++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-@@ -333,6 +333,10 @@ constructor(
+@@ -333,6 +333,12 @@ constructor(
  
      /** Dismisses all */
      fun dismissAllTasks() {
-+        // Lujarch's Background (BG-5): Clear all skips the kept apps' cards.
++        // Lujarch's Background (BG-4, BG-8): Clear all skips the kept apps' cards, and the Running
++        // layer goes up while the cards go.
++        recentsView.mLujarchRecents?.onClearAll()
 +        if (recentsView.mLujarchRecents?.clearAllButKept() == true) {
 +            return
 +        }
@@ -1226,9 +2248,18 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..3bed633553c62849e0708a4084b03439
              recentsView.mUtils.taskViews
                  .reversed()
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
-index 4ca0a119f5eaade708989b74d4c0ed6b55594959..62fdafb64297466fc903cdfd1b8a0505c99814c8 100644
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..66e7d97ec84577fa36b8404305975170dca28b2a 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
+@@ -1581,7 +1581,7 @@ public abstract class RecentsView<
+     @Override
+     protected boolean isSignificantMove(float absoluteDelta, int pageOrientedSize) {
+         DeviceProfile deviceProfile = mContainer.getDeviceProfile();
+-        if (!deviceProfile.getDeviceProperties().isLargeScreen()) {
++        if (!lujarchScrollsAsGrid()) {
+             return super.isSignificantMove(absoluteDelta, pageOrientedSize);
+         }
+ 
 @@ -2000,6 +2000,9 @@ public abstract class RecentsView<
          mAppliedTaskListChangeId = taskListChangeId;
          resetTaskVisuals();
@@ -1239,7 +2270,43 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..62fdafb64297466fc903cdfd1b8a0505
          updateEnabledOverlays();
          if (isPageScrollsInitialized()) {
              onPageScrollsInitialized();
-@@ -3641,6 +3644,9 @@ public abstract class RecentsView<
+@@ -2290,7 +2293,7 @@ public abstract class RecentsView<
+      */
+     private float getTaskAlignmentTranslationY() {
+         DeviceProfile deviceProfile = mContainer.getDeviceProfile();
+-        if (deviceProfile.getDeviceProperties().isLargeScreen()) {
++        if (lujarchScrollsAsGrid()) {
+             return deviceProfile.getOverviewProfile().getRowSpacing();
+         }
+         return 0f;
+@@ -2393,7 +2396,7 @@ public abstract class RecentsView<
+ 
+     @Override
+     protected int getDestinationPage(int scaledScroll) {
+-        if (!mContainer.getDeviceProfile().getDeviceProperties().isLargeScreen()) {
++        if (!lujarchScrollsAsGrid()) {
+             return super.getDestinationPage(scaledScroll);
+         }
+         if (!isPageScrollsInitialized()) {
+@@ -3248,8 +3251,16 @@ public abstract class RecentsView<
+             mAddDesktopButton.setGridTranslationX(translationX);
+         }
+ 
++        // Lujarch's Background (BG-10): on a phone the folded cards sit against the right edge,
++        // the current card keeping its size there.
++        float lujarchShift = lujarchGridShift();
++        if (lujarchShift != 0) {
++            for (TaskView taskView : getTaskViews()) {
++                taskView.setGridTranslationX(taskView.getGridTranslationX() + lujarchShift);
++            }
++        }
+         mClearAllButton.setGridTranslationPrimary(
+-                clearAllTotalTranslationX - snappedTaskGridTranslationX);
++                clearAllTotalTranslationX - snappedTaskGridTranslationX + lujarchShift);
+         mClearAllButton.setGridScrollOffset(
+                 mIsRtl ? mLastComputedTaskSize.left - mLastComputedGridSize.left
+                         : mLastComputedTaskSize.right - mLastComputedGridSize.right);
+@@ -3641,6 +3652,9 @@ public abstract class RecentsView<
              mEmptyIcon.setAlpha(alphaInt);
          }
          mActionsView.getContentAlpha().updateValue(mContentAlpha);
@@ -1249,7 +2316,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..62fdafb64297466fc903cdfd1b8a0505
  
          if (alpha > 0) {
              setVisibility(VISIBLE);
-@@ -3759,9 +3765,15 @@ public abstract class RecentsView<
+@@ -3759,7 +3773,56 @@ public abstract class RecentsView<
       * returns true.
       */
      public boolean canRemoveTaskView(TaskView taskView) {
@@ -1257,21 +2324,107 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..62fdafb64297466fc903cdfd1b8a0505
 +        // Lujarch's Background (BG-5): a kept app's card cannot be swiped away.
 +        return mUtils.canRemoveTaskView(taskView)
 +                && (mLujarchRecents == null || !mLujarchRecents.isKept(taskView));
-     }
- 
++    }
++
 +    /** Lujarch's Background in Recents (BG-5, BG-11, BG-12); null outside the home app. */
 +    @Nullable
 +    public com.android.quickstep.lujarch.LujarchRecents mLujarchRecents;
 +
++    /** Whether a phone's Recents folds into two rows (BG-10). */
++    private boolean lujarchFoldsIntoRows() {
++        return com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(
++                mContainer.getDeviceProfile());
++    }
++
++    /** Whether Recents scrolls as the grid does: on a large screen, or folded on a phone. */
++    private boolean lujarchScrollsAsGrid() {
++        return mContainer.getDeviceProfile().getDeviceProperties().isLargeScreen()
++                || (lujarchFoldsIntoRows() && showAsGrid());
++    }
++
++    /**
++     * The card that keeps its size when a phone's Recents folds (BG-10): the app Recents was
++     * opened from, or the newest card.
++     */
++    @Nullable
++    public TaskView lujarchCurrentTaskView() {
++        if (mLujarchRecents == null || !lujarchFoldsIntoRows()) {
++            return null;
++        }
++        TaskView running = getRunningTaskView();
++        return running != null ? running : getFirstTaskView();
++    }
++
++    /** How far the folded cards move to rest against the right edge (BG-10). */
++    private float lujarchGridShift() {
++        if (mLujarchRecents == null || !lujarchFoldsIntoRows()) {
++            return 0;
++        }
++        DeviceProfile dp = mContainer.getDeviceProfile();
++        int width = dp.getDeviceProperties().getWidthPx();
++        int margin = dp.getOverviewProfile().getGridSideMargin();
++        float shift = (width - mLastComputedTaskSize.width()) / 2f - margin;
++        return mIsRtl ? -shift : shift;
++    }
++
++    /** The Recents switches changed where the cards are (BG-8, BG-10). */
++    public void lujarchRelayout() {
++        updateSizeAndPadding();
++        requestLayout();
+     }
+ 
      @Override
-     public int getNextPage() {
-         int nextPage = super.getNextPage();
+diff --git a/quickstep/src/com/android/quickstep/views/TaskView.kt b/quickstep/src/com/android/quickstep/views/TaskView.kt
+index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..1eface8b4173264536e8b328cf5ec890d9a9fc6c 100644
+--- a/quickstep/src/com/android/quickstep/views/TaskView.kt
++++ b/quickstep/src/com/android/quickstep/views/TaskView.kt
+@@ -150,7 +150,12 @@ constructor(
+ 
+     val isGridTask: Boolean
+         /** Returns whether the task is part of overview grid and not being focused. */
+-        get() = container.deviceProfile.deviceProperties.isLargeScreen && !isLargeTile
++        get() = foldsIntoGrid && !isLargeTile
++
++    /** Lujarch's Background (BG-10): a phone's Recents folds into the grid too. */
++    private val foldsIntoGrid: Boolean
++        get() = container.deviceProfile.deviceProperties.isLargeScreen ||
++            com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(container.deviceProfile)
+ 
+     val isRunningTask: Boolean
+         get() = this === recentsView?.runningTaskView
+@@ -165,7 +170,8 @@ constructor(
+         get() = displayId.isExternalDisplay
+ 
+     val isLargeTile: Boolean
+-        get() = type == TaskViewType.DESKTOP
++        // Lujarch's Background (BG-10): on a phone the current card keeps its size.
++        get() = type == TaskViewType.DESKTOP || recentsView?.lujarchCurrentTaskView() === this
+ 
+     val recentsView: RecentsView<*, *>?
+         get() = parent as? RecentsView<*, *>
+@@ -1186,7 +1192,7 @@ constructor(
+         val boxTranslationY: Float
+         val expectedWidth: Int
+         val expectedHeight: Int
+-        if (container.deviceProfile.deviceProperties.isLargeScreen) {
++        if (foldsIntoGrid) {
+             val boxWidth: Int
+             val boxHeight: Int
+ 
+@@ -1305,6 +1311,7 @@ constructor(
+ 
+     /** Launch of the current task (both live and inactive tasks) with an animation. */
+     fun launchWithAnimation(): RunnableList? {
++        recentsView?.mLujarchRecents?.onCardLaunch()
+         Log.d(
+             TAG,
+             "${taskIds.contentToString()} - launchWithAnimation - initiating launch, " +
 diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..32b9b43c91bf654415ca56cc2a4b07b248e9b3ad
+index 0000000000000000000000000000000000000000..4f9fcd8ac815e49db213e389ce537b8145df3066
 --- /dev/null
 +++ b/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,26 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1288,20 +2441,22 @@ index 0000000000000000000000000000000000000000..32b9b43c91bf654415ca56cc2a4b07b2
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-11, BG-12). -->
++<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
 +<resources>
 +    <string name="lujarch_background_recents">"最近使ったアプリ"</string>
-+    <string name="lujarch_background_recents_running">"実行中のアプリを表示"</string>
++    <string name="lujarch_background_recents_running">"「実行中」を表示"</string>
 +    <string name="lujarch_background_recents_running_summary">"カードの上に、画面外で実行中のアプリを表示"</string>
++    <string name="lujarch_background_recents_state">"アプリの状態を表示"</string>
++    <string name="lujarch_background_recents_state_summary">"カードを 2 行にまとめ、各アプリのメモリと状態を表示"</string>
 +    <string name="lujarch_background_recents_memory">"メモリを表示"</string>
 +    <string name="lujarch_background_recents_memory_summary">"カードの下に、使用中のメモリを表示"</string>
 +</resources>
 diff --git a/res/values-zh-rCN/lujarch_background_strings.xml b/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..4ac127becfc9b881748bda2f71d4e41fda96dbdf
+index 0000000000000000000000000000000000000000..af5ef07ac187b1ce9022a95baee59e0122914f72
 --- /dev/null
 +++ b/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,26 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1318,20 +2473,22 @@ index 0000000000000000000000000000000000000000..4ac127becfc9b881748bda2f71d4e41f
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-11, BG-12). -->
++<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
 +<resources>
 +    <string name="lujarch_background_recents">"最近用过的应用"</string>
-+    <string name="lujarch_background_recents_running">"显示运行中的应用"</string>
++    <string name="lujarch_background_recents_running">"显示“运行中”"</string>
 +    <string name="lujarch_background_recents_running_summary">"在卡片上方显示离开屏幕后仍在运行的应用"</string>
++    <string name="lujarch_background_recents_state">"显示应用状态"</string>
++    <string name="lujarch_background_recents_state_summary">"卡片折成两行，并显示每个应用的内存和状态"</string>
 +    <string name="lujarch_background_recents_memory">"显示内存"</string>
 +    <string name="lujarch_background_recents_memory_summary">"在卡片下方显示内存使用情况"</string>
 +</resources>
 diff --git a/res/values/lujarch_background_strings.xml b/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ba8e35eb7b6e94af54bb431939ef4bba02ab5aa
+index 0000000000000000000000000000000000000000..f6b1c23c78879fec9072feda8c4be1c2af6a8ff0
 --- /dev/null
 +++ b/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,26 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1348,24 +2505,26 @@ index 0000000000000000000000000000000000000000..0ba8e35eb7b6e94af54bb431939ef4bb
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-11, BG-12). -->
++<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
 +<resources>
 +    <string name="lujarch_background_recents">Recents</string>
-+    <string name="lujarch_background_recents_running">Show running apps</string>
++    <string name="lujarch_background_recents_running">Show running</string>
 +    <string name="lujarch_background_recents_running_summary">Above the cards, the apps running off screen</string>
++    <string name="lujarch_background_recents_state">Show app state</string>
++    <string name="lujarch_background_recents_state_summary">"Fold the cards into two rows and show each app’s memory and state"</string>
 +    <string name="lujarch_background_recents_memory">Show memory</string>
 +    <string name="lujarch_background_recents_memory_summary">Below the cards, the memory in use</string>
 +</resources>
 diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
-index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..a9f018ac23bef142ee815f37bef0603736855518 100644
+index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..dd09601f7f5bd5b5d7cfcc79fe7885ce06c0ff23 100644
 --- a/res/xml/launcher_preferences.xml
 +++ b/res/xml/launcher_preferences.xml
-@@ -116,6 +116,27 @@
+@@ -116,6 +116,33 @@
          android:persistent="false"
          launcher:useSimpleSummaryProvider="true" />
  
-+    <!-- Lujarch's Background (BG-11, BG-12): Recents' Running layer and memory, kept in
-+         Settings.Secure (RecentsSettings). -->
++    <!-- Lujarch's Background (BG-8, BG-10, BG-11): Recents' Running layer, two rows and memory,
++         kept in Settings.Secure (RecentsSettings). -->
 +    <androidx.preference.PreferenceScreen
 +        android:key="pref_lujarch_recents"
 +        android:title="@string/lujarch_background_recents"
@@ -1375,6 +2534,12 @@ index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..a9f018ac23bef142ee815f37bef06037
 +            android:key="pref_lujarch_recents_running"
 +            android:title="@string/lujarch_background_recents_running"
 +            android:summary="@string/lujarch_background_recents_running_summary"
++            android:persistent="false" />
++
++        <SwitchPreferenceCompat
++            android:key="pref_lujarch_recents_state"
++            android:title="@string/lujarch_background_recents_state"
++            android:summary="@string/lujarch_background_recents_state_summary"
 +            android:persistent="false" />
 +
 +        <SwitchPreferenceCompat
@@ -1390,10 +2555,10 @@ index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..a9f018ac23bef142ee815f37bef06037
      <androidx.preference.PreferenceScreen
 diff --git a/src/com/android/launcher3/lujarch/RecentsSettings.java b/src/com/android/launcher3/lujarch/RecentsSettings.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..6e1c9feecfc0105e993022042634a17615d42926
+index 0000000000000000000000000000000000000000..ae8b071611a012c640a8c09571ccd06709cf4b60
 --- /dev/null
 +++ b/src/com/android/launcher3/lujarch/RecentsSettings.java
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,58 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1419,13 +2584,15 @@ index 0000000000000000000000000000000000000000..6e1c9feecfc0105e993022042634a176
 +import androidx.preference.TwoStatePreference;
 +
 +/**
-+ * Home settings > Recents: Show running apps (BG-11) and Show memory (BG-12), kept in
-+ * Settings.Secure, where Recents reads them.
++ * Home settings > Recents: Show running (BG-8), Show app state (BG-10) and Show memory (BG-11),
++ * kept in Settings.Secure, where Recents reads them.
 + */
 +public final class RecentsSettings {
 +    public static final String KEY_RUNNING = "pref_lujarch_recents_running";
++    public static final String KEY_STATE = "pref_lujarch_recents_state";
 +    public static final String KEY_MEMORY = "pref_lujarch_recents_memory";
 +    public static final String SETTING_RUNNING = "lujarch_background_recents_running";
++    public static final String SETTING_STATE = "lujarch_background_recents_state";
 +    public static final String SETTING_MEMORY = "lujarch_background_recents_memory";
 +
 +    private RecentsSettings() {
@@ -1436,6 +2603,8 @@ index 0000000000000000000000000000000000000000..6e1c9feecfc0105e993022042634a176
 +        final String setting;
 +        if (KEY_RUNNING.equals(preference.getKey())) {
 +            setting = SETTING_RUNNING;
++        } else if (KEY_STATE.equals(preference.getKey())) {
++            setting = SETTING_STATE;
 +        } else if (KEY_MEMORY.equals(preference.getKey())) {
 +            setting = SETTING_MEMORY;
 +        } else {

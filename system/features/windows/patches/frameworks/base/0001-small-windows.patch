@@ -350,7 +350,7 @@ index 80577829d9ad884bd91d006f45d5e964c9f6fd67..ea0cc6c06ffae1909333dd2af4e14f2a
  
      /**
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
-index f5cf073faadea06cffbe8b91686388cad3c2d32e..79622c6086e6c07e0cdbd1fa2958b39bc7f860fc 100644
+index f5cf073faadea06cffbe8b91686388cad3c2d32e..ab3476d60d73c7ef7ea65b004c6d8e0750016a84 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/BubbleController.java
 @@ -262,6 +262,10 @@ public class BubbleController implements ConfigurationChangeListener,
@@ -730,7 +730,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..79622c6086e6c07e0cdbd1fa2958b39b
              if (mStackView != null) {
                  mStackView.setImeVisible(imeVisible, heightChanged);
                  if (!imeVisible && mOnImeHidden != null) {
-@@ -3508,6 +3642,58 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3508,6 +3642,70 @@ public class BubbleController implements ConfigurationChangeListener,
                      (controller) -> controller.moveDraggedBubbleToFullscreen(key, dropLocation));
          }
  
@@ -750,6 +750,18 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..79622c6086e6c07e0cdbd1fa2958b39b
 +                    controller -> {
 +                        if (controller.getSmallWindows() != null) {
 +                            controller.getSmallWindows().setRecentsShown(shown, keys, slots);
++                        }
++                    });
++        }
++
++        @Override
++        public void setRecentsProgress(float progress, String[] keys, Rect[] slots) {
++            executeRemoteCallWithTaskPermission(
++                    mController,
++                    "setRecentsProgress",
++                    controller -> {
++                        if (controller.getSmallWindows() != null) {
++                            controller.getSmallWindows().setRecentsProgress(progress, keys, slots);
 +                        }
 +                    });
 +        }
@@ -789,7 +801,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..79622c6086e6c07e0cdbd1fa2958b39b
          @Override
          public void setHasBubbleBar(boolean hasBubbleBar) {
              executeRemoteCallWithTaskPermission(
-@@ -3820,6 +4006,12 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3820,6 +4018,12 @@ public class BubbleController implements ConfigurationChangeListener,
                              sensitiveNotificationProtectionActive));
          }
  
@@ -802,7 +814,7 @@ index f5cf073faadea06cffbe8b91686388cad3c2d32e..79622c6086e6c07e0cdbd1fa2958b39b
          @Override
          public boolean canShowBubbleNotification() {
              // in bubble bar mode, when the IME is visible we can't animate new bubbles.
-@@ -3983,7 +4175,9 @@ public class BubbleController implements ConfigurationChangeListener,
+@@ -3983,7 +4187,9 @@ public class BubbleController implements ConfigurationChangeListener,
              }
  
              boolean hideRootTask = false;
@@ -975,17 +987,17 @@ index ceb7925161d13a7cca80d8b08b0cdfcfd08ac1c9..fb500c58c4c39d61077c2d421ffb618a
       * Returns the string representation of the given dismiss reason.
       */
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
-index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..99cb3eb48f537854ca6f1760c1d3b7b4f856b892 100644
+index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..625784a524b57936cfd7c381d7e98ca996d0c112 100644
 --- a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/IBubbles.aidl
-@@ -65,4 +65,18 @@ interface IBubbles {
+@@ -65,4 +65,21 @@ interface IBubbles {
      oneway void moveDraggedBubbleToFullscreen(in String key, in Point dropLocation) = 15;
  
      oneway void setHasBubbleBar(in boolean hasBubbleBar) = 16;
 +
 +    oneway void showTaskInSmallWindow(in int taskId, in @nullable Rect from) = 17;
 +
-+    /** Recents shows or not; slots[i] is where the small window of taskIds[i] waits in it. */
++    /** Recents shows or not; slots[i] is where the small window of keys[i] waits in it. */
 +    oneway void setRecentsShown(in boolean shown, in String[] keys, in Rect[] slots) = 18;
 +
 +    /** Linux is in front on the home screen: small windows step aside until it leaves. */
@@ -996,14 +1008,17 @@ index 17c7d7a2bbe7adb8a3f64a4b763c95e1c1b9fa57..99cb3eb48f537854ca6f1760c1d3b7b4
 +
 +    /** Shows the app of a small window full screen, growing out of where the window is. */
 +    oneway void moveSmallWindowToFullscreen(in String key) = 21;
++
++    /** The swipe to Recents has come this far, 0 to 1: the small windows go part of their way. */
++    oneway void setRecentsProgress(in float progress, in String[] keys, in Rect[] slots) = 22;
  }
 \ No newline at end of file
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0ca1b81e4
+index 0000000000000000000000000000000000000000..a5f0059043d7b2914e5c472f90126f6a9aec9997
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowItem.kt
-@@ -0,0 +1,528 @@
+@@ -0,0 +1,555 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1045,10 +1060,12 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +import com.android.wm.shell.bubbles.model.BubbleIcon
 +import com.android.wm.shell.taskview.TaskView
 +import kotlin.math.ceil
++import kotlin.math.cos
 +import kotlin.math.floor
 +import kotlin.math.max
 +import kotlin.math.min
 +import kotlin.math.roundToInt
++import kotlin.math.sin
 +
 +/**
 + * One small window: the same shape is a card in the dock, an icon in the rail and the open window,
@@ -1081,6 +1098,13 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +    val lift = LujarchSpring(1f)
 +    val springs = arrayOf(x, y, w, h, radius, turn, window, icon, scale, alpha, content, lift)
 +    var startAt = 0L
++    /** A card in the dock hangs from its top edge and swings, in degrees (WIN-5). */
++    val swing = LujarchSpring()
++    /** Its place in the dock or the rail, where it lands. */
++    var slotX = 0f
++    var slotY = 0f
++    /** Let go, a card follows the one above it until then, and lands (WIN-5). */
++    var wake = 0L
 +
 +    // The open window's own place and size (WIN-2), kept while it waits in the dock.
 +    var winX = Float.NaN
@@ -1160,6 +1184,7 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +    private var textLayout: StaticLayout? = null
 +    private var textLayoutWidth = 0
 +    private var shownRadius = -1f
++    private var shownAlpha = -1f
 +    private val lastClip = Rect()
 +    private var screenX = 0f
 +    private var screenY = 0f
@@ -1237,6 +1262,24 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +        pivotY = h / 2f
 +        scaleX = turnScale * lift
 +        scaleY = lift
++        // The swing turns it about the middle of its top edge, not about the pivot.
++        val swing = item.swing.value
++        rotation = swing
++        if (swing != 0f) {
++            val a = Math.toRadians(swing.toDouble())
++            val c = cos(a).toFloat()
++            val s = sin(a).toFloat()
++            val dx = pivotX - w / 2f
++            val dy = pivotY
++            translationX = dx * c - dy * s - dx
++            translationY = dx * s + dy * c - dy
++        } else {
++            translationX = 0f
++            translationY = 0f
++        }
++        // Lifted, its shadow deepens.
++        translationZ = max(0f, lift - 1f) / (LujarchSmallWindowsView.DOCK_LIFT - 1f) *
++            LujarchSmallWindowsView.LIFT_ELEVATION * density
 +        alpha = item.alpha.value
 +        invalidateOutline()
 +        val tv = item.taskView ?: run {
@@ -1252,29 +1295,41 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +        tv.scaleY = s
 +        tv.translationX = screenX
 +        tv.translationY = top + screenY
-+        tv.alpha = item.content.value * (1f - item.icon.value)
++        tv.alpha = item.content.value * (1f - item.icon.value) * item.alpha.value
 +        if (clip != lastClip) {
 +            lastClip.set(clip)
 +            tv.setClipBounds(Rect(clip))
 +        }
 +        val r = screenRadius / s
 +        val sc = tv.surfaceControl?.takeIf { it.isValid }
-+        if (sc != null && kotlin.math.abs(r - shownRadius) > 0.5f) {
-+            shownRadius = r
-+            tv.setCornerRadius(r)
-+            // A SurfaceView hands its radius to the surface only when it updates the surface for
-+            // another reason; without this the task keeps the corners it was created with. The
-+            // task view draws no frames of its own: the corners go with the window's next one.
-+            val t = SurfaceControl.Transaction().setCornerRadius(sc, r)
++        val radiusChanged = kotlin.math.abs(r - shownRadius) > 0.5f
++        val alphaChanged = tv.alpha != shownAlpha
++        if (sc != null && (radiusChanged || alphaChanged)) {
++            val t = SurfaceControl.Transaction()
++            if (radiusChanged) {
++                shownRadius = r
++                tv.setCornerRadius(r)
++                // A SurfaceView hands its radius to the surface only when it updates the surface
++                // for another reason; without this the task keeps the corners it was created with.
++                t.setCornerRadius(sc, r)
++            }
++            if (alphaChanged) {
++                // A surface below its window ignores the view's alpha and shows through wherever
++                // the window is clear.
++                shownAlpha = tv.alpha
++                t.setAlpha(sc, tv.alpha)
++            }
++            // The task view draws no frames of its own: these go with the window's next one.
 +            tv.rootSurfaceControl?.applyTransactionOnDraw(t) ?: t.apply()
 +        }
++        (tv as? LujarchSmallWindowTaskView)?.followTransform(swing != 0f)
 +        invalidate()
 +    }
 +
 +    /**
 +     * Places the app's screen in a shape of [w] by [h] whose screen starts [top] down, at the
-+     * scale [s]: filling a window, centred on a card or in a slot of Recents (WIN-4). Sets
-+     * [screenX], [screenY], the part of it shown ([clip]) and its corners.
++     * scale [s]: filling a window or a card, or covering a tile in Recents (WIN-4). Sets
++     * [screenX], [screenY], the part of it shown ([clip]) and its corners, the shape's.
 +     */
 +    private fun placeScreen(w: Float, h: Float, top: Float, s: Float) {
 +        val spareW = w - item.taskW * s
@@ -1287,9 +1342,7 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +        val r = ceil((w - screenX) / s).toInt().coerceIn(l + 1, max(l + 1, item.taskW))
 +        val b = ceil((h - top - screenY) / s).toInt().coerceIn(t + 1, max(t + 1, item.taskH))
 +        clip.set(l, t, r, b)
-+        val onCard = LujarchSmallWindowsView.CARD_SCREEN_RADIUS * density *
-+            min(1f, h / (LujarchSmallWindowsView.CARD_H * density))
-+        screenRadius = onCard + (item.radius.value - onCard) * item.window.value
++        screenRadius = item.radius.value
 +    }
 +
 +    /**
@@ -1318,6 +1371,7 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +
 +    fun onTaskViewChanged() {
 +        shownRadius = -1f
++        shownAlpha = -1f
 +        lastClip.setEmpty()
 +    }
 +
@@ -1348,18 +1402,7 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +            drawShade(canvas, w, h, kotlin.math.abs(item.turn.value) * cardness,
 +                item.turn.value > 0f)
 +        }
-+        if (cardness > 0f) drawRim(canvas, w, h, cardness)
 +        if (window > 0f) drawChrome(canvas, w, h, window)
-+    }
-+
-+    /** A card's edge, so that a card reads as lying on the one it covers. */
-+    private fun drawRim(canvas: Canvas, w: Float, h: Float, a: Float) {
-+        stroke.strokeWidth = density
-+        stroke.strokeCap = Paint.Cap.BUTT
-+        stroke.color = withAlpha(host.rimColor, a)
-+        val o = stroke.strokeWidth / 2
-+        rect.set(o, o, w - o, h - o)
-+        canvas.drawRoundRect(rect, item.radius.value - o, item.radius.value - o, stroke)
 +    }
 +
 +    private fun drawAppPlaceholder(canvas: Canvas, w: Float, h: Float, a: Float) {
@@ -1389,8 +1432,9 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +
 +    private fun drawBadge(canvas: Canvas, h: Float, a: Float) {
 +        val icon = appIcon ?: return
-+        // The badge keeps its place on the card as the card shrinks into a slot in Recents.
-+        val k = min(1f, width / (LujarchSmallWindowsView.CARD_W * density))
++        // The badge keeps its place on the card as the card shrinks into a tile in Recents.
++        val k = min(1f, max(width / (LujarchSmallWindowsView.CARD_W * density),
++            h / (LujarchSmallWindowsView.CARD_H * density)))
 +        val size = 22f * density * k
 +        val margin = 8f * density * k
 +        // In the lower corner towards the middle of the screen.
@@ -1412,9 +1456,7 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +        val message = item.lastMessage
 +        val name = item.name ?: ""
 +        val textBlock = 16f * density + if (message.isNullOrEmpty()) 0f else 34f * density
-+        // Centered in what the card above leaves visible, so that the count is never under it.
-+        val covered = host.coveredTop(item)
-+        val top = covered + (h - covered - size - 8f * density - textBlock) / 2f
++        val top = (h - size - 8f * density - textBlock) / 2f
 +        drawAvatar(canvas, cx, top + size / 2, size, a)
 +        if (item.unread > 0) {
 +            // The unread count at the picture's upper outer corner.
@@ -1534,10 +1576,10 @@ index 0000000000000000000000000000000000000000..bc13ea3c32cb4086fee0f4605330e5b0
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..2ec3adf87d169f9affb4e5897e47cccd9e984df0
+index 0000000000000000000000000000000000000000..74e24e170bfb3885ec86b78f5ed7413d5680e9ac
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowTaskView.kt
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,119 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1557,9 +1599,12 @@ index 0000000000000000000000000000000000000000..2ec3adf87d169f9affb4e5897e47cccd
 +package com.android.wm.shell.bubbles
 +
 +import android.content.Context
++import android.graphics.Matrix
 +import android.graphics.Rect
 +import android.os.Handler
++import android.view.SurfaceControl
 +import android.view.SurfaceHolder
++import android.view.View
 +import android.view.ViewTreeObserver
 +import com.android.wm.shell.taskview.TaskView
 +import com.android.wm.shell.taskview.TaskViewController
@@ -1581,6 +1626,11 @@ index 0000000000000000000000000000000000000000..2ec3adf87d169f9affb4e5897e47cccd
 +    disableBackgroundLayer: Boolean,
 +) : TaskView(context, taskViewController, taskViewTaskController, handler, disableBackgroundLayer) {
 +    private val taskBounds = Rect()
++    private val transform = Matrix()
++    private val surfaceTransform = Matrix()
++    private val values = FloatArray(9)
++    /** The view's whole transform in its window, while its card swings. */
++    @Volatile private var swung: FloatArray? = null
 +
 +    /** The task's bounds for the size the view is laid out at. */
 +    fun taskBounds(out: Rect): Rect {
@@ -1603,15 +1653,58 @@ index 0000000000000000000000000000000000000000..2ec3adf87d169f9affb4e5897e47cccd
 +        onLocationChanged()
 +    }
 +
++    /**
++     * While its card swings (WIN-5), the surface takes the view's whole transform: the surface's
++     * own placement holds only a position and a scale, the bounds of the turned view.
++     */
++    fun followTransform(on: Boolean) {
++        if (!on && swung == null) return
++        transform.reset()
++        var v: View = this
++        while (true) {
++            transform.postConcat(v.matrix)
++            transform.postTranslate(v.left.toFloat(), v.top.toFloat())
++            val parent = v.parent as? View ?: break
++            transform.postTranslate(-parent.scrollX.toFloat(), -parent.scrollY.toFloat())
++            v = parent
++        }
++        swung = FloatArray(9).also { transform.getValues(it) }
++        // A request places the surface at the view's unscaled bounds; the swing's end places it
++        // once more by the whole transform, now unturned.
++        requestUpdateSurfacePositionAndScale()
++        if (!on) swung = null
++    }
++
++    override fun onSetSurfacePositionAndScale(
++        transaction: SurfaceControl.Transaction,
++        surface: SurfaceControl,
++        positionLeft: Int,
++        positionTop: Int,
++        postScaleX: Float,
++        postScaleY: Float,
++    ) {
++        val m = swung
++        if (m == null) {
++            super.onSetSurfacePositionAndScale(transaction, surface, positionLeft, positionTop,
++                postScaleX, postScaleY)
++            return
++        }
++        // Called on the render thread as the view moves, and on this one by a request.
++        synchronized(surfaceTransform) {
++            surfaceTransform.setValues(m)
++            transaction.setMatrix(surface, surfaceTransform, values)
++        }
++    }
++
 +    /** The small windows' view sets the touchable region of their window by itself. */
 +    override fun onComputeInternalInsets(inoutInfo: ViewTreeObserver.InternalInsetsInfo) {}
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..28baf38c6d89980c06f21df1ef61f72c098410e7
+index 0000000000000000000000000000000000000000..f49d65a9a40681003a13bdad6280d8a92e29b65e
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsMotion.kt
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,119 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1640,8 +1733,9 @@ index 0000000000000000000000000000000000000000..28baf38c6d89980c06f21df1ef61f72c
 +
 +/**
 + * The one spring of WIN-9: damping ratio 0.8, natural frequency 16 rad/s, unit mass. It overshoots
-+ * by about 1.5 % and settles in about half a second. Stepped in closed form by the gap between
-+ * frame times, so it follows the same path at any frame rate.
++ * by about 1.5 % and settles in about half a second. The dock's chain, its landing and its cards'
++ * swing step it with their own damping and frequency (WIN-5). Stepped in closed form by the gap
++ * between frame times, so it follows the same path at any frame rate.
 + */
 +class LujarchSpring(value: Float = 0f) {
 +    var pos = value.toDouble()
@@ -1670,16 +1764,19 @@ index 0000000000000000000000000000000000000000..28baf38c6d89980c06f21df1ef61f72c
 +        vel = 0.0
 +    }
 +
-+    /** Advances by [ms] milliseconds; [threshold] is the distance that counts as there. */
-+    fun step(ms: Long, threshold: Double) {
++    /**
++     * Advances by [ms] milliseconds; [threshold] is the distance that counts as there; [z] and
++     * [w0] are the damping ratio, below 1, and the natural frequency.
++     */
++    fun step(ms: Long, threshold: Double, z: Double = Z, w0: Double = W0) {
 +        if (atRest) return
 +        val t = ms / 1000.0
 +        val x0 = pos - target
-+        val wd = W0 * sqrt(1 - Z * Z)
-+        val sc = (Z * W0 * x0 + vel) / wd
-+        val e = exp(-Z * W0 * t)
++        val wd = w0 * sqrt(1 - z * z)
++        val sc = (z * w0 * x0 + vel) / wd
++        val e = exp(-z * w0 * t)
 +        val x = e * (x0 * cos(wd * t) + sc * sin(wd * t))
-+        val v = x * -W0 * Z + e * (-wd * x0 * sin(wd * t) + wd * sc * cos(wd * t))
++        val v = x * -w0 * z + e * (-wd * x0 * sin(wd * t) + wd * sc * cos(wd * t))
 +        pos = x + target
 +        vel = v
 +        if (abs(x) < threshold && abs(v) < threshold * 20) {
@@ -1697,63 +1794,6 @@ index 0000000000000000000000000000000000000000..28baf38c6d89980c06f21df1ef61f72c
 +        /** Whether motion plays: off with Settings > Accessibility > Remove animations. */
 +        @JvmStatic
 +        fun animated(): Boolean = ValueAnimator.areAnimatorsEnabled()
-+    }
-+}
-+
-+/**
-+ * Where a moving thing was over its last moments, frame by frame, so that what trails it can be
-+ * placed where it was a while ago. [at] sets [x] and [y].
-+ */
-+class LujarchTrail {
-+    private val times = LongArray(SIZE)
-+    private val xs = FloatArray(SIZE)
-+    private val ys = FloatArray(SIZE)
-+    private var count = 0
-+    private var head = 0
-+    var x = 0f
-+        private set
-+    var y = 0f
-+        private set
-+
-+    fun clear() {
-+        count = 0
-+        head = 0
-+    }
-+
-+    fun add(time: Long, x: Float, y: Float) {
-+        head = (head + 1) % SIZE
-+        times[head] = time
-+        xs[head] = x
-+        ys[head] = y
-+        if (count < SIZE) count++
-+    }
-+
-+    /** Where it was at [time]: between the frames around it, or at the oldest one kept. */
-+    fun at(time: Long) {
-+        if (count == 0) return
-+        var i = head
-+        for (n in 0 until count) {
-+            if (times[i] <= time) {
-+                val newer = (i + 1) % SIZE
-+                if (i == head || times[newer] == times[i]) {
-+                    x = xs[i]
-+                    y = ys[i]
-+                } else {
-+                    val k = (time - times[i]).toFloat() / (times[newer] - times[i])
-+                    x = xs[i] + (xs[newer] - xs[i]) * k
-+                    y = ys[i] + (ys[newer] - ys[i]) * k
-+                }
-+                return
-+            }
-+            if (n < count - 1) i = (i - 1 + SIZE) % SIZE
-+        }
-+        x = xs[i]
-+        y = ys[i]
-+    }
-+
-+    private companion object {
-+        /** About a second of frames: more than the last card trails by. */
-+        const val SIZE = 128
 +    }
 +}
 +
@@ -1965,10 +2005,10 @@ index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c4
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b16eca36bc
+index 0000000000000000000000000000000000000000..e04a2b2455ee7bc02f357ed9382eebd00fece7e8
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
-@@ -0,0 +1,2058 @@
+@@ -0,0 +1,2282 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2007,6 +2047,7 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +import android.text.TextPaint
 +import android.util.Log
 +import android.view.Gravity
++import android.view.HapticFeedbackConstants
 +import android.view.MotionEvent
 +import android.view.SurfaceControl
 +import android.view.SurfaceView
@@ -2082,12 +2123,16 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        arrayOf(handleX, handleY, handleAlpha, railX, railTop, railHeight, railAlpha, menuAlpha)
 +    private val clock = LujarchFrameClock(::onFrame)
 +    /**
-+     * From a drag of the dock or the rail until it rests, the cards or icons trail its top one
-+     * after another along [trail] (WIN-5, WIN-6).
++     * From a drag of the dock or the rail until it rests, each card or icon follows the one above
++     * it on its own spring, softer further down; let go, the cards land one after another
++     * (WIN-5, WIN-6).
 +     */
 +    private var chained = false
-+    private val trail = LujarchTrail()
-+    private var chainRestAt = 0L
++    /** How far the swipe to Recents has come, 0 to 1, while it moves (WIN-11). */
++    private var swipe = 0f
++    /** When the shapes that flew into their tiles in Recents fade over them (WIN-11). */
++    private var recentsFadeAt = 0L
++    private var recentsFaded = false
 +
 +    private val dismissView = DismissView(context)
 +    private var menuFor: LujarchSmallWindowItem? = null
@@ -2265,7 +2310,7 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +                scale = fitScale(item, from.width().toFloat(), from.height().toFloat()))
 +            return
 +        }
-+        snapItem(item, slotFrame(0), scale = cardScale(item))
++        snapItem(item, slotFrame(0, item), scale = cardScale(item))
 +        item.alpha.snap(0f)
 +        item.lift.snap(0.6f)
 +    }
@@ -2499,18 +2544,23 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +    private val bottomLimit: Float
 +        get() = min(height - margin, imeTop - margin)
 +
-+    /**
-+     * The scale that fits the app's whole screen into a card or a slot of this size, inside a
-+     * margin that shrinks with the shape (WIN-4).
-+     */
-+    private fun fitScale(item: LujarchSmallWindowItem, w: Float, h: Float): Float {
-+        val inset = dp(CARD_INSET) * h / dp(CARD_H)
-+        return max(0.01f, min((w - 2 * inset) / max(1, item.layoutW),
-+            (h - 2 * inset) / max(1, item.layoutH)))
-+    }
++    /** The scale that fits the app's whole screen into a shape of this size (WIN-4). */
++    private fun fitScale(item: LujarchSmallWindowItem, w: Float, h: Float): Float =
++        max(0.01f, min(w / max(1, item.layoutW), h / max(1, item.layoutH)))
++
++    /** The scale at which the app's screen covers a shape of this size, cut at two sides. */
++    private fun coverScale(item: LujarchSmallWindowItem, w: Float, h: Float): Float =
++        max(0.01f, max(w / max(1, item.layoutW), h / max(1, item.layoutH)))
 +
 +    private fun cardScale(item: LujarchSmallWindowItem): Float =
 +        fitScale(item, dp(CARD_W), dp(CARD_H))
++
++    /** A card is the app's screen fitted into a card's place, in the screen's shape (WIN-4). */
++    private fun cardW(item: LujarchSmallWindowItem?): Float =
++        if (item == null || item.layoutW == 0) dp(CARD_W) else item.layoutW * cardScale(item)
++
++    private fun cardH(item: LujarchSmallWindowItem?): Float =
++        if (item == null || item.layoutH == 0) dp(CARD_H) else item.layoutH * cardScale(item)
 +
 +    private fun initWindow(item: LujarchSmallWindowItem) {
 +        val w = if (width > 0) width else resources.displayMetrics.widthPixels
@@ -2552,19 +2602,18 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        val icon: Float,
 +    )
 +
-+    /** How much of a card's top the card above it covers in the dock. */
-+    fun coveredTop(item: LujarchSmallWindowItem): Float =
-+        if (!folded && item !== open && !recentsShown && dock.indexOf(item) > 0) {
-+            dp(CARD_H - CARD_STEP)
-+        } else {
-+            0f
-+        }
-+
-+    private fun dockX(): Float = if (dockRight) width - dp(DOCK_MARGIN + CARD_W) else dp(DOCK_MARGIN)
-+
 +    private fun railRestX(): Float = if (dockRight) width - dp(RAIL_W) else 0f
 +
-+    private fun slotFrame(i: Int): Frame =
++    /** The place of the [i]th card of the dock: against its edge, below the cards above it. */
++    private fun cardFrame(i: Int, item: LujarchSmallWindowItem? = dock.getOrNull(i)): Frame {
++        var y = dockTop + dp(CARD_FROM_HANDLE)
++        for (j in 0 until min(i, dock.size)) y += cardH(dock[j]) + dp(CARD_GAP)
++        val w = cardW(item)
++        val x = if (dockRight) width - dp(DOCK_MARGIN) - w else dp(DOCK_MARGIN)
++        return Frame(x, y, w, cardH(item), dp(CARD_RADIUS), if (dockRight) 1f else -1f, 0f, 0f)
++    }
++
++    private fun slotFrame(i: Int, item: LujarchSmallWindowItem? = dock.getOrNull(i)): Frame =
 +        if (folded) {
 +            val x =
 +                if (dockRight) width - dp(RAIL_W) + dp((RAIL_W - RAIL_ICON) / 2)
@@ -2572,9 +2621,14 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +            Frame(x, railTopFor(dockTop) + dp(RAIL_PAD) + i * dp(RAIL_STEP), dp(RAIL_ICON),
 +                dp(RAIL_ICON), dp(RAIL_ICON / 2), 0f, 0f, 1f)
 +        } else {
-+            Frame(dockX(), dockTop + dp(CARD_FROM_HANDLE) + i * dp(CARD_STEP), dp(CARD_W),
-+                dp(CARD_H), dp(CARD_RADIUS), if (dockRight) 1f else -1f, 0f, 0f)
++            cardFrame(i, item)
 +        }
++
++    /** The handle's left: centred over the top card. */
++    private fun handleRestX(): Float {
++        val f = cardFrame(0)
++        return f.x + f.w / 2 - dp(HANDLE_W) / 2
++    }
 +
 +    private fun windowFrame(item: LujarchSmallWindowItem): Frame {
 +        val s = item.winScale
@@ -2588,8 +2642,8 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +    private fun railTopFor(top: Float): Float = top + dp(RAIL_FROM_HANDLE)
 +
 +    private fun clampDockTop(top: Float): Float {
-+        val cards = max(1, dock.size)
-+        val span = dp(CARD_FROM_HANDLE) + (cards - 1) * dp(CARD_STEP) + dp(CARD_H)
++        var span = dp(CARD_FROM_HANDLE) + if (dock.isEmpty()) dp(CARD_H) else 0f
++        dock.forEachIndexed { i, item -> span += cardH(item) + if (i > 0) dp(CARD_GAP) else 0f }
 +        return top.coerceIn(topLimit, max(topLimit, height - margin - span))
 +    }
 +
@@ -2643,6 +2697,8 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        dock.forEachIndexed { i, item ->
 +            if (gesture?.holds(item) == true) return@forEachIndexed
 +            val f = slotFrame(i)
++            item.slotX = f.x
++            item.slotY = f.y
 +            target(item, f,
 +                if (folded) fitScale(item, dp(RAIL_ICON), dp(RAIL_ICON)) else cardScale(item))
 +            item.startAt = if (stagger && !chained) now + i * LujarchSpring.STAGGER_MS else now
@@ -2656,7 +2712,7 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        }
 +        val visibleDock = dock.isNotEmpty() && settings.enabled
 +        if (gesture !is DockDrag) {
-+            handleX.to(dockX() + dp((CARD_W - HANDLE_W) / 2))
++            handleX.to(handleRestX())
 +            handleY.to(dockTop)
 +            // Hidden while folded, the handle comes back where the dock unfolds.
 +            if (handleAlpha.value <= 0.01f) {
@@ -2681,8 +2737,35 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +            items.values.forEach { item -> item.springs.forEach { it.snap(it.target.toFloat()) } }
 +            ownSprings.forEach { it.snap(it.target.toFloat()) }
 +        }
++        if (swipe > 0f) followSwipe()
 +        clock.start()
 +        invalidate()
++    }
++
++    /**
++     * While the swipe to Recents moves, the open window and the cards go part of their way to
++     * their tiles with it, each a little behind the one before (WIN-11).
++     */
++    private fun followSwipe() {
++        val p = swipe.coerceIn(0f, 1f)
++        val k = SWIPE_SHARE * p * p * (3 - 2 * p)
++        recentsPlaces().forEachIndexed { j, (item, f, scale) ->
++            if (gesture?.holds(item) == true) return@forEachIndexed
++            val t = k * (1f - SWIPE_BEHIND * j)
++            fun go(s: LujarchSpring, to: Float) {
++                val from = s.target.toFloat()
++                s.snap(from + (to - from) * t)
++            }
++            go(item.x, f.x)
++            go(item.y, f.y)
++            go(item.w, f.w)
++            go(item.h, f.h)
++            go(item.radius, f.radius)
++            go(item.turn, f.turn)
++            go(item.window, f.window)
++            go(item.icon, f.icon)
++            go(item.scale, scale)
++        }
 +    }
 +
 +    /**
@@ -2690,34 +2773,45 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +     * Recents' cards where its Running layer shows what runs, each with its live screen.
 +     */
 +    private fun placeInRecents(now: Long) {
-+        val shown = listOfNotNull(open) + dock
-+        val h = dp(RECENTS_TILE_H)
-+        val w = h * dp(CARD_W) / dp(CARD_H)
-+        val gap = dp(RECENTS_GAP)
-+        val total = shown.size * w + max(0, shown.size - 1) * gap
-+        var x = (width - total) / 2f
-+        val y = statusBar + dp(RECENTS_TOP)
-+        shown.forEachIndexed { i, item ->
-+            val slot = recentsSlots[item.bubble.key]
-+            if (slot != null && item.isConversation) {
-+                // A conversation waits as the person's picture, as on the rail.
-+                val d = min(slot.width(), slot.height())
-+                target(item, Frame(slot.centerX() - d / 2, slot.centerY() - d / 2, d, d, d / 2,
-+                    0f, 0f, 1f), fitScale(item, d, d))
-+            } else if (slot != null) {
-+                target(item, Frame(slot.left, slot.top, slot.width(), slot.height(),
-+                    dp(CARD_RADIUS) * slot.height() / dp(CARD_H), 0f, 0f, 0f),
-+                    fitScale(item, slot.width(), slot.height()))
-+            } else {
-+                target(item, Frame(x, y, w, h, dp(CARD_RADIUS) * h / dp(CARD_H), 0f, 0f, 0f),
-+                    fitScale(item, w, h))
-+                x += w + gap
-+            }
++        recentsPlaces().forEachIndexed { i, (item, f, scale) ->
++            target(item, f, scale)
++            if (recentsFaded && recentsSlots.containsKey(item.bubble.key)) item.alpha.to(0f)
 +            item.startAt = now + i * LujarchSpring.STAGGER_MS
 +        }
 +        handleAlpha.to(0f)
 +        railAlpha.to(0f)
 +        menuAlpha.to(0f)
++    }
++
++    /**
++     * Where each shape waits in Recents, the open window first: its tile in the Running layer,
++     * which its screen covers, or, before the layer has laid one out, a strip above the cards.
++     */
++    private fun recentsPlaces(): List<Triple<LujarchSmallWindowItem, Frame, Float>> {
++        val shown = listOfNotNull(open) + dock
++        val h = dp(RECENTS_TILE_H)
++        val w = h * dp(CARD_W) / dp(CARD_H)
++        val gap = dp(RECENTS_GAP)
++        val strip = shown.count { !recentsSlots.containsKey(it.bubble.key) }
++        var x = (width - (strip * w + max(0, strip - 1) * gap)) / 2f
++        val y = statusBar + dp(RECENTS_TOP)
++        return shown.map { item ->
++            val slot = recentsSlots[item.bubble.key]
++            if (slot != null && item.isConversation) {
++                // A conversation waits as the person's picture, as on the rail.
++                val d = min(slot.width(), slot.height())
++                Triple(item, Frame(slot.centerX() - d / 2, slot.centerY() - d / 2, d, d, d / 2,
++                    0f, 0f, 1f), fitScale(item, d, d))
++            } else if (slot != null) {
++                Triple(item, Frame(slot.left, slot.top, slot.width(), slot.height(),
++                    dp(RECENTS_RADIUS), 0f, 0f, 0f),
++                    coverScale(item, slot.width(), slot.height()))
++            } else {
++                val f = Frame(x, y, w, h, dp(CARD_RADIUS) * h / dp(CARD_H), 0f, 0f, 0f)
++                x += w + gap
++                Triple(item, f, coverScale(item, w, h))
++            }
++        }
 +    }
 +
 +    /**
@@ -2749,17 +2843,16 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +     * (WIN-11).
 +     */
 +    fun setRecentsShown(shown: Boolean, keys: Array<String>?, slots: Array<Rect>?) {
-+        recentsSlots.clear()
-+        if (keys != null && slots != null) {
-+            for (i in 0 until minOf(keys.size, slots.size)) {
-+                recentsSlots[keys[i]] = RectF(slots[i])
-+            }
-+        }
++        takeSlots(keys, slots)
 +        if (shown == recentsShown) {
 +            if (shown) place(animate = true)
 +            return
 +        }
 +        recentsShown = shown
++        swipe = 0f
++        recentsFaded = false
++        // The Running layer shows each window's own tile from then on (RunningLayerView).
++        recentsFadeAt = if (shown) SystemClock.uptimeMillis() + RECENTS_FADE_MS else 0L
 +        if (shown) {
 +            hideMenu()
 +            gesture = null
@@ -2769,6 +2862,27 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        syncTasks()
 +    }
 +
++    /**
++     * The swipe to Recents has come [progress] of its way, 0 to 1 (Launcher reports it): the
++     * shapes go part of their way to their tiles; at 0 they go back (WIN-11).
++     */
++    fun setRecentsProgress(progress: Float, keys: Array<String>?, slots: Array<Rect>?) {
++        if (recentsShown) return
++        takeSlots(keys, slots)
++        swipe = progress.coerceIn(0f, 1f)
++        if (swipe > 0f) hideMenu()
++        place(animate = true)
++    }
++
++    private fun takeSlots(keys: Array<String>?, slots: Array<Rect>?) {
++        recentsSlots.clear()
++        if (keys != null && slots != null) {
++            for (i in 0 until minOf(keys.size, slots.size)) {
++                recentsSlots[keys[i]] = RectF(slots[i])
++            }
++        }
++    }
++
 +    private fun onFrame(ms: Long): Boolean {
 +        val now = SystemClock.uptimeMillis()
 +        var moving = false
@@ -2776,13 +2890,34 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +            s.step(ms, if (s === handleAlpha || s === railAlpha || s === menuAlpha) 0.002 else 0.5)
 +            if (!s.atRest) moving = true
 +        }
-+        if (chained && follow(now)) moving = true
-+        for (item in items.values.toList() + leavingItems()) {
-+            if (now >= item.startAt) {
-+                for (s in item.springs) s.step(ms, if (s === item.x || s === item.y ||
-+                        s === item.w || s === item.h || s === item.radius) 0.5 else 0.002)
++        if (recentsShown && !recentsFaded && recentsFadeAt != 0L && now >= recentsFadeAt) {
++            recentsFaded = true
++            for (item in items.values) {
++                if (recentsSlots.containsKey(item.bubble.key)) item.alpha.to(0f)
 +            }
-+            if (item.springs.any { !it.atRest }) moving = true
++        }
++        if (chained && stepChain(ms, now)) moving = true
++        for (item in items.values.toList() + leavingItems()) {
++            val inChain = chained && item in dock
++            if (now >= item.startAt) {
++                for (s in item.springs) {
++                    when {
++                        inChain && (s === item.x || s === item.y) -> {}
++                        s === item.x || s === item.y || s === item.w || s === item.h ||
++                            s === item.radius -> s.step(ms, 0.5)
++                        s === item.turn -> s.step(ms, 0.002, TURN_Z, TURN_W0)
++                        s === item.lift -> s.step(ms, 0.002, LIFT_Z, LIFT_W0)
++                        else -> s.step(ms, 0.002)
++                    }
++                }
++            }
++            // Against its sideways motion, more the further down the stack (WIN-5).
++            val i = dock.indexOf(item)
++            val swings = i >= 0 && !folded && !recentsShown && swipe == 0f
++            item.swing.to(if (!swings) 0f else (item.x.vel / density * SWING_PER_SPEED *
++                (1 + SWING_DOWN * i)).toFloat().coerceIn(-SWING_MAX, SWING_MAX))
++            item.swing.step(ms, 0.01, SWING_Z, SWING_W0)
++            if (item.springs.any { !it.atRest } || !item.swing.atRest) moving = true
 +            placeView(item)
 +        }
 +        // Shapes that left are removed once they have faded.
@@ -2794,50 +2929,70 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        return moving || gesture != null
 +    }
 +
-+    /** The first card or icon goes with the top; the dock or the rail is moving or flung. */
++    /** The dock or the rail is picked up: its cards or icons follow each other until they rest. */
 +    private fun startChain() {
 +        chained = true
-+        chainRestAt = 0L
-+        trail.clear()
++        dock.forEach { it.wake = 0L }
 +    }
 +
 +    /**
-+     * Places each card of the dock, or each icon of the rail, where the one before it was 35 ms
-+     * earlier, so that they trail its top one after another (WIN-5, WIN-6, WIN-9). Returns
-+     * whether they still move.
++     * Steps the chained cards or icons: the top one follows the finger, or the rail, on a stiff
++     * spring, each other one the one above it on a softer spring further down; let go, each card
++     * follows until its turn and lands in its place, overshooting a little (WIN-5, WIN-6,
++     * WIN-9). Returns whether they still move.
 +     */
-+    private fun follow(now: Long): Boolean {
-+        val leadX: Float
-+        val leadY: Float
-+        val step: Float
-+        if (folded) {
-+            leadX = railX.value + dp((RAIL_W - RAIL_ICON) / 2)
-+            leadY = railTop.value + dp(RAIL_PAD)
-+            step = dp(RAIL_STEP)
-+        } else {
-+            leadX = handleX.value - dp((CARD_W - HANDLE_W) / 2)
-+            leadY = handleY.value + dp(CARD_FROM_HANDLE)
-+            step = dp(CARD_STEP)
-+        }
-+        trail.add(now, leadX, leadY)
++    private fun stepChain(ms: Long, now: Long): Boolean {
++        val drag = gesture as? DockDrag
++        val held = drag != null || gesture is RailDrag
++        var moving = gesture != null
 +        dock.forEachIndexed { i, item ->
-+            trail.at(now - i * LujarchSpring.STAGGER_MS)
-+            item.x.snap(trail.x)
-+            item.y.snap(trail.y + i * step)
++            val prev = dock.getOrNull(i - 1)
++            when {
++                i == 0 && drag != null ->
++                    item.stepTo(ms, Float.NaN, Float.NaN, LEAD_Z,
++                        if (drag.overClose) LEAD_NEAR_W0 else LEAD_W0)
++                i == 0 && folded ->
++                    item.stepTo(ms, railX.value + dp((RAIL_W - RAIL_ICON) / 2),
++                        railTop.value + dp(RAIL_PAD), LEAD_Z, LEAD_W0)
++                prev != null && (held || folded || now < item.wake) -> {
++                    val x = when {
++                        folded || !dockRight -> prev.x.value
++                        else -> prev.x.value + prev.w.value - item.w.value
++                    }
++                    val y = prev.y.value + if (folded) dp(RAIL_STEP) else prev.h.value + dp(CARD_GAP)
++                    item.stepTo(ms, x, y, FOLLOW_Z, max(FOLLOW_W0_MIN, FOLLOW_W0 - 3.0 * i))
++                    if (held || now < item.wake) moving = true
++                }
++                else -> {
++                    item.x.to(item.slotX)
++                    item.y.to(item.slotY)
++                    item.x.step(ms, 0.5, LAND_Z, LAND_W0)
++                    item.y.step(ms, 0.5)
++                }
++            }
++            if (!item.x.atRest || !item.y.atRest) moving = true
 +        }
-+        val leadMoving = gesture != null ||
-+            !(handleX.atRest && handleY.atRest && railX.atRest && railTop.atRest)
-+        if (leadMoving) {
-+            chainRestAt = 0L
-+            return true
++        val lead = dock.firstOrNull()
++        if (!folded && lead != null) {
++            handleX.snap(lead.x.value + lead.w.value / 2 - dp(HANDLE_W) / 2)
++            handleY.snap(lead.y.value - dp(CARD_FROM_HANDLE))
 +        }
-+        if (chainRestAt == 0L) chainRestAt = now
-+        if (now - chainRestAt <= dock.size * LujarchSpring.STAGGER_MS) return true
-+        chained = false
-+        trail.clear()
-+        place(animate = true)
-+        syncTasks()
-+        return false
++        if (folded && !(railX.atRest && railTop.atRest)) moving = true
++        if (!moving) {
++            chained = false
++            place(animate = true)
++            syncTasks()
++        }
++        return moving
++    }
++
++    /** Moves the shape's place towards [x], [y] (NaN: its target) on a spring of its own. */
++    private fun LujarchSmallWindowItem.stepTo(ms: Long, x: Float, y: Float, z: Double,
++        w0: Double) {
++        if (!x.isNaN()) this.x.to(x)
++        if (!y.isNaN()) this.y.to(y)
++        this.x.step(ms, 0.5, z, w0)
++        this.y.step(ms, 0.5, z, w0)
 +    }
 +
 +    /** The side a dock or a rail let go at [centreX] moving at [vx] rests at, as bubbles do. */
@@ -3200,12 +3355,14 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +
 +        fun move(ev: MotionEvent) {
 +            if (!moved && hypot(ev.rawX - downX, ev.rawY - downY) < touchSlop) return
-+            if (!moved) {
-+                moved = true
-+                hideMenu()
-+                onStart()
-+            }
++            if (!moved) begin()
 +            onMove(ev.rawX - downX, ev.rawY - downY, ev.rawX, ev.rawY)
++        }
++
++        fun begin() {
++            moved = true
++            hideMenu()
++            onStart()
 +        }
 +
 +        open fun onStart() {}
@@ -3355,9 +3512,65 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        }
 +    }
 +
++    /** The middle of the close circle at the bottom of the screen. */
++    private fun closeCentre(): Pair<Float, Float> {
++        val circle = dismissView.circle
++        return Pair(circle.x + dismissView.x + circle.width / 2f,
++            circle.y + dismissView.y + circle.height / 2f)
++    }
++
++    /** Whether a held card's middle at [x], [y] is over the close circle. */
++    private fun nearClose(x: Float, y: Float): Boolean {
++        val (cx, cy) = closeCentre()
++        return hypot(x - cx, y - cy) < dp(CLOSE_RADIUS)
++    }
++
++    private fun showOverClose(near: Boolean) {
++        val circle = dismissView.circle
++        circle.animate().scaleX(if (near) 1.15f else 1f).scaleY(if (near) 1.15f else 1f)
++            .setDuration(200).start()
++    }
++
 +    /**
-+     * A card picked up: into the middle of the screen it opens there, onto the close circle it
-+     * closes, back on the dock it takes that place in the stack (WIN-4).
++     * A touch on a card: a tap opens it, a drag moves the whole dock (WIN-5), and touching and
++     * holding takes the card out of the stack (WIN-4).
++     */
++    private inner class CardTouch(val item: LujarchSmallWindowItem, x: Float, y: Float) :
++        Gesture(x, y) {
++        private val hold = Runnable {
++            if (gesture !== this || moved) return@Runnable
++            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
++            gesture = CardDrag(item, downX, downY).also { it.begin() }
++            requestApplyTouchRegion()
++            clock.start()
++        }
++
++        init {
++            handler.postDelayed(hold, ViewConfiguration.getLongPressTimeout().toLong())
++        }
++
++        override fun onStart() {
++            handler.removeCallbacks(hold)
++            gesture = DockDrag(downX, downY).also { it.begin() }
++        }
++
++        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
++            (gesture as? DockDrag)?.onMove(dx, dy, x, y)
++        }
++
++        override fun onUp(vx: Float, vy: Float) = handler.removeCallbacks(hold)
++
++        override fun onTap() {
++            handler.removeCallbacks(hold)
++            openItem(item)
++        }
++
++        override fun onCancel() = handler.removeCallbacks(hold)
++    }
++
++    /**
++     * A card taken out of the stack: into the middle of the screen it opens there, onto the close
++     * circle it closes, back on the dock it takes that place in the stack (WIN-4).
 +     */
 +    private inner class CardDrag(val item: LujarchSmallWindowItem, x: Float, y: Float) :
 +        Gesture(x, y) {
@@ -3377,15 +3590,11 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
 +            item.x.snap(x - grabX)
 +            item.y.snap(y - grabY)
-+            val circle = dismissView.circle
-+            val cx = circle.x + dismissView.x + circle.width / 2f
-+            val cy = circle.y + dismissView.y + circle.height / 2f
-+            val near = hypot(x - cx, y - cy) < dp(CLOSE_RADIUS)
++            val near = nearClose(item.x.value + item.w.value / 2, item.y.value + item.h.value / 2)
 +            if (near != overClose) {
 +                overClose = near
 +                item.lift.to(if (near) CLOSE_LIFT else DRAG_LIFT)
-+                circle.animate().scaleX(if (near) 1.15f else 1f).scaleY(if (near) 1.15f else 1f)
-+                    .setDuration(200).start()
++                showOverClose(near)
 +            }
 +            clock.start()
 +        }
@@ -3407,77 +3616,101 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +                    openItem(item)
 +                }
 +                else -> {
-+                    val slot =
-+                        ((y - grabY + dp(CARD_H) / 2 - dockTop - dp(CARD_FROM_HANDLE) -
-+                            dp(CARD_H) / 2) / dp(CARD_STEP)).roundToInt()
++                    // It goes above the first card whose middle is lower than its own.
++                    val middle = item.y.value + item.h.value / 2
 +                    dock.remove(item)
-+                    dock.add(slot.coerceIn(0, dock.size), item)
++                    val below = dock.indexOfFirst { it.y.value + it.h.value / 2 > middle }
++                    dock.add(if (below < 0) dock.size else below, item)
 +                }
 +            }
 +            gesture = null
 +            item.lift.to(1f)
 +            place(animate = true, stagger = false)
 +        }
-+
-+        override fun onTap() {
-+            if (folded) {
-+                folded = false
-+                place(animate = true, stagger = true)
-+                syncTasks()
-+            } else {
-+                openItem(item)
-+            }
-+        }
 +    }
 +
 +    /**
-+     * The handle above the top card: the dock follows the finger anywhere, its cards trailing,
-+     * and settles against the nearer side edge with the fling, as Android's bubbles do; pushed
-+     * past the screen's edge it folds into the rail (WIN-5, WIN-6).
++     * The handle above the top card, or a drag on any card: the dock follows the finger anywhere
++     * on a stiff spring, its cards trailing and swinging, and settles against the nearer side
++     * edge with the fling, as Android's bubbles do; pushed more than halfway past the screen's
++     * edge it folds into the rail; dropped on the close circle it closes every small window
++     * (WIN-5, WIN-6).
 +     */
 +    private inner class DockDrag(x: Float, y: Float) : Gesture(x, y) {
-+        private val startX = handleX.value
-+        private val startY = handleY.value
++        private val grabX = x - (dock.firstOrNull()?.x?.value ?: 0f)
++        private val grabY = y - (dock.firstOrNull()?.y?.value ?: 0f)
++        var overClose = false
++            private set
 +
-+        override fun onStart() = startChain()
++        override fun holds(item: LujarchSmallWindowItem) = moved && item in dock
++
++        override fun onStart() {
++            startChain()
++            dismissView.show()
++            // Picked up, the cards turn square to the screen and lift off it.
++            dock.forEach {
++                it.turn.to(0f)
++                it.lift.to(DOCK_LIFT)
++            }
++            clock.start()
++        }
 +
 +        override fun onMove(dx: Float, dy: Float, x: Float, y: Float) {
-+            handleX.snap(startX + dx)
-+            handleY.snap(startY + dy)
++            val lead = dock.firstOrNull() ?: return
++            var lx = x - grabX
++            var ly = y - grabY
++            val near = nearClose(lx + lead.w.value / 2, ly + lead.h.value / 2)
++            if (near) {
++                // Drawn onto the circle.
++                val (cx, cy) = closeCentre()
++                lx = cx - lead.w.value / 2
++                ly = cy - lead.h.value / 2
++            }
++            if (near != overClose) {
++                overClose = near
++                dock.forEach { it.lift.to(if (near) CLOSE_LIFT else DOCK_LIFT) }
++                showOverClose(near)
++            }
++            lead.x.to(lx)
++            lead.y.to(ly)
 +            clock.start()
 +        }
 +
 +        override fun onUp(vx: Float, vy: Float) {
-+            val cardX = handleX.value - dp((CARD_W - HANDLE_W) / 2)
-+            when {
-+                cardX > width - dp(DOCK_MARGIN + CARD_W) + dp(FOLD_PUSH) -> {
-+                    folded = true
-+                    dockRight = true
-+                }
-+                cardX < dp(DOCK_MARGIN) - dp(FOLD_PUSH) -> {
-+                    folded = true
-+                    dockRight = false
-+                }
-+                else -> dockRight = restsRight(cardX + dp(CARD_W) / 2, vx)
-+            }
-+            dockTop = clampDockTop(handleY.value + flungBy(vy))
-+            saveDock()
++            dismissView.hide()
 +            gesture = null
-+            if (folded) {
-+                // The cards fly into the rail from where they are.
++            val lead = dock.firstOrNull() ?: return
++            if (overClose) {
 +                chained = false
-+                trail.clear()
++                dock.toList().forEach { close(it) }
++                return
++            }
++            // Decided by where the finger put the dock, not by the top card trailing it.
++            val w = lead.w.value
++            val fx = lead.x.target.toFloat()
++            val outRight = fx + w - width
++            val outLeft = -fx
++            val fold = outRight > w / 2 || outLeft > w / 2
++            dockRight = if (fold) outRight > outLeft else restsRight(fx + w / 2, vx)
++            dockTop = clampDockTop(lead.y.target.toFloat() - dp(CARD_FROM_HANDLE) + flungBy(vy))
++            saveDock()
++            if (fold) {
++                // The cards fly into the rail from where they are.
++                folded = true
++                chained = false
 +                place(animate = true, stagger = true)
 +                syncTasks()
 +                return
 +            }
-+            handleX.to(dockX() + dp((CARD_W - HANDLE_W) / 2), vx)
-+            handleY.to(dockTop, vy)
++            lead.x.to(lead.x.target.toFloat(), vx)
++            lead.y.to(lead.y.target.toFloat(), vy)
 +            place(animate = true)
++            val now = SystemClock.uptimeMillis()
++            dock.forEachIndexed { i, item -> item.wake = now + i * LAND_STAGGER_MS }
 +            syncTasks()
 +        }
 +
-+        override fun onTap() {}
++        override fun onCancel() = onUp(0f, 0f)
 +    }
 +
 +    /**
@@ -3557,10 +3790,10 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +            if (x in f.x..f.x + f.w && y in f.y..f.y + f.h) return null
 +        }
 +        if (!folded) {
-+            for (item in dock) {
-+                if (itemRect(item).contains(x, y)) return CardDrag(item, x, y)
-+            }
 +            if (dock.isNotEmpty() && handleRect().contains(x, y)) return DockDrag(x, y)
++            for (item in dock) {
++                if (itemRect(item).contains(x, y)) return CardTouch(item, x, y)
++            }
 +        } else if (dock.isNotEmpty() && railRect().contains(x, y)) {
 +            return RailDrag(x, y)
 +        }
@@ -3961,11 +4194,11 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        private const val KEY_TOP = "dock_top"
 +
 +        // dp, from the design of target/windows.md
++        /** The place a card fills with the app's screen, in the screen's shape. */
 +        const val CARD_W = 108f
 +        const val CARD_H = 150f
-+        const val CARD_RADIUS = 20f
-+        /** Each card covers the top of the one below by a sixth of its height. */
-+        const val CARD_STEP = 125f
++        const val CARD_RADIUS = 14f
++        const val CARD_GAP = 12f
 +        const val CARD_FROM_HANDLE = 30f
 +        const val DOCK_MARGIN = 10f
 +        const val DOCK_TOP = 200f
@@ -3986,10 +4219,10 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        const val RAIL_STEP = 32f
 +        const val RAIL_PAD = 16f
 +        const val RAIL_FROM_HANDLE = 20f
-+        const val FOLD_PUSH = 40f
 +        const val EDGE_COLUMN = 118f
 +        const val INTO_SCREEN = 120f
-+        const val CLOSE_RADIUS = 60f
++        /** A held card or the dock closes over the circle within this of its middle. */
++        const val CLOSE_RADIUS = 96f
 +        /** Each edge of a window takes a drag within this much of it, on either side. */
 +        const val EDGE_TOUCH = 16f
 +        const val CORNER_TOUCH = 32f
@@ -4003,17 +4236,48 @@ index 0000000000000000000000000000000000000000..87e8609187efd518b998389cf70137b1
 +        const val DISMISS_Z = 20f
 +        const val DRAG_Z = 24f
 +        const val DRAG_LIFT = 1.06f
++        const val DOCK_LIFT = 1.05f
 +        const val CLOSE_LIFT = 0.82f
++        /** The shadow a card lifted by [DOCK_LIFT] gains, in dp. */
++        const val LIFT_ELEVATION = 6f
 +        const val OUTLINE_ALPHA = 0.85f
 +        const val SNAPSHOT_MS = 150L
 +        const val RECENTS_TILE_H = 56f
 +        const val RECENTS_GAP = 10f
 +        const val RECENTS_TOP = 16f
++        /** The corners of a tile in the Running layer (RunningLayerView). */
++        const val RECENTS_RADIUS = 18f
++        /** A shape that flew into its tile fades over it as the layer shows the tile. */
++        const val RECENTS_FADE_MS = 450L
++        /** The share of their way the shapes go with the swipe, each later one this much less. */
++        const val SWIPE_SHARE = 0.5f
++        const val SWIPE_BEHIND = 0.12f
++
++        // The dock's chain (WIN-5): the top card follows the finger on a stiff spring, softer
++        // over the close circle; each other card follows the one above it, softer further
++        // down; let go, the cards land one after another, overshooting the edge a little, and
++        // turn back with a wobble. Damping ratios and natural frequencies in rad/s.
++        const val LEAD_Z = 0.78
++        const val LEAD_W0 = 40.0
++        const val LEAD_NEAR_W0 = 26.0
++        const val FOLLOW_Z = 0.7
++        const val FOLLOW_W0 = 24.0
++        const val FOLLOW_W0_MIN = 6.0
++        const val LAND_Z = 0.6
++        const val LAND_W0 = 15.0
++        const val LAND_STAGGER_MS = 45L
++        const val TURN_Z = 0.55
++        const val TURN_W0 = 14.0
++        const val LIFT_Z = 0.62
++        const val LIFT_W0 = 22.0
++        /** A card's swing: degrees per dp/s of its sideways speed, more further down. */
++        const val SWING_PER_SPEED = 0.008
++        const val SWING_DOWN = 0.3
++        const val SWING_MAX = 10f
++        const val SWING_Z = 0.32
++        const val SWING_W0 = 12.0
 +        /** A card's turn of 16 degrees, as the width a turned card shows. */
 +        const val TURN_SCALE = 0.92f
-+        /** The margin round an app's screen on its card, and that screen's corners. */
-+        const val CARD_INSET = 6f
-+        const val CARD_SCREEN_RADIUS = 8f
 +
 +        // The edges a resize moves.
 +        const val EDGE_LEFT = 1
