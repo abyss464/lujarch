@@ -19,7 +19,7 @@ download, Unrestricted, or a process the owner named), Paused (frozen in memory,
 back as it was), Reclaimed (ended; its card in Recents remains and it starts again when opened)
 or Stopped (force stopped: it does not run again until the owner opens it). On screen it is
 Foreground; in a small window, open or in the dock or the rail, it is Small window. Each state has its own color, the same wherever it is shown, and
-every change says who made it (You, System or the app, with the other app's name when another app
+every change says who made it (User, System or the app, with the other app's name when another app
 caused it) and why, in plain words. App battery usage shows the app's run state as one line per
 process for each of the last 7 days; a mark on a line opens the reason and who.
 
@@ -106,7 +106,7 @@ memory, whether it is kept, its background usage level and its last reclaim, eac
 The page shows the process's state and why, in plain words, with who caused it; its memory as
 actual use, resident and compressed; its place in the order of reclaiming, with the system's
 score in brackets; its CPU time today; and its threads by CPU time, read only. End this process
-ends it once, recorded as You; it then follows the app's choices again.
+ends it once, recorded as User; it then follows the app's choices again.
 
 ## Running
 
@@ -132,10 +132,11 @@ once they have passed; a small window's tile comes from the window itself (WIN-1
 closes they go back up into the status bar over the app that opens. Clear all sends them up first
 and brings them down again when it is done.
 
-A card lifted toward the layer parts it. Once the card's top is within 80 dp of the layer, the
-tiles in its way fold into their icons and slide aside to both sides of the card, the nearest
-first, settling in about half a second however fast the finger moves; until the way is clear the
-card waits at the layer's edge, so it never covers a tile and never passes under one. When the card
+A card lifted toward the layer parts it. As soon as the card rises, the tiles in its way fold
+into their icons and slide aside to both sides of the card, the nearest first, settling in about a
+quarter of a second however fast the finger moves. The card follows the finger up to the lowest
+part of a tile still in its way, so it never covers a tile and never passes under one, and it is
+held back only while a tile is still there. When the card
 is gone or back in its place, the tiles slide back from the gap outward, overshoot a little and
 open again.
 
