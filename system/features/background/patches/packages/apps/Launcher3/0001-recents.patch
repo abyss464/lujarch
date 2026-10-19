@@ -1392,10 +1392,10 @@ index 0000000000000000000000000000000000000000..468f29cce4f50e6f17a77d1c4e783c76
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159f773d894
+index 0000000000000000000000000000000000000000..5bf084f7befcf56a04c5cb0b73cb62c40a1d57c0
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,840 @@
+@@ -0,0 +1,895 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1582,8 +1582,6 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +     * windows, then Unrestricted and Chosen.
 +     */
 +    fun bind(list: List<LujarchBackgroundApp>, windows: List<LujarchSmallWindow>) {
-+        for (t in tiles) row.removeView(t)
-+        tiles.clear()
 +        val own = list.filter { it.ownService }
 +        val chosen = list.filter { !it.ownService }.sortedBy {
 +            when (it.usage) {
@@ -1592,6 +1590,17 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +                else -> 2
 +            }
 +        }
++        val apps = own + chosen
++        // The same tiles again, as on each settle: they keep moving as they were.
++        val sameApps = tiles.filter { it.window == null }.map { it.app?.let(::look) } == apps.map(::look)
++        val sameWindows = tiles.mapNotNull { it.window?.let(::look) } == windows.map(::look)
++        if (sameApps && sameWindows) {
++            tiles.filter { it.window == null }.forEachIndexed { i, t -> t.app = apps[i] }
++            tiles.filter { it.window != null }.forEachIndexed { i, t -> t.window = windows[i] }
++            return
++        }
++        for (t in tiles) row.removeView(t)
++        tiles.clear()
 +        own.forEach { tiles.add(appTile(it)) }
 +        windows.forEach { tiles.add(windowTile(it)) }
 +        chosen.forEach { tiles.add(appTile(it)) }
@@ -1750,10 +1759,24 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +    // -----------------------------------------------------------------------------------------
 +    // Parting around a lifted card.
 +
-+    /** Running's lowest edge with a margin, on the screen: a card above it would touch the tiles. */
-+    private fun edge(): Float {
++    /** Running's lowest edge at rest with a margin, on the screen. */
++    private fun restEdge(): Float {
 +        getLocationOnScreen(location)
 +        return location[1] + scroller.top + dp(TILE_H) + dp(EDGE_MARGIN).toFloat()
++    }
++
++    /**
++     * The lowest part of a tile still in the lifted card's way with a margin, on the screen; null
++     * once none is: a card above it would touch that tile.
++     */
++    private fun edge(): Float? {
++        var bottom = -1f
++        for (t in tiles) {
++            if (t.blocks && t.blockR > gapL && t.blockL < gapR) bottom = max(bottom, t.blockB)
++        }
++        if (bottom < 0f) return null
++        getLocationOnScreen(location)
++        return location[1] + bottom + dp(EDGE_MARGIN)
 +    }
 +
 +    private val parts: Boolean
@@ -1792,7 +1815,7 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +            want = ty
 +            if (!parts) return ty
 +            // From 80 dp below the edge, judged a tenth of a second ahead by the finger's speed.
-+            val ahead = top + want + min(0f, vy) * 0.1f - edge()
++            val ahead = top + want + min(0f, vy) * 0.1f - restEdge()
 +            yieldT = ((dp(NEAR) - ahead) / dp(NEAR)).coerceIn(0f, 1f) * (-want / dp(10)).coerceIn(0f, 1f)
 +            yieldDrive = true
 +            yieldBack = false
@@ -1801,8 +1824,8 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        }
 +
 +        /**
-+         * The finger let go. A card on its way out flies on at the fling's speed, slowed near the
-+         * edge until the way is clear, and [settle] then takes it on; a card going back settles
++         * The finger let go. A card on its way out flies on at the fling's speed, held back only
++         * by a tile still in its way, and [settle] then takes it on; a card going back settles
 +         * at once and the tiles close behind it.
 +         */
 +        fun release(dismissing: Boolean, velocity: Float, direction: Float, settle: () -> Unit) {
@@ -1815,7 +1838,7 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +            }
 +            yieldT = 1f
 +            yieldDrive = true
-+            if (yieldA >= OPEN) {
++            if (yieldA >= OPEN || edge() == null) {
 +                finish()
 +                settle()
 +                returnLayer(LEAVE_RETURN_MS)
@@ -1829,12 +1852,9 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        internal fun step(ms: Long) {
 +            val f = fly
 +            if (f != null) {
-+                val open = ((yieldA - 0.78f) / 0.2f).coerceIn(0f, 1f)
-+                val near = top + want - edge() < dp(100)
-+                val v = if (near) f.v * lerp(0.25f, 1f, open) else f.v
-+                want += v * ms / 1000f
++                want += f.v * ms / 1000f
 +                apply(limit(top, want))
-+                if (yieldA >= OPEN) {
++                if (yieldA >= OPEN || edge() == null) {
 +                    finish()
 +                    f.settle()
 +                    returnLayer(LEAVE_RETURN_MS)
@@ -1859,13 +1879,12 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +
 +    private class Fly(val v: Float, val settle: () -> Unit)
 +
-+    /** Before the way is clear a card presses in by a few dp at most, never as far as the tiles. */
++    /** Against a tile still in its way a card presses in by a few dp at most, never touching it. */
 +    private fun limit(top: Float, ty: Float): Float {
-+        val e = edge()
++        val e = edge() ?: return ty
 +        val pen = e - (top + ty)
 +        if (pen <= 0f) return ty
-+        val open = ((yieldA - 0.78f) / 0.2f).coerceIn(0f, 1f)
-+        return e - lerp(dp(6) * (1f - exp(-pen / dp(20))), pen, open) - top
++        return e - dp(6) * (1f - exp(-pen / dp(20))) - top
 +    }
 +
 +    /** The card is gone or back: the tiles slide back from the gap outward and open again. */
@@ -1911,7 +1930,7 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +    }
 +
 +    private fun onTick(ms: Long) {
-+        // The parting spring: critically damped, about half a second from start to rest.
++        // The parting spring: critically damped, about a quarter of a second from start to rest.
 +        var moving = false
 +        if (yieldDrive) {
 +            var left = ms / 1000f
@@ -1924,8 +1943,9 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +            }
 +            moving = abs(yieldA - yieldT) > 0.002f || abs(yieldV) > 0.02f
 +        }
-+        held?.step(ms)
++        // The tiles move first: the card goes as far as where they now are.
 +        applyMotion()
++        held?.step(ms)
 +        if (!moving && held == null) ticker.end()
 +    }
 +
@@ -2035,6 +2055,7 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +            }
 +            t.set(cx - homeCx, cy - homeCy, s, open, label, squash, shown,
 +                if (p > 0f) min(1f, p * 12f) else 0f)
++            t.extent(cx, cy, s, open, label, shown > 0f && p > 0f)
 +        }
 +        // The layer's name shows once the tiles have passed it.
 +        title.alpha = ((minP - 0.4f) / 0.3f).coerceIn(0f, 1f)
@@ -2043,12 +2064,20 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +    // -----------------------------------------------------------------------------------------
 +    // Tiles.
 +
++    /** What a tile shows of what it stands for. */
++    private fun look(app: LujarchBackgroundApp) =
++        listOf(app.packageName, app.uid, app.label, app.word, app.ownService)
++
++    private fun look(window: LujarchSmallWindow) =
++        listOf(window.key, window.packageName, window.userId, window.label)
++
 +    private fun appTile(app: LujarchBackgroundApp): Tile = Tile(context, icon(app.packageName, app.uid),
 +        app.word.orEmpty(), app.ownService, null).apply {
++        this.app = app
 +        contentDescription = context.getString(R.string.lujarch_background_tile, app.label, app.word)
-+        setOnClickListener { recents.open(app) }
++        setOnClickListener { this.app?.let { recents.open(it) } }
 +        setOnLongClickListener { v ->
-+            menu(v, app)
++            this.app?.let { menu(v, it) }
 +            true
 +        }
 +    }
@@ -2058,9 +2087,9 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        return Tile(context, icon(window.packageName, UserHandle.getUid(window.userId, 0)), word, false,
 +            window).apply {
 +            contentDescription = context.getString(R.string.lujarch_background_tile, window.label, word)
-+            setOnClickListener { recents.open(window) }
++            setOnClickListener { this.window?.let { recents.open(it) } }
 +            setOnLongClickListener { v ->
-+                recents.appOf(window)?.let { menu(v, it) }
++                this.window?.let { recents.appOf(it) }?.let { menu(v, it) }
 +                true
 +            }
 +        }
@@ -2100,8 +2129,9 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        private val icon: Drawable,
 +        word: String,
 +        private val own: Boolean,
-+        val window: LujarchSmallWindow?,
++        var window: LujarchSmallWindow?,
 +    ) : View(context) {
++        var app: LujarchBackgroundApp? = null
 +        var bar = 0
 +        private var dx = 0f
 +        private var dy = 0f
@@ -2125,6 +2155,31 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        private val word: String = TextUtils.ellipsize(word, text, dp(TILE_W - 6).toFloat(),
 +            TextUtils.TruncateAt.END).toString()
 +        private val r = RectF()
++
++        /** What the tile covers in the layer as drawn: its sides and its lowest point. */
++        var blocks = false
++        var blockL = 0f
++        var blockR = 0f
++        var blockB = 0f
++
++        fun extent(cx: Float, cy: Float, s: Float, open: Float, label: Float, drawn: Boolean) {
++            blocks = drawn
++            val rowTop = scroller.top.toFloat()
++            var half = s / 2
++            var bottom = cy + s / 2
++            if (open > 0f) {
++                val o = open.coerceIn(0f, 1.2f)
++                half = max(half, lerp(s / 2, dp(TILE_W) / 2f, o))
++                bottom = max(bottom, lerp(cy - s / 2, rowTop, o) + lerp(s, dp(TILE_H).toFloat(), o))
++            }
++            if (label > 0f) {
++                half = max(half, dp(TILE_W) / 2f)
++                bottom = max(bottom, rowTop + dp(LABEL_Y) + dp(4) + text.descent() - text.ascent())
++            }
++            blockL = cx - half
++            blockR = cx + half
++            blockB = bottom
++        }
 +
 +        fun set(dx: Float, dy: Float, s: Float, open: Float, label: Float, squash: Float,
 +                shown: Float, iconAlpha: Float) {
@@ -2217,7 +2272,7 @@ index 0000000000000000000000000000000000000000..f5a50d6e2107ce8dcf867870ebc36159
 +        private const val RETURN_MS = 560L
 +        private const val BACK_RETURN_MS = 150L
 +        private const val LEAVE_RETURN_MS = 300L
-+        private const val YIELD_W = 9f
++        private const val YIELD_W = 20f
 +        private const val OPEN = 0.97f
 +        private val STANDARD = PathInterpolator(0.2f, 0f, 0f, 1f)
 +
