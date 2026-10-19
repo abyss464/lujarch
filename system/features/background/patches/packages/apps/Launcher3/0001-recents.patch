@@ -1,12 +1,12 @@
 diff --git a/quickstep/AndroidManifest.xml b/quickstep/AndroidManifest.xml
-index e8d372c65f275842115fbccf8c3037c88fe81ae3..cf34d76d6ffcc19fc2bcadf2c64698ad6a72edf7 100644
+index e8d372c65f275842115fbccf8c3037c88fe81ae3..026d4eeca7971e18b0dedda260518e8a6bee682a 100644
 --- a/quickstep/AndroidManifest.xml
 +++ b/quickstep/AndroidManifest.xml
 @@ -30,6 +30,8 @@
      <uses-permission android:name="android.permission.REMOVE_TASKS"/>
      <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
      <uses-permission android:name="android.permission.MANAGE_ACTIVITY_TASKS"/>
-+    <!-- Lujarch's Background: the Running layer and the memory in Recents (BG-11, BG-12). -->
++    <!-- Lujarch's Background: the Running layer and the memory in Recents (BG-12, BG-13). -->
 +    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
      <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"/>
      <uses-permission android:name="android.permission.STATUS_BAR"/>
@@ -48,7 +48,7 @@ index 0000000000000000000000000000000000000000..ad7ce48fbe70559bb20da8e9fd9896eb
 +</vector>
 diff --git a/quickstep/res/values-ja/lujarch_background_strings.xml b/quickstep/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..4874a9e1c69140b3633067520998d13051d1d0e8
+index 0000000000000000000000000000000000000000..38e6ff7bdefd18ed5708a4eae81fde0fca788628
 --- /dev/null
 +++ b/quickstep/res/values-ja/lujarch_background_strings.xml
 @@ -0,0 +1,32 @@
@@ -68,7 +68,7 @@ index 0000000000000000000000000000000000000000..4874a9e1c69140b3633067520998d130
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<!-- Lujarch's Background in Recents (BG-5, BG-12, BG-13). -->
 +<resources>
 +    <string name="lujarch_background_running">"実行中"</string>
 +    <string name="lujarch_background_small_window">"小ウィンドウ"</string>
@@ -86,7 +86,7 @@ index 0000000000000000000000000000000000000000..4874a9e1c69140b3633067520998d130
 +</resources>
 diff --git a/quickstep/res/values-zh-rCN/lujarch_background_strings.xml b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..3cdb21f01c84231682e7cddb0fdad4390247c2c4
+index 0000000000000000000000000000000000000000..e55878b1988c65162a33cb93b492dbf7ddd9791c
 --- /dev/null
 +++ b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
 @@ -0,0 +1,32 @@
@@ -106,7 +106,7 @@ index 0000000000000000000000000000000000000000..3cdb21f01c84231682e7cddb0fdad439
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<!-- Lujarch's Background in Recents (BG-5, BG-12, BG-13). -->
 +<resources>
 +    <string name="lujarch_background_running">"运行中"</string>
 +    <string name="lujarch_background_small_window">"小窗"</string>
@@ -123,14 +123,14 @@ index 0000000000000000000000000000000000000000..3cdb21f01c84231682e7cddb0fdad439
 +    <string name="lujarch_background_remove_keep">"取消保留"</string>
 +</resources>
 diff --git a/quickstep/res/values/dimens.xml b/quickstep/res/values/dimens.xml
-index 14759874569ffa26f6e123a7889c0fc4a30242d5..b90b8a885dc9f60d1910c923ffa7add61df59fae 100644
+index 14759874569ffa26f6e123a7889c0fc4a30242d5..4864d5273c7c5d20453ed8fe20d867349908c89e 100644
 --- a/quickstep/res/values/dimens.xml
 +++ b/quickstep/res/values/dimens.xml
 @@ -50,6 +50,9 @@
      <dimen name="overview_task_margin">16dp</dimen>
      <!--  The horizontal space between tasks  -->
      <dimen name="overview_page_spacing">16dp</dimen>
-+    <!--  Lujarch's Background (BG-10): the two rows a phone's Recents folds into  -->
++    <!--  Lujarch's Background (BG-11): the two rows a phone's Recents folds into  -->
 +    <dimen name="overview_grid_side_margin">16dp</dimen>
 +    <dimen name="overview_grid_row_spacing">12dp</dimen>
      <!--  The collapsed max width of the icon menu text  -->
@@ -165,7 +165,7 @@ index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18
 +</resources>
 diff --git a/quickstep/res/values/lujarch_background_strings.xml b/quickstep/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ad15c1225ace5609fbba9174808ce7d88d37dc9
+index 0000000000000000000000000000000000000000..35c5ac50932040cb0da5eccb0b8fca57e1533a7f
 --- /dev/null
 +++ b/quickstep/res/values/lujarch_background_strings.xml
 @@ -0,0 +1,32 @@
@@ -185,7 +185,7 @@ index 0000000000000000000000000000000000000000..0ad15c1225ace5609fbba9174808ce7d
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background in Recents (BG-5, BG-11, BG-12). -->
++<!-- Lujarch's Background in Recents (BG-5, BG-12, BG-13). -->
 +<resources>
 +    <string name="lujarch_background_running">Running</string>
 +    <string name="lujarch_background_small_window">Small window</string>
@@ -266,7 +266,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..bc5ca6ed1f4b21daacff0b71e226c874
          switch (state.ordinal) {
              case HINT_STATE_ORDINAL: {
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java b/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
-index e890b5e2fe0cd054e32e22d403212ab333fa55ab..83a9bdab3027b79852eb437f8d2bc1ca331f7790 100644
+index e890b5e2fe0cd054e32e22d403212ab333fa55ab..691ae08a4d2918daee0224a913cab08829d32a4f 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
 +++ b/quickstep/src/com/android/launcher3/uioverrides/states/OverviewState.java
 @@ -174,7 +174,9 @@ public class OverviewState extends LauncherState {
@@ -274,21 +274,21 @@ index e890b5e2fe0cd054e32e22d403212ab333fa55ab..83a9bdab3027b79852eb437f8d2bc1ca
      @Override
      public boolean displayOverviewTasksAsGrid(DeviceProfile deviceProfile) {
 -        return deviceProfile.getDeviceProperties().isLargeScreen();
-+        // Lujarch's Background (BG-10): a phone's Recents folds into two rows when it settles.
++        // Lujarch's Background (BG-11): a phone's Recents folds into two rows when it settles.
 +        return deviceProfile.getDeviceProperties().isLargeScreen()
 +                || com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(deviceProfile);
      }
  
      @Override
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
-index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..3545ef083794d109dc75d27e8efede8c1139f443 100644
+index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..58e5eb6a5224671e6673ac6251ef43795dcd4ef1 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
 +++ b/quickstep/src/com/android/launcher3/uioverrides/touchcontrollers/TaskViewDismissTouchController.kt
 @@ -95,6 +95,8 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
      private var recentsScaleAnimation: SpringAnimation? = null
      private var canInterceptTouch = false
      private var isDismissing = false
-+    /** Lujarch's Background (BG-8): the Running layer parting around the card. */
++    /** Lujarch's Background (BG-9): the Running layer parting around the card. */
 +    private var lujarchHold: com.android.quickstep.lujarch.RunningLayerView.Held? = null
      private var allowDetach = true
  
@@ -380,7 +380,7 @@ index cb9e9976e87500ec19e6acba17f3d7ecbeb0448e..3545ef083794d109dc75d27e8efede8c
 +                    recentsScaleAnimation = null
 +                }
 +        }
-+        // Lujarch's Background (BG-8): a card on its way out waits at the Running layer's edge
++        // Lujarch's Background (BG-9): a card on its way out waits at the Running layer's edge
 +        // until the tiles have parted.
 +        val hold = lujarchHold
 +        lujarchHold = null
@@ -426,7 +426,7 @@ index afa87a5619fe4b7c7781a21b7f4aaccf677a6188..e2c0e93dc1f748c0d926496410d331af
          if (mIsTransientTaskbar && mContainerInterface.getTaskbarInteractor() != null) {
              mContainerInterface.getTaskbarInteractor()
 diff --git a/quickstep/src/com/android/quickstep/BaseContainerInterface.java b/quickstep/src/com/android/quickstep/BaseContainerInterface.java
-index 37eac47136d2815a7a9ca76aad7f6bcd40270e67..946fb9f3beebe28c16da1eae2564b7268509bda0 100644
+index 37eac47136d2815a7a9ca76aad7f6bcd40270e67..6767f42d529a43f077c07e060f56518c166e8db3 100644
 --- a/quickstep/src/com/android/quickstep/BaseContainerInterface.java
 +++ b/quickstep/src/com/android/quickstep/BaseContainerInterface.java
 @@ -398,7 +398,8 @@ public abstract class BaseContainerInterface<STATE_TYPE extends BaseState<STATE_
@@ -434,7 +434,7 @@ index 37eac47136d2815a7a9ca76aad7f6bcd40270e67..946fb9f3beebe28c16da1eae2564b726
                      context,
                      dp,
 -                    /* claimedSpaceAbove= */0,
-+                    // Lujarch's Background (BG-8): the Running layer's place above the cards.
++                    // Lujarch's Background (BG-9): the Running layer's place above the cards.
 +                    com.android.quickstep.lujarch.LujarchRecents.spaceAboveCards(dp),
                      overviewActionsClaimedSpace,
                      res.getDimensionPixelSize(R.dimen.overview_minimum_next_prev_size) + taskMargin,
@@ -447,7 +447,7 @@ index 37eac47136d2815a7a9ca76aad7f6bcd40270e67..946fb9f3beebe28c16da1eae2564b726
 +        if (dp.getDeviceProperties().isLargeScreen()) {
 +            calculateLargeTileSize(context, dp, potentialTaskRect);
 +        } else {
-+            // Lujarch's Background (BG-10): on a phone the current card keeps its size and the
++            // Lujarch's Background (BG-11): on a phone the current card keeps its size and the
 +            // two rows share its height.
 +            calculateTaskSize(context, dp, potentialTaskRect, orientationHandler);
 +        }
@@ -562,7 +562,7 @@ index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc3038078
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979f53fe98f
+index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f3417eaaf3b5
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 @@ -0,0 +1,590 @@
@@ -615,8 +615,8 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +import com.android.systemui.shared.system.ActivityManagerWrapper
 +
 +/**
-+ * Lujarch's Background in Recents: the Running layer above the cards (BG-8), the two rows and each
-+ * card's state (BG-10), the memory below them (BG-11), a kept app's card, which cannot be swiped
++ * Lujarch's Background in Recents: the Running layer above the cards (BG-9), the two rows and each
++ * card's state (BG-11), the memory below them (BG-12), a kept app's card, which cannot be swiped
 + * away and which Clear all skips (BG-4), and a card dropped on the Running layer opening in a small
 + * window (WIN-11). Everything comes from Background's one API.
 + */
@@ -689,7 +689,7 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +
 +    /**
 +     * Recents settling brings the Running layer down from the status bar and fades the memory in
-+     * after the fold (BG-8, BG-10), and the small windows fly into their tiles (WIN-11); leaving
++     * after the fold (BG-9, BG-11), and the small windows fly into their tiles (WIN-11); leaving
 +     * sends them back.
 +     */
 +    private fun settle(settles: Boolean) {
@@ -753,7 +753,7 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +
 +    /**
 +     * A card is lifted to be swiped away: the Running layer parts around it and holds it back
-+     * until the way is clear (BG-8). [apply] moves the card; null when nothing is in its way.
++     * until the way is clear (BG-9). [apply] moves the card; null when nothing is in its way.
 +     */
 +    fun hold(tv: TaskView, apply: (Float) -> Unit): RunningLayerView.Held? {
 +        if (runningLayer.visibility != View.VISIBLE ||
@@ -915,12 +915,12 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +        return true
 +    }
 +
-+    /** Settings > System > Memory (BG-11). */
++    /** Settings > System > Memory (BG-12). */
 +    fun openMemory() {
 +        start(Intent(LujarchBackground.ACTION_MEMORY).setPackage(LujarchBackground.SETTINGS_PACKAGE), 0)
 +    }
 +
-+    /** The app's Allow background usage, its home (BG-8). */
++    /** The app's Allow background usage, its home (BG-9). */
 +    fun openBackgroundUsage(packageName: String, uid: Int) {
 +        start(Intent(Settings.ACTION_VIEW_ADVANCED_POWER_USAGE_DETAIL)
 +            .setData(Uri.fromParts("package", packageName, null))
@@ -1060,8 +1060,8 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +    }
 +
 +    /**
-+     * The switches that change where the cards are: the two rows (BG-10) and the Running layer's
-+     * place above them (BG-8). Returns whether either changed.
++     * The switches that change where the cards are: the two rows (BG-11) and the Running layer's
++     * place above them (BG-9). Returns whether either changed.
 +     */
 +    private fun readLayout(): Boolean {
 +        val resolver = context.contentResolver
@@ -1088,14 +1088,14 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +        private var sideways = false
 +
 +        /**
-+         * A phone's Recents folds into two rows when it settles (BG-10), once it is laid out in
++         * A phone's Recents folds into two rows when it settles (BG-11), once it is laid out in
 +         * the screen's rotation.
 +         */
 +        @JvmStatic
 +        fun foldsIntoRows(dp: com.android.launcher3.DeviceProfile): Boolean =
 +            rowsOn && !dp.deviceProperties.isLargeScreen && !sideways
 +
-+        /** The height the Running layer takes above a phone's cards, in pixels (BG-8). */
++        /** The height the Running layer takes above a phone's cards, in pixels (BG-9). */
 +        @JvmStatic
 +        fun spaceAboveCards(dp: com.android.launcher3.DeviceProfile): Int =
 +            if (dp.deviceProperties.isLargeScreen) 0 else runningSpace
@@ -1158,7 +1158,7 @@ index 0000000000000000000000000000000000000000..23e957f91f9ad3fed3972969f362a979
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..468f29cce4f50e6f17a77d1c4e783c76c2c50196
+index 0000000000000000000000000000000000000000..f12ab0f4af3a89bdac515c3390584273d02b6c83
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/MemoryRowView.kt
 @@ -0,0 +1,228 @@
@@ -1198,7 +1198,7 @@ index 0000000000000000000000000000000000000000..468f29cce4f50e6f17a77d1c4e783c76
 +import com.android.launcher3.R
 +
 +/**
-+ * The memory below the cards in Recents (BG-11): the same four parts as Settings > System >
++ * The memory below the cards in Recents (BG-12): the same four parts as Settings > System >
 + * Memory, with Memory, which opens that page. Its line carries Android's Screenshot between the
 + * free memory and Memory, in Memory's type; the label is left out when the line has no room.
 + */
@@ -1392,7 +1392,7 @@ index 0000000000000000000000000000000000000000..468f29cce4f50e6f17a77d1c4e783c76
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..5bf084f7befcf56a04c5cb0b73cb62c40a1d57c0
+index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10bd7611b2
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 @@ -0,0 +1,895 @@
@@ -1452,7 +1452,7 @@ index 0000000000000000000000000000000000000000..5bf084f7befcf56a04c5cb0b73cb62c4
 +import kotlin.math.sin
 +
 +/**
-+ * The Running layer above the cards in Recents (BG-8): everything that runs off screen, each a
++ * The Running layer above the cards in Recents (BG-9): everything that runs off screen, each a
 + * tile with the app's icon and one word for why, under the layer's name, in one row that scrolls
 + * sideways. A tap opens the app; touching and holding shows its menu. A small window's tile is the
 + * place its shape flies into (WIN-11): the layer tells where the places are on each frame it draws,
@@ -1578,7 +1578,7 @@ index 0000000000000000000000000000000000000000..5bf084f7befcf56a04c5cb0b73cb62c4
 +    }
 +
 +    /**
-+     * What runs off screen, in the order of BG-8: what the apps run themselves, the small
++     * What runs off screen, in the order of BG-9: what the apps run themselves, the small
 +     * windows, then Unrestricted and Chosen.
 +     */
 +    fun bind(list: List<LujarchBackgroundApp>, windows: List<LujarchSmallWindow>) {
@@ -2293,7 +2293,7 @@ index 0000000000000000000000000000000000000000..5bf084f7befcf56a04c5cb0b73cb62c4
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..6c20bc797abe9609f365e1124ef7cc9f77f9dc20
+index 0000000000000000000000000000000000000000..6d7b83dbc7c97bc930e402a28451148d8ef1549c
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/TaskMarks.kt
 @@ -0,0 +1,141 @@
@@ -2328,7 +2328,7 @@ index 0000000000000000000000000000000000000000..6c20bc797abe9609f365e1124ef7cc9f
 +import com.android.quickstep.views.TaskView
 +
 +/**
-+ * The marks of Background on a card in Recents (BG-10): the app's memory while it is in memory, a
++ * The marks of Background on a card in Recents (BG-11): the app's memory while it is in memory, a
 + * short mark at the top corner of a kept app's card (BG-4), and a reclaimed app's card dimmed with
 + * a dashed outline and Opens again. Drawn over the card, which keeps its place, size and order.
 + */
@@ -2522,7 +2522,7 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..d9346e100ac745efe30d70e87ae17bad
              LauncherState state = getStateManager().getState();
              boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9ae018856 100644
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c7178fa2914d 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 +++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 @@ -18,11 +18,13 @@ package com.android.quickstep.views
@@ -2551,7 +2551,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
  
      /** Dismisses all */
      fun dismissAllTasks() {
-+        // Lujarch's Background (BG-4, BG-8): Clear all skips the kept apps' cards, and the Running
++        // Lujarch's Background (BG-4, BG-9): Clear all skips the kept apps' cards, and the Running
 +        // layer goes up while the cards go.
 +        recentsView.mLujarchRecents?.onClearAll()
 +        if (recentsView.mLujarchRecents?.clearAllButKept() == true) {
@@ -2564,7 +2564,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
  
              // Page snapping and relayout to run after all animations have completed.
              val onFinishComplete = {
-+                // Lujarch's Background (BG-10): the folded cards' places before the relayout.
++                // Lujarch's Background (BG-11): the folded cards' places before the relayout.
 +                val lujarchPlaces = lujarchCardPlaces(dismissedTaskView)
 +
                  // Reset task translations as they may have updated via the dismiss animations.
@@ -2583,7 +2583,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
      }
  
 +    /**
-+     * Lujarch's Background (BG-10): where each folded card shows, by its id, as its centre and
++     * Lujarch's Background (BG-11): where each folded card shows, by its id, as its centre and
 +     * width on screen; null when Recents is not folded.
 +     */
 +    private fun lujarchCardPlaces(dismissedTaskView: TaskView?): Map<Int, FloatArray>? {
@@ -2656,7 +2656,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
          private const val SPEED_UP_STIFFNESS = 100_000f
      }
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
-index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3ebe97d00e 100644
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d3f96a96d 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
 @@ -920,6 +920,10 @@ public abstract class RecentsView<
@@ -2789,7 +2789,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
              mAddDesktopButton.setGridTranslationX(translationX);
          }
  
-+        // Lujarch's Background (BG-10): on a phone the folded cards sit against the right edge,
++        // Lujarch's Background (BG-11): on a phone the folded cards sit against the right edge,
 +        // the current card keeping its size there.
 +        float lujarchShift = lujarchGridShift();
 +        if (lujarchShift != 0) {
@@ -2834,11 +2834,11 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
 +                && (mLujarchRecents == null || !mLujarchRecents.isKept(taskView));
 +    }
 +
-+    /** Lujarch's Background in Recents (BG-5, BG-11, BG-12); null outside the home app. */
++    /** Lujarch's Background in Recents (BG-5, BG-12, BG-13); null outside the home app. */
 +    @Nullable
 +    public com.android.quickstep.lujarch.LujarchRecents mLujarchRecents;
 +
-+    /** Whether a phone's Recents folds into two rows (BG-10). */
++    /** Whether a phone's Recents folds into two rows (BG-11). */
 +    private boolean lujarchFoldsIntoRows() {
 +        return com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(
 +                mContainer.getDeviceProfile());
@@ -2851,7 +2851,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
 +    }
 +
 +    /**
-+     * The card that keeps its size when a phone's Recents folds (BG-10): the app Recents was
++     * The card that keeps its size when a phone's Recents folds (BG-11): the app Recents was
 +     * opened from, or the newest card.
 +     */
 +    @Nullable
@@ -2863,7 +2863,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
 +        return running != null ? running : getFirstTaskView();
 +    }
 +
-+    /** How far the folded cards move to rest against the right edge (BG-10). */
++    /** How far the folded cards move to rest against the right edge (BG-11). */
 +    private float lujarchGridShift() {
 +        if (mLujarchRecents == null || !lujarchFoldsIntoRows()) {
 +            return 0;
@@ -2875,7 +2875,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
 +        return mIsRtl ? -shift : shift;
 +    }
 +
-+    /** The Recents switches changed where the cards are (BG-8, BG-10). */
++    /** The Recents switches changed where the cards are (BG-9, BG-11). */
 +    public void lujarchRelayout() {
 +        updateSizeAndPadding();
 +        requestLayout();
@@ -2883,7 +2883,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3e
  
      @Override
 diff --git a/quickstep/src/com/android/quickstep/views/TaskView.kt b/quickstep/src/com/android/quickstep/views/TaskView.kt
-index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec49ce1e0b 100644
+index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..d631712dfa37fdd4b8fa3a51f734a48cd6d96e96 100644
 --- a/quickstep/src/com/android/quickstep/views/TaskView.kt
 +++ b/quickstep/src/com/android/quickstep/views/TaskView.kt
 @@ -150,7 +150,12 @@ constructor(
@@ -2893,7 +2893,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec
 -        get() = container.deviceProfile.deviceProperties.isLargeScreen && !isLargeTile
 +        get() = foldsIntoGrid && !isLargeTile
 +
-+    /** Lujarch's Background (BG-10): a phone's Recents folds into the grid too. */
++    /** Lujarch's Background (BG-11): a phone's Recents folds into the grid too. */
 +    private val foldsIntoGrid: Boolean
 +        get() = container.deviceProfile.deviceProperties.isLargeScreen ||
 +            com.android.quickstep.lujarch.LujarchRecents.foldsIntoRows(container.deviceProfile)
@@ -2905,7 +2905,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec
  
      val isLargeTile: Boolean
 -        get() = type == TaskViewType.DESKTOP
-+        // Lujarch's Background (BG-10): on a phone the current card keeps its size.
++        // Lujarch's Background (BG-11): on a phone the current card keeps its size.
 +        get() = type == TaskViewType.DESKTOP || recentsView?.lujarchCurrentTaskView() === this
  
      val recentsView: RecentsView<*, *>?
@@ -2923,7 +2923,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec
              width = expectedWidth
              height = expectedHeight
          }
-+        // Lujarch's Background (BG-10): a card in the rows keeps its chip within its width.
++        // Lujarch's Background (BG-11): a card in the rows keeps its chip within its width.
 +        if (taskContainers.size == 1 && this::orientedState.isInitialized) {
 +            val margins =
 +                (resources.getDimensionPixelSize(
@@ -2954,7 +2954,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..b2ae26e17663cdaec6e241600e45f5ec
              "${taskIds.contentToString()} - launchWithAnimation - initiating launch, " +
 diff --git a/res/values-ja/lujarch_background_strings.xml b/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..4f9fcd8ac815e49db213e389ce537b8145df3066
+index 0000000000000000000000000000000000000000..b5d0362571573773d676954c1c3fc942ceaf428d
 --- /dev/null
 +++ b/res/values-ja/lujarch_background_strings.xml
 @@ -0,0 +1,26 @@
@@ -2974,7 +2974,7 @@ index 0000000000000000000000000000000000000000..4f9fcd8ac815e49db213e389ce537b81
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
++<!-- Home settings > Recents (BG-9, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_recents">"最近使ったアプリ"</string>
 +    <string name="lujarch_background_recents_running">"「実行中」を表示"</string>
@@ -2986,7 +2986,7 @@ index 0000000000000000000000000000000000000000..4f9fcd8ac815e49db213e389ce537b81
 +</resources>
 diff --git a/res/values-zh-rCN/lujarch_background_strings.xml b/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..af5ef07ac187b1ce9022a95baee59e0122914f72
+index 0000000000000000000000000000000000000000..fed7c0bcba55845c6969fa61cb9264cda97718bd
 --- /dev/null
 +++ b/res/values-zh-rCN/lujarch_background_strings.xml
 @@ -0,0 +1,26 @@
@@ -3006,7 +3006,7 @@ index 0000000000000000000000000000000000000000..af5ef07ac187b1ce9022a95baee59e01
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
++<!-- Home settings > Recents (BG-9, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_recents">"最近用过的应用"</string>
 +    <string name="lujarch_background_recents_running">"显示“运行中”"</string>
@@ -3018,7 +3018,7 @@ index 0000000000000000000000000000000000000000..af5ef07ac187b1ce9022a95baee59e01
 +</resources>
 diff --git a/res/values/lujarch_background_strings.xml b/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..f6b1c23c78879fec9072feda8c4be1c2af6a8ff0
+index 0000000000000000000000000000000000000000..9d8f642519f7b2d0b16241d933ed3e646ea97fca
 --- /dev/null
 +++ b/res/values/lujarch_background_strings.xml
 @@ -0,0 +1,26 @@
@@ -3038,7 +3038,7 @@ index 0000000000000000000000000000000000000000..f6b1c23c78879fec9072feda8c4be1c2
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Home settings > Recents (BG-8, BG-10, BG-11). -->
++<!-- Home settings > Recents (BG-9, BG-11, BG-12). -->
 +<resources>
 +    <string name="lujarch_background_recents">Recents</string>
 +    <string name="lujarch_background_recents_running">Show running</string>
@@ -3049,14 +3049,14 @@ index 0000000000000000000000000000000000000000..f6b1c23c78879fec9072feda8c4be1c2
 +    <string name="lujarch_background_recents_memory_summary">Below the cards, the memory in use</string>
 +</resources>
 diff --git a/res/xml/launcher_preferences.xml b/res/xml/launcher_preferences.xml
-index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..dd09601f7f5bd5b5d7cfcc79fe7885ce06c0ff23 100644
+index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..5db6412471d3df92dce16128af9e4fda332c4c6b 100644
 --- a/res/xml/launcher_preferences.xml
 +++ b/res/xml/launcher_preferences.xml
 @@ -116,6 +116,33 @@
          android:persistent="false"
          launcher:useSimpleSummaryProvider="true" />
  
-+    <!-- Lujarch's Background (BG-8, BG-10, BG-11): Recents' Running layer, two rows and memory,
++    <!-- Lujarch's Background (BG-9, BG-11, BG-12): Recents' Running layer, two rows and memory,
 +         kept in Settings.Secure (RecentsSettings). -->
 +    <androidx.preference.PreferenceScreen
 +        android:key="pref_lujarch_recents"
@@ -3088,7 +3088,7 @@ index b0eb219376a5297b455c6acafe4d3bd74c0fc1fa..dd09601f7f5bd5b5d7cfcc79fe7885ce
      <androidx.preference.PreferenceScreen
 diff --git a/src/com/android/launcher3/lujarch/RecentsSettings.java b/src/com/android/launcher3/lujarch/RecentsSettings.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..ae8b071611a012c640a8c09571ccd06709cf4b60
+index 0000000000000000000000000000000000000000..9eba8e16129304accc091e2d3b64278bbc4a76b1
 --- /dev/null
 +++ b/src/com/android/launcher3/lujarch/RecentsSettings.java
 @@ -0,0 +1,58 @@
@@ -3117,7 +3117,7 @@ index 0000000000000000000000000000000000000000..ae8b071611a012c640a8c09571ccd067
 +import androidx.preference.TwoStatePreference;
 +
 +/**
-+ * Home settings > Recents: Show running (BG-8), Show app state (BG-10) and Show memory (BG-11),
++ * Home settings > Recents: Show running (BG-9), Show app state (BG-11) and Show memory (BG-12),
 + * kept in Settings.Secure, where Recents reads them.
 + */
 +public final class RecentsSettings {

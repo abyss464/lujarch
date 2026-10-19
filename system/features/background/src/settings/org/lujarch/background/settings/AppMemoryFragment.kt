@@ -33,6 +33,7 @@ import androidx.preference.PreferenceScreen
 import com.android.internal.app.LujarchBackground
 import com.android.internal.app.LujarchBackgroundApp
 import com.android.internal.app.LujarchBackgroundEvent
+import com.android.internal.app.LujarchBackgroundLimit
 import com.android.internal.app.LujarchBackgroundMemory
 import com.android.internal.app.procstats.IProcessStats
 import com.android.internal.app.procstats.ProcessStats
@@ -46,13 +47,15 @@ import org.lujarch.settings.pages.Pages
 
 /**
  * Settings > Apps > (app) > Memory (BG-6): the app's average and highest use over the last 3
- * hours, its processes each with its state and memory (a row opens the process), whether it is
- * kept, its background usage level and its last reclaim, each leading to its own home.
+ * hours, its memory limit (BG-8), its processes each with its state and memory (a row opens the
+ * process), whether it is kept, its background usage level and its last reclaim, each leading to
+ * its own home.
  */
 class AppMemoryFragment : BasePreferenceFragment() {
     private lateinit var packageName: String
     private var label = ""
     private lateinit var headerPref: Preference
+    private lateinit var limitPref: Preference
     private lateinit var processesPref: PreferenceCategory
     private lateinit var keptPref: Preference
     private lateinit var usagePref: Preference
@@ -72,6 +75,15 @@ class AppMemoryFragment : BasePreferenceFragment() {
                 icon = context.packageManager.getApplicationIcon(packageName)
             } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
                 Log.w(TAG, "$packageName has no icon", e)
+            }
+        }
+        limitPref = screen.add(Preference(context)) {
+            key = "limit"
+            setTitle(R.string.memory_limit_title)
+            setSummary(org.lujarch.settings.pages.R.string.loading)
+            setOnPreferenceClickListener {
+                MemoryLimitFragment.open(requireContext(), packageName)
+                true
             }
         }
         processesPref = screen.add(PreferenceCategory(context)) {
@@ -151,14 +163,19 @@ class AppMemoryFragment : BasePreferenceFragment() {
         }
         val memory = attempt("app's memory", R.string.memory_error_load) { BackgroundClient.call {
             it.memory } }
-        val history = orNull("memory over 3 hours") { usedOver3Hours(a.uid) }
-        render(a, reclaim, memory, history)
+        val history = orNull("memory over 3 hours") {
+            withContext(Dispatchers.IO) { usedOver3Hours(packageName, a.uid) }
+        }
+        val limit = orNull("memory limit") { BackgroundClient.call { it.getLimit(packageName, user) } }
+        render(a, reclaim, memory, history, limit)
     }
 
     private fun render(a: LujarchBackgroundApp, reclaim: LujarchBackgroundEvent?,
-            memory: LujarchBackgroundMemory?, history: LongArray?) {
+            memory: LujarchBackgroundMemory?, history: LongArray?, limit: LujarchBackgroundLimit?) {
         if (!pageAlive) return
         val context = prefContext
+        limitPref.isVisible = UserHandle.getAppId(a.uid) >= android.os.Process.FIRST_APPLICATION_UID
+        limitPref.summary = limit?.let { MemoryLimitFragment.summary(context, it) }
         headerPref.summary = if (history != null && history[0] > 0) {
             getString(R.string.memory_average, Formatter.formatShortFileSize(context, history[0]),
                 Formatter.formatShortFileSize(context, history[1]))
@@ -217,37 +234,6 @@ class AppMemoryFragment : BasePreferenceFragment() {
             .putExtra(LujarchBackground.EXTRA_ALLOW_BACKGROUND_USAGE, allowBackgroundUsage))
     }
 
-    /**
-     * The app's average and highest memory over the last 3 hours, in bytes, from Android's own
-     * process stats; null when they cannot be read.
-     */
-    private suspend fun usedOver3Hours(uid: Int): LongArray? = withContext(Dispatchers.IO) {
-        val service = IProcessStats.Stub.asInterface(
-            ServiceManager.getService(ProcessStats.SERVICE_NAME)) ?: return@withContext null
-        val pfd = service.getStatsOverTime(THREE_HOURS_MS) ?: return@withContext null
-        val stats = ProcessStats(false)
-        ParcelFileDescriptor.AutoCloseInputStream(pfd).use { stats.read(it) }
-        if (stats.mReadError != null) {
-            Log.w(TAG, "process stats: ${stats.mReadError}")
-            return@withContext null
-        }
-        val versions = stats.mPackages.get(packageName, uid) ?: return@withContext null
-        val totals = ProcessStats.ProcessDataCollection(ProcessStats.ALL_SCREEN_ADJ,
-            ProcessStats.ALL_MEM_ADJ, ProcessStats.ALL_PROC_STATES)
-        val now = SystemClock.uptimeMillis()
-        var avg = 0L
-        var max = 0L
-        for (v in 0 until versions.size()) {
-            val pkg = versions.valueAt(v)
-            for (i in 0 until pkg.mProcesses.size) {
-                pkg.mProcesses.valueAt(i).computeProcessData(totals, now)
-                avg += totals.avgPss
-                max += totals.maxPss
-            }
-        }
-        longArrayOf(avg * 1024, max * 1024)
-    }
-
     companion object {
         const val ARG_PACKAGE = "package"
         const val ARG_LABEL = "label"
@@ -265,6 +251,37 @@ class AppMemoryFragment : BasePreferenceFragment() {
         fun open(context: Context, packageName: String, label: String?) {
             Pages.open(context, AppMemoryFragment::class.java, R.string.memory_title,
                 arguments = args(packageName, label))
+        }
+
+        /**
+         * The app's average and highest memory over the last 3 hours, in bytes, from Android's own
+         * process stats; null when they cannot be read.
+         */
+        fun usedOver3Hours(packageName: String, uid: Int): LongArray? {
+            val service = IProcessStats.Stub.asInterface(
+                ServiceManager.getService(ProcessStats.SERVICE_NAME)) ?: return null
+            val pfd = service.getStatsOverTime(THREE_HOURS_MS) ?: return null
+            val stats = ProcessStats(false)
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { stats.read(it) }
+            if (stats.mReadError != null) {
+                Log.w(TAG, "process stats: ${stats.mReadError}")
+                return null
+            }
+            val versions = stats.mPackages.get(packageName, uid) ?: return null
+            val totals = ProcessStats.ProcessDataCollection(ProcessStats.ALL_SCREEN_ADJ,
+                ProcessStats.ALL_MEM_ADJ, ProcessStats.ALL_PROC_STATES)
+            val now = SystemClock.uptimeMillis()
+            var avg = 0L
+            var max = 0L
+            for (v in 0 until versions.size()) {
+                val pkg = versions.valueAt(v)
+                for (i in 0 until pkg.mProcesses.size) {
+                    pkg.mProcesses.valueAt(i).computeProcessData(totals, now)
+                    avg += totals.avgPss
+                    max += totals.maxPss
+                }
+            }
+            return longArrayOf(avg * 1024, max * 1024)
         }
 
         /** The main process by that name, another by its short name. */
