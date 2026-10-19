@@ -37,13 +37,13 @@ folder in Android/obb.
 ### INS-3 The install has the options the owner chooses
 
 - Home: the installer, Options; Settings > Apps > App installer > Default options
-- Switch: Allow downgrade; Install for: This user, All users; Permissions: Ask as usual, Grant all, Deny all; Allow test-only apps; Allow apps for old Android versions; Processor type: Automatic or one the phone runs; Installed by: Package installer or an installed app; Source: Local file, Downloaded file, App store, Other; Updates by other apps ask first; Optimization: As Android chooses, Speed profile, Speed, Verify only; After installing: Done, Open, App info; Delete the file after installing
-- Default: off; This user; Ask as usual; off; off; Automatic; Package installer; Local file, or Downloaded file for a file from the web; off; As Android chooses; Done; off
+- Switch: Allow downgrade; Install for: This user, All users; Permissions: Ask as usual, Grant all, Deny all; Allow test-only apps; Allow apps for old Android versions; Processor type: Automatic or one the phone runs; Installed by: Package installer or an installed app; Updates by other apps ask first; Optimization: As Android chooses, Speed profile, Speed, Verify only; After installing: Done, Open, App info; Delete the file after installing
+- Default: off; This user; Ask as usual; off; off; Automatic; Package installer; off; As Android chooses; Done; off
 - Verify: vm
 
 The defaults page sets what the installer's options start from; the installer's own options apply
-to that install. Source App store keeps the restricted settings Android holds back from sideloaded
-apps away from the app; the page says so. Installed by names the app recorded as the installer.
+to that install. The install records where the file came from as Android does: Local file, or
+Downloaded file for a file from the web. Installed by names the app recorded as the installer.
 Updates by other apps ask first makes other installers' updates of the app wait for the owner.
 Allow downgrade is honoured where Android allows it; a refused downgrade says so.
 
