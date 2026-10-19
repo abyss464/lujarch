@@ -2601,7 +2601,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..a55b781d67b41658c0f50d11ecbda0e9
          private const val SPEED_UP_STIFFNESS = 100_000f
      }
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
-index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45ff63e699 100644
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..0a73b586feb14faad8f3ae37510e5e3ebe97d00e 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
 @@ -920,6 +920,10 @@ public abstract class RecentsView<
@@ -2674,7 +2674,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
              return super.getDestinationPage(scaledScroll);
          }
          if (!isPageScrollsInitialized()) {
-@@ -2715,6 +2730,43 @@ public abstract class RecentsView<
+@@ -2715,6 +2730,55 @@ public abstract class RecentsView<
          }
      }
  
@@ -2690,8 +2690,14 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
 +        mLujarchTurning = true;
 +        AnimatorSet out = setRecentsChangedOrientation(true /* fadeOut */);
 +        out.addListener(AnimatorListeners.forSuccessCallback(() -> {
-+            switchToScreenshot(() -> finishRecentsAnimation(true /* toHome */,
-+                    null /* onFinishComplete */));
++            switchToScreenshot(() -> finishRecentsAnimation(true /* toHome */, () -> {
++                // A screen that stands as the launcher's window does brings no configuration
++                // change.
++                if (mLujarchTurning && mContainer.getDisplay().getRotation()
++                        == mOrientationState.getRecentsActivityRotation()) {
++                    lujarchTurned();
++                }
++            }));
 +            // Recents comes back as it was if the screen does not turn.
 +            postDelayed(() -> {
 +                if (mLujarchTurning) {
@@ -2705,6 +2711,12 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
 +    /** Lujarch: Recents has turned with the screen and comes back in the state it is in. */
 +    private void lujarchTurned() {
 +        mLujarchTurning = false;
++        if (getPagedOrientationHandler() != RecentsPagedOrientationHandler.PORTRAIT) {
++            // Recents stands in the screen's rotation, no longer in the swiped app's.
++            final int rotation = mContainer.getDisplay().getRotation();
++            mOrientationState.update(rotation, rotation);
++            updateOrientationHandler();
++        }
 +        setOverviewGridEnabled(getStateManager().getState().displayOverviewTasksAsGrid(
 +                mContainer.getDeviceProfile()));
 +        getStateManager().reapplyState();
@@ -2718,7 +2730,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
      private void animateRotation(int newRotation) {
          AbstractFloatingView.closeAllOpenViewsExcept(mContainer, false, TYPE_REBIND_SAFE);
          AnimatorSet pa = setRecentsChangedOrientation(true);
-@@ -3248,8 +3300,16 @@ public abstract class RecentsView<
+@@ -3248,8 +3312,16 @@ public abstract class RecentsView<
              mAddDesktopButton.setGridTranslationX(translationX);
          }
  
@@ -2736,7 +2748,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
          mClearAllButton.setGridScrollOffset(
                  mIsRtl ? mLastComputedTaskSize.left - mLastComputedGridSize.left
                          : mLastComputedTaskSize.right - mLastComputedGridSize.right);
-@@ -3641,6 +3701,9 @@ public abstract class RecentsView<
+@@ -3641,6 +3713,9 @@ public abstract class RecentsView<
              mEmptyIcon.setAlpha(alphaInt);
          }
          mActionsView.getContentAlpha().updateValue(mContentAlpha);
@@ -2746,7 +2758,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
  
          if (alpha > 0) {
              setVisibility(VISIBLE);
-@@ -3678,6 +3741,10 @@ public abstract class RecentsView<
+@@ -3678,6 +3753,10 @@ public abstract class RecentsView<
      protected void onConfigurationChanged(Configuration newConfig) {
          super.onConfigurationChanged(newConfig);
          updateRecentsRotation();
@@ -2757,7 +2769,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..aae8ae94e02b532be1a5358197664a45
          onOrientationChanged();
          updateEmptyMessageConfiguration();
          if (enableLowResThumbnailPreloading()) {
-@@ -3759,7 +3826,56 @@ public abstract class RecentsView<
+@@ -3759,7 +3838,56 @@ public abstract class RecentsView<
       * returns true.
       */
      public boolean canRemoveTaskView(TaskView taskView) {
