@@ -2669,8 +2669,7 @@ class Modules:
     def own(self, name):
         rels = (os.path.relpath(path, self.tree_product)
                 for path in self.info.get(name, {}).get("installed") or [])
-        return [rel for rel in rels if not rel.startswith("..") and rel.split("/", 1)[0] not in (
-            "system_other", "fake_packages", "obj", "testcases", "data", "symbols")]
+        return [rel for rel in rels if rel.split("/", 1)[0] in {**VM_PARTITIONS, **VM_RAMDISKS}]
 
     def installs(self, names):
         """What these modules and the modules they require install."""
