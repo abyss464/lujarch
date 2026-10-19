@@ -1,0 +1,2007 @@
+diff --git a/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml b/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..3806f8b02eb159fb35b658d541ee4f0a1aa61110
+--- /dev/null
++++ b/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml
+@@ -0,0 +1,35 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_recorder_profile_high">高画質</string>
++    <string name="lujarch_recorder_profile_small">小さいファイル</string>
++    <string name="lujarch_recorder_error_codec">コーデック %1$s では動画を録画できません</string>
++    <string name="lujarch_recorder_error_format">この形式はこのコーデックに対応していません</string>
++    <string name="lujarch_recorder_error_encoder">%1$s のエンコーダーがありません</string>
++    <string name="lujarch_recorder_error_size">エンコーダーは %1$d × %2$d に近いサイズに対応していません</string>
++    <string name="lujarch_recorder_error_bitrate_mode">エンコーダーはこのビットレートモードに対応していません</string>
++    <string name="lujarch_recorder_error_bit_depth">このコーデックには 10 ビットのプロファイルがありません</string>
++    <string name="lujarch_recorder_error_profile">エンコーダーはこのプロファイルとレベルに対応していません</string>
++    <string name="lujarch_recorder_error_opus_rate">Opus は 48 kHz でのみ録音できます</string>
++    <string name="lujarch_recorder_error_webm_tracks">WebM の音声トラックは 1 つだけです。1 つのトラックにミックスを選んでください</string>
++    <string name="lujarch_recorder_error_configure">エンコーダー %1$s はこの設定を受け付けません</string>
++    <string name="lujarch_recorder_error_audio_codec">この音声設定に対応する音声エンコーダーがありません</string>
++    <string name="lujarch_recorder_error_microphone">マイクを録音できません</string>
++    <string name="lujarch_recorder_error_device_audio">デバイスの音声を録音できません</string>
++    <string name="lujarch_recorder_error_encoding">%1$s で録画に失敗しました：%2$s</string>
++    <string name="lujarch_recorder_error_file">次のファイルを作成できませんでした</string>
++</resources>
+diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..606c671880c4e413f5fe5f716b7862b0d744df5b
+--- /dev/null
++++ b/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml
+@@ -0,0 +1,35 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_recorder_profile_high">高画质</string>
++    <string name="lujarch_recorder_profile_small">小文件</string>
++    <string name="lujarch_recorder_error_codec">编码 %1$s 无法录制视频</string>
++    <string name="lujarch_recorder_error_format">此格式不支持该编码</string>
++    <string name="lujarch_recorder_error_encoder">没有 %1$s 的编码器</string>
++    <string name="lujarch_recorder_error_size">编码器不支持接近 %1$d × %2$d 的尺寸</string>
++    <string name="lujarch_recorder_error_bitrate_mode">编码器不支持此码率模式</string>
++    <string name="lujarch_recorder_error_bit_depth">此编码没有 10 位配置</string>
++    <string name="lujarch_recorder_error_profile">编码器不支持此配置和级别</string>
++    <string name="lujarch_recorder_error_opus_rate">Opus 只能以 48 kHz 录制</string>
++    <string name="lujarch_recorder_error_webm_tracks">WebM 只能有一条音轨；请选择混合为一条音轨</string>
++    <string name="lujarch_recorder_error_configure">编码器 %1$s 不接受这些设置</string>
++    <string name="lujarch_recorder_error_audio_codec">没有音频编码器支持这些声音设置</string>
++    <string name="lujarch_recorder_error_microphone">无法录制麦克风</string>
++    <string name="lujarch_recorder_error_device_audio">无法录制设备音频</string>
++    <string name="lujarch_recorder_error_encoding">录制在 %1$s 失败：%2$s</string>
++    <string name="lujarch_recorder_error_file">无法创建下一个文件</string>
++</resources>
+diff --git a/packages/SystemUI/res/values/lujarch_recorder_strings.xml b/packages/SystemUI/res/values/lujarch_recorder_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..9bc42a7368758c5e77ae3591439e88d6f2c32c6c
+--- /dev/null
++++ b/packages/SystemUI/res/values/lujarch_recorder_strings.xml
+@@ -0,0 +1,35 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<resources>
++    <string name="lujarch_recorder_profile_high">High quality</string>
++    <string name="lujarch_recorder_profile_small">Small file</string>
++    <string name="lujarch_recorder_error_codec">The codec %1$s cannot record video</string>
++    <string name="lujarch_recorder_error_format">The format does not take this codec</string>
++    <string name="lujarch_recorder_error_encoder">No encoder for %1$s</string>
++    <string name="lujarch_recorder_error_size">The encoder takes no size near %1$d × %2$d</string>
++    <string name="lujarch_recorder_error_bitrate_mode">The encoder does not support this bitrate mode</string>
++    <string name="lujarch_recorder_error_bit_depth">The codec has no 10-bit profile</string>
++    <string name="lujarch_recorder_error_profile">The encoder does not support this profile and level</string>
++    <string name="lujarch_recorder_error_opus_rate">Opus records only at 48 kHz</string>
++    <string name="lujarch_recorder_error_webm_tracks">WebM holds only one audio track; choose Mixed into one track</string>
++    <string name="lujarch_recorder_error_configure">The encoder %1$s refused these settings</string>
++    <string name="lujarch_recorder_error_audio_codec">No audio encoder takes these sound settings</string>
++    <string name="lujarch_recorder_error_microphone">The microphone cannot be recorded</string>
++    <string name="lujarch_recorder_error_device_audio">Device audio cannot be recorded</string>
++    <string name="lujarch_recorder_error_encoding">Recording failed in %1$s: %2$s</string>
++    <string name="lujarch_recorder_error_file">The next file could not be created</string>
++</resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478e1938d6d
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java
+@@ -0,0 +1,516 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.screenrecord;
++
++import android.content.ContentResolver;
++import android.content.Context;
++import android.media.MediaCodecInfo;
++import android.media.MediaCodecInfo.CodecProfileLevel;
++import android.media.MediaCodecList;
++import android.media.MediaFormat;
++import android.media.MediaMuxer;
++import android.provider.Settings;
++import android.util.DisplayMetrics;
++import android.util.Log;
++import android.util.Range;
++
++import com.android.systemui.res.R;
++
++import org.json.JSONException;
++import org.json.JSONObject;
++
++import java.util.Calendar;
++import java.util.Iterator;
++import java.util.Locale;
++
++/**
++ * Screen record's settings (target/recorder.md), each a Settings.Secure value of the user that
++ * records, and what they come to on this phone's encoders.
++ */
++public final class LujarchRecorderConfig {
++    static final String TAG = "lujarch_recorder";
++    static final String PREFIX = "lujarch_recorder_";
++
++    /** Settings > System > Screen record. */
++    public static final String ACTION_SETTINGS = "org.lujarch.recorder.action.SCREEN_RECORD";
++
++    public static final String KEY_AUDIO_SOURCE = PREFIX + "audio_source";
++    public static final String KEY_PROFILES = PREFIX + "profiles";
++    public static final String KEY_COUNTDOWN = PREFIX + "countdown";
++
++    /** The profiles that come with the system: High quality and Small file (REC-5). */
++    public static final String BUILT_IN_PROFILES = "{\"@high\":{\"resolution\":100,"
++            + "\"frame_rate\":0,\"bitrate\":40000,\"bitrate_mode\":1,\"audio_bitrate\":256},"
++            + "\"@small\":{\"resolution\":50,\"frame_rate\":30,\"bitrate\":3000,"
++            + "\"bitrate_mode\":1,\"audio_bitrate\":96}}";
++
++    /** The settings a profile holds: those of the video, the sound and the file. */
++    public static final String[] PROFILE_KEYS = {
++            "codec", "encoder", "profile", "level", "bit_depth", "resolution", "width", "height",
++            "frame_rate", "every_frame", "bitrate", "bitrate_mode", "quality", "key_interval",
++            "b_frames", "orientation", "audio_source", "separate_tracks", "internal_volume",
++            "mic_volume", "audio_codec", "sample_rate", "channels", "audio_bitrate",
++            "noise_suppression", "echo_cancellation", "format", "folder", "file_name", "longest",
++            "largest", "at_limit",
++    };
++
++    public static final int BITRATE_MODE_CQ = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CQ;
++    public static final int BITRATE_MODE_VBR = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR;
++    public static final int BITRATE_MODE_CBR = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR;
++
++    public String codec;
++    public String encoder;
++    public int profile;
++    public int level;
++    public int bitDepth;
++    public int resolution;
++    public int width;
++    public int height;
++    public int frameRate;
++    public boolean everyFrame;
++    public int bitrateKbps;
++    public int bitrateMode;
++    public int quality;
++    public int keyInterval;
++    public int bFrames;
++    public int orientation;
++
++    public ScreenRecordingAudioSource audioSource;
++    public boolean separateTracks;
++    public int internalVolume;
++    public int micVolume;
++    public String audioCodec;
++    public int sampleRate;
++    public int channels;
++    public int audioBitrateKbps;
++    public boolean noiseSuppression;
++    public boolean echoCancellation;
++
++    public String format;
++    public String folder;
++    public String fileName;
++    public int longestMinutes;
++    public int largestMb;
++    public boolean newFileAtLimit;
++
++    public int countdownSeconds;
++    public boolean keepScreenOn;
++    public boolean doNotDisturb;
++
++    private LujarchRecorderConfig() {
++    }
++
++    public static LujarchRecorderConfig read(Context context) {
++        ContentResolver cr = context.getContentResolver();
++        int user = context.getUserId();
++        LujarchRecorderConfig c = new LujarchRecorderConfig();
++        c.codec = string(cr, user, "codec", "");
++        c.encoder = string(cr, user, "encoder", "");
++        c.profile = integer(cr, user, "profile", -1);
++        c.level = integer(cr, user, "level", -1);
++        c.bitDepth = integer(cr, user, "bit_depth", 8);
++        c.resolution = integer(cr, user, "resolution", 100);
++        c.width = integer(cr, user, "width", 0);
++        c.height = integer(cr, user, "height", 0);
++        c.frameRate = integer(cr, user, "frame_rate", 0);
++        c.everyFrame = integer(cr, user, "every_frame", 0) != 0;
++        c.bitrateKbps = integer(cr, user, "bitrate", 0);
++        c.bitrateMode = integer(cr, user, "bitrate_mode", BITRATE_MODE_VBR);
++        c.quality = integer(cr, user, "quality", -1);
++        c.keyInterval = integer(cr, user, "key_interval", 1);
++        c.bFrames = integer(cr, user, "b_frames", 0);
++        c.orientation = integer(cr, user, "orientation", 0);
++        int source = integer(cr, user, "audio_source", 0);
++        ScreenRecordingAudioSource[] sources = ScreenRecordingAudioSource.values();
++        c.audioSource = source >= 0 && source < sources.length
++                ? sources[source] : ScreenRecordingAudioSource.NONE;
++        c.separateTracks = integer(cr, user, "separate_tracks", 0) != 0;
++        c.internalVolume = integer(cr, user, "internal_volume", 100);
++        c.micVolume = integer(cr, user, "mic_volume", 100);
++        c.audioCodec = string(cr, user, "audio_codec", "aac_lc");
++        c.sampleRate = integer(cr, user, "sample_rate", 44100);
++        c.channels = integer(cr, user, "channels", 2);
++        c.audioBitrateKbps = integer(cr, user, "audio_bitrate", 192);
++        c.noiseSuppression = integer(cr, user, "noise_suppression", 0) != 0;
++        c.echoCancellation = integer(cr, user, "echo_cancellation", 0) != 0;
++        c.format = string(cr, user, "format", "mp4");
++        c.folder = string(cr, user, "folder", "Movies");
++        c.fileName = string(cr, user, "file_name", "screen-yyyyMMdd-HHmmss");
++        c.longestMinutes = integer(cr, user, "longest", 60);
++        c.largestMb = integer(cr, user, "largest", 5000);
++        c.newFileAtLimit = integer(cr, user, "at_limit", 0) != 0;
++        c.countdownSeconds = integer(cr, user, "countdown", 3);
++        c.keepScreenOn = integer(cr, user, "keep_screen_on", 0) != 0;
++        c.doNotDisturb = integer(cr, user, "dnd", 0) != 0;
++        return c;
++    }
++
++    private static String string(ContentResolver cr, int user, String key, String def) {
++        String v = Settings.Secure.getStringForUser(cr, PREFIX + key, user);
++        return v == null ? def : v;
++    }
++
++    private static int integer(ContentResolver cr, int user, String key, int def) {
++        return Settings.Secure.getIntForUser(cr, PREFIX + key, def, user);
++    }
++
++    /** The user's audio choice, as the recording dialog shows it (REC-1, REC-3). */
++    public static ScreenRecordingAudioSource audioSource(Context context) {
++        return read(context).audioSource;
++    }
++
++    public static void setAudioSource(Context context, ScreenRecordingAudioSource source) {
++        put(context, KEY_AUDIO_SOURCE, String.valueOf(source.ordinal()));
++    }
++
++    /** The countdown before a recording starts, in seconds (REC-6). */
++    public static int countdownSeconds(Context context) {
++        return read(context).countdownSeconds;
++    }
++
++    static boolean put(Context context, String key, String value) {
++        try {
++            return Settings.Secure.putStringForUser(context.getContentResolver(), key, value,
++                    context.getUserId());
++        } catch (SecurityException e) {
++            Log.e(TAG, key + " not written", e);
++            return false;
++        }
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Profiles (REC-5)
++
++    /** Every profile by name: the built-in ones (named with @) first, then the saved ones. */
++    public static JSONObject profiles(Context context) {
++        JSONObject all = new JSONObject();
++        try {
++            JSONObject builtIn = new JSONObject(BUILT_IN_PROFILES);
++            for (Iterator<String> i = builtIn.keys(); i.hasNext(); ) {
++                String name = i.next();
++                all.put(name, builtIn.get(name));
++            }
++            String saved = Settings.Secure.getStringForUser(context.getContentResolver(),
++                    KEY_PROFILES, context.getUserId());
++            if (saved != null && !saved.isEmpty()) {
++                JSONObject s = new JSONObject(saved);
++                for (Iterator<String> i = s.keys(); i.hasNext(); ) {
++                    String name = i.next();
++                    all.put(name, s.get(name));
++                }
++            }
++        } catch (JSONException e) {
++            Log.e(TAG, "profiles not read", e);
++        }
++        return all;
++    }
++
++    /** The name a profile shows. */
++    public static String profileLabel(Context context, String name) {
++        switch (name) {
++            case "@high": return context.getString(R.string.lujarch_recorder_profile_high);
++            case "@small": return context.getString(R.string.lujarch_recorder_profile_small);
++            default: return name;
++        }
++    }
++
++    /** Sets every setting [name] holds; returns whether all were written. */
++    public static boolean useProfile(Context context, String name) {
++        JSONObject profile = profiles(context).optJSONObject(name);
++        if (profile == null) {
++            Log.e(TAG, "no profile " + name);
++            return false;
++        }
++        boolean ok = true;
++        for (Iterator<String> i = profile.keys(); i.hasNext(); ) {
++            String key = i.next();
++            ok &= put(context, PREFIX + key, String.valueOf(profile.opt(key)));
++        }
++        Log.i(TAG, "profile " + name + " in use");
++        return ok;
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // What the settings come to on this phone (REC-2, REC-3, REC-4)
++
++    /** A setting that cannot be used, named for the owner. */
++    public static final class Unusable extends java.io.IOException {
++        public Unusable(String message) {
++            super(message);
++        }
++    }
++
++    /** The video and sound a recording will have. */
++    public static final class Resolved {
++        public String videoMime;
++        public MediaCodecInfo videoEncoder;
++        public int width;
++        public int height;
++        public int frameRate;
++        public int bitrate;
++        public int bitrateMode = -1;
++        public int quality = -1;
++        public int profile = -1;
++        public int level = -1;
++        public int muxerFormat;
++        public String fileMime;
++        public String extension;
++        public String audioMime;
++        public int aacProfile;
++        public int sampleRate;
++        public int audioBitrate;
++
++        /** The bytes a minute takes, or -1 when it follows the picture's quality. */
++        public long bytesPerMinute(boolean withAudio, int audioTracks) {
++            if (bitrateMode == BITRATE_MODE_CQ) return -1;
++            long bits = bitrate + (withAudio ? (long) audioBitrate * audioTracks : 0);
++            return bits * 60 / 8;
++        }
++    }
++
++    public static boolean isVideoMime(String mime) {
++        return MediaFormat.MIMETYPE_VIDEO_AVC.equals(mime)
++                || MediaFormat.MIMETYPE_VIDEO_HEVC.equals(mime)
++                || MediaFormat.MIMETYPE_VIDEO_AV1.equals(mime)
++                || MediaFormat.MIMETYPE_VIDEO_VP8.equals(mime)
++                || MediaFormat.MIMETYPE_VIDEO_VP9.equals(mime);
++    }
++
++    /** The codec when none is chosen: H.265 with a hardware encoder, H.264 otherwise. */
++    public static String defaultCodec() {
++        for (MediaCodecInfo info : new MediaCodecList(MediaCodecList.REGULAR_CODECS)
++                .getCodecInfos()) {
++            if (!info.isEncoder() || !info.isHardwareAccelerated() || info.isAlias()) continue;
++            for (String type : info.getSupportedTypes()) {
++                if (type.equalsIgnoreCase(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
++                    return MediaFormat.MIMETYPE_VIDEO_HEVC;
++                }
++            }
++        }
++        return MediaFormat.MIMETYPE_VIDEO_AVC;
++    }
++
++    /** The encoder [name] of [mime], or the codec's first hardware encoder when [name] is empty. */
++    public static MediaCodecInfo findEncoder(String mime, String name) {
++        MediaCodecInfo software = null;
++        for (MediaCodecInfo info : new MediaCodecList(MediaCodecList.REGULAR_CODECS)
++                .getCodecInfos()) {
++            if (!info.isEncoder() || info.isAlias()) continue;
++            boolean takes = false;
++            for (String type : info.getSupportedTypes()) {
++                if (type.equalsIgnoreCase(mime)) takes = true;
++            }
++            if (!takes) continue;
++            if (!name.isEmpty()) {
++                if (info.getName().equals(name)) return info;
++                continue;
++            }
++            if (info.isHardwareAccelerated()) return info;
++            if (software == null) software = info;
++        }
++        return name.isEmpty() ? software : null;
++    }
++
++    private static int tenBitProfile(String mime) {
++        switch (mime) {
++            case MediaFormat.MIMETYPE_VIDEO_AVC: return CodecProfileLevel.AVCProfileHigh10;
++            case MediaFormat.MIMETYPE_VIDEO_HEVC: return CodecProfileLevel.HEVCProfileMain10;
++            case MediaFormat.MIMETYPE_VIDEO_AV1: return CodecProfileLevel.AV1ProfileMain10;
++            case MediaFormat.MIMETYPE_VIDEO_VP9: return CodecProfileLevel.VP9Profile2;
++            default: return -1;
++        }
++    }
++
++    private static int align(int value, int alignment) {
++        return Math.max(alignment, value - value % alignment);
++    }
++
++    /**
++     * What these settings come to for a screen of [metrics] at [refreshRate]: the encoder, the
++     * size, rate and bitrate it takes, the format and the sound. A setting that cannot be used
++     * throws [Unusable] naming it.
++     */
++    public Resolved resolve(Context context, DisplayMetrics metrics, float refreshRate)
++            throws Unusable {
++        Resolved r = new Resolved();
++        r.videoMime = codec.isEmpty() ? defaultCodec() : codec;
++        if (!isVideoMime(r.videoMime)) {
++            throw new Unusable(context.getString(R.string.lujarch_recorder_error_codec, codec));
++        }
++        boolean webm = "webm".equals(format);
++        boolean webmCodec = MediaFormat.MIMETYPE_VIDEO_VP8.equals(r.videoMime)
++                || MediaFormat.MIMETYPE_VIDEO_VP9.equals(r.videoMime);
++        if (webm != webmCodec) {
++            throw new Unusable(context.getString(R.string.lujarch_recorder_error_format));
++        }
++        r.muxerFormat = webm ? MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM
++                : MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4;
++        r.fileMime = webm ? "video/webm" : "video/mp4";
++        r.extension = webm ? ".webm" : ".mp4";
++
++        r.videoEncoder = findEncoder(r.videoMime, encoder);
++        if (r.videoEncoder == null) {
++            throw new Unusable(context.getString(R.string.lujarch_recorder_error_encoder,
++                    encoder.isEmpty() ? r.videoMime : encoder));
++        }
++        MediaCodecInfo.CodecCapabilities caps =
++                r.videoEncoder.getCapabilitiesForType(r.videoMime);
++        MediaCodecInfo.VideoCapabilities vc = caps.getVideoCapabilities();
++
++        // The size.
++        int screenW = metrics.widthPixels;
++        int screenH = metrics.heightPixels;
++        if (orientation == 1) {
++            screenW = Math.min(metrics.widthPixels, metrics.heightPixels);
++            screenH = Math.max(metrics.widthPixels, metrics.heightPixels);
++        } else if (orientation == 2) {
++            screenW = Math.max(metrics.widthPixels, metrics.heightPixels);
++            screenH = Math.min(metrics.widthPixels, metrics.heightPixels);
++        }
++        int w;
++        int h;
++        if (resolution == 0 && width > 0 && height > 0) {
++            w = width;
++            h = height;
++        } else {
++            int scale = resolution > 0 ? resolution : 100;
++            w = screenW * scale / 100;
++            h = screenH * scale / 100;
++        }
++        w = align(w, vc.getWidthAlignment());
++        h = align(h, vc.getHeightAlignment());
++        if (!vc.isSizeSupported(w, h)) {
++            int maxW = vc.getSupportedWidths().getUpper();
++            int maxH = vc.getSupportedHeights().getUpper();
++            double fit = Math.min(1.0, Math.min((double) maxW / w, (double) maxH / h));
++            int fw = align((int) (w * fit), vc.getWidthAlignment());
++            int fh = align((int) (h * fit), vc.getHeightAlignment());
++            while (!vc.isSizeSupported(fw, fh) && fw > vc.getWidthAlignment()
++                    && fh > vc.getHeightAlignment()) {
++                fw = align(fw * 15 / 16, vc.getWidthAlignment());
++                fh = align(fh * 15 / 16, vc.getHeightAlignment());
++            }
++            if (!vc.isSizeSupported(fw, fh)) {
++                throw new Unusable(context.getString(R.string.lujarch_recorder_error_size, w, h));
++            }
++            Log.i(TAG, "size " + w + "x" + h + " brought to " + fw + "x" + fh);
++            w = fw;
++            h = fh;
++        }
++        r.width = w;
++        r.height = h;
++
++        // The frame rate.
++        int fps = frameRate > 0 ? frameRate : Math.round(refreshRate);
++        Range<Double> rates = vc.getSupportedFrameRatesFor(w, h);
++        if (fps > rates.getUpper()) {
++            Log.i(TAG, "frame rate " + fps + " brought to " + rates.getUpper().intValue());
++            fps = rates.getUpper().intValue();
++        }
++        r.frameRate = Math.max(1, fps);
++
++        // The bitrate.
++        Range<Integer> bitrates = vc.getBitrateRange();
++        int bitrate = bitrateKbps > 0 ? bitrateKbps * 1000 : w * h * r.frameRate / 30 * 6;
++        r.bitrate = bitrates.clamp(bitrate);
++        MediaCodecInfo.EncoderCapabilities ec = caps.getEncoderCapabilities();
++        if (bitrateMode >= 0) {
++            if (!ec.isBitrateModeSupported(bitrateMode)) {
++                throw new Unusable(context.getString(R.string.lujarch_recorder_error_bitrate_mode));
++            }
++            r.bitrateMode = bitrateMode;
++        }
++        if (r.bitrateMode == BITRATE_MODE_CQ) {
++            Range<Integer> q = ec.getQualityRange();
++            r.quality = quality >= 0 ? q.clamp(quality) : q.getUpper() * 3 / 4;
++        }
++
++        // Profile and level.
++        r.profile = profile;
++        if (r.profile < 0 && bitDepth == 10) {
++            r.profile = tenBitProfile(r.videoMime);
++            if (r.profile < 0) {
++                throw new Unusable(context.getString(R.string.lujarch_recorder_error_bit_depth));
++            }
++        }
++        if (r.profile >= 0) {
++            boolean found = false;
++            for (CodecProfileLevel pl : caps.profileLevels) {
++                if (pl.profile == r.profile && (level < 0 || pl.level >= level)) found = true;
++            }
++            if (!found) {
++                throw new Unusable(context.getString(R.string.lujarch_recorder_error_profile));
++            }
++            r.level = level;
++        }
++
++        // The sound.
++        r.sampleRate = sampleRate;
++        r.audioBitrate = audioBitrateKbps * 1000;
++        switch (audioCodec) {
++            case "opus":
++                r.audioMime = MediaFormat.MIMETYPE_AUDIO_OPUS;
++                if (sampleRate != 48000) {
++                    throw new Unusable(context.getString(R.string.lujarch_recorder_error_opus_rate));
++                }
++                break;
++            case "aac_he":
++                r.audioMime = MediaFormat.MIMETYPE_AUDIO_AAC;
++                r.aacProfile = CodecProfileLevel.AACObjectHE;
++                break;
++            default:
++                r.audioMime = MediaFormat.MIMETYPE_AUDIO_AAC;
++                r.aacProfile = CodecProfileLevel.AACObjectLC;
++                break;
++        }
++        if (webm && audioSource != ScreenRecordingAudioSource.NONE
++                && !MediaFormat.MIMETYPE_AUDIO_OPUS.equals(r.audioMime)) {
++            throw new Unusable(context.getString(R.string.lujarch_recorder_error_format));
++        }
++        return r;
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // The file (REC-4)
++
++    /** The file name of a recording started at [millis], [part] 1 for the first file. */
++    public String fileName(long millis, int part, String extension) {
++        Calendar c = Calendar.getInstance();
++        c.setTimeInMillis(millis);
++        String name = fileName
++                .replace("yyyy", String.format(Locale.ROOT, "%04d", c.get(Calendar.YEAR)))
++                .replace("MM", String.format(Locale.ROOT, "%02d", c.get(Calendar.MONTH) + 1))
++                .replace("dd", String.format(Locale.ROOT, "%02d", c.get(Calendar.DAY_OF_MONTH)))
++                .replace("HH", String.format(Locale.ROOT, "%02d", c.get(Calendar.HOUR_OF_DAY)))
++                .replace("mm", String.format(Locale.ROOT, "%02d", c.get(Calendar.MINUTE)))
++                .replace("ss", String.format(Locale.ROOT, "%02d", c.get(Calendar.SECOND)))
++                .replace('/', '_');
++        if (name.isEmpty()) name = "screen";
++        return (part > 1 ? name + "-" + part : name) + extension;
++    }
++
++    /** The folder, under DCIM, Movies or Pictures, as MediaStore takes it. */
++    public String relativePath() {
++        String f = folder.replaceAll("^/+|/+$", "");
++        if (!(f.equals("DCIM") || f.startsWith("DCIM/") || f.equals("Movies")
++                || f.startsWith("Movies/") || f.equals("Pictures") || f.startsWith("Pictures/"))) {
++            Log.w(TAG, "folder " + folder + " is not under DCIM, Movies or Pictures; Movies");
++            f = "Movies";
++        }
++        return f + "/";
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..43b41b21ac8dc4ff5fe2af785491739462f569fb
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java
+@@ -0,0 +1,702 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.screenrecord;
++
++import android.annotation.SuppressLint;
++import android.content.ContentResolver;
++import android.content.ContentValues;
++import android.content.Context;
++import android.media.AudioAttributes;
++import android.media.AudioFormat;
++import android.media.AudioPlaybackCaptureConfiguration;
++import android.media.AudioRecord;
++import android.media.MediaCodec;
++import android.media.MediaFormat;
++import android.media.MediaMuxer;
++import android.media.MediaRecorder;
++import android.media.audiofx.AcousticEchoCanceler;
++import android.media.audiofx.NoiseSuppressor;
++import android.media.projection.MediaProjection;
++import android.net.Uri;
++import android.os.Bundle;
++import android.os.ParcelFileDescriptor;
++import android.provider.MediaStore;
++import android.util.Log;
++import android.view.Surface;
++
++import com.android.systemui.res.R;
++
++import java.io.IOException;
++import java.nio.ByteBuffer;
++import java.nio.ByteOrder;
++import java.util.ArrayList;
++import java.util.List;
++
++/**
++ * Encodes the screen and its sound as LujarchRecorderConfig says, straight into MediaStore
++ * items: the picture through a video encoder fed by a surface, the sound read from the
++ * microphone and the playback capture, mixed or kept apart, and each file published as it ends.
++ */
++final class LujarchScreenEncoder {
++    private static final String TAG = LujarchRecorderConfig.TAG;
++    private static final long TIMEOUT_US = 10_000;
++    private static final int AUDIO_FRAME_MS = 20;
++
++    interface Listener {
++        /** A limit was reached and the recording stops (MediaRecorder's info codes). */
++        void onLimit(int what);
++
++        /** The recording failed; what was recorded is kept. */
++        void onFailed(String reason);
++    }
++
++    private final Context mContext;
++    private final LujarchRecorderConfig mConfig;
++    private final LujarchRecorderConfig.Resolved mResolved;
++    private final MediaProjection mProjection;
++    private final Listener mListener;
++    private final long mStartMillis = System.currentTimeMillis();
++
++    private final boolean mMic;
++    private final boolean mInternal;
++    private final int mAudioTracks;
++
++    private MediaCodec mVideo;
++    private Surface mSurface;
++    private final List<MediaCodec> mAudioCodecs = new ArrayList<>();
++    private AudioRecord mMicRecord;
++    private AudioRecord mInternalRecord;
++    private NoiseSuppressor mNoiseSuppressor;
++    private AcousticEchoCanceler mEchoCanceler;
++    private Thread mVideoThread;
++    private Thread mAudioThread;
++    private volatile boolean mStopping;
++    private volatile boolean mFailed;
++
++    private final Object mLock = new Object();
++    // Guarded by mLock.
++    private final MediaFormat[] mFormats;
++    private MediaMuxer mMuxer;
++    private ParcelFileDescriptor mFd;
++    private Uri mUri;
++    private final List<Uri> mFinished = new ArrayList<>();
++    private boolean mStarted;
++    private final List<Pending> mWaiting = new ArrayList<>();
++    private int mPart = 1;
++    private long mSegmentBaseUs;
++    private long mSegmentBytes;
++    private long mLastVideoUs = -1;
++    private final long[] mLastPts;
++    private boolean mRotate;
++    private boolean mLimitSent;
++    private long mBaseUs = -1;
++    private boolean mPaused;
++    private long mPausedAtUs;
++    private long mPausedUs;
++
++    private record Pending(int track, ByteBuffer data, MediaCodec.BufferInfo info) {
++    }
++
++    LujarchScreenEncoder(Context context, LujarchRecorderConfig config,
++            LujarchRecorderConfig.Resolved resolved, MediaProjection projection,
++            ScreenRecordingAudioSource source, Listener listener) {
++        mContext = context;
++        mConfig = config;
++        mResolved = resolved;
++        mProjection = projection;
++        mListener = listener;
++        mMic = source == ScreenRecordingAudioSource.MIC
++                || source == ScreenRecordingAudioSource.MIC_AND_INTERNAL;
++        mInternal = source == ScreenRecordingAudioSource.INTERNAL
++                || source == ScreenRecordingAudioSource.MIC_AND_INTERNAL;
++        mAudioTracks = !mMic && !mInternal ? 0 : (mMic && mInternal && config.separateTracks)
++                ? 2 : 1;
++        mFormats = new MediaFormat[1 + mAudioTracks];
++        mLastPts = new long[1 + mAudioTracks];
++    }
++
++    // -------------------------------------------------------------------------------------
++    // Setting up
++
++    /** Prepares the encoders and the first file; returns the surface the screen is drawn on. */
++    Surface prepare() throws IOException, LujarchRecorderConfig.Unusable {
++        if (mAudioTracks == 2 && mResolved.muxerFormat
++                == MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM) {
++            throw new LujarchRecorderConfig.Unusable(
++                    mContext.getString(R.string.lujarch_recorder_error_webm_tracks));
++        }
++        mVideo = createVideoCodec();
++        mSurface = mVideo.createInputSurface();
++        if (mAudioTracks > 0) {
++            createAudioRecords();
++            for (int i = 0; i < mAudioTracks; i++) mAudioCodecs.add(createAudioCodec());
++        }
++        openFile();
++        return mSurface;
++    }
++
++    private MediaCodec createVideoCodec() throws IOException, LujarchRecorderConfig.Unusable {
++        LujarchRecorderConfig.Resolved r = mResolved;
++        MediaFormat f = MediaFormat.createVideoFormat(r.videoMime, r.width, r.height);
++        f.setInteger(MediaFormat.KEY_COLOR_FORMAT,
++                android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
++        f.setInteger(MediaFormat.KEY_FRAME_RATE, r.frameRate);
++        f.setFloat(MediaFormat.KEY_MAX_FPS_TO_ENCODER, r.frameRate);
++        f.setInteger(MediaFormat.KEY_BIT_RATE, r.bitrate);
++        if (r.bitrateMode >= 0) f.setInteger(MediaFormat.KEY_BITRATE_MODE, r.bitrateMode);
++        if (r.quality >= 0) f.setInteger(MediaFormat.KEY_QUALITY, r.quality);
++        if (r.profile >= 0) f.setInteger(MediaFormat.KEY_PROFILE, r.profile);
++        if (r.level >= 0) f.setInteger(MediaFormat.KEY_LEVEL, r.level);
++        f.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, mConfig.keyInterval);
++        if (mConfig.bFrames > 0) f.setInteger(MediaFormat.KEY_MAX_B_FRAMES, mConfig.bFrames);
++        if (mConfig.everyFrame) {
++            f.setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1_000_000L / r.frameRate);
++        }
++        MediaCodec codec = MediaCodec.createByCodecName(r.videoEncoder.getName());
++        try {
++            codec.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
++        } catch (RuntimeException e) {
++            codec.release();
++            Log.e(TAG, "video encoder refused " + f, e);
++            throw new LujarchRecorderConfig.Unusable(mContext.getString(
++                    R.string.lujarch_recorder_error_configure, r.videoEncoder.getName()));
++        }
++        Log.i(TAG, "video " + r.videoEncoder.getName() + " " + f);
++        return codec;
++    }
++
++    private MediaCodec createAudioCodec() throws IOException, LujarchRecorderConfig.Unusable {
++        LujarchRecorderConfig.Resolved r = mResolved;
++        MediaFormat f = MediaFormat.createAudioFormat(r.audioMime, r.sampleRate, mConfig.channels);
++        f.setInteger(MediaFormat.KEY_BIT_RATE, r.audioBitrate);
++        if (MediaFormat.MIMETYPE_AUDIO_AAC.equals(r.audioMime)) {
++            f.setInteger(MediaFormat.KEY_AAC_PROFILE, r.aacProfile);
++        }
++        f.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, frameBytes() * 2);
++        MediaCodec codec;
++        try {
++            codec = MediaCodec.createByCodecName(
++                    new android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS)
++                            .findEncoderForFormat(f));
++        } catch (NullPointerException | IllegalArgumentException e) {
++            throw new LujarchRecorderConfig.Unusable(
++                    mContext.getString(R.string.lujarch_recorder_error_audio_codec));
++        }
++        try {
++            codec.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
++        } catch (RuntimeException e) {
++            codec.release();
++            Log.e(TAG, "audio encoder refused " + f, e);
++            throw new LujarchRecorderConfig.Unusable(
++                    mContext.getString(R.string.lujarch_recorder_error_audio_codec));
++        }
++        Log.i(TAG, "audio " + codec.getName() + " " + f);
++        return codec;
++    }
++
++    private int frameBytes() {
++        return mResolved.sampleRate * AUDIO_FRAME_MS / 1000 * mConfig.channels * 2;
++    }
++
++    @SuppressLint("MissingPermission")
++    private void createAudioRecords() throws LujarchRecorderConfig.Unusable {
++        int mask = mConfig.channels == 1 ? AudioFormat.CHANNEL_IN_MONO
++                : AudioFormat.CHANNEL_IN_STEREO;
++        AudioFormat format = new AudioFormat.Builder()
++                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
++                .setSampleRate(mResolved.sampleRate)
++                .setChannelMask(mask)
++                .build();
++        int buffer = Math.max(AudioRecord.getMinBufferSize(mResolved.sampleRate, mask,
++                AudioFormat.ENCODING_PCM_16BIT), frameBytes()) * 4;
++        if (mMic) {
++            mMicRecord = new AudioRecord.Builder()
++                    .setAudioSource(mConfig.echoCancellation
++                            ? MediaRecorder.AudioSource.VOICE_COMMUNICATION
++                            : MediaRecorder.AudioSource.DEFAULT)
++                    .setAudioFormat(format)
++                    .setBufferSizeInBytes(buffer)
++                    .build();
++            if (mMicRecord.getState() != AudioRecord.STATE_INITIALIZED) {
++                throw new LujarchRecorderConfig.Unusable(
++                        mContext.getString(R.string.lujarch_recorder_error_microphone));
++            }
++            int session = mMicRecord.getAudioSessionId();
++            if (mConfig.noiseSuppression) {
++                if (NoiseSuppressor.isAvailable()) {
++                    mNoiseSuppressor = NoiseSuppressor.create(session);
++                    if (mNoiseSuppressor != null) mNoiseSuppressor.setEnabled(true);
++                } else {
++                    Log.w(TAG, "noise suppression is not available");
++                }
++            }
++            if (mConfig.echoCancellation) {
++                if (AcousticEchoCanceler.isAvailable()) {
++                    mEchoCanceler = AcousticEchoCanceler.create(session);
++                    if (mEchoCanceler != null) mEchoCanceler.setEnabled(true);
++                } else {
++                    Log.w(TAG, "echo cancellation is not available");
++                }
++            }
++        }
++        if (mInternal) {
++            AudioPlaybackCaptureConfiguration capture =
++                    new AudioPlaybackCaptureConfiguration.Builder(mProjection)
++                            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
++                            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
++                            .addMatchingUsage(AudioAttributes.USAGE_GAME)
++                            .build();
++            mInternalRecord = new AudioRecord.Builder()
++                    .setAudioFormat(format)
++                    .setAudioPlaybackCaptureConfig(capture)
++                    .setBufferSizeInBytes(buffer)
++                    .build();
++            if (mInternalRecord.getState() != AudioRecord.STATE_INITIALIZED) {
++                throw new LujarchRecorderConfig.Unusable(
++                        mContext.getString(R.string.lujarch_recorder_error_device_audio));
++            }
++        }
++    }
++
++    // -------------------------------------------------------------------------------------
++    // Files (REC-4)
++
++    // Called with mLock held, or before the threads start.
++    private void openFile() throws IOException {
++        ContentValues values = new ContentValues();
++        values.put(MediaStore.Video.Media.DISPLAY_NAME,
++                mConfig.fileName(mStartMillis, mPart, mResolved.extension));
++        values.put(MediaStore.Video.Media.MIME_TYPE, mResolved.fileMime);
++        values.put(MediaStore.Video.Media.RELATIVE_PATH, mConfig.relativePath());
++        values.put(MediaStore.Video.Media.DATE_TAKEN, mStartMillis);
++        values.put(MediaStore.Video.Media.IS_PENDING, 1);
++        ContentResolver resolver = mContext.getContentResolver();
++        Uri uri = resolver.insert(
++                MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values);
++        if (uri == null) throw new IOException("MediaStore did not take " + values);
++        mFd = resolver.openFileDescriptor(uri, "rw");
++        if (mFd == null) throw new IOException("no file for " + uri);
++        mMuxer = new MediaMuxer(mFd.getFileDescriptor(), mResolved.muxerFormat);
++        mUri = uri;
++        mStarted = false;
++        mSegmentBytes = 0;
++        java.util.Arrays.fill(mLastPts, -1);
++        Log.i(TAG, "file " + uri + " " + values.get(MediaStore.Video.Media.DISPLAY_NAME));
++    }
++
++    // Called with mLock held.
++    private void startMuxerIfReady() {
++        for (MediaFormat f : mFormats) if (f == null) return;
++        for (MediaFormat f : mFormats) mMuxer.addTrack(f);
++        mMuxer.start();
++        mStarted = true;
++        for (Pending p : mWaiting) write(p.track, p.data, p.info);
++        mWaiting.clear();
++    }
++
++    // Called with mLock held. Ends the current file and publishes it.
++    private void closeFile() {
++        if (mMuxer == null) return;
++        boolean written = mStarted;
++        try {
++            if (mStarted) mMuxer.stop();
++        } catch (RuntimeException e) {
++            Log.e(TAG, "file " + mUri + " not finished", e);
++            written = false;
++        }
++        mMuxer.release();
++        mMuxer = null;
++        try {
++            mFd.close();
++        } catch (IOException e) {
++            Log.e(TAG, "file " + mUri + " not closed", e);
++        }
++        ContentResolver resolver = mContext.getContentResolver();
++        if (written) {
++            ContentValues values = new ContentValues();
++            values.put(MediaStore.Video.Media.IS_PENDING, 0);
++            resolver.update(mUri, values, null, null);
++            mFinished.add(mUri);
++            Log.i(TAG, "file " + mUri + " saved");
++        } else {
++            resolver.delete(mUri, null, null);
++            Log.w(TAG, "file " + mUri + " had nothing and is deleted");
++        }
++        mUri = null;
++    }
++
++    // -------------------------------------------------------------------------------------
++    // Running
++
++    void start() {
++        mVideo.start();
++        for (MediaCodec c : mAudioCodecs) c.start();
++        mVideoThread = new Thread(this::drainVideo, "lujarch_recorder_video");
++        mVideoThread.start();
++        if (mAudioTracks > 0) {
++            if (mMicRecord != null) mMicRecord.startRecording();
++            if (mInternalRecord != null) mInternalRecord.startRecording();
++            mAudioThread = new Thread(this::runAudio, "lujarch_recorder_audio");
++            mAudioThread.start();
++        }
++    }
++
++    /** Pauses the picture and the sound (REC-7). */
++    void pause() {
++        synchronized (mLock) {
++            if (mPaused) return;
++            mPaused = true;
++            mPausedAtUs = System.nanoTime() / 1000;
++        }
++        Bundle b = new Bundle();
++        b.putInt(MediaCodec.PARAMETER_KEY_SUSPEND, 1);
++        mVideo.setParameters(b);
++        Log.i(TAG, "paused");
++    }
++
++    void resume() {
++        synchronized (mLock) {
++            if (!mPaused) return;
++            mPaused = false;
++            mPausedUs += System.nanoTime() / 1000 - mPausedAtUs;
++        }
++        Bundle b = new Bundle();
++        b.putInt(MediaCodec.PARAMETER_KEY_SUSPEND, 0);
++        b.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
++        mVideo.setParameters(b);
++        Log.i(TAG, "resumed");
++    }
++
++    boolean isPaused() {
++        synchronized (mLock) {
++            return mPaused;
++        }
++    }
++
++    /** Ends the recording; every file with something in it is saved. */
++    void stop() {
++        if (mStopping) return;
++        mStopping = true;
++        try {
++            if (!mFailed) mVideo.signalEndOfInputStream();
++        } catch (RuntimeException e) {
++            Log.e(TAG, "video end not signalled", e);
++        }
++        join(mVideoThread);
++        join(mAudioThread);
++        if (mMicRecord != null) mMicRecord.release();
++        if (mInternalRecord != null) mInternalRecord.release();
++        if (mNoiseSuppressor != null) mNoiseSuppressor.release();
++        if (mEchoCanceler != null) mEchoCanceler.release();
++        release(mVideo);
++        for (MediaCodec c : mAudioCodecs) release(c);
++        if (mSurface != null) mSurface.release();
++        synchronized (mLock) {
++            closeFile();
++        }
++    }
++
++    /** The files saved, the first first. */
++    List<Uri> files() {
++        synchronized (mLock) {
++            return new ArrayList<>(mFinished);
++        }
++    }
++
++    /** The file being written, or the last one saved. */
++    Uri currentUri() {
++        synchronized (mLock) {
++            if (mUri != null) return mUri;
++            return mFinished.isEmpty() ? null : mFinished.get(mFinished.size() - 1);
++        }
++    }
++
++    /** Deletes a file still being written: one that was never finished. */
++    void discardUnfinished() {
++        synchronized (mLock) {
++            if (mMuxer != null) {
++                mMuxer.release();
++                mMuxer = null;
++            }
++            if (mUri != null) {
++                mContext.getContentResolver().delete(mUri, null, null);
++                mUri = null;
++            }
++        }
++    }
++
++    private static void join(Thread t) {
++        if (t == null) return;
++        try {
++            t.join(5000);
++        } catch (InterruptedException e) {
++            Thread.currentThread().interrupt();
++        }
++    }
++
++    private static void release(MediaCodec c) {
++        if (c == null) return;
++        try {
++            c.stop();
++        } catch (RuntimeException e) {
++            // A codec that failed cannot be stopped; it is released all the same.
++        }
++        c.release();
++    }
++
++    private void fail(String what, Throwable e) {
++        Log.e(TAG, what, e);
++        if (mFailed || mStopping) return;
++        mFailed = true;
++        mListener.onFailed(mContext.getString(R.string.lujarch_recorder_error_encoding, what,
++                e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
++    }
++
++    private void drainVideo() {
++        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
++        try {
++            while (true) {
++                int index = mVideo.dequeueOutputBuffer(info, TIMEOUT_US);
++                if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
++                    if (mFailed) return;
++                    continue;
++                }
++                if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
++                    trackReady(0, mVideo.getOutputFormat());
++                    continue;
++                }
++                if (index < 0) continue;
++                ByteBuffer data = mVideo.getOutputBuffer(index);
++                boolean end = (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
++                if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 && info.size > 0
++                        && data != null) {
++                    sample(0, data, info);
++                }
++                mVideo.releaseOutputBuffer(index, false);
++                if (end) return;
++            }
++        } catch (RuntimeException e) {
++            fail(mResolved.videoEncoder.getName(), e);
++        }
++    }
++
++    private void runAudio() {
++        int bytes = frameBytes();
++        ByteBuffer mic = mMicRecord != null
++                ? ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder()) : null;
++        ByteBuffer internal = mInternalRecord != null
++                ? ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder()) : null;
++        long frames = 0;
++        int frameSize = mConfig.channels * 2;
++        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
++        try {
++            while (!mStopping && !mFailed) {
++                int n = Integer.MAX_VALUE;
++                if (mic != null) n = Math.min(n, read(mMicRecord, mic, bytes));
++                if (internal != null) n = Math.min(n, read(mInternalRecord, internal, bytes));
++                if (n <= 0) continue;
++                boolean paused;
++                synchronized (mLock) {
++                    paused = mPaused;
++                }
++                if (!paused) {
++                    long ptsUs = frames * 1_000_000L / mResolved.sampleRate;
++                    if (mic != null) scale(mic, n, mConfig.micVolume);
++                    if (internal != null) scale(internal, n, mConfig.internalVolume);
++                    if (mAudioTracks == 2) {
++                        feed(0, internal, n, ptsUs, false);
++                        feed(1, mic, n, ptsUs, false);
++                    } else if (mic != null && internal != null) {
++                        mix(internal, mic, n);
++                        feed(0, internal, n, ptsUs, false);
++                    } else {
++                        feed(0, mic != null ? mic : internal, n, ptsUs, false);
++                    }
++                    frames += n / frameSize;
++                }
++                for (int t = 0; t < mAudioTracks; t++) drainAudio(t, info, false);
++            }
++            long ptsUs = frames * 1_000_000L / mResolved.sampleRate;
++            for (int t = 0; t < mAudioTracks; t++) {
++                feed(t, null, 0, ptsUs, true);
++                drainAudio(t, info, true);
++            }
++        } catch (RuntimeException e) {
++            fail(mAudioCodecs.isEmpty() ? "audio" : mAudioCodecs.get(0).getName(), e);
++        }
++    }
++
++    private static int read(AudioRecord record, ByteBuffer buffer, int bytes) {
++        buffer.clear();
++        int n = record.read(buffer, bytes, AudioRecord.READ_BLOCKING);
++        if (n < 0) throw new IllegalStateException("audio read failed: " + n);
++        buffer.limit(n);
++        return n;
++    }
++
++    /** Scales 16-bit samples by [percent], clipping. */
++    private static void scale(ByteBuffer b, int n, int percent) {
++        if (percent == 100) return;
++        for (int i = 0; i + 1 < n; i += 2) {
++            int v = b.getShort(i) * percent / 100;
++            b.putShort(i, (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, v)));
++        }
++    }
++
++    /** Adds [other] into [into], clipping. */
++    private static void mix(ByteBuffer into, ByteBuffer other, int n) {
++        for (int i = 0; i + 1 < n; i += 2) {
++            int v = into.getShort(i) + other.getShort(i);
++            into.putShort(i, (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, v)));
++        }
++    }
++
++    private void feed(int track, ByteBuffer pcm, int n, long ptsUs, boolean end) {
++        MediaCodec codec = mAudioCodecs.get(track);
++        int index;
++        do {
++            index = codec.dequeueInputBuffer(TIMEOUT_US);
++            if (index < 0) drainAudio(track, new MediaCodec.BufferInfo(), false);
++        } while (index < 0 && !mFailed);
++        if (index < 0) return;
++        ByteBuffer in = codec.getInputBuffer(index);
++        int size = 0;
++        if (pcm != null && in != null) {
++            pcm.position(0).limit(n);
++            in.clear();
++            in.put(pcm);
++            size = n;
++        }
++        codec.queueInputBuffer(index, 0, size, ptsUs,
++                end ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
++    }
++
++    private void drainAudio(int track, MediaCodec.BufferInfo info, boolean untilEnd) {
++        MediaCodec codec = mAudioCodecs.get(track);
++        while (true) {
++            int index = codec.dequeueOutputBuffer(info, untilEnd ? TIMEOUT_US : 0);
++            if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
++                if (untilEnd && !mFailed) continue;
++                return;
++            }
++            if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
++                trackReady(1 + track, codec.getOutputFormat());
++                continue;
++            }
++            if (index < 0) continue;
++            ByteBuffer data = codec.getOutputBuffer(index);
++            boolean end = (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
++            if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 && info.size > 0
++                    && data != null) {
++                sample(1 + track, data, info);
++            }
++            codec.releaseOutputBuffer(index, false);
++            if (end) return;
++        }
++    }
++
++    // -------------------------------------------------------------------------------------
++    // Writing
++
++    private void trackReady(int track, MediaFormat format) {
++        synchronized (mLock) {
++            mFormats[track] = format;
++            if (mMuxer != null && !mStarted) startMuxerIfReady();
++        }
++    }
++
++    /**
++     * Writes one encoded sample: video times are the screen's clock less the pauses, sound
++     * times count the samples recorded; both start at the first picture.
++     */
++    private void sample(int track, ByteBuffer data, MediaCodec.BufferInfo info) {
++        synchronized (mLock) {
++            if (mMuxer == null) return;
++            long us = info.presentationTimeUs;
++            if (track == 0) {
++                if (mBaseUs < 0) mBaseUs = us;
++                us = us - mBaseUs - mPausedUs;
++                boolean key = (info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
++                if (mRotate && key) rotate(us);
++                mLastVideoUs = us;
++            } else if (mBaseUs < 0) {
++                return;
++            }
++            us -= mSegmentBaseUs;
++            if (us < 0) return;
++            MediaCodec.BufferInfo out = new MediaCodec.BufferInfo();
++            out.set(0, info.size, us, info.flags);
++            data.position(info.offset).limit(info.offset + info.size);
++            if (!mStarted) {
++                ByteBuffer copy = ByteBuffer.allocate(info.size);
++                copy.put(data);
++                copy.flip();
++                mWaiting.add(new Pending(track, copy, out));
++                return;
++            }
++            write(track, data, out);
++            checkLimits(us);
++        }
++    }
++
++    // Called with mLock held.
++    private void write(int track, ByteBuffer data, MediaCodec.BufferInfo info) {
++        if (info.presentationTimeUs <= mLastPts[track]) {
++            info.presentationTimeUs = mLastPts[track] + 1;
++        }
++        mLastPts[track] = info.presentationTimeUs;
++        mMuxer.writeSampleData(track, data, info);
++        mSegmentBytes += info.size;
++    }
++
++    // Called with mLock held.
++    private void checkLimits(long us) {
++        if (mRotate || mLimitSent) return;
++        boolean time = mConfig.longestMinutes > 0
++                && us >= mConfig.longestMinutes * 60_000_000L;
++        boolean size = mConfig.largestMb > 0
++                && mSegmentBytes >= mConfig.largestMb * 1_000_000L * 98 / 100;
++        if (!time && !size) return;
++        if (mConfig.newFileAtLimit) {
++            Log.i(TAG, "limit reached; a new file follows");
++            mRotate = true;
++            Bundle b = new Bundle();
++            b.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
++            mVideo.setParameters(b);
++        } else {
++            Log.i(TAG, "limit reached; the recording stops");
++            mLimitSent = true;
++            mListener.onLimit(time ? MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED
++                    : MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED);
++        }
++    }
++
++    // Called with mLock held, at a key frame at [us] of the recording.
++    private void rotate(long us) {
++        mRotate = false;
++        closeFile();
++        mPart++;
++        try {
++            openFile();
++        } catch (IOException e) {
++            fail(mContext.getString(R.string.lujarch_recorder_error_file), e);
++            return;
++        }
++        mSegmentBaseUs = us;
++        startMuxerIfReady();
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java b/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
+index 730678b992d2ca2efba92a5eb604c4d305de4567..141e7d362a23f4d45c35d2393922d6a663240701 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
+@@ -238,9 +238,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+                         displayId,
+                         this
+                 );
+-                setLowQuality(mLowQuality);
+-                setLongerDuration(mLongerDuration);
+-                setHEVC(mHEVC);
+ 
+                 if (startRecording()) {
+                     updateState(true);
+@@ -581,24 +578,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+                 createSaveNotification(savedRecording), currentUser);
+     }
+ 
+-    private void setLowQuality(boolean turnOn) {
+-        if (getRecorder() != null) {
+-            getRecorder().setLowQuality(turnOn);
+-        }
+-    }
+-
+-    private void setLongerDuration(boolean longer) {
+-        if (getRecorder() != null) {
+-            getRecorder().setLongerDuration(longer);
+-        }
+-    }
+-
+-    private void setHEVC(boolean hevc) {
+-        if (getRecorder() != null) {
+-            getRecorder().setHEVC(hevc);
+-        }
+-    }
+-
+     protected String getTag() {
+         return TAG;
+     }
+@@ -654,6 +633,13 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+         onStartCommand(stopIntent, 0, 0);
+     }
+ 
++    @Override
++    public void onFailed(String reason) {
++        Log.e(getTag(), "Recording failed: " + reason);
++        Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
++        onStopped(mUserContextTracker.getUserContext().getUserId(), StopReason.STOP_ERROR);
++    }
++
+     @Override
+     public void onStarted() {
+         mScreenRecordingStartTimeStore.markStartTime();
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
+index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68f5fcc004 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
+@@ -18,24 +18,14 @@ package com.android.systemui.screenrecord;
+ 
+ import static android.content.Context.MEDIA_PROJECTION_SERVICE;
+ 
+-import static com.android.systemui.screenrecord.ScreenRecordingAudioSource.INTERNAL;
+-import static com.android.systemui.screenrecord.ScreenRecordingAudioSource.MIC;
+-import static com.android.systemui.screenrecord.ScreenRecordingAudioSource.MIC_AND_INTERNAL;
+ 
+ import android.annotation.Nullable;
+-import android.app.ActivityManager;
+ import android.content.ContentProvider;
+-import android.content.ContentResolver;
+-import android.content.ContentValues;
+ import android.content.Context;
+ import android.graphics.Bitmap;
+ import android.graphics.drawable.Icon;
+ import android.hardware.display.DisplayManager;
+ import android.hardware.display.VirtualDisplay;
+-import android.media.MediaCodec;
+-import android.media.MediaCodecInfo;
+-import android.media.MediaFormat;
+-import android.media.MediaMuxer;
+ import android.media.MediaRecorder;
+ import android.media.ThumbnailUtils;
+ import android.media.projection.IMediaProjection;
+@@ -48,8 +38,6 @@ import android.os.Handler;
+ import android.os.IBinder;
+ import android.os.RemoteException;
+ import android.os.ServiceManager;
+-import android.provider.MediaStore;
+-import android.text.format.DateUtils;
+ import android.util.DisplayMetrics;
+ import android.util.Log;
+ import android.util.Size;
+@@ -64,54 +52,29 @@ import com.android.systemui.mediaprojection.MediaProjectionCaptureTarget;
+ import java.io.Closeable;
+ import java.io.File;
+ import java.io.IOException;
+-import java.io.OutputStream;
+-import java.nio.file.Files;
+-import java.text.SimpleDateFormat;
+ import java.util.ArrayList;
+-import java.util.Date;
+ import java.util.List;
+ import java.util.concurrent.atomic.AtomicBoolean;
+ 
+ /**
+- * Recording screen and mic/internal audio
++ * Recording screen and mic/internal audio, with the settings of Settings > System > Screen
++ * record (LujarchRecorderConfig).
+  */
+ public class ScreenMediaRecorder {
+-    private static final int TOTAL_NUM_TRACKS = 1;
+-    private static final int VIDEO_FRAME_RATE = 30;
+-    private static final int VIDEO_FRAME_RATE_TO_RESOLUTION_RATIO = 6;
+-    private static final int LOW_VIDEO_FRAME_RATE_TO_RESOLUTION_RATIO = 2;
+-    private static final int LOW_VIDEO_FRAME_RATE = 25;
+-    private static final int AUDIO_BIT_RATE = 196000;
+-    private static final int AUDIO_SAMPLE_RATE = 44100;
+-    private static final int MAX_DURATION_MS = (int) DateUtils.HOUR_IN_MILLIS;
+-    private static final long MAX_FILESIZE_BYTES = 5000000000L;
+-    private static final long MAX_FILESIZE_BYTES_LONGER = 16106100000L; // 15 GiB
+-
+     private static final String TAG = "ScreenMediaRecorder";
+ 
+-    private File mTempVideoFile;
+-    private File mTempAudioFile;
+     private MediaProjection mMediaProjection;
+     private Surface mInputSurface;
+     private VirtualDisplay mVirtualDisplay;
+-    private MediaRecorder mMediaRecorder;
+-    private int mUid;
+-    private ScreenInternalAudioRecorder mAudio;
+-    private ScreenRecordingAudioSource mAudioSource;
+-    private Long mStartTimeMillis = 0L;
++    private LujarchScreenEncoder mEncoder;
++    private final int mUid;
++    private final ScreenRecordingAudioSource mAudioSource;
+     private final MediaProjectionCaptureTarget mCaptureRegion;
+     private final Handler mHandler;
+     private final int mDisplayId;
+     private final AtomicBoolean mIsStarted = new AtomicBoolean();
+ 
+-    private int mMaxRefreshRate;
+-    private String mAvcProfileLevel;
+-
+-    private boolean mLowQuality;
+-    private boolean mLongerDuration;
+-    private boolean mHEVC;
+-
+-    private Context mContext;
++    private final Context mContext;
+     ScreenMediaRecorderListener mListener;
+ 
+     public ScreenMediaRecorder(
+@@ -122,21 +85,6 @@ public class ScreenMediaRecorder {
+             MediaProjectionCaptureTarget captureRegion,
+             int displayId,
+             ScreenMediaRecorderListener listener) {
+-        this(context, handler, uid, audioSource, captureRegion,
+-                displayId, listener, false, false, false);
+-    }
+-
+-    public ScreenMediaRecorder(
+-            Context context,
+-            Handler handler,
+-            int uid,
+-            ScreenRecordingAudioSource audioSource,
+-            MediaProjectionCaptureTarget captureRegion,
+-            int displayId,
+-            ScreenMediaRecorderListener listener,
+-            boolean lowQuality,
+-            boolean longerDuration,
+-            boolean hevc) {
+         mContext = context;
+         mHandler = handler;
+         mUid = uid;
+@@ -144,28 +92,21 @@ public class ScreenMediaRecorder {
+         mListener = listener;
+         mAudioSource = audioSource;
+         mDisplayId = displayId;
+-        mLowQuality = lowQuality;
+-        mLongerDuration = longerDuration;
+-        mHEVC = hevc;
+-        mMaxRefreshRate = mContext.getResources().getInteger(
+-                com.android.systemui.res.R.integer.config_screenRecorderMaxFramerate);
+-        mAvcProfileLevel = mContext.getResources().getString(
+-                com.android.systemui.res.R.string.config_screenRecorderAVCProfileLevel);
+-    }
+-
+-    public void setLowQuality(boolean low) {
+-        mLowQuality = low;
+     }
+ 
+-    public void setLongerDuration(boolean longer) {
+-        mLongerDuration = longer;
+-    }
+-
+-    public void setHEVC(boolean hevc) {
+-        mHEVC = hevc;
++    /** The settings resolved for the display [displayId]. */
++    public static LujarchRecorderConfig.Resolved resolve(Context context,
++            LujarchRecorderConfig config, int displayId) throws LujarchRecorderConfig.Unusable {
++        DisplayMetrics metrics = new DisplayMetrics();
++        Display display = context.getSystemService(DisplayManager.class).getDisplay(displayId);
++        display.getRealMetrics(metrics);
++        return config.resolve(context, metrics, display.getRefreshRate());
+     }
+ 
+     private void prepare() throws IOException, RemoteException, RuntimeException {
++        LujarchRecorderConfig config = LujarchRecorderConfig.read(mContext);
++        LujarchRecorderConfig.Resolved resolved = resolve(mContext, config, mDisplayId);
++
+         //Setup media projection
+         IBinder b = ServiceManager.getService(MEDIA_PROJECTION_SERVICE);
+         IMediaProjectionManager mediaService =
+@@ -187,68 +128,33 @@ public class ScreenMediaRecorder {
+         mMediaProjection = new MediaProjection(mContext, projection);
+         mMediaProjection.registerCallback(mediaProjectionCallback, mHandler);
+ 
+-        File cacheDir = mContext.getCacheDir();
+-        cacheDir.mkdirs();
+-        mTempVideoFile = File.createTempFile("temp", ".mp4", cacheDir);
+-
+-        // Set up media recorder
+-        mMediaRecorder = new MediaRecorder(mContext);
++        mEncoder = new LujarchScreenEncoder(mContext, config, resolved, mMediaProjection,
++                mAudioSource, new LujarchScreenEncoder.Listener() {
++                    @Override
++                    public void onLimit(int what) {
++                        mHandler.post(() -> mListener.onInfo(null, what, 0));
++                    }
+ 
+-        // Set up audio source
+-        if (mAudioSource == MIC) {
+-            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
++                    @Override
++                    public void onFailed(String reason) {
++                        mHandler.post(() -> mListener.onFailed(reason));
++                    }
++                });
++        try {
++            mInputSurface = mEncoder.prepare();
++        } catch (IOException | RuntimeException e) {
++            mEncoder.discardUnfinished();
++            mMediaProjection.stop();
++            throw e;
+         }
+-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+-
+-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+ 
+-
+-        // Set up video
+         DisplayMetrics metrics = new DisplayMetrics();
+-        DisplayManager dm = mContext.getSystemService(DisplayManager.class);
+-        Display display = dm.getDisplay(mDisplayId);
+-        display.getRealMetrics(metrics);
+-        int refreshRate = mLowQuality ? LOW_VIDEO_FRAME_RATE : (int) display.getRefreshRate();
+-        if (mMaxRefreshRate != 0 && refreshRate > mMaxRefreshRate) refreshRate = mMaxRefreshRate;
+-        VideoParameters videoParameters = getSupportedSize(metrics.widthPixels,
+-                metrics.heightPixels, refreshRate);
+-        if (!mHEVC) {
+-            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+-            mMediaRecorder.setVideoEncodingProfileLevel(
+-                    MediaCodecInfo.CodecProfileLevel.AVCProfileMain,
+-                    mLowQuality ? MediaCodecInfo.CodecProfileLevel.AVCLevel32
+-                    : getAvcProfileLevelCodeByName(mAvcProfileLevel));
+-        } else {
+-            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+-            mMediaRecorder.setVideoEncodingProfileLevel(
+-                    MediaCodecInfo.CodecProfileLevel.HEVCProfileMain,
+-                    mLowQuality ? MediaCodecInfo.CodecProfileLevel.HEVCHighTierLevel31
+-                    : MediaCodecInfo.CodecProfileLevel.HEVCHighTierLevel41);
+-        }
+-        mMediaRecorder.setVideoSize(videoParameters.mWidth, videoParameters.mHeight);
+-        mMediaRecorder.setVideoFrameRate(videoParameters.mRefreshRate);
+-        mMediaRecorder.setVideoEncodingBitRate(mLowQuality ? (videoParameters.bitrate() / 3)
+-                : videoParameters.bitrate());
+-        mMediaRecorder.setMaxDuration(mLongerDuration ? 0 : MAX_DURATION_MS);
+-        mMediaRecorder.setMaxFileSize(
+-                mLongerDuration ? MAX_FILESIZE_BYTES_LONGER : MAX_FILESIZE_BYTES);
+-
+-        // Set up audio
+-        if (mAudioSource == MIC) {
+-            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.HE_AAC);
+-            mMediaRecorder.setAudioChannels(TOTAL_NUM_TRACKS);
+-            mMediaRecorder.setAudioEncodingBitRate(AUDIO_BIT_RATE);
+-            mMediaRecorder.setAudioSamplingRate(AUDIO_SAMPLE_RATE);
+-        }
+-
+-        mMediaRecorder.setOutputFile(mTempVideoFile);
+-        mMediaRecorder.prepare();
+-        // Create surface
+-        mInputSurface = mMediaRecorder.getSurface();
++        mContext.getSystemService(DisplayManager.class).getDisplay(mDisplayId)
++                .getRealMetrics(metrics);
+         mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                 "Recording Display",
+-                videoParameters.mWidth,
+-                videoParameters.mHeight,
++                resolved.width,
++                resolved.height,
+                 metrics.densityDpi,
+                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                 mInputSurface,
+@@ -259,112 +165,6 @@ public class ScreenMediaRecorder {
+                     }
+                 },
+                 mHandler);
+-
+-        mMediaRecorder.setOnInfoListener((mr, what, extra) -> mListener.onInfo(mr, what, extra));
+-        if (mAudioSource == INTERNAL ||
+-                mAudioSource == MIC_AND_INTERNAL) {
+-            mTempAudioFile = File.createTempFile("temp", ".aac",
+-                    mContext.getCacheDir());
+-            mAudio = new ScreenInternalAudioRecorder(mTempAudioFile.getAbsolutePath(),
+-                    mMediaProjection, mAudioSource == MIC_AND_INTERNAL);
+-        }
+-
+-    }
+-
+-    /**
+-     * Match human-readable AVC level name to its constant value.
+-     */
+-    private int getAvcProfileLevelCodeByName(final String levelName) {
+-        switch (levelName) {
+-            case "3": return MediaCodecInfo.CodecProfileLevel.AVCLevel3;
+-            case "3.1": return MediaCodecInfo.CodecProfileLevel.AVCLevel31;
+-            case "3.2": return MediaCodecInfo.CodecProfileLevel.AVCLevel32;
+-            case "4": return MediaCodecInfo.CodecProfileLevel.AVCLevel4;
+-            case "4.1": return MediaCodecInfo.CodecProfileLevel.AVCLevel41;
+-            default:
+-            case "4.2": return MediaCodecInfo.CodecProfileLevel.AVCLevel42;
+-        }
+-    }
+-
+-    /**
+-     * Find the highest supported screen resolution and refresh rate for the given dimensions on
+-     * this device, up to actual size and given rate.
+-     * If possible this will return the same values as given, but values may be smaller on some
+-     * devices.
+-     *
+-     * @param screenWidth  Actual pixel width of screen
+-     * @param screenHeight Actual pixel height of screen
+-     * @param refreshRate  Desired refresh rate
+-     * @return returns {@link VideoParameters} for the screen recording.
+-     */
+-    private VideoParameters getSupportedSize(final int screenWidth, final int screenHeight,
+-            int refreshRate)
+-            throws IOException {
+-        String videoType = mHEVC ? MediaFormat.MIMETYPE_VIDEO_HEVC : MediaFormat.MIMETYPE_VIDEO_AVC;
+-
+-        // Get max size from the decoder, to ensure recordings will be playable on device
+-        MediaCodec decoder = MediaCodec.createDecoderByType(videoType);
+-        MediaCodecInfo.VideoCapabilities vc = decoder.getCodecInfo().getCapabilitiesForType(
+-                        videoType)
+-                .getVideoCapabilities();
+-        decoder.release();
+-
+-        // Check if we can support screen size as-is
+-        int width = vc.getSupportedWidths().getUpper();
+-        int height = vc.getSupportedHeights().getUpper();
+-
+-        int screenWidthAligned = screenWidth;
+-        if (screenWidthAligned % vc.getWidthAlignment() != 0) {
+-            screenWidthAligned -= (screenWidthAligned % vc.getWidthAlignment());
+-        }
+-        int screenHeightAligned = screenHeight;
+-        if (screenHeightAligned % vc.getHeightAlignment() != 0) {
+-            screenHeightAligned -= (screenHeightAligned % vc.getHeightAlignment());
+-        }
+-
+-        if (width >= screenWidthAligned && height >= screenHeightAligned
+-                && vc.isSizeSupported(screenWidthAligned, screenHeightAligned)) {
+-            // Desired size is supported, now get the rate
+-            int maxRate = getSupportedFrameRateFor(vc, screenWidthAligned, screenHeightAligned);
+-
+-            if (maxRate < refreshRate) {
+-                refreshRate = maxRate;
+-            }
+-            VideoParameters parameters = new VideoParameters(
+-                    /* mWidth= */ screenWidthAligned,
+-                    /* mHeight= */ screenHeightAligned,
+-                    /* mRefreshRate= */ refreshRate
+-            );
+-            Log.d(TAG, "Screen size supported with parameters: " + parameters);
+-            return parameters;
+-        }
+-
+-        // Otherwise, resize for max supported size
+-        double scale = Math.min(((double) width / screenWidth),
+-                ((double) height / screenHeight));
+-
+-        int scaledWidth = (int) (screenWidth * scale);
+-        int scaledHeight = (int) (screenHeight * scale);
+-        if (scaledWidth % vc.getWidthAlignment() != 0) {
+-            scaledWidth -= (scaledWidth % vc.getWidthAlignment());
+-        }
+-        if (scaledHeight % vc.getHeightAlignment() != 0) {
+-            scaledHeight -= (scaledHeight % vc.getHeightAlignment());
+-        }
+-
+-        // Find max supported rate for size
+-        int maxRate = getSupportedFrameRateFor(vc, scaledWidth, scaledHeight);
+-        if (maxRate < refreshRate) {
+-            refreshRate = maxRate;
+-        }
+-
+-        VideoParameters parameters = new VideoParameters(
+-                /* mWidth= */ scaledWidth,
+-                /* mHeight= */ scaledHeight,
+-                /* mRefreshRate= */ refreshRate
+-        );
+-        Log.d(TAG, "Resized to parameters: " + parameters);
+-        return parameters;
+     }
+ 
+     /**
+@@ -373,13 +173,24 @@ public class ScreenMediaRecorder {
+     public void start() throws IOException, RemoteException, RuntimeException {
+         Log.d(TAG, "start recording");
+         prepare();
+-        mMediaRecorder.start();
+-        mStartTimeMillis = System.currentTimeMillis();
++        mEncoder.start();
+         mListener.onStarted();
+-        recordInternalAudio();
+         mIsStarted.set(true);
+     }
+ 
++    /** Pauses the recording until [resume] (REC-7). */
++    public void pause() {
++        if (mIsStarted.get()) mEncoder.pause();
++    }
++
++    public void resume() {
++        if (mIsStarted.get()) mEncoder.resume();
++    }
++
++    public boolean isPaused() {
++        return mIsStarted.get() && mEncoder.isPaused();
++    }
++
+     /**
+      * End screen recording, throws an exception if stopping recording failed
+      */
+@@ -387,11 +198,7 @@ public class ScreenMediaRecorder {
+         if (mIsStarted.compareAndSet(true, false)) {
+             Closer closer = new Closer();
+ 
+-            // MediaRecorder might throw RuntimeException if stopped immediately after starting
+-            // We should remove the recording in this case as it will be invalid
+-            closer.register(mMediaRecorder::stop);
+-            closer.register(mMediaRecorder::release);
+-            closer.register(mInputSurface::release);
++            closer.register(mEncoder::stop);
+             closer.register(mVirtualDisplay::release);
+             closer.register(() -> {
+                 if (stopReason == StopReason.STOP_UNKNOWN) {
+@@ -406,11 +213,9 @@ public class ScreenMediaRecorder {
+                     mMediaProjection.stop(stopReason);
+                 }
+             });
+-            closer.register(this::stopInternalAudioRecording);
+ 
+             closer.close();
+ 
+-            mMediaRecorder = null;
+             mMediaProjection = null;
+ 
+             Log.d(TAG, "end recording");
+@@ -419,77 +224,36 @@ public class ScreenMediaRecorder {
+         }
+     }
+ 
+-    private void stopInternalAudioRecording() {
+-        if (mAudioSource == INTERNAL || mAudioSource == MIC_AND_INTERNAL) {
+-            mAudio.end();
+-            mAudio = null;
+-        }
+-    }
+-
+-    private void recordInternalAudio() throws IllegalStateException {
+-        if (mAudioSource == INTERNAL || mAudioSource == MIC_AND_INTERNAL) {
+-            mAudio.start();
+-        }
+-    }
+-
+     public SavedRecording save() throws IOException, IllegalStateException {
+         return save(createRecordingUri());
+     }
+ 
++    /** The file the recording is written to; it is saved when the recording ends. */
+     public Uri createRecordingUri() {
+-        String saveDate = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
+-        String fileName = mStartTimeMillis > 0L
+-                ? String.format("screen-%s-%d.mp4", saveDate, mStartTimeMillis)
+-                : String.format("screen-%s.mp4", saveDate);
+-
+-        ContentValues values = new ContentValues();
+-        values.put(MediaStore.Video.Media.DISPLAY_NAME, fileName);
+-        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
+-        values.put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis());
+-        values.put(MediaStore.Video.Media.DATE_TAKEN, System.currentTimeMillis());
+-
+-        ContentResolver resolver = mContext.getContentResolver();
+-        Uri collectionUri = MediaStore.Video.Media.getContentUri(
+-                MediaStore.VOLUME_EXTERNAL_PRIMARY);
+-        return ContentProvider.maybeAddUserId(resolver.insert(collectionUri, values),
+-                mContext.getUserId());
++        Uri uri = mEncoder == null ? null : mEncoder.currentUri();
++        if (uri == null) throw new IllegalStateException("nothing is recorded");
++        return ContentProvider.maybeAddUserId(uri, mContext.getUserId());
+     }
+ 
+     /**
+-     * Store recorded video
++     * The recorded video, saved when the recording ended; [itemUri] is the last of its files.
+      */
+     public SavedRecording save(Uri itemUri)
+             throws IOException, IllegalStateException {
+         Log.d(TAG, itemUri.toString());
+-        ContentResolver resolver = mContext.getContentResolver();
+-        if (mAudioSource == MIC_AND_INTERNAL || mAudioSource == INTERNAL) {
+-            try {
+-                Log.d(TAG, "muxing recording");
+-                File file = File.createTempFile("temp", ".mp4",
+-                        mContext.getCacheDir());
+-                ScreenRecordingMuxer muxer = new ScreenRecordingMuxer(
+-                        MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4,
+-                        file.getAbsolutePath(),
+-                        mTempVideoFile.getAbsolutePath(),
+-                        mTempAudioFile.getAbsolutePath());
+-                muxer.mux();
+-                mTempVideoFile.delete();
+-                mTempVideoFile = file;
+-            } catch (IOException e) {
+-                Log.e(TAG, "muxing recording " + e.getMessage());
+-                e.printStackTrace();
+-            }
++        if (mEncoder.files().isEmpty()) {
++            throw new IOException("nothing was written to " + itemUri);
+         }
+-
+-        // Add to the mediastore
+-        OutputStream os = resolver.openOutputStream(itemUri, "w");
+-        Files.copy(mTempVideoFile.toPath(), os);
+-        os.close();
+-        if (mTempAudioFile != null) mTempAudioFile.delete();
+-        SavedRecording recording = new SavedRecording(
+-                itemUri, mTempVideoFile, getRequiredThumbnailSize());
+-        mTempVideoFile.delete();
+-        return recording;
++        Icon thumbnail = null;
++        try {
++            Bitmap bitmap = mContext.getContentResolver().loadThumbnail(
++                    ContentProvider.getUriWithoutUserId(itemUri), getRequiredThumbnailSize(),
++                    null);
++            thumbnail = Icon.createWithBitmap(bitmap);
++        } catch (IOException e) {
++            Log.e(TAG, "Error creating thumbnail", e);
++        }
++        return new SavedRecording(itemUri, thumbnail);
+     }
+ 
+     /**
+@@ -504,33 +268,10 @@ public class ScreenMediaRecorder {
+     }
+ 
+     /**
+-     * Release the resources without saving the data
++     * Release the resources; a file that was never finished is deleted.
+      */
+     public void release() {
+-        if (mTempVideoFile != null) {
+-            mTempVideoFile.delete();
+-        }
+-        if (mTempAudioFile != null) {
+-            mTempAudioFile.delete();
+-        }
+-    }
+-
+-    /**
+-     * Currently, screen recording is being treated as a real time usecase which is at the same
+-     * priority as any other video encoding/decoding usecases. This can result in video playback and
+-     * recording failures while screen recording is in progress.
+-     *
+-     * Test the selfie enabled when increasing the cap because it's known to overflow the
+-     * buffer when it is too high.
+-     *
+-     * @return frame rate that is supported by the codec and adjusted for the screen recording.
+-     */
+-    private int getSupportedFrameRateFor(MediaCodecInfo.VideoCapabilities vc, int width,
+-            int height) {
+-        int maxRate = vc.getSupportedFrameRatesFor(width,
+-                height).getUpper().intValue() / 2;
+-        // hard cap refresh rate at VIDEO_FRAME_RATE anyway
+-        return Math.min(maxRate, VIDEO_FRAME_RATE);
++        if (mEncoder != null) mEncoder.discardUnfinished();
+     }
+ 
+     private static final class MediaProjectionCallback extends MediaProjection.Callback {
+@@ -619,6 +360,13 @@ public class ScreenMediaRecorder {
+          * and the app that is being captured is closed.
+          */
+         void onStopped(int userId, @StopReason int stopReason);
++
++        /**
++         * Called when the encoder failed and the recording ends; [reason] names what failed.
++         */
++        default void onFailed(String reason) {
++            onStopped(0, StopReason.STOP_ERROR);
++        }
+     }
+ 
+     /**
+@@ -667,12 +415,4 @@ public class ScreenMediaRecorder {
+             }
+         }
+     }
+-
+-    private record VideoParameters(int mWidth, int mHeight, int mRefreshRate) {
+-
+-        int bitrate() {
+-            return mWidth * mHeight * mRefreshRate / VIDEO_FRAME_RATE
+-                    * VIDEO_FRAME_RATE_TO_RESOLUTION_RATIO;
+-        }
+-    }
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
+index 1fb6631869dc9796d9651d3b7a31662132d4a254..514c9c46e39aecbf4e47a6ba6d16f303166ab2a2 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
+@@ -85,6 +85,12 @@ open class ScreenRecordingService : ComponentService() {
+             override fun onStopped(userId: Int, @StopReason stopReason: Int) {
+                 launchCallbackAction { onRecordingInterrupted(userId, stopReason) }
+             }
++
++            override fun onFailed(reason: String) {
++                Log.e(tag, "Recording failed: $reason")
++                Toast.makeText(this@ScreenRecordingService, reason, Toast.LENGTH_LONG).show()
++                launchCallbackAction { onRecordingInterrupted(userId, StopReason.STOP_ERROR) }
++            }
+         }
+ 
+     private lateinit var notificationInteractor: NotificationInteractor
+@@ -249,9 +255,6 @@ open class ScreenRecordingService : ComponentService() {
+                             parameters.captureTarget,
+                             parameters.displayId,
+                             screenMediaRecorderListener,
+-                            parameters.lowQuality,
+-                            parameters.longerDuration,
+-                            parameters.hevc,
+                         ),
+                 )
+             context.startRecording()
