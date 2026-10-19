@@ -210,10 +210,10 @@ index 18b2933f9f7aed124b1a34a8ea428c3991081871..4669f11940f78cb91dd84fcad8b87fad
       */
 diff --git a/services/core/java/com/android/server/storage/LujarchStorageService.java b/services/core/java/com/android/server/storage/LujarchStorageService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d9476bbbf1f
+index 0000000000000000000000000000000000000000..0b215b6ba3db3cde334fe5bbfadcd5ba4cdb277f
 --- /dev/null
 +++ b/services/core/java/com/android/server/storage/LujarchStorageService.java
-@@ -0,0 +1,552 @@
+@@ -0,0 +1,584 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -270,20 +270,23 @@ index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d94
 +/**
 + * Lujarch's Storage (STO-1): the storage limits the owner sets for apps, kept in a file and set
 + * as each app uid's quota on the data volume, which the kernel holds. An app whose limit clears
-+ * its cache first is watched, and its cache cleared before it reaches the limit.
++ * its cache first may hold its limit and its cache, the room clearing frees: it never runs out
++ * before clearing would have let it, and its cache is cleared once it nears its limit.
 + */
 +public final class LujarchStorageService extends ILujarchStorage.Stub {
 +    static final String TAG = "lujarch_storage";
 +    private static final File DIR = new File("/data/lujarch/storage");
 +    /** How often an app with a limit is watched; more often near its limit. */
-+    private static final long WATCH_MS = 2_000;
++    private static final long WATCH_MS = 1_000;
 +    private static final long WATCH_NEAR_MS = 250;
 +    /** Within this of its limit, an app is full. */
 +    private static final long FULL_NEAR_BYTES = 4L << 20;
 +    /** A cache this small is not worth clearing. */
 +    private static final long CACHE_MIN_BYTES = 1L << 20;
 +    /** A cache is cleared again no sooner than this after the last clear. */
-+    private static final long CLEAR_AGAIN_MS = 2_000;
++    private static final long CLEAR_AGAIN_MS = 1_000;
++    /** The quota follows the cache once it is this far from it. */
++    private static final long QUOTA_STEP_BYTES = 1L << 20;
 +
 +    public static final class Lifecycle extends SystemService {
 +        private LujarchStorageService mService;
@@ -323,6 +326,8 @@ index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d94
 +        long sinceMillis;
 +        /** A cache clear asked for and not yet done. */
 +        boolean clearing;
++        /** The quota last set; -1 before. */
++        long quotaBytes = -1;
 +        long lastClearElapsed = -CLEAR_AGAIN_MS;
 +    }
 +
@@ -553,25 +558,44 @@ index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d94
 +        }
 +    }
 +
-+    /** Sets the uid's quota to its limit, or none, and watches it while its limit is on. */
++    /**
++     * Sets the uid's quota as its limit says, or none, and watches it while its limit is on.
++     * The watch sets the quota of a limit that clears the cache first.
++     */
 +    private void apply(int uid) {
 +        final long bytes = limitOf(uid);
-+        try {
-+            mInstaller.setLujarchAppSpaceLimit(null, uid, bytes);
-+        } catch (Installer.InstallerException e) {
-+            Slog.e(TAG, "cannot set the storage limit of uid " + uid + " to " + bytes, e);
-+        }
++        final Watch w;
 +        synchronized (mLock) {
 +            if (bytes > 0) {
-+                if (mWatches.get(uid) == null) {
-+                    mWatches.put(uid, new Watch());
++                w = new Watch();
++                final Watch was = mWatches.get(uid);
++                if (was != null) {
++                    w.full = was.full;
++                    w.sinceMillis = was.sinceMillis;
++                    w.lastClearElapsed = was.lastClearElapsed;
 +                }
++                mWatches.put(uid, w);
 +            } else {
++                w = null;
 +                mWatches.delete(uid);
 +            }
 +        }
++        if (w == null || clearsCache(uid) == null) {
++            setQuota(uid, bytes, w);
++        }
 +        mHandler.removeCallbacks(mWatch);
 +        mHandler.post(mWatch);
++    }
++
++    private void setQuota(int uid, long bytes, @Nullable Watch w) {
++        try {
++            mInstaller.setLujarchAppSpaceLimit(null, uid, bytes);
++            if (w != null) {
++                w.quotaBytes = bytes;
++            }
++        } catch (Installer.InstallerException e) {
++            Slog.e(TAG, "cannot set the storage limit of uid " + uid + " to " + bytes, e);
++        }
 +    }
 +
 +    /** Reads what each limited uid holds, clears caches as their limits say, notes when full. */
@@ -614,8 +638,16 @@ index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d94
 +                            + w.used + " of " + limit + " bytes");
 +                }
 +            }
-+            if (w.used < 0) {
++            if (w.used < 0 || w.cache < 0) {
++                if (w.quotaBytes != limit) {
++                    setQuota(uid, limit, w);
++                }
 +                continue;
++            }
++            // The limit and the cache: what the app may hold until its cache is cleared.
++            if (clearPackage != null
++                    && Math.abs(limit + w.cache - w.quotaBytes) >= QUOTA_STEP_BYTES) {
++                setQuota(uid, limit + w.cache, w);
 +            }
 +            near |= w.used >= limit - 2 * margin;
 +            if (clearPackage != null && w.used >= limit - margin && w.cache >= CACHE_MIN_BYTES
