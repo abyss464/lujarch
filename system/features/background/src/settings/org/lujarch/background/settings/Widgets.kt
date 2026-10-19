@@ -71,7 +71,7 @@ class HeaderPreference(context: Context) : Preference(context) {
 internal fun dp(context: Context, value: Float): Int =
     TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, context.resources.displayMetrics).toInt()
 
-/** Who caused it, as a small mark: You filled, System outlined, an app dashed (BG-1). */
+/** Who caused it, as a small mark: User filled, System outlined, an app dashed (BG-1). */
 object Chips {
     fun bind(view: TextView, who: Int, name: CharSequence?) {
         val context = view.context
@@ -81,13 +81,13 @@ object Chips {
             cornerRadius = dp(context, 5f).toFloat()
             val stroke = dp(context, 1.5f)
             when (who) {
-                LujarchBackground.WHO_YOU -> setColor(color)
+                LujarchBackground.WHO_USER -> setColor(color)
                 LujarchBackground.WHO_SYSTEM -> setStroke(stroke, color)
                 else -> setStroke(stroke, color, dp(context, 3f).toFloat(), dp(context, 2f).toFloat())
             }
         }
         view.setTextColor(
-            if (who == LujarchBackground.WHO_YOU) context.getColor(android.R.color.system_accent1_0) else color
+            if (who == LujarchBackground.WHO_USER) context.getColor(android.R.color.system_accent1_0) else color
         )
         val h = dp(context, 5f)
         view.setPadding(h, 0, h, 0)

@@ -205,7 +205,7 @@ index 0000000000000000000000000000000000000000..c7a5de4350b6edefadd70c5ee3919f46
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackground.java b/core/java/com/android/internal/app/LujarchBackground.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..fe0015827303513354d21e62fa26089093e783dd
+index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279a0ed61ad
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackground.java
 @@ -0,0 +1,270 @@
@@ -247,7 +247,7 @@ index 0000000000000000000000000000000000000000..fe0015827303513354d21e62fa260890
 +    /** Held by the callers of {@link ILujarchBackground}. */
 +    public static final String PERMISSION = "android.permission.LUJARCH_BACKGROUND";
 +
-+    public static final int WHO_YOU = 1;
++    public static final int WHO_USER = 1;
 +    public static final int WHO_SYSTEM = 2;
 +    /** The app itself. */
 +    public static final int WHO_APP = 3;
@@ -385,11 +385,11 @@ index 0000000000000000000000000000000000000000..fe0015827303513354d21e62fa260890
 +        }
 +    }
 +
-+    /** The color of who caused it: You filled, System outlined, an app dashed. */
++    /** The color of who caused it: User filled, System outlined, an app dashed. */
 +    @ColorInt
 +    public static int whoColor(Context context, int who) {
 +        switch (who) {
-+            case WHO_YOU:
++            case WHO_USER:
 +                return context.getColor(android.R.color.system_accent1_500);
 +            case WHO_SYSTEM:
 +                return context.getColor(android.R.color.system_accent3_500);
@@ -435,11 +435,11 @@ index 0000000000000000000000000000000000000000..fe0015827303513354d21e62fa260890
 +        }
 +    }
 +
-+    /** The name of who caused it: You, System, App; another app by its own name. */
++    /** The name of who caused it: User, System, App; another app by its own name. */
 +    public static String whoName(Context context, int who) {
 +        switch (who) {
-+            case WHO_YOU:
-+                return context.getString(R.string.lujarch_background_who_you);
++            case WHO_USER:
++                return context.getString(R.string.lujarch_background_who_user);
 +            case WHO_SYSTEM:
 +                return context.getString(R.string.lujarch_background_who_system);
 +            default:
@@ -481,7 +481,7 @@ index 0000000000000000000000000000000000000000..fe0015827303513354d21e62fa260890
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackgroundApp.aidl b/core/java/com/android/internal/app/LujarchBackgroundApp.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..d39e8d29155fea9166f1567e9abee041a6089c9f
+index 0000000000000000000000000000000000000000..11ccc6369619fa73d9a5ec802882ce343bec6a6b
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackgroundApp.aidl
 @@ -0,0 +1,85 @@
@@ -517,7 +517,7 @@ index 0000000000000000000000000000000000000000..d39e8d29155fea9166f1567e9abee041
 +    int state;
 +    /** LujarchBackground.WHO_*. */
 +    int who;
-+    /** Who, in words: You, System, App, or the other app's name. */
++    /** Who, in words: User, System, App, or the other app's name. */
 +    @nullable String whoName;
 +    /** Why it is in its state, in words. */
 +    @nullable String reason;
@@ -717,7 +717,7 @@ index 0000000000000000000000000000000000000000..9967e536a43e180f104894cf007d7506
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackgroundReason.aidl b/core/java/com/android/internal/app/LujarchBackgroundReason.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..891b0eaebcdef6e36a029f80ef9d32590523ba5b
+index 0000000000000000000000000000000000000000..cd5c32d2cfeae7d0f1ee13a45ca4e7ac077c1d9d
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackgroundReason.aidl
 @@ -0,0 +1,29 @@
@@ -746,7 +746,7 @@ index 0000000000000000000000000000000000000000..891b0eaebcdef6e36a029f80ef9d3259
 +parcelable LujarchBackgroundReason {
 +    /** LujarchBackground.WHO_*. */
 +    int who;
-+    /** Who, in words: You, System, App, or the other app's name. */
++    /** Who, in words: User, System, App, or the other app's name. */
 +    @nullable String whoName;
 +    @nullable String text;
 +}
@@ -972,7 +972,7 @@ index 0000000000000000000000000000000000000000..58b61be109a626afc8f67138600273cb
 +</vector>
 diff --git a/core/res/res/values-ja/lujarch_background_strings.xml b/core/res/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..bdd9cd9492e795535c51163a42282f2141a1326a
+index 0000000000000000000000000000000000000000..0915d5b0465859f582ec60fd562af61d6f5c6938
 --- /dev/null
 +++ b/core/res/res/values-ja/lujarch_background_strings.xml
 @@ -0,0 +1,162 @@
@@ -1006,7 +1006,7 @@ index 0000000000000000000000000000000000000000..bdd9cd9492e795535c51163a42282f21
 +    <string name="lujarch_background_usage_optimized">"最適化"</string>
 +    <string name="lujarch_background_usage_restricted">"制限"</string>
 +    <string name="lujarch_background_kept">"保持中"</string>
-+    <string name="lujarch_background_who_you">"あなた"</string>
++    <string name="lujarch_background_who_user">"ユーザー"</string>
 +    <string name="lujarch_background_who_system">"システム"</string>
 +    <string name="lujarch_background_who_app">"アプリ"</string>
 +    <string name="lujarch_background_r_on_screen">"画面に表示中"</string>
@@ -1140,7 +1140,7 @@ index 0000000000000000000000000000000000000000..bdd9cd9492e795535c51163a42282f21
 +</resources>
 diff --git a/core/res/res/values-zh-rCN/lujarch_background_strings.xml b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..5d5a9984e360122505b9e90d38fc94fcd4a796f2
+index 0000000000000000000000000000000000000000..9e59ff16549d97cc182c3d61943500131c723f98
 --- /dev/null
 +++ b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
 @@ -0,0 +1,162 @@
@@ -1174,7 +1174,7 @@ index 0000000000000000000000000000000000000000..5d5a9984e360122505b9e90d38fc94fc
 +    <string name="lujarch_background_usage_optimized">"优化"</string>
 +    <string name="lujarch_background_usage_restricted">"受限"</string>
 +    <string name="lujarch_background_kept">"已保留"</string>
-+    <string name="lujarch_background_who_you">"你"</string>
++    <string name="lujarch_background_who_user">"用户"</string>
 +    <string name="lujarch_background_who_system">"系统"</string>
 +    <string name="lujarch_background_who_app">"应用"</string>
 +    <string name="lujarch_background_r_on_screen">"在屏幕上"</string>
@@ -1308,7 +1308,7 @@ index 0000000000000000000000000000000000000000..5d5a9984e360122505b9e90d38fc94fc
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_strings.xml b/core/res/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..ccebd197eb8956295e7efb734d813587615204db
+index 0000000000000000000000000000000000000000..1c6694698479e93cd1f4b4c5727a8a6467837a60
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_strings.xml
 @@ -0,0 +1,166 @@
@@ -1342,7 +1342,7 @@ index 0000000000000000000000000000000000000000..ccebd197eb8956295e7efb734d813587
 +    <string name="lujarch_background_usage_optimized">Optimized</string>
 +    <string name="lujarch_background_usage_restricted">Restricted</string>
 +    <string name="lujarch_background_kept">Kept</string>
-+    <string name="lujarch_background_who_you">You</string>
++    <string name="lujarch_background_who_user">User</string>
 +    <string name="lujarch_background_who_system">System</string>
 +    <string name="lujarch_background_who_app">App</string>
 +    <string name="lujarch_background_r_on_screen">On the screen</string>
@@ -1480,7 +1480,7 @@ index 0000000000000000000000000000000000000000..ccebd197eb8956295e7efb734d813587
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_symbols.xml b/core/res/res/values/lujarch_background_symbols.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..906cbb4e649e32be18347aaf36af356cb60cb080
+index 0000000000000000000000000000000000000000..a59c3292351b15a61b2ec6d258e30af70f770226
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_symbols.xml
 @@ -0,0 +1,154 @@
@@ -1513,7 +1513,7 @@ index 0000000000000000000000000000000000000000..906cbb4e649e32be18347aaf36af356c
 +    <java-symbol type="string" name="lujarch_background_usage_optimized" />
 +    <java-symbol type="string" name="lujarch_background_usage_restricted" />
 +    <java-symbol type="string" name="lujarch_background_kept" />
-+    <java-symbol type="string" name="lujarch_background_who_you" />
++    <java-symbol type="string" name="lujarch_background_who_user" />
 +    <java-symbol type="string" name="lujarch_background_who_system" />
 +    <java-symbol type="string" name="lujarch_background_who_app" />
 +    <java-symbol type="string" name="lujarch_background_r_on_screen" />
@@ -3024,7 +3024,7 @@ index 0000000000000000000000000000000000000000..74b0c341c171879ac23d633c3eb3ecb9
 +}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundService.java b/services/core/java/com/android/server/am/LujarchBackgroundService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997bc866443d
+index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b25f520ba9
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundService.java
 @@ -0,0 +1,3103 @@
@@ -3955,12 +3955,12 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +    /** [who, package] of a caller: the owner through the system's own pages and Recents, or the app. */
 +    private String[] whoForCaller(int callingUid) {
 +        if (UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
-+            return new String[] {String.valueOf(LujarchBackground.WHO_YOU), null};
++            return new String[] {String.valueOf(LujarchBackground.WHO_USER), null};
 +        }
 +        final String[] pkgs = mContext.getPackageManager().getPackagesForUid(callingUid);
 +        final String pkg = pkgs != null && pkgs.length > 0 ? pkgs[0] : null;
 +        if (pkg == null || isOwnersSurface(pkg, UserHandle.getUserId(callingUid))) {
-+            return new String[] {String.valueOf(LujarchBackground.WHO_YOU), null};
++            return new String[] {String.valueOf(LujarchBackground.WHO_USER), null};
 +        }
 +        return new String[] {String.valueOf(LujarchBackground.WHO_OTHER), pkg};
 +    }
@@ -4118,10 +4118,10 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +                        || before == LujarchBackground.RUN_STOPPED || before < 0
 +                        ? C_OPENED_AGAIN : C_OPENED;
 +                record(userId, pkg, new Event(time, LujarchBackground.EVENT_OPENED,
-+                        LujarchBackground.WHO_YOU, null, cause, null));
++                        LujarchBackground.WHO_USER, null, cause, null));
 +            } else if (onScreen(before) && !onScreen(now.state)) {
 +                record(userId, pkg, new Event(time, LujarchBackground.EVENT_LEFT,
-+                        LujarchBackground.WHO_YOU, null, C_LEFT, null));
++                        LujarchBackground.WHO_USER, null, C_LEFT, null));
 +            }
 +            if ((now.state == LujarchBackground.RUN_PAUSED || track == TRACK_CHOSEN)
 +                    && before >= LujarchBackground.RUN_FOREGROUND
@@ -4385,13 +4385,13 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +    /** [who, cause] of an end, from its exit reason and who asked for it. */
 +    private int[] endCause(@Nullable ApplicationExitInfo info, @Nullable Caller caller, int uid,
 +            String pkg) {
-+        final int you = LujarchBackground.WHO_YOU;
++        final int user = LujarchBackground.WHO_USER;
 +        final int system = LujarchBackground.WHO_SYSTEM;
 +        final int app = LujarchBackground.WHO_APP;
 +        if (info == null) {
 +            return new int[] {system, C_END_SYSTEM};
 +        }
-+        final int callerWho = caller != null ? caller.who : you;
++        final int callerWho = caller != null ? caller.who : user;
 +        switch (info.getReason()) {
 +            case ApplicationExitInfo.REASON_LOW_MEMORY:
 +                return new int[] {system, C_END_LOW_MEMORY};
@@ -4406,7 +4406,7 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +            case ApplicationExitInfo.REASON_FREEZER:
 +                return new int[] {system, C_END_FREEZER};
 +            case ApplicationExitInfo.REASON_PERMISSION_CHANGE:
-+                return new int[] {you, C_END_PERMISSION};
++                return new int[] {user, C_END_PERMISSION};
 +            case ApplicationExitInfo.REASON_PACKAGE_UPDATED:
 +            case ApplicationExitInfo.REASON_PACKAGE_STATE_CHANGE:
 +                return new int[] {system, C_END_UPDATE};
@@ -4415,7 +4415,7 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +                    case ApplicationExitInfo.SUBREASON_FORCE_STOP:
 +                        return new int[] {callerWho, C_STOP};
 +                    case ApplicationExitInfo.SUBREASON_REMOVE_TASK:
-+                        return new int[] {you, C_END_CARD};
++                        return new int[] {user, C_END_CARD};
 +                    case ApplicationExitInfo.SUBREASON_KILL_BACKGROUND:
 +                    case ApplicationExitInfo.SUBREASON_STOP_APP:
 +                    case ApplicationExitInfo.SUBREASON_KILL_PID:
@@ -4436,9 +4436,9 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +                    case ApplicationExitInfo.SUBREASON_ISOLATED_NOT_NEEDED:
 +                        return new int[] {system, C_END_UNUSED};
 +                    case ApplicationExitInfo.SUBREASON_CACHED_IDLE_FORCED_APP_STANDBY:
-+                        return new int[] {you, C_END_RESTRICTED};
++                        return new int[] {user, C_END_RESTRICTED};
 +                    case ApplicationExitInfo.SUBREASON_REMOVE_TASK:
-+                        return new int[] {you, C_END_CARD};
++                        return new int[] {user, C_END_CARD};
 +                    default:
 +                        return new int[] {system, C_END_SYSTEM};
 +                }
@@ -4646,20 +4646,20 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +        }
 +        if ((p.hold & LUJARCH_HOLD_SMALL_WINDOW) != 0 && !p.frozen) {
 +            s.state = LujarchBackground.RUN_SMALL_WINDOW;
-+            s.who = LujarchBackground.WHO_YOU;
++            s.who = LujarchBackground.WHO_USER;
 +            s.cause = C_SMALL_WINDOW;
 +            return s;
 +        }
 +        if (p.top || p.visible) {
 +            s.state = LujarchBackground.RUN_FOREGROUND;
-+            s.who = LujarchBackground.WHO_YOU;
++            s.who = LujarchBackground.WHO_USER;
 +            s.cause = C_ON_SCREEN;
 +            return s;
 +        }
 +        if (p.frozen) {
 +            s.state = LujarchBackground.RUN_PAUSED;
 +            if ((p.hold & LUJARCH_HOLD_KEPT) != 0) {
-+                s.who = LujarchBackground.WHO_YOU;
++                s.who = LujarchBackground.WHO_USER;
 +                s.cause = C_KEPT;
 +            } else {
 +                s.cause = C_PAUSED;
@@ -4668,7 +4668,7 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +        }
 +        s.state = LujarchBackground.RUN_BACKGROUND;
 +        if ((p.hold & LUJARCH_HOLD_CHOSEN) != 0) {
-+            s.who = LujarchBackground.WHO_YOU;
++            s.who = LujarchBackground.WHO_USER;
 +            s.cause = C_CHOSEN;
 +        } else if (p.fgs) {
 +            s.who = LujarchBackground.WHO_APP;
@@ -4697,7 +4697,7 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +            }
 +        } else if ((p.hold & LUJARCH_HOLD_UNRESTRICTED) != 0) {
 +            s.who = isSystemAllowlisted(p.packageName) ? LujarchBackground.WHO_SYSTEM
-+                    : LujarchBackground.WHO_YOU;
++                    : LujarchBackground.WHO_USER;
 +            s.cause = C_UNRESTRICTED;
 +        } else if (p.executing) {
 +            s.who = LujarchBackground.WHO_APP;
@@ -4947,7 +4947,7 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +                    ? w.chosen(s.chosenNames, procs.size() - s.chosenRunning)
 +                    : w.text(s.lead.cause, s.lead.detail, s.lead.whoPackage, userId);
 +            if (s.state == LujarchBackground.RUN_PAUSED && a.kept) {
-+                a.who = LujarchBackground.WHO_YOU;
++                a.who = LujarchBackground.WHO_USER;
 +                a.whoName = w.who(a.who, null, userId);
 +                a.reason = w.text(C_KEPT, null, null, userId);
 +            }
@@ -5115,13 +5115,13 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +            final ArrayList<LujarchBackgroundReason> reasons = new ArrayList<>();
 +            reasons.add(reason(s.who, out.whoName, out.reason));
 +            if ((p.hold & LUJARCH_HOLD_KEPT) != 0 && s.cause != C_KEPT) {
-+                reasons.add(reason(LujarchBackground.WHO_YOU,
-+                        w.who(LujarchBackground.WHO_YOU, null, p.userId),
++                reasons.add(reason(LujarchBackground.WHO_USER,
++                        w.who(LujarchBackground.WHO_USER, null, p.userId),
 +                        w.text(C_KEPT, null, null, p.userId)));
 +            }
 +            if ((p.hold & LUJARCH_HOLD_UNRESTRICTED) != 0 && s.cause != C_UNRESTRICTED) {
 +                final int who = isSystemAllowlisted(p.packageName) ? LujarchBackground.WHO_SYSTEM
-+                        : LujarchBackground.WHO_YOU;
++                        : LujarchBackground.WHO_USER;
 +                reasons.add(reason(who, w.who(who, null, p.userId),
 +                        w.text(C_UNRESTRICTED, null, null, p.userId)));
 +            }
@@ -5239,8 +5239,8 @@ index 0000000000000000000000000000000000000000..74a6be62302efb2a168428176910997b
 +
 +        String who(int who, @Nullable String pkg, int userId) {
 +            switch (who) {
-+                case LujarchBackground.WHO_YOU:
-+                    return c.getString(R.string.lujarch_background_who_you);
++                case LujarchBackground.WHO_USER:
++                    return c.getString(R.string.lujarch_background_who_user);
 +                case LujarchBackground.WHO_APP:
 +                    return c.getString(R.string.lujarch_background_who_app);
 +                case LujarchBackground.WHO_OTHER:
