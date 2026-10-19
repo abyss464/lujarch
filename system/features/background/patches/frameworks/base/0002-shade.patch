@@ -253,7 +253,7 @@ index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..7eeaec08574d6a9ab6d4f119797b8719
                      }
                  },
 diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
-index a3cdd7341281a898ca15bf1a6f7520c65a13e424..a2b9b1df06c13de5f070e9b3453d733fc05e8967 100644
+index a3cdd7341281a898ca15bf1a6f7520c65a13e424..21f7915ac648c81097caa29a56352c964c439eeb 100644
 --- a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
 +++ b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
 @@ -34,19 +34,24 @@ import com.android.systemui.dagger.SysUISingleton
@@ -303,7 +303,7 @@ index a3cdd7341281a898ca15bf1a6f7520c65a13e424..a2b9b1df06c13de5f070e9b3453d733f
  ) : FooterActionsInteractor {
      override val securityButtonConfig: Flow<SecurityButtonConfig?> =
          securityRepository.security.combine(supervisionRepository.supervision) {
-@@ -160,6 +173,14 @@ constructor(
+@@ -160,6 +173,17 @@ constructor(
          fgsManagerController.showDialog(expandable)
      }
  
@@ -311,8 +311,11 @@ index a3cdd7341281a898ca15bf1a6f7520c65a13e424..a2b9b1df06c13de5f070e9b3453d733f
 +        LujarchRunning.flow(context, bgDispatcher)
 +
 +    override fun showRunning() {
++        // The launcher refuses Recents while the shade is expanded.
++        shadeController.get().addPostCollapseAction {
++            recents.get().ifPresent { it.showRecentApps(false) }
++        }
 +        shadeController.get().animateCollapseShade()
-+        recents.get().ifPresent { it.showRecentApps(false) }
 +    }
 +
      override fun showPowerMenuDialog(
