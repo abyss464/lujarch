@@ -68,10 +68,10 @@ index b3c39ff167b2348316c3ada985924bc3ea08bb36..720f8ce68130c747311dbf2f710077b4
      // The number of longs needed to form a full bitmask of app ops
 diff --git a/core/java/com/android/internal/app/ILujarchBackground.aidl b/core/java/com/android/internal/app/ILujarchBackground.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..acccac02bc6ec12e334f58954f0996337f90ceb9
+index 0000000000000000000000000000000000000000..24af198619e8625ffe974ad2e27c4637ec98c427
 --- /dev/null
 +++ b/core/java/com/android/internal/app/ILujarchBackground.aidl
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,103 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -94,6 +94,7 @@ index 0000000000000000000000000000000000000000..acccac02bc6ec12e334f58954f099633
 +import com.android.internal.app.LujarchBackgroundApp;
 +import com.android.internal.app.LujarchSmallWindow;
 +import com.android.internal.app.LujarchBackgroundEvent;
++import com.android.internal.app.LujarchBackgroundLimit;
 +import com.android.internal.app.LujarchBackgroundMemory;
 +import com.android.internal.app.LujarchBackgroundProcess;
 +import com.android.internal.app.LujarchBackgroundRun;
@@ -132,6 +133,12 @@ index 0000000000000000000000000000000000000000..acccac02bc6ec12e334f58954f099633
 +
 +    void setKept(String packageName, int userId, boolean kept);
 +
++    /** The app's memory limit and its use against it (BG-8); null when it is not installed. */
++    @nullable LujarchBackgroundLimit getLimit(String packageName, int userId);
++
++    /** Sets the app's memory limit; only the fields the owner sets are read. */
++    void setLimit(String packageName, int userId, in LujarchBackgroundLimit limit);
++
 +    /** The app's processes through the day that starts at local midnight dayStartMillis. */
 +    LujarchBackgroundRun[] getRunState(String packageName, int userId, long dayStartMillis);
 +
@@ -143,7 +150,7 @@ index 0000000000000000000000000000000000000000..acccac02bc6ec12e334f58954f099633
 +
 +    /**
 +     * What runs off screen, in the order of Recents' Running layer: what the apps run
-+     * themselves, small windows, Unrestricted, Chosen processes (BG-8).
++     * themselves, small windows, Unrestricted, Chosen processes (BG-9).
 +     */
 +    LujarchBackgroundApp[] getRunning(int userId);
 +
@@ -170,7 +177,7 @@ index 0000000000000000000000000000000000000000..acccac02bc6ec12e334f58954f099633
 +}
 diff --git a/core/java/com/android/internal/app/ILujarchBackgroundListener.aidl b/core/java/com/android/internal/app/ILujarchBackgroundListener.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..c7a5de4350b6edefadd70c5ee3919f4641e1c38e
+index 0000000000000000000000000000000000000000..0a563536f2b458ce65d840964b236cef0d221b65
 --- /dev/null
 +++ b/core/java/com/android/internal/app/ILujarchBackgroundListener.aidl
 @@ -0,0 +1,29 @@
@@ -192,7 +199,7 @@ index 0000000000000000000000000000000000000000..c7a5de4350b6edefadd70c5ee3919f46
 +package com.android.internal.app;
 +
 +/**
-+ * Told when what runs off screen changed (BG-8, BG-9): the shade's Running · N and Recents follow
++ * Told when what runs off screen changed (BG-9, BG-10): the shade's Running · N and Recents follow
 + * it without asking again and again.
 + * @hide
 + */
@@ -205,10 +212,10 @@ index 0000000000000000000000000000000000000000..c7a5de4350b6edefadd70c5ee3919f46
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackground.java b/core/java/com/android/internal/app/LujarchBackground.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279a0ed61ad
+index 0000000000000000000000000000000000000000..b7b291b096a92e847a099c0a26067aa70b6f244b
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackground.java
-@@ -0,0 +1,270 @@
+@@ -0,0 +1,287 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -300,6 +307,23 @@ index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279
 +    /** A chosen process ended right after the main process, without the system ending it. */
 +    public static final int SUGGEST_LEFT_WITH_MAIN = 2;
 +
++    /** When an app needs more than its memory limit (BG-8): it waits, or it is ended. */
++    public static final int LIMIT_HOLD = 0;
++    public static final int LIMIT_END = 1;
++    /** Sizes of memory limits are in MB of 1000 * 1000 bytes, as Android shows sizes. */
++    public static final long LIMIT_MB = 1_000_000L;
++    /** The smallest memory limit. */
++    public static final long LIMIT_MIN_BYTES = 32 * LIMIT_MB;
++    /** No process, so nothing held. */
++    public static final int LIMIT_STATE_NONE = 0;
++    /** The limits do not hold now: off, or on screen without Also on screen. */
++    public static final int LIMIT_STATE_LIFTED = 1;
++    public static final int LIMIT_STATE_WITHIN = 2;
++    /** At its memory limit: what it uses beyond it is compressed. */
++    public static final int LIMIT_STATE_COMPRESSING = 3;
++    /** At its memory limit with the compressed full: it needs more. */
++    public static final int LIMIT_STATE_NEEDS_MORE = 4;
++
 +    /** Settings > System > Memory (BG-5). */
 +    public static final String ACTION_MEMORY = "org.lujarch.background.action.MEMORY";
 +    /**
@@ -316,11 +340,11 @@ index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279
 +    /** The package of the memory pages. */
 +    public static final String SETTINGS_PACKAGE = "org.lujarch.settings";
 +
-+    /** Settings.Secure: Recents shows its Running layer (BG-8). */
++    /** Settings.Secure: Recents shows its Running layer (BG-9). */
 +    public static final String SETTING_RECENTS_RUNNING = "lujarch_background_recents_running";
-+    /** Settings.Secure: Recents shows the memory (BG-11). */
++    /** Settings.Secure: Recents shows the memory (BG-12). */
 +    public static final String SETTING_RECENTS_MEMORY = "lujarch_background_recents_memory";
-+    /** Settings.Secure: Recents shows each app's state and folds into two rows (BG-10). */
++    /** Settings.Secure: Recents shows each app's state and folds into two rows (BG-11). */
 +    public static final String SETTING_RECENTS_STATE = "lujarch_background_recents_state";
 +
 +    private LujarchBackground() {
@@ -398,7 +422,7 @@ index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279
 +        }
 +    }
 +
-+    /** The four parts of the memory in use (BG-5, BG-11). */
++    /** The four parts of the memory in use (BG-5, BG-12). */
 +    public static final int MEMORY_SYSTEM = 0;
 +    public static final int MEMORY_APPS = 1;
 +    public static final int MEMORY_KEPT = 2;
@@ -481,10 +505,10 @@ index 0000000000000000000000000000000000000000..4ef85af9bd94fe5ee6f05a2420c0c279
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackgroundApp.aidl b/core/java/com/android/internal/app/LujarchBackgroundApp.aidl
 new file mode 100644
-index 0000000000000000000000000000000000000000..11ccc6369619fa73d9a5ec802882ce343bec6a6b
+index 0000000000000000000000000000000000000000..b2869ce90bcb1ac6a807244979ce46c46bbe94f1
 --- /dev/null
 +++ b/core/java/com/android/internal/app/LujarchBackgroundApp.aidl
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,87 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -531,6 +555,8 @@ index 0000000000000000000000000000000000000000..11ccc6369619fa73d9a5ec802882ce34
 +    boolean system;
 +    /** Keep is on. */
 +    boolean kept;
++    /** Its memory limit when Use memory limit is on (BG-8); 0 without one. */
++    long limitBytes;
 +    /** LujarchBackground.USAGE_*. */
 +    int usage;
 +    /** Background usage cannot be changed for this app. */
@@ -611,6 +637,61 @@ index 0000000000000000000000000000000000000000..78a12d9ac9ba8800fc0e58509279b4a3
 +    @nullable String process;
 +    /** Why, in a few words (for an end or a wake), to group lines by. */
 +    @nullable String reason;
++}
+diff --git a/core/java/com/android/internal/app/LujarchBackgroundLimit.aidl b/core/java/com/android/internal/app/LujarchBackgroundLimit.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..b80c5803f1562c3ec1534d759d0de69ed776e515
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchBackgroundLimit.aidl
+@@ -0,0 +1,49 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++/**
++ * An app's memory limit, as the owner set it, and the app's use against it (BG-8).
++ * @hide
++ */
++parcelable LujarchBackgroundLimit {
++    /** Use memory limit. */
++    boolean on;
++    /** The most its processes together hold in memory. */
++    long memoryBytes;
++    /** The most they hold compressed; -1 for No limit. */
++    long compressedBytes;
++    /** When it needs more: LujarchBackground.LIMIT_HOLD or LIMIT_END. */
++    int action;
++    /** With LIMIT_END, how long it may need more before it is ended; 0 for at once. */
++    long endAfterMs;
++    /** Also on screen. */
++    boolean onScreen;
++
++    // The rest is filled by getLimit only.
++    /** What its processes hold now, in memory and compressed; 0 without a process. */
++    long usedBytes;
++    long usedCompressedBytes;
++    /** LujarchBackground.LIMIT_STATE_*. */
++    int state;
++    /** Since when it is in that state, as System.currentTimeMillis(); 0 when not known. */
++    long sinceMillis;
++    /** When it is ended unless it frees memory first; 0 when it is not about to be. */
++    long endsAtMillis;
++    /** When its limit last ended it; 0 when it never has, within the record. */
++    long lastEndMillis;
 +}
 diff --git a/core/java/com/android/internal/app/LujarchBackgroundMemory.aidl b/core/java/com/android/internal/app/LujarchBackgroundMemory.aidl
 new file mode 100644
@@ -901,7 +982,7 @@ index 0000000000000000000000000000000000000000..4ea4389b6b154ebdef0423f06515168d
 +    boolean conversation;
 +}
 diff --git a/core/java/com/android/internal/notification/SystemNotificationChannels.java b/core/java/com/android/internal/notification/SystemNotificationChannels.java
-index 970d564c9634188d58d1f4339c7a202968054db6..cea3a622e8bef38aec5f9f7e4d61bdaf14a12104 100644
+index 970d564c9634188d58d1f4339c7a202968054db6..b762d6c7a40fdadcc087ede8d0724442381e66db 100644
 --- a/core/java/com/android/internal/notification/SystemNotificationChannels.java
 +++ b/core/java/com/android/internal/notification/SystemNotificationChannels.java
 @@ -18,6 +18,7 @@ import static android.app.admin.DevicePolicyResources.Strings.Core.NOTIFICATION_
@@ -916,7 +997,7 @@ index 970d564c9634188d58d1f4339c7a202968054db6..cea3a622e8bef38aec5f9f7e4d61bdaf
                  ABUSIVE_BACKGROUND_APPS,
                  context.getString(R.string.notification_channel_abusive_bg_apps),
                  NotificationManager.IMPORTANCE_LOW);
-+        // Lujarch's Background alerts speak here too (BG-12), and the owner can turn them off.
++        // Lujarch's Background alerts speak here too (BG-13), and the owner can turn them off.
 +        abusiveBackgroundAppsChannel.setBlockable(true);
          channelsList.add(abusiveBackgroundAppsChannel);
  
@@ -972,10 +1053,10 @@ index 0000000000000000000000000000000000000000..58b61be109a626afc8f67138600273cb
 +</vector>
 diff --git a/core/res/res/values-ja/lujarch_background_strings.xml b/core/res/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0915d5b0465859f582ec60fd562af61d6f5c6938
+index 0000000000000000000000000000000000000000..4f364bf3594169363f0bc64d182cb92ffbfd8352
 --- /dev/null
 +++ b/core/res/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,163 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1036,6 +1117,7 @@ index 0000000000000000000000000000000000000000..0915d5b0465859f582ec60fd562af61d
 +    <string name="lujarch_background_end_card">"カードが閉じられた"</string>
 +    <string name="lujarch_background_end_you">"あなたが終了"</string>
 +    <string name="lujarch_background_end_restricted">"制限されている"</string>
++    <string name="lujarch_background_end_limit">"メモリの上限を超えて必要とした"</string>
 +    <string name="lujarch_background_end_self">"アプリ自身が終了"</string>
 +    <string name="lujarch_background_end_crash">"エラーで終了"</string>
 +    <string name="lujarch_background_end_anr">"応答しなくなった"</string>
@@ -1140,10 +1222,10 @@ index 0000000000000000000000000000000000000000..0915d5b0465859f582ec60fd562af61d
 +</resources>
 diff --git a/core/res/res/values-zh-rCN/lujarch_background_strings.xml b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..9e59ff16549d97cc182c3d61943500131c723f98
+index 0000000000000000000000000000000000000000..86f14a4c2b2fc0e30aa3290114d3c3ea4f2037c4
 --- /dev/null
 +++ b/core/res/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,163 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1204,6 +1286,7 @@ index 0000000000000000000000000000000000000000..9e59ff16549d97cc182c3d6194350013
 +    <string name="lujarch_background_end_card">"卡片被关闭"</string>
 +    <string name="lujarch_background_end_you">"你结束了它"</string>
 +    <string name="lujarch_background_end_restricted">"它受限，不在后台运行"</string>
++    <string name="lujarch_background_end_limit">"它需要的内存超出了内存上限"</string>
 +    <string name="lujarch_background_end_self">"它自己退出了"</string>
 +    <string name="lujarch_background_end_crash">"它出错退出了"</string>
 +    <string name="lujarch_background_end_anr">"它没有响应"</string>
@@ -1308,10 +1391,10 @@ index 0000000000000000000000000000000000000000..9e59ff16549d97cc182c3d6194350013
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_strings.xml b/core/res/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..1c6694698479e93cd1f4b4c5727a8a6467837a60
+index 0000000000000000000000000000000000000000..451ae47da0d801e16bfae61dc905b96121f831fc
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,167 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1372,6 +1455,7 @@ index 0000000000000000000000000000000000000000..1c6694698479e93cd1f4b4c5727a8a64
 +    <string name="lujarch_background_end_card">its card was closed</string>
 +    <string name="lujarch_background_end_you">you ended it</string>
 +    <string name="lujarch_background_end_restricted">it is restricted</string>
++    <string name="lujarch_background_end_limit">it needed more than its memory limit</string>
 +    <string name="lujarch_background_end_self">it closed itself</string>
 +    <string name="lujarch_background_end_crash">it crashed</string>
 +    <string name="lujarch_background_end_anr">it stopped responding</string>
@@ -1480,10 +1564,10 @@ index 0000000000000000000000000000000000000000..1c6694698479e93cd1f4b4c5727a8a64
 +</resources>
 diff --git a/core/res/res/values/lujarch_background_symbols.xml b/core/res/res/values/lujarch_background_symbols.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..a59c3292351b15a61b2ec6d258e30af70f770226
+index 0000000000000000000000000000000000000000..aa2c7a801358e8dbf4f05897316270c5bd51358b
 --- /dev/null
 +++ b/core/res/res/values/lujarch_background_symbols.xml
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,155 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -1543,6 +1627,7 @@ index 0000000000000000000000000000000000000000..a59c3292351b15a61b2ec6d258e30af7
 +    <java-symbol type="string" name="lujarch_background_end_card" />
 +    <java-symbol type="string" name="lujarch_background_end_you" />
 +    <java-symbol type="string" name="lujarch_background_end_restricted" />
++    <java-symbol type="string" name="lujarch_background_end_limit" />
 +    <java-symbol type="string" name="lujarch_background_end_self" />
 +    <java-symbol type="string" name="lujarch_background_end_crash" />
 +    <java-symbol type="string" name="lujarch_background_end_anr" />
@@ -1747,7 +1832,7 @@ index e63c7c7b97b53207414bfcb9726de2aedd530d53..6ed8116e43d35c894714491b5a341847
                              && !pr.mReceivers.isReceivingBroadcast()
                              && !pr.getHasStartedServices()) {
 diff --git a/services/core/java/com/android/server/am/AppRestrictionController.java b/services/core/java/com/android/server/am/AppRestrictionController.java
-index 9ad1cd6ed58c61c7ff5aa1730716d2153532dc25..f2e4dd9421936148741466dab56cb16a78c625f3 100644
+index 9ad1cd6ed58c61c7ff5aa1730716d2153532dc25..f44ce13f5c5dfc4d537838992a732de35fec577c 100644
 --- a/services/core/java/com/android/server/am/AppRestrictionController.java
 +++ b/services/core/java/com/android/server/am/AppRestrictionController.java
 @@ -1153,9 +1153,10 @@ public final class AppRestrictionController {
@@ -1755,7 +1840,7 @@ index 9ad1cd6ed58c61c7ff5aa1730716d2153532dc25..f2e4dd9421936148741466dab56cb16a
  
          /**
 -         * Default value to {@link #mBgAutoRestrictAbusiveApps}.
-+         * Default value to {@link #mBgAutoRestrictAbusiveApps}. Lujarch's Background (BG-12): the
++         * Default value to {@link #mBgAutoRestrictAbusiveApps}. Lujarch's Background (BG-13): the
 +         * system never restricts an app by itself; the owner is asked.
           */
 -        static final boolean DEFAULT_BG_AUTO_RESTRICT_ABUSIVE_APPS = true;
@@ -1767,7 +1852,7 @@ index 9ad1cd6ed58c61c7ff5aa1730716d2153532dc25..f2e4dd9421936148741466dab56cb16a
                          null, UserHandle.of(UserHandle.getUserId(uid)));
              }
  
-+            // Lujarch's Background (BG-12): View running opens Recents' Running layer, which the
++            // Lujarch's Background (BG-13): View running opens Recents' Running layer, which the
 +            // shade shows for this intent.
 +            final Notification.Action[] actions = new Notification.Action[] {
 +                new Notification.Action.Builder(null, mContext.getString(
@@ -1808,9 +1893,617 @@ index 8f0a95e785ee992380737bd29b3027e327b0c6c1..9414f2bcf55beccfb23d6679eb2f3063
  
              if (android.os.Flags.perfettoSdkTracingV3()) {
                  PerfettoTrace.instant(FREEZER_CATEGORY, "unfreeze")
+diff --git a/services/core/java/com/android/server/am/LujarchBackgroundLimits.java b/services/core/java/com/android/server/am/LujarchBackgroundLimits.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..997af74ba41b823eb8e33ad55cb0be68f905fa3b
+--- /dev/null
++++ b/services/core/java/com/android/server/am/LujarchBackgroundLimits.java
+@@ -0,0 +1,602 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.am;
++
++import android.annotation.Nullable;
++import android.os.Handler;
++import android.os.HandlerThread;
++import android.os.Process;
++import android.os.SystemClock;
++import android.util.ArrayMap;
++import android.util.AtomicFile;
++import android.util.Slog;
++import android.util.SparseArray;
++import android.util.SparseBooleanArray;
++
++import com.android.internal.app.LujarchBackground;
++import com.android.internal.app.LujarchBackgroundLimit;
++
++import java.io.BufferedReader;
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.io.InputStreamReader;
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Files;
++import java.nio.file.NoSuchFileException;
++import java.nio.file.Paths;
++
++/**
++ * The memory limits the owner sets for apps (BG-8): kept in a file, written to each app's memory
++ * cgroup while they hold, and watched each second while the app has a process, so that an app
++ * that needs more waits or is ended as the owner chose. Its own thread does the writes, since
++ * lowering an app's limit compresses its memory before the write returns.
++ */
++final class LujarchBackgroundLimits {
++    private static final String TAG = LujarchBackgroundService.TAG;
++    /** An app's memory cgroup, by uid; it exists while the uid has a process. */
++    private static final String CGROUP = "/sys/fs/cgroup/apps/uid_";
++    private static final String NO_LIMIT = "max";
++    private static final long WATCH_MS = 1_000;
++    /** An app that went past its memory limit this recently still needs more. */
++    private static final long NEED_WINDOW_MS = 3_000;
++    /** Within this of a limit, an app is at it. */
++    private static final long NEAR_MIN_BYTES = 4L << 20;
++
++    /** What the owner set for one app. */
++    static final class Limit {
++        boolean on;
++        long memoryBytes = 1000 * LujarchBackground.LIMIT_MB;
++        long compressedBytes = -1;
++        int action = LujarchBackground.LIMIT_HOLD;
++        long endAfterMs;
++        boolean onScreen = true;
++        /** When this limit last ended the app, as System.currentTimeMillis(); 0 when never. */
++        long lastEndMillis;
++
++        Limit copy() {
++            final Limit l = new Limit();
++            l.on = on;
++            l.memoryBytes = memoryBytes;
++            l.compressedBytes = compressedBytes;
++            l.action = action;
++            l.endAfterMs = endAfterMs;
++            l.onScreen = onScreen;
++            l.lastEndMillis = lastEndMillis;
++            return l;
++        }
++    }
++
++    /** What one uid holds against its limit, as last watched. */
++    private static final class Watch {
++        String key;
++        int state = LujarchBackground.LIMIT_STATE_NONE;
++        long sinceMillis;
++        long used;
++        long usedCompressed;
++        long highEvents = -1;
++        /** When it last went past its memory limit with the compressed full (elapsed). */
++        long lastNeedElapsed;
++        /** Since when it needs more without a pause longer than NEED_WINDOW_MS (elapsed). */
++        long needsMoreSinceElapsed;
++        long endsAtMillis;
++    }
++
++    /** Ends an app whose limit says so; the owner's choice, recorded as such. */
++    interface Ender {
++        void endForLimit(int uid, String packageName);
++    }
++
++    private final File mFile;
++    private final Ender mEnder;
++    private final HandlerThread mThread;
++    private final Handler mHandler;
++    private final Object mLock = new Object();
++    /** "uid:package" to its limit. */
++    private final ArrayMap<String, Limit> mLimits = new ArrayMap<>();
++    /** The uids whose app is on screen. */
++    private final SparseBooleanArray mOnScreen = new SparseBooleanArray();
++    /** The uids with a limit applied or watched, to what they hold. */
++    private final SparseArray<Watch> mWatches = new SparseArray<>();
++    private boolean mWatching;
++
++    LujarchBackgroundLimits(File dir, Ender ender) {
++        mFile = new File(dir, "limits");
++        mEnder = ender;
++        mThread = new HandlerThread(TAG + ".limits", Process.THREAD_PRIORITY_BACKGROUND);
++        mThread.start();
++        mHandler = new Handler(mThread.getLooper()) {
++            @Override
++            public void dispatchMessage(android.os.Message msg) {
++                try {
++                    super.dispatchMessage(msg);
++                } catch (RuntimeException e) {
++                    Slog.e(TAG, "memory limits: work failed", e);
++                }
++            }
++        };
++    }
++
++    private static String key(int uid, String packageName) {
++        return uid + ":" + packageName;
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // The owner's limits
++
++    /**
++     * One line an app: "uid:package", then on, memory, compressed, action, end after, on screen
++     * and the last end, separated by tabs.
++     */
++    void load() {
++        if (!mFile.exists()) {
++            return;
++        }
++        try (BufferedReader r = new BufferedReader(new InputStreamReader(
++                new FileInputStream(mFile), StandardCharsets.UTF_8))) {
++            String line;
++            synchronized (mLock) {
++                mLimits.clear();
++                while ((line = r.readLine()) != null) {
++                    final String[] f = line.split("\t");
++                    if (f.length != 8) {
++                        Slog.w(TAG, "memory limits: a line is not understood: " + line);
++                        continue;
++                    }
++                    try {
++                        final Limit l = new Limit();
++                        l.on = "1".equals(f[1]);
++                        l.memoryBytes = Long.parseLong(f[2]);
++                        l.compressedBytes = Long.parseLong(f[3]);
++                        l.action = Integer.parseInt(f[4]);
++                        l.endAfterMs = Long.parseLong(f[5]);
++                        l.onScreen = "1".equals(f[6]);
++                        l.lastEndMillis = Long.parseLong(f[7]);
++                        mLimits.put(f[0], l);
++                    } catch (NumberFormatException e) {
++                        Slog.w(TAG, "memory limits: a line is not understood: " + line, e);
++                    }
++                }
++            }
++        } catch (IOException e) {
++            Slog.e(TAG, "cannot read " + mFile, e);
++        }
++        mHandler.post(this::applyAll);
++    }
++
++    private void save() {
++        final StringBuilder out = new StringBuilder();
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                final Limit l = mLimits.valueAt(i);
++                out.append(mLimits.keyAt(i)).append('\t').append(l.on ? 1 : 0).append('\t')
++                        .append(l.memoryBytes).append('\t').append(l.compressedBytes).append('\t')
++                        .append(l.action).append('\t').append(l.endAfterMs).append('\t')
++                        .append(l.onScreen ? 1 : 0).append('\t').append(l.lastEndMillis)
++                        .append('\n');
++            }
++        }
++        final AtomicFile file = new AtomicFile(mFile);
++        FileOutputStream stream = null;
++        try {
++            stream = file.startWrite();
++            stream.write(out.toString().getBytes(StandardCharsets.UTF_8));
++            file.finishWrite(stream);
++        } catch (IOException e) {
++            Slog.e(TAG, "cannot write " + mFile, e);
++            if (stream != null) {
++                file.failWrite(stream);
++            }
++        }
++    }
++
++    /** The app's limit, a copy; the defaults, off, when the owner never set one. */
++    Limit get(int uid, String packageName) {
++        synchronized (mLock) {
++            final Limit l = mLimits.get(key(uid, packageName));
++            return l != null ? l.copy() : new Limit();
++        }
++    }
++
++    /** The app's memory limit when it holds one that is on; 0 without. */
++    long limitBytes(int uid, String packageName) {
++        synchronized (mLock) {
++            final Limit l = mLimits.get(key(uid, packageName));
++            return l != null && l.on ? l.memoryBytes : 0;
++        }
++    }
++
++    void set(int uid, String packageName, LujarchBackgroundLimit in) {
++        if (in.memoryBytes < LujarchBackground.LIMIT_MIN_BYTES) {
++            throw new IllegalArgumentException("a memory limit below "
++                    + LujarchBackground.LIMIT_MIN_BYTES + " bytes");
++        }
++        if (in.compressedBytes < -1) {
++            throw new IllegalArgumentException("a compressed limit below 0");
++        }
++        if (in.action != LujarchBackground.LIMIT_HOLD && in.action != LujarchBackground.LIMIT_END
++                || in.endAfterMs < 0) {
++            throw new IllegalArgumentException("no such action " + in.action);
++        }
++        synchronized (mLock) {
++            final String k = key(uid, packageName);
++            final Limit l = mLimits.containsKey(k) ? mLimits.get(k) : new Limit();
++            l.on = in.on;
++            l.memoryBytes = in.memoryBytes;
++            l.compressedBytes = in.compressedBytes;
++            l.action = in.action;
++            l.endAfterMs = in.endAfterMs;
++            l.onScreen = in.onScreen;
++            mLimits.put(k, l);
++        }
++        Slog.i(TAG, packageName + " (" + uid + "): memory limit " + (in.on ? "on, " + in.memoryBytes
++                + " bytes, compressed " + (in.compressedBytes < 0 ? "no limit"
++                : in.compressedBytes + " bytes") + ", " + (in.action
++                == LujarchBackground.LIMIT_HOLD ? "hold it back" : "end it after "
++                + in.endAfterMs + " ms") + (in.onScreen ? ", also on screen" : "") : "off"));
++        mHandler.post(() -> {
++            save();
++            apply(uid);
++        });
++    }
++
++    /** Fills the live part of a limit for the page: what the app holds and where it is. */
++    void fill(int uid, LujarchBackgroundLimit out) {
++        synchronized (mLock) {
++            final Watch w = mWatches.get(uid);
++            if (w != null && w.highEvents >= 0) {
++                out.usedBytes = w.used;
++                out.usedCompressedBytes = w.usedCompressed;
++                out.state = w.state;
++                out.sinceMillis = w.sinceMillis;
++                out.endsAtMillis = w.endsAtMillis;
++                return;
++            }
++        }
++        final String dir = CGROUP + uid + "/";
++        final long used = readLong(dir + "memory.current");
++        if (used < 0 || !populated(dir)) {
++            out.state = LujarchBackground.LIMIT_STATE_NONE;
++            return;
++        }
++        out.usedBytes = used;
++        out.usedCompressedBytes = Math.max(0, readLong(dir + "memory.swap.current"));
++        out.state = LujarchBackground.LIMIT_STATE_LIFTED;
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Applying
++
++    /** The app of the uid came on or left the screen, or its processes changed. */
++    void onAppState(int uid, boolean onScreen) {
++        mHandler.post(() -> {
++            final boolean was;
++            synchronized (mLock) {
++                was = mOnScreen.get(uid);
++                if (onScreen) {
++                    mOnScreen.put(uid, true);
++                } else {
++                    mOnScreen.delete(uid);
++                }
++            }
++            if (hasLimit(uid)) {
++                apply(uid);
++            }
++        });
++    }
++
++    private boolean hasLimit(int uid) {
++        synchronized (mLock) {
++            return keyOf(uid) != null || mWatches.get(uid) != null;
++        }
++    }
++
++    /** The first of the uid's packages with a limit; a uid shared by packages has one cgroup. */
++    @Nullable
++    private String keyOf(int uid) {
++        final String prefix = uid + ":";
++        for (int i = 0; i < mLimits.size(); i++) {
++            if (mLimits.keyAt(i).startsWith(prefix)) {
++                return mLimits.keyAt(i);
++            }
++        }
++        return null;
++    }
++
++    private String packageOf(String key) {
++        return key.substring(key.indexOf(':') + 1);
++    }
++
++    private void applyAll() {
++        final int[] uids;
++        synchronized (mLock) {
++            uids = new int[mLimits.size()];
++            for (int i = 0; i < mLimits.size(); i++) {
++                final String k = mLimits.keyAt(i);
++                uids[i] = Integer.parseInt(k.substring(0, k.indexOf(':')));
++            }
++        }
++        for (int uid : uids) {
++            apply(uid);
++        }
++    }
++
++    /**
++     * Writes the uid's limits to its cgroup as they should hold now, or lifts them; a cgroup
++     * made again for a new process is written again.
++     */
++    private void apply(int uid) {
++        final String dir = CGROUP + uid + "/";
++        final Limit l;
++        final boolean onScreen;
++        final String k;
++        synchronized (mLock) {
++            k = keyOf(uid);
++            l = k != null ? mLimits.get(k).copy() : null;
++            onScreen = mOnScreen.get(uid);
++        }
++        final boolean holds = l != null && l.on && (l.onScreen || !onScreen);
++        if (!new File(dir).isDirectory()) {
++            synchronized (mLock) {
++                if (!holds) {
++                    mWatches.delete(uid);
++                }
++            }
++            return;
++        }
++        final String high = holds ? String.valueOf(l.memoryBytes) : NO_LIMIT;
++        final String swap = holds && l.compressedBytes >= 0 ? String.valueOf(l.compressedBytes)
++                : NO_LIMIT;
++        write(dir + "memory.swap.max", swap);
++        write(dir + "memory.high", high);
++        synchronized (mLock) {
++            if (l == null || !l.on) {
++                mWatches.delete(uid);
++            } else {
++                Watch w = mWatches.get(uid);
++                if (w == null) {
++                    w = new Watch();
++                    mWatches.put(uid, w);
++                }
++                w.key = k;
++            }
++        }
++        startWatching();
++    }
++
++    /** Writes a cgroup value unless it is there already. */
++    private static void write(String path, String value) {
++        final String now = read(path);
++        if (now == null) {
++            return;
++        }
++        if (now.equals(value) || NO_LIMIT.equals(value) && NO_LIMIT.equals(now)) {
++            return;
++        }
++        if (!NO_LIMIT.equals(value) && !NO_LIMIT.equals(now)) {
++            // The kernel keeps the value in pages: compare in pages.
++            try {
++                final long page = 4096;
++                if (Long.parseLong(now) / page == Long.parseLong(value) / page) {
++                    return;
++                }
++            } catch (NumberFormatException e) {
++                // Written below.
++            }
++        }
++        try (FileOutputStream out = new FileOutputStream(path)) {
++            out.write(value.getBytes(StandardCharsets.US_ASCII));
++        } catch (IOException e) {
++            Slog.e(TAG, "memory limits: cannot write " + value + " to " + path, e);
++        }
++    }
++
++    @Nullable
++    private static String read(String path) {
++        try {
++            return new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.US_ASCII)
++                    .trim();
++        } catch (NoSuchFileException e) {
++            return null;
++        } catch (IOException e) {
++            Slog.w(TAG, "memory limits: cannot read " + path, e);
++            return null;
++        }
++    }
++
++    private static long readLong(String path) {
++        final String s = read(path);
++        if (s == null) {
++            return -1;
++        }
++        try {
++            return NO_LIMIT.equals(s) ? Long.MAX_VALUE : Long.parseLong(s);
++        } catch (NumberFormatException e) {
++            return -1;
++        }
++    }
++
++    /** A count of memory.events ("high"); -1 when the cgroup is gone. */
++    private static long highEvents(String dir) {
++        return field(dir + "memory.events", "high");
++    }
++
++    /** Whether a process is in the cgroup; the uid's cgroup stays after its last process. */
++    private static boolean populated(String dir) {
++        return field(dir + "cgroup.events", "populated") > 0;
++    }
++
++    /** A "name value" line of a cgroup file; -1 when it cannot be read. */
++    private static long field(String path, String name) {
++        final String s = read(path);
++        if (s == null) {
++            return -1;
++        }
++        for (String line : s.split("\n")) {
++            if (line.startsWith(name + " ")) {
++                try {
++                    return Long.parseLong(line.substring(name.length() + 1).trim());
++                } catch (NumberFormatException e) {
++                    return -1;
++                }
++            }
++        }
++        return -1;
++    }
++
++    /** Free compressed swap of the device, in bytes; MAX_VALUE when it cannot be read. */
++    private static long swapFree() {
++        final String s = read("/proc/meminfo");
++        if (s != null) {
++            for (String line : s.split("\n")) {
++                if (line.startsWith("SwapFree:")) {
++                    try {
++                        return Long.parseLong(line.replaceAll("[^0-9]", "")) * 1024;
++                    } catch (NumberFormatException e) {
++                        break;
++                    }
++                }
++            }
++        }
++        return Long.MAX_VALUE;
++    }
++
++    // ---------------------------------------------------------------------------------------
++    // Watching
++
++    private void startWatching() {
++        if (!mWatching) {
++            mWatching = true;
++            mHandler.postDelayed(this::watch, WATCH_MS);
++        }
++    }
++
++    private void watch() {
++        final int[] uids;
++        synchronized (mLock) {
++            uids = new int[mWatches.size()];
++            for (int i = 0; i < mWatches.size(); i++) {
++                uids[i] = mWatches.keyAt(i);
++            }
++        }
++        final long swapFree = swapFree();
++        boolean any = false;
++        for (int uid : uids) {
++            any |= watch(uid, swapFree);
++        }
++        if (any) {
++            mHandler.postDelayed(this::watch, WATCH_MS);
++        } else {
++            mWatching = false;
++        }
++    }
++
++    /** Reads what the uid holds and acts on it; false once it has no process. */
++    private boolean watch(int uid, long swapFree) {
++        final String dir = CGROUP + uid + "/";
++        final Limit l;
++        final boolean onScreen;
++        final Watch w;
++        synchronized (mLock) {
++            final String k = keyOf(uid);
++            l = k != null ? mLimits.get(k).copy() : null;
++            onScreen = mOnScreen.get(uid);
++            w = mWatches.get(uid);
++        }
++        if (w == null || l == null || !l.on) {
++            return false;
++        }
++        final long used = readLong(dir + "memory.current");
++        final long compressed = readLong(dir + "memory.swap.current");
++        final long events = highEvents(dir);
++        if (used < 0 || events < 0 || !populated(dir)) {
++            synchronized (mLock) {
++                setState(w, LujarchBackground.LIMIT_STATE_NONE);
++                w.highEvents = -1;
++                w.used = 0;
++                w.usedCompressed = 0;
++                w.endsAtMillis = 0;
++                w.needsMoreSinceElapsed = 0;
++            }
++            return false;
++        }
++        // A cgroup made again for a new process starts without the limits.
++        if (readLong(dir + "memory.high") == Long.MAX_VALUE && (l.onScreen || !onScreen)) {
++            apply(uid);
++        }
++        final long now = SystemClock.elapsedRealtime();
++        final boolean holds = l.onScreen || !onScreen;
++        final long near = Math.max(NEAR_MIN_BYTES, l.memoryBytes / 50);
++        final boolean atMemory = used >= l.memoryBytes - near;
++        final boolean compressedFull = l.compressedBytes >= 0
++                ? compressed >= l.compressedBytes - near : swapFree < near;
++        final boolean grew = w.highEvents >= 0 && events > w.highEvents;
++        boolean end = false;
++        synchronized (mLock) {
++            w.used = used;
++            w.usedCompressed = Math.max(0, compressed);
++            if (holds && atMemory && compressedFull && grew) {
++                w.lastNeedElapsed = now;
++                if (w.needsMoreSinceElapsed == 0) {
++                    w.needsMoreSinceElapsed = now;
++                }
++            }
++            final boolean needs = holds && now - w.lastNeedElapsed < NEED_WINDOW_MS
++                    && w.lastNeedElapsed > 0;
++            if (!needs) {
++                w.needsMoreSinceElapsed = 0;
++                w.endsAtMillis = 0;
++            }
++            setState(w, !holds ? LujarchBackground.LIMIT_STATE_LIFTED
++                    : needs ? LujarchBackground.LIMIT_STATE_NEEDS_MORE
++                    : atMemory && !compressedFull ? LujarchBackground.LIMIT_STATE_COMPRESSING
++                    : LujarchBackground.LIMIT_STATE_WITHIN);
++            w.highEvents = events;
++            if (needs && l.action == LujarchBackground.LIMIT_END) {
++                final long left = l.endAfterMs - (now - w.needsMoreSinceElapsed);
++                w.endsAtMillis = System.currentTimeMillis() + Math.max(0, left);
++                if (left <= 0) {
++                    end = true;
++                    w.needsMoreSinceElapsed = 0;
++                    w.lastNeedElapsed = 0;
++                    w.endsAtMillis = 0;
++                }
++            }
++        }
++        if (end) {
++            final String k = w.key;
++            Slog.i(TAG, packageOf(k) + " (" + uid + ") needs more than its memory limit: ended");
++            synchronized (mLock) {
++                final Limit stored = mLimits.get(k);
++                if (stored != null) {
++                    stored.lastEndMillis = System.currentTimeMillis();
++                }
++            }
++            save();
++            mEnder.endForLimit(uid, packageOf(k));
++        }
++        return true;
++    }
++
++    private static void setState(Watch w, int state) {
++        if (w.state != state) {
++            w.state = state;
++            w.sinceMillis = System.currentTimeMillis();
++        }
++    }
++}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundNotices.java b/services/core/java/com/android/server/am/LujarchBackgroundNotices.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..eb9eab9c0eb63af4887346de5a98fd480f088b69
+index 0000000000000000000000000000000000000000..26057891a4f74752b1657208fa8834f496771c37
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundNotices.java
 @@ -0,0 +1,234 @@
@@ -1856,7 +2549,7 @@ index 0000000000000000000000000000000000000000..eb9eab9c0eb63af4887346de5a98fd48
 +import java.util.Calendar;
 +
 +/**
-+ * Background's alerts (BG-12), posted by the system under Android System in Android's own
++ * Background's alerts (BG-13), posted by the system under Android System in Android's own
 + * Background activity channel: a choice of the owner's broke (BG-3), or an app off screen uses
 + * much more battery than usual. Each offers the same action as its page and leads there.
 + */
@@ -3024,10 +3717,10 @@ index 0000000000000000000000000000000000000000..74b0c341c171879ac23d633c3eb3ecb9
 +}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundService.java b/services/core/java/com/android/server/am/LujarchBackgroundService.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b25f520ba9
+index 0000000000000000000000000000000000000000..4912fe6e67fa4ac34997387ae1031262f2ae7667
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundService.java
-@@ -0,0 +1,3103 @@
+@@ -0,0 +1,3196 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -3107,6 +3800,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +import com.android.internal.app.LujarchBackground;
 +import com.android.internal.app.LujarchBackgroundApp;
 +import com.android.internal.app.LujarchBackgroundEvent;
++import com.android.internal.app.LujarchBackgroundLimit;
 +import com.android.internal.app.LujarchBackgroundMemory;
 +import com.android.internal.app.LujarchBackgroundProcess;
 +import com.android.internal.app.LujarchBackgroundReason;
@@ -3194,6 +3888,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +    static final int C_END_FREEZER = 72;
 +    static final int C_END_PERMISSION = 73;
 +    static final int C_END_BOOT = 74;
++    static final int C_END_LIMIT = 75;
 +    static final int C_STOP = 80;
 +    static final int C_START_BROADCAST = 90;
 +    static final int C_START_SERVICE = 91;
@@ -3231,6 +3926,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +    final LujarchBackgroundRecord mRecord;
 +    final LujarchBackgroundRuns mRuns;
 +    final LujarchBackgroundProc mProc = new LujarchBackgroundProc();
++    final LujarchBackgroundLimits mMemoryLimits;
 +    private LujarchBackgroundNotices mNotices;
 +    private LujarchBackgroundUsage mUsage;
 +    private AppOpsManager mAppOps;
@@ -3327,6 +4023,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +    static final int ACTION_KILL_BACKGROUND = 2;
 +    static final int ACTION_STOP_APP = 3;
 +    static final int ACTION_END_PROCESS = 4;
++    static final int ACTION_LIMIT = 5;
 +
 +    /** One process as ActivityManager knows it, copied under its locks. */
 +    static final class Proc {
@@ -3379,6 +4076,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        };
 +        mRecord = new LujarchBackgroundRecord(DIR);
 +        mRuns = new LujarchBackgroundRuns(DIR);
++        mMemoryLimits = new LujarchBackgroundLimits(DIR, this::endForLimit);
 +    }
 +
 +    /** Called once ActivityManager is ready: loads the record, watches what it follows, publishes the API. */
@@ -3388,6 +4086,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +                mRecord.load();
 +                mRuns.load();
 +                loadChosen();
++                mMemoryLimits.load();
 +                mAppOps = mContext.getSystemService(AppOpsManager.class);
 +                mDeviceIdle = IDeviceIdleController.Stub.asInterface(
 +                        ServiceManager.getService(Context.DEVICE_IDLE_CONTROLLER));
@@ -4141,6 +4840,9 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +            t.since = time;
 +        }
 +        t.onScreen = onScreen(now.state);
++        if (!procs.isEmpty()) {
++            mMemoryLimits.onAppState(procs.get(0).uid, t.onScreen);
++        }
 +    }
 +
 +    /** Each process's state from now on, in its line (BG-1). */
@@ -4390,6 +5092,9 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        final int app = LujarchBackground.WHO_APP;
 +        if (info == null) {
 +            return new int[] {system, C_END_SYSTEM};
++        }
++        if (caller != null && caller.action == ACTION_LIMIT) {
++            return new int[] {user, C_END_LIMIT};
 +        }
 +        final int callerWho = caller != null ? caller.who : user;
 +        switch (info.getReason()) {
@@ -4906,6 +5611,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        a.uid = info.uid;
 +        a.label = label(info.packageName, userId);
 +        a.kept = isKept(info.uid, info.packageName);
++        a.limitBytes = mMemoryLimits.limitBytes(info.uid, info.packageName);
 +        a.usage = usageOf(info.uid, info.packageName);
 +        a.usageFixed = isSystemAllowlisted(info.packageName);
 +        synchronized (mLock) {
@@ -5200,7 +5906,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        }
 +    }
 +
-+    /** What runs off screen, in the order of Recents' Running layer (BG-8). */
++    /** What runs off screen, in the order of Recents' Running layer (BG-9). */
 +    List<LujarchBackgroundApp> running(int userId) {
 +        final ArrayList<LujarchBackgroundApp> out = new ArrayList<>();
 +        final ArrayMap<String, Integer> kinds = new ArrayMap<>();
@@ -5318,6 +6024,8 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +                    return c.getString(R.string.lujarch_background_end_you);
 +                case C_END_RESTRICTED:
 +                    return c.getString(R.string.lujarch_background_end_restricted);
++                case C_END_LIMIT:
++                    return c.getString(R.string.lujarch_background_end_limit);
 +                case C_END_SELF:
 +                    return c.getString(R.string.lujarch_background_end_self);
 +                case C_END_CRASH:
@@ -5693,6 +6401,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        idle.reason = mContext.getString(R.string.lujarch_background_r_not_started);
 +        idle.word = LujarchBackground.stateName(mContext, idle.state);
 +        idle.kept = isKept(info.uid, packageName);
++        idle.limitBytes = mMemoryLimits.limitBytes(info.uid, packageName);
 +        idle.usage = usageOf(info.uid, packageName);
 +        idle.usageFixed = isSystemAllowlisted(packageName);
 +        idle.taskId = -1;
@@ -6020,6 +6729,83 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +        }
 +    }
 +
++    @Override
++    public LujarchBackgroundLimit getLimit(String packageName, int userId) {
++        enforce();
++        final long ident = Binder.clearCallingIdentity();
++        try {
++            final int uid;
++            try {
++                uid = mContext.getPackageManager().getPackageUidAsUser(packageName, userId);
++            } catch (PackageManager.NameNotFoundException e) {
++                return null;
++            }
++            final LujarchBackgroundLimits.Limit l = mMemoryLimits.get(uid, packageName);
++            final LujarchBackgroundLimit out = new LujarchBackgroundLimit();
++            out.on = l.on;
++            out.memoryBytes = l.memoryBytes;
++            out.compressedBytes = l.compressedBytes;
++            out.action = l.action;
++            out.endAfterMs = l.endAfterMs;
++            out.onScreen = l.onScreen;
++            out.lastEndMillis = l.lastEndMillis;
++            mMemoryLimits.fill(uid, out);
++            if (!l.on && out.state != LujarchBackground.LIMIT_STATE_NONE) {
++                out.state = LujarchBackground.LIMIT_STATE_LIFTED;
++            }
++            return out;
++        } finally {
++            Binder.restoreCallingIdentity(ident);
++        }
++    }
++
++    @Override
++    public void setLimit(String packageName, int userId, LujarchBackgroundLimit limit) {
++        enforce();
++        final long ident = Binder.clearCallingIdentity();
++        try {
++            final int uid = uidOf(packageName, userId);
++            if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++                throw new IllegalArgumentException(packageName + " is part of the system");
++            }
++            mMemoryLimits.set(uid, packageName, limit);
++        } finally {
++            Binder.restoreCallingIdentity(ident);
++        }
++    }
++
++    /**
++     * Ends every process of the uid, as its memory limit says (BG-8); the end is the owner's
++     * choice and recorded so. Called on the limits' thread.
++     */
++    private void endForLimit(int uid, String packageName) {
++        final int userId = UserHandle.getUserId(uid);
++        synchronized (mLock) {
++            mCallers.put(LujarchBackgroundRecord.key(userId, packageName),
++                    new Caller(LujarchBackground.WHO_USER, null, ACTION_LIMIT,
++                            SystemClock.elapsedRealtime()));
++        }
++        int ended = 0;
++        synchronized (mAm) {
++            final ArrayList<ProcessRecord> procs = new ArrayList<>();
++            synchronized (mAm.mProcLock) {
++                for (ProcessRecord app : mAm.mProcessList.getLruProcessesLOSP()) {
++                    if (app.uid == uid && app.getPid() > 0 && !app.isKilled()
++                            && !app.isKilledByAm() && !app.isPersistent()) {
++                        procs.add(app);
++                    }
++                }
++            }
++            for (ProcessRecord app : procs) {
++                app.killLocked("needs more than its memory limit",
++                        ApplicationExitInfo.REASON_OTHER, ApplicationExitInfo.SUBREASON_UNKNOWN,
++                        true);
++                ended++;
++            }
++        }
++        Slog.i(TAG, packageName + " (" + uid + "): " + ended + " processes ended by its memory limit");
++    }
++
 +    void applyKept(String packageName, int uid, boolean kept) {
 +        mAppOps.setMode(AppOpsManager.OP_LUJARCH_KEEP, uid, packageName,
 +                kept ? AppOpsManager.MODE_ALLOWED : AppOpsManager.MODE_IGNORED);
@@ -6133,7 +6919,7 @@ index 0000000000000000000000000000000000000000..567122b009381a0e3864bc4dd01b19b2
 +}
 diff --git a/services/core/java/com/android/server/am/LujarchBackgroundUsage.java b/services/core/java/com/android/server/am/LujarchBackgroundUsage.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..94a294ca9f6b6b911f8908d836d3fc2781b79884
+index 0000000000000000000000000000000000000000..d51ff3cabed0c328043b798acd58224e4acc0b86
 --- /dev/null
 +++ b/services/core/java/com/android/server/am/LujarchBackgroundUsage.java
 @@ -0,0 +1,325 @@
@@ -6188,7 +6974,7 @@ index 0000000000000000000000000000000000000000..94a294ca9f6b6b911f8908d836d3fc27
 +/**
 + * The battery each app used off screen in the last 24 hours, from Android's own accumulated
 + * battery usage, noted once an hour; and the alert for an app that uses much more than its peers
-+ * (BG-12). Nothing is restricted here: the alert only proposes.
++ * (BG-13). Nothing is restricted here: the alert only proposes.
 + */
 +final class LujarchBackgroundUsage {
 +    private static final String TAG = LujarchBackgroundService.TAG;

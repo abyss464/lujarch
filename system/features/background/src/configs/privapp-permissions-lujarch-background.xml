@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The privileged permissions Background adds to the apps that show it: Recents (BG-8, BG-10,
-    BG-11), its pages in Settings and Lujarch Settings (BG-1 to BG-7) and the shade's footer in
-    SystemUI (BG-9). A missing entry stops system_server at boot.
+    The privileged permissions Background adds to the apps that show it: Recents (BG-9, BG-11,
+    BG-12), its pages in Settings and Lujarch Settings (BG-1 to BG-7) and the shade's footer in
+    SystemUI (BG-10). A missing entry stops system_server at boot.
 -->
 <permissions>
     <privapp-permissions package="com.android.launcher3">

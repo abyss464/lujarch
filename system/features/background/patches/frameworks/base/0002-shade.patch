@@ -1,19 +1,19 @@
 diff --git a/packages/SystemUI/AndroidManifest.xml b/packages/SystemUI/AndroidManifest.xml
-index a83e306e053c9057aab10ffea49a47e9e24b1a90..fc281713a6217c8788a9fae9f20b717603f5597b 100644
+index a83e306e053c9057aab10ffea49a47e9e24b1a90..ae12285cb0daaac5aeacae51e7cf00e9d21003cf 100644
 --- a/packages/SystemUI/AndroidManifest.xml
 +++ b/packages/SystemUI/AndroidManifest.xml
 @@ -308,6 +308,8 @@
  
      <!-- Listen app op changes -->
      <uses-permission android:name="android.permission.WATCH_APPOPS" />
-+    <!-- Lujarch's Background: the shade's Running · N (BG-9). -->
++    <!-- Lujarch's Background: the shade's Running · N (BG-10). -->
 +    <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
      <uses-permission android:name="android.permission.OBSERVE_GRANT_REVOKE_PERMISSIONS" />
      <!-- For handling silent audio recordings -->
      <uses-permission android:name="android.permission.MODIFY_AUDIO_ROUTING" />
 diff --git a/packages/SystemUI/res/values-ja/lujarch_background_strings.xml b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0d7393203c5f31a32788b7f287f7280744f6e101
+index 0000000000000000000000000000000000000000..e6d4acc42fe969cd910ca628f871fbf805ae6c54
 --- /dev/null
 +++ b/packages/SystemUI/res/values-ja/lujarch_background_strings.xml
 @@ -0,0 +1,22 @@
@@ -33,7 +33,7 @@ index 0000000000000000000000000000000000000000..0d7393203c5f31a32788b7f287f72807
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
++<!-- Lujarch's Background (BG-10): the shade's footer leads to Recents' Running layer. -->
 +<resources>
 +    <plurals name="lujarch_background_running">
 +        <item quantity="other">"実行中 · %d"</item>
@@ -41,7 +41,7 @@ index 0000000000000000000000000000000000000000..0d7393203c5f31a32788b7f287f72807
 +</resources>
 diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..582f18a737bd8a3ffff6604fbc1e2f3a4d532c2d
+index 0000000000000000000000000000000000000000..045161b5a31b57d7e80812ec3abc1401b6245936
 --- /dev/null
 +++ b/packages/SystemUI/res/values-zh-rCN/lujarch_background_strings.xml
 @@ -0,0 +1,22 @@
@@ -61,7 +61,7 @@ index 0000000000000000000000000000000000000000..582f18a737bd8a3ffff6604fbc1e2f3a
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
++<!-- Lujarch's Background (BG-10): the shade's footer leads to Recents' Running layer. -->
 +<resources>
 +    <plurals name="lujarch_background_running">
 +        <item quantity="other">"运行中 · %d"</item>
@@ -69,7 +69,7 @@ index 0000000000000000000000000000000000000000..582f18a737bd8a3ffff6604fbc1e2f3a
 +</resources>
 diff --git a/packages/SystemUI/res/values/lujarch_background_strings.xml b/packages/SystemUI/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..81535293c0c93a421e7608434c3652fc7287a01c
+index 0000000000000000000000000000000000000000..bc72d61c4fd9e234d68f929f8b619c01287fdddd
 --- /dev/null
 +++ b/packages/SystemUI/res/values/lujarch_background_strings.xml
 @@ -0,0 +1,23 @@
@@ -89,7 +89,7 @@ index 0000000000000000000000000000000000000000..81535293c0c93a421e7608434c3652fc
 +    See the License for the specific language governing permissions and
 +    limitations under the License.
 +-->
-+<!-- Lujarch's Background (BG-9): the shade's footer leads to Recents' Running layer. -->
++<!-- Lujarch's Background (BG-10): the shade's footer leads to Recents' Running layer. -->
 +<resources>
 +    <plurals name="lujarch_background_running">
 +        <item quantity="one">Running · %d</item>
@@ -98,7 +98,7 @@ index 0000000000000000000000000000000000000000..81535293c0c93a421e7608434c3652fc
 +</resources>
 diff --git a/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..806aae68c17a3201c6fbb64867bdb60959cf8dcc
+index 0000000000000000000000000000000000000000..8ed2a7b19aed7f9c3affd90167d7ade15c03fec9
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/lujarch/background/LujarchRunning.kt
 @@ -0,0 +1,121 @@
@@ -136,11 +136,11 @@ index 0000000000000000000000000000000000000000..806aae68c17a3201c6fbb64867bdb609
 +import kotlinx.coroutines.flow.flowOn
 +import kotlinx.coroutines.launch
 +
-+/** What Recents' Running layer shows, for the shade's footer (BG-9). */
++/** What Recents' Running layer shows, for the shade's footer (BG-10). */
 +data class LujarchRunningModel(val count: Int, val unseen: Boolean)
 +
 +/**
-+ * The shade's Running · N (BG-9): the count of what Recents' Running layer shows and whether
++ * The shade's Running · N (BG-10): the count of what Recents' Running layer shows and whether
 + * something started running since Recents last showed it, as Background tells it.
 + */
 +object LujarchRunning {
@@ -224,7 +224,7 @@ index 0000000000000000000000000000000000000000..806aae68c17a3201c6fbb64867bdb609
 +            .flowOn(bgDispatcher)
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt b/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
-index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..7eeaec08574d6a9ab6d4f119797b8719c75efb7f 100644
+index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..3bb8c31ea502b1266c253ab6e0770d328a0a3eb2 100644
 --- a/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
 +++ b/packages/SystemUI/src/com/android/systemui/qs/FgsManagerController.kt
 @@ -156,6 +156,8 @@ constructor(
@@ -243,7 +243,7 @@ index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..7eeaec08574d6a9ab6d4f119797b8719
 -                            showDialog(null)
 +                            if (com.android.systemui.lujarch.background.LujarchRunning
 +                                    .isLayerOn(appContext)) {
-+                                // Lujarch's Background (BG-8): what runs is shown in Recents'
++                                // Lujarch's Background (BG-9): what runs is shown in Recents'
 +                                // Running layer.
 +                                recents.get().ifPresent { it.showRecentApps(false) }
 +                            } else {
@@ -253,7 +253,7 @@ index a5e1fa8463a8627992a6ca45f4b909b3e19ba4d7..7eeaec08574d6a9ab6d4f119797b8719
                      }
                  },
 diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
-index a3cdd7341281a898ca15bf1a6f7520c65a13e424..21f7915ac648c81097caa29a56352c964c439eeb 100644
+index a3cdd7341281a898ca15bf1a6f7520c65a13e424..af8d646b5a3c8e8504cfeb4411f0c418d2fb8eb1 100644
 --- a/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
 +++ b/packages/SystemUI/src/com/android/systemui/qs/footer/domain/interactor/FooterActionsInteractor.kt
 @@ -34,19 +34,24 @@ import com.android.systemui.dagger.SysUISingleton
@@ -285,10 +285,10 @@ index a3cdd7341281a898ca15bf1a6f7520c65a13e424..21f7915ac648c81097caa29a56352c96
      /** Show the foreground services dialog. */
      fun showForegroundServicesDialog(expandable: Expandable)
  
-+    /** What Recents' Running layer shows; null while that layer is off (Lujarch, BG-9). */
++    /** What Recents' Running layer shows; null while that layer is off (Lujarch, BG-10). */
 +    val lujarchRunning: Flow<LujarchRunningModel?>
 +
-+    /** Closes the shade and shows Recents with its Running layer (Lujarch, BG-9). */
++    /** Closes the shade and shows Recents with its Running layer (Lujarch, BG-10). */
 +    fun showRunning()
 +
      /** Show the power menu dialog. */
@@ -322,7 +322,7 @@ index a3cdd7341281a898ca15bf1a6f7520c65a13e424..21f7915ac648c81097caa29a56352c96
          globalActionsDialogLite: GlobalActionsDialogLite,
          expandable: Expandable,
 diff --git a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
-index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..ea921794a775917ca7f28c23637a860504db0fc6 100644
+index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..39d88f1f9c92c80eb729137c4aa40ea80cf90e90 100644
 --- a/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
 +++ b/packages/SystemUI/src/com/android/systemui/qs/footer/ui/viewmodel/FooterActionsViewModel.kt
 @@ -231,6 +231,21 @@ fun createFooterActionsViewModel(
@@ -355,7 +355,7 @@ index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..ea921794a775917ca7f28c23637a8605
 +                footerActionsInteractor.lujarchRunning,
 +            ) { foregroundServicesCount, hasNewChanges, securityModel, textFeedbackModel, running ->
 +                if (running != null) {
-+                    // Lujarch's Background (BG-9): Running · N leads to Recents' Running layer.
++                    // Lujarch's Background (BG-10): Running · N leads to Recents' Running layer.
 +                    return@combine if (running.count <= 0) null
 +                    else lujarchRunningButtonViewModel(
 +                        qsThemedContext,
@@ -372,7 +372,7 @@ index 1095b8aac04d42d1377c81905c9bdfc5c040ab5a..ea921794a775917ca7f28c23637a8605
      )
  }
  
-+/** Lujarch's Background (BG-9): the footer's Running · N. */
++/** Lujarch's Background (BG-10): the footer's Running · N. */
 +fun lujarchRunningButtonViewModel(
 +    qsThemedContext: Context,
 +    running: com.android.systemui.lujarch.background.LujarchRunningModel,

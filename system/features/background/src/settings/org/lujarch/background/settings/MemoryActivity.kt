@@ -18,9 +18,12 @@ package org.lujarch.background.settings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.text.format.Formatter
 import android.util.Log
 import androidx.fragment.app.Fragment
 import com.android.internal.app.LujarchBackground
+import com.android.internal.app.LujarchBackgroundApp
+import org.lujarch.settings.AppInfoRow
 import org.lujarch.settings.Contribution
 import org.lujarch.settings.SearchEntry
 import org.lujarch.settings.pages.BaseActivity
@@ -54,8 +57,46 @@ class MemoryActivity : BaseActivity() {
     }
 }
 
-/** The memory page in Settings search (BG-5). */
+/**
+ * Memory in App info, with the app's average use, whether it is kept and its memory limit (BG-6),
+ * and the memory page in Settings search (BG-5).
+ */
 class MemoryContribution : Contribution {
+    override fun appInfoRows(context: Context, packageName: String, userId: Int): List<AppInfoRow> {
+        val summary = try {
+            BackgroundClient.callNow { it.getApp(packageName, userId) }
+                ?.let { summary(context, packageName, it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "App info: the memory of $packageName is not known: ${e.message}")
+            null
+        } ?: ""
+        return listOf(
+            AppInfoRow(
+                key = "lujarch_memory",
+                title = context.getString(R.string.memory_title),
+                summary = summary,
+                action = LujarchBackground.ACTION_APP_MEMORY,
+            )
+        )
+    }
+
+    private fun summary(context: Context, packageName: String, a: LujarchBackgroundApp): String {
+        val average = AppMemoryFragment.usedOver3Hours(packageName, a.uid)?.get(0) ?: 0
+        val parts = mutableListOf(when {
+            average > 0 -> context.getString(R.string.memory_app_info_average,
+                Formatter.formatShortFileSize(context, average))
+            a.memoryBytes > 0 -> context.getString(R.string.memory_now,
+                Formatter.formatShortFileSize(context, a.memoryBytes))
+            else -> LujarchBackground.stateName(context, a.state)
+        })
+        if (a.kept) parts += LujarchBackground.memoryName(context, LujarchBackground.MEMORY_KEPT)
+        if (a.limitBytes > 0) {
+            parts += context.getString(R.string.memory_app_info_limit,
+                Formatter.formatShortFileSize(context, a.limitBytes))
+        }
+        return parts.joinToString(context.getString(R.string.memory_separator))
+    }
+
     override fun searchEntries(context: Context): List<SearchEntry> =
         listOf(
             SearchEntry(
