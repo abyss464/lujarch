@@ -1,0 +1,21 @@
+// Screen record's profiles, used by the recording dialog in SystemUI and by the settings page.
+java_library {
+    name: "LujarchRecorderProfiles",
+    srcs: ["src/profiles/**/*.java"],
+    platform_apis: true,
+    visibility: ["//visibility:public"],
+}
+
+// Screen record's pages in Lujarch Settings: Settings > System > Screen record.
+android_library {
+    name: "LujarchRecorderSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "LujarchRecorderProfiles",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}

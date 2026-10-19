@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="rec_title">画面録画</string>
+    <string name="rec_summary">動画、音声、ファイル、プロファイル</string>
+    <string name="rec_system">システム</string>
+    <string name="rec_keywords">画面録画, 録画, 動画, コーデック, ビットレート, 解像度, フレームレート</string>
+    <string name="rec_footer">クイック設定 > 画面録画はこの設定で録画します。</string>
+    <string name="rec_video">動画</string>
+    <string name="rec_audio">音声</string>
+    <string name="rec_file">ファイル</string>
+    <string name="rec_profiles">プロファイル</string>
+    <string name="rec_recording">録画中</string>
+    <string name="rec_video_search">コーデック、エンコーダー、解像度、フレームレート、ビットレート</string>
+    <string name="rec_audio_search">音声のソース、音量、コーデック、サンプルレート</string>
+    <string name="rec_file_search">形式、フォルダ、ファイル名、上限</string>
+    <string name="rec_profiles_search">まとめて使える設定の組み合わせ</string>
+    <string name="rec_recording_search">カウントダウン、画面をオンのままにする、サイレントモード</string>
+    <string name="rec_hardware">ハードウェア</string>
+    <string name="rec_software">ソフトウェア</string>
+    <string name="rec_automatic">自動</string>
+    <string name="rec_custom">カスタム</string>
+    <string name="rec_codec">コーデック</string>
+    <string name="rec_codec_auto">自動（%1$s）</string>
+    <string name="rec_encoder">エンコーダー</string>
+    <string name="rec_encoder_auto">コーデックのハードウェアエンコーダー</string>
+    <string name="rec_profile_level">プロファイルとレベル</string>
+    <string name="rec_profile_level_value">%1$s、レベル %2$s</string>
+    <string name="rec_bit_depth">ビット深度</string>
+    <string name="rec_8_bit">8 ビット</string>
+    <string name="rec_10_bit">10 ビット</string>
+    <string name="rec_resolution">解像度</string>
+    <string name="rec_same_as_screen">画面と同じ</string>
+    <string name="rec_size_records">%1$s · %2$d × %3$d で録画</string>
+    <string name="rec_size_brought">%1$s · エンコーダーはこのサイズに対応していないため、対応する最も近いサイズ %2$d × %3$d で録画します</string>
+    <string name="rec_size_hint">幅 x 高さ（例：1920x1080）</string>
+    <string name="rec_frame_rate">フレームレート</string>
+    <string name="rec_fps">%1$d fps</string>
+    <string name="rec_frame_rate_screen">画面と同じ（%1$d fps）</string>
+    <string name="rec_frames">フレーム</string>
+    <string name="rec_frames_changes">画面が変わったときのみ</string>
+    <string name="rec_frames_every">すべてのフレーム</string>
+    <string name="rec_bitrate">ビットレート</string>
+    <string name="rec_bitrate_auto">自動：サイズとフレームレートに合わせる</string>
+    <string name="rec_bitrate_hint">Mbps</string>
+    <string name="rec_mbps">%1$s Mbps</string>
+    <string name="rec_bitrate_mode">ビットレートモード</string>
+    <string name="rec_mode_variable">可変</string>
+    <string name="rec_mode_constant">固定</string>
+    <string name="rec_mode_quality">品質固定</string>
+    <string name="rec_quality">品質</string>
+    <string name="rec_quality_value">%1$d（%2$d〜%3$d）</string>
+    <string name="rec_key_interval">キーフレーム間隔</string>
+    <string name="rec_key_every">すべてのフレーム</string>
+    <string name="rec_key_first">最初のみ</string>
+    <string name="rec_seconds_hint">秒</string>
+    <string name="rec_b_frames">B フレーム</string>
+    <string name="rec_orientation">向き</string>
+    <string name="rec_orientation_start">開始時の画面の向き</string>
+    <string name="rec_orientation_portrait">縦向き</string>
+    <string name="rec_orientation_landscape">横向き</string>
+    <string name="rec_audio_source">音声を録音</string>
+    <string name="rec_audio_none">オフ</string>
+    <string name="rec_audio_device">デバイスの音声</string>
+    <string name="rec_audio_mic">マイク</string>
+    <string name="rec_audio_both">デバイスの音声とマイク</string>
+    <string name="rec_both_sources">両方のソース</string>
+    <string name="rec_mixed">1 つのトラックにミックス</string>
+    <string name="rec_separate">別々のトラック</string>
+    <string name="rec_device_volume">デバイスの音声の音量</string>
+    <string name="rec_mic_volume">マイクの音量</string>
+    <string name="rec_percent">%1$d%%</string>
+    <string name="rec_audio_codec">コーデック</string>
+    <string name="rec_sample_rate">サンプルレート</string>
+    <string name="rec_channels">チャンネル</string>
+    <string name="rec_mono">モノラル</string>
+    <string name="rec_stereo">ステレオ</string>
+    <string name="rec_audio_bitrate">ビットレート</string>
+    <string name="rec_kbps">%1$d kbps</string>
+    <string name="rec_kbps_hint">kbps</string>
+    <string name="rec_microphone">マイク</string>
+    <string name="rec_noise_suppression">ノイズ抑制</string>
+    <string name="rec_noise_suppression_summary">マイクの定常的なノイズを抑えます</string>
+    <string name="rec_echo_cancellation">エコーキャンセル</string>
+    <string name="rec_echo_cancellation_summary">スマートフォン自身の音をマイクから取り除きます</string>
+    <string name="rec_not_on_phone">このスマートフォンにはありません</string>
+    <string name="rec_format">形式</string>
+    <string name="rec_folder">フォルダ</string>
+    <string name="rec_folder_hint">例：Movies/Screen recordings</string>
+    <string name="rec_file_name">ファイル名</string>
+    <string name="rec_file_name_next">次の録画：%1$s</string>
+    <string name="rec_file_name_hint">yyyy MM dd HH mm ss は日付と時刻になります</string>
+    <string name="rec_longest">最長録画時間</string>
+    <string name="rec_largest">最大ファイルサイズ</string>
+    <string name="rec_no_limit">制限なし</string>
+    <string name="rec_minutes_hint">分</string>
+    <string name="rec_mb">%1$d MB</string>
+    <string name="rec_mb_hint">MB</string>
+    <string name="rec_at_limit">上限に達したとき</string>
+    <string name="rec_limit_stop">停止</string>
+    <string name="rec_limit_new_file">新しいファイルで続ける</string>
+    <string name="rec_profile_high">高画質</string>
+    <string name="rec_profile_small">小さいファイル</string>
+    <string name="rec_profile_high_summary">画面のサイズとリフレッシュレート、高いビットレート</string>
+    <string name="rec_profile_small_summary">半分のサイズ、30 fps、低いビットレート</string>
+    <string name="rec_profile_saved_summary">保存したプロファイル</string>
+    <string name="rec_profile_use">使う</string>
+    <string name="rec_profile_rename">名前を変更</string>
+    <string name="rec_profile_delete">削除</string>
+    <string name="rec_profile_save">現在の設定をプロファイルとして保存</string>
+    <string name="rec_profile_name">名前</string>
+    <string name="rec_profile_used">%1$s を使用中</string>
+    <string name="rec_profiles_footer">「使う」を選ぶと、動画・音声・ファイルのすべての設定がプロファイルの値になります。</string>
+    <string name="rec_countdown">カウントダウン</string>
+    <string name="rec_countdown_none">なし</string>
+    <string name="rec_keep_screen_on">画面をオンのままにする</string>
+    <string name="rec_keep_screen_on_summary">録画が終わるまで画面がオフになりません</string>
+    <string name="rec_dnd">録画中はサイレントモード</string>
+    <string name="rec_dnd_summary">録画開始時に優先する通知のみにし、終了時に元の状態に戻します</string>
+    <string name="rec_error_range">%1$d〜%2$d の数値を入力してください</string>
+    <string name="rec_error_number">数値を入力してください</string>
+    <string name="rec_error_size">64〜8192 の幅と高さを入力してください（例：1920x1080）</string>
+    <string name="rec_error_no_size">%1$s · エンコーダーは近いサイズに対応していません</string>
+    <string name="rec_error_frame_rate">エンコーダーはこのサイズでは最大 %1$d fps です</string>
+    <string name="rec_error_bitrate">エンコーダーは %1$s〜%2$s Mbps に対応しています</string>
+    <string name="rec_error_bitrate_mode">エンコーダーはこのビットレートモードに対応していません</string>
+    <string name="rec_error_10_bit">エンコーダーにはこのコーデックの 10 ビットプロファイルがありません</string>
+    <string name="rec_error_codec_webm">WebM は VP8 と VP9 のみ対応しています。先に「ファイル」で MP4 を選んでください</string>
+    <string name="rec_error_codec_mp4">MP4 は VP8 と VP9 に対応していません。先に「ファイル」で WebM を選んでください</string>
+    <string name="rec_error_format_webm">WebM は VP8 と VP9 のみ対応しています。先に「動画」でどちらかを選んでください</string>
+    <string name="rec_error_format_mp4">MP4 は H.264、H.265、AV1 に対応しています。先に「動画」でいずれかを選んでください</string>
+    <string name="rec_error_webm_audio">WebM の音声は Opus のみです。先に「音声」で Opus を選んでください</string>
+    <string name="rec_error_webm_tracks">WebM の音声トラックは 1 つだけです。先に「1 つのトラックにミックス」を選んでください</string>
+    <string name="rec_error_opus_rate">Opus は 48 kHz でのみ録音できます</string>
+    <string name="rec_error_folder">フォルダは DCIM、Movies、Pictures のいずれかの中にしてください</string>
+    <string name="rec_error_file_name">/ を含まない名前を入力してください</string>
+    <string name="rec_error_profile">プロファイルの設定の一部を設定できませんでした</string>
+    <string name="rec_error_profile_name">@ で始まらない名前を入力してください</string>
+    <string name="rec_error_profile_exists">この名前のプロファイルがあります</string>
+    <plurals name="rec_countdown_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="rec_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="rec_minutes">
+        <item quantity="other">%1$d 分</item>
+    </plurals>
+</resources>

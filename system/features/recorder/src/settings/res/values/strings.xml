@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="rec_title">Screen record</string>
+    <string name="rec_summary">Video, audio, file and profiles</string>
+    <string name="rec_system">System</string>
+    <string name="rec_keywords">screen record, recording, video, codec, bitrate, resolution, frame rate</string>
+    <string name="rec_footer">Quick Settings > Screen record records with these settings.</string>
+    <string name="rec_video">Video</string>
+    <string name="rec_audio">Audio</string>
+    <string name="rec_file">File</string>
+    <string name="rec_profiles">Profiles</string>
+    <string name="rec_recording">Recording</string>
+    <string name="rec_video_search">Codec, encoder, resolution, frame rate and bitrate</string>
+    <string name="rec_audio_search">Audio source, volumes, codec and sample rate</string>
+    <string name="rec_file_search">Format, folder, file name and limits</string>
+    <string name="rec_profiles_search">Sets of settings to use at once</string>
+    <string name="rec_recording_search">Countdown, keep the screen on, Do not disturb</string>
+    <string name="rec_hardware">Hardware</string>
+    <string name="rec_software">Software</string>
+    <string name="rec_automatic">Automatic</string>
+    <string name="rec_custom">Custom</string>
+    <string name="rec_codec">Codec</string>
+    <string name="rec_codec_auto">Automatic (%1$s)</string>
+    <string name="rec_encoder">Encoder</string>
+    <string name="rec_encoder_auto">The codec\'s hardware encoder</string>
+    <string name="rec_profile_level">Profile and level</string>
+    <string name="rec_profile_level_value">%1$s, level %2$s</string>
+    <string name="rec_bit_depth">Bit depth</string>
+    <string name="rec_8_bit">8-bit</string>
+    <string name="rec_10_bit">10-bit</string>
+    <string name="rec_resolution">Resolution</string>
+    <string name="rec_same_as_screen">Same as the screen</string>
+    <string name="rec_size_records">%1$s · records at %2$d × %3$d</string>
+    <string name="rec_size_brought">%1$s · the encoder does not take it; records at the nearest size it takes, %2$d × %3$d</string>
+    <string name="rec_size_hint">Width x height, such as 1920x1080</string>
+    <string name="rec_frame_rate">Frame rate</string>
+    <string name="rec_fps">%1$d fps</string>
+    <string name="rec_frame_rate_screen">Same as the screen (%1$d fps)</string>
+    <string name="rec_frames">Frames</string>
+    <string name="rec_frames_changes">Only when the screen changes</string>
+    <string name="rec_frames_every">Every frame</string>
+    <string name="rec_bitrate">Bitrate</string>
+    <string name="rec_bitrate_auto">Automatic: follows the size and the frame rate</string>
+    <string name="rec_bitrate_hint">Mbps</string>
+    <string name="rec_mbps">%1$s Mbps</string>
+    <string name="rec_bitrate_mode">Bitrate mode</string>
+    <string name="rec_mode_variable">Variable</string>
+    <string name="rec_mode_constant">Constant</string>
+    <string name="rec_mode_quality">Constant quality</string>
+    <string name="rec_quality">Quality</string>
+    <string name="rec_quality_value">%1$d (%2$d to %3$d)</string>
+    <string name="rec_key_interval">Key frame interval</string>
+    <string name="rec_key_every">Every frame</string>
+    <string name="rec_key_first">Only the first</string>
+    <string name="rec_seconds_hint">Seconds</string>
+    <string name="rec_b_frames">B-frames</string>
+    <string name="rec_orientation">Orientation</string>
+    <string name="rec_orientation_start">As the screen is at the start</string>
+    <string name="rec_orientation_portrait">Portrait</string>
+    <string name="rec_orientation_landscape">Landscape</string>
+    <string name="rec_audio_source">Record audio</string>
+    <string name="rec_audio_none">Off</string>
+    <string name="rec_audio_device">Device audio</string>
+    <string name="rec_audio_mic">Microphone</string>
+    <string name="rec_audio_both">Device audio and microphone</string>
+    <string name="rec_both_sources">Both sources</string>
+    <string name="rec_mixed">Mixed into one track</string>
+    <string name="rec_separate">Separate tracks</string>
+    <string name="rec_device_volume">Device audio volume</string>
+    <string name="rec_mic_volume">Microphone volume</string>
+    <string name="rec_percent">%1$d %%</string>
+    <string name="rec_audio_codec">Codec</string>
+    <string name="rec_sample_rate">Sample rate</string>
+    <string name="rec_channels">Channels</string>
+    <string name="rec_mono">Mono</string>
+    <string name="rec_stereo">Stereo</string>
+    <string name="rec_audio_bitrate">Bitrate</string>
+    <string name="rec_kbps">%1$d kbps</string>
+    <string name="rec_kbps_hint">kbps</string>
+    <string name="rec_microphone">Microphone</string>
+    <string name="rec_noise_suppression">Noise suppression</string>
+    <string name="rec_noise_suppression_summary">Reduces steady noise in the microphone</string>
+    <string name="rec_echo_cancellation">Echo cancellation</string>
+    <string name="rec_echo_cancellation_summary">Removes the phone\'s own sound from the microphone</string>
+    <string name="rec_not_on_phone">This phone does not have it</string>
+    <string name="rec_format">Format</string>
+    <string name="rec_folder">Folder</string>
+    <string name="rec_folder_hint">Such as Movies/Screen recordings</string>
+    <string name="rec_file_name">File name</string>
+    <string name="rec_file_name_next">The next recording: %1$s</string>
+    <string name="rec_file_name_hint">yyyy MM dd HH mm ss are the date and time</string>
+    <string name="rec_longest">Longest recording</string>
+    <string name="rec_largest">Largest file</string>
+    <string name="rec_no_limit">No limit</string>
+    <string name="rec_minutes_hint">Minutes</string>
+    <string name="rec_mb">%1$d MB</string>
+    <string name="rec_mb_hint">MB</string>
+    <string name="rec_at_limit">At the limit</string>
+    <string name="rec_limit_stop">Stop</string>
+    <string name="rec_limit_new_file">Go on in a new file</string>
+    <string name="rec_profile_high">High quality</string>
+    <string name="rec_profile_small">Small file</string>
+    <string name="rec_profile_high_summary">The screen\'s size and refresh rate at a high bitrate</string>
+    <string name="rec_profile_small_summary">Half the size at 30 fps at a low bitrate</string>
+    <string name="rec_profile_saved_summary">Saved profile</string>
+    <string name="rec_profile_use">Use</string>
+    <string name="rec_profile_rename">Rename</string>
+    <string name="rec_profile_delete">Delete</string>
+    <string name="rec_profile_save">Save current settings as a profile</string>
+    <string name="rec_profile_name">Name</string>
+    <string name="rec_profile_used">%1$s is in use</string>
+    <string name="rec_profiles_footer">Use sets every setting of the video, the sound and the file to the profile\'s.</string>
+    <string name="rec_countdown">Countdown</string>
+    <string name="rec_countdown_none">None</string>
+    <string name="rec_keep_screen_on">Keep the screen on</string>
+    <string name="rec_keep_screen_on_summary">The screen stays on until the recording ends</string>
+    <string name="rec_dnd">Do not disturb while recording</string>
+    <string name="rec_dnd_summary">Priority only from the start of a recording; the earlier state comes back when it ends</string>
+    <string name="rec_error_range">Enter a number from %1$d to %2$d</string>
+    <string name="rec_error_number">Enter a number</string>
+    <string name="rec_error_size">Enter a width and a height from 64 to 8192, such as 1920x1080</string>
+    <string name="rec_error_no_size">%1$s · the encoder takes no size near it</string>
+    <string name="rec_error_frame_rate">The encoder takes at most %1$d fps at this size</string>
+    <string name="rec_error_bitrate">The encoder takes %1$s to %2$s Mbps</string>
+    <string name="rec_error_bitrate_mode">The encoder does not support this bitrate mode</string>
+    <string name="rec_error_10_bit">The encoder has no 10-bit profile for this codec</string>
+    <string name="rec_error_codec_webm">WebM takes only VP8 and VP9; choose MP4 in File first</string>
+    <string name="rec_error_codec_mp4">MP4 does not take VP8 and VP9; choose WebM in File first</string>
+    <string name="rec_error_format_webm">WebM takes only VP8 and VP9; choose one in Video first</string>
+    <string name="rec_error_format_mp4">MP4 takes H.264, H.265 and AV1; choose one in Video first</string>
+    <string name="rec_error_webm_audio">WebM takes only Opus sound; choose Opus in Audio first</string>
+    <string name="rec_error_webm_tracks">WebM holds only one audio track; choose Mixed into one track first</string>
+    <string name="rec_error_opus_rate">Opus records only at 48 kHz</string>
+    <string name="rec_error_folder">The folder must be in DCIM, Movies or Pictures</string>
+    <string name="rec_error_file_name">Enter a name without /</string>
+    <string name="rec_error_profile">Not every setting of the profile could be set</string>
+    <string name="rec_error_profile_name">Enter a name that does not start with @</string>
+    <string name="rec_error_profile_exists">A profile has this name</string>
+    <plurals name="rec_countdown_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="rec_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="rec_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+</resources>

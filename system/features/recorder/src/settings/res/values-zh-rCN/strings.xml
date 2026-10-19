@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="rec_title">屏幕录制</string>
+    <string name="rec_summary">视频、音频、文件和配置</string>
+    <string name="rec_system">系统</string>
+    <string name="rec_keywords">屏幕录制, 录屏, 视频, 编码, 码率, 分辨率, 帧率</string>
+    <string name="rec_footer">快速设置 > 屏幕录制会使用这些设置录制。</string>
+    <string name="rec_video">视频</string>
+    <string name="rec_audio">音频</string>
+    <string name="rec_file">文件</string>
+    <string name="rec_profiles">配置</string>
+    <string name="rec_recording">录制</string>
+    <string name="rec_video_search">编码、编码器、分辨率、帧率和码率</string>
+    <string name="rec_audio_search">音频来源、音量、编码和采样率</string>
+    <string name="rec_file_search">格式、文件夹、文件名和限制</string>
+    <string name="rec_profiles_search">可一次应用的设置组合</string>
+    <string name="rec_recording_search">倒计时、保持屏幕常亮、勿扰</string>
+    <string name="rec_hardware">硬件</string>
+    <string name="rec_software">软件</string>
+    <string name="rec_automatic">自动</string>
+    <string name="rec_custom">自定义</string>
+    <string name="rec_codec">编码</string>
+    <string name="rec_codec_auto">自动（%1$s）</string>
+    <string name="rec_encoder">编码器</string>
+    <string name="rec_encoder_auto">该编码的硬件编码器</string>
+    <string name="rec_profile_level">配置文件和级别</string>
+    <string name="rec_profile_level_value">%1$s，级别 %2$s</string>
+    <string name="rec_bit_depth">位深</string>
+    <string name="rec_8_bit">8 位</string>
+    <string name="rec_10_bit">10 位</string>
+    <string name="rec_resolution">分辨率</string>
+    <string name="rec_same_as_screen">与屏幕相同</string>
+    <string name="rec_size_records">%1$s · 以 %2$d × %3$d 录制</string>
+    <string name="rec_size_brought">%1$s · 编码器不支持此尺寸；以它支持的最接近尺寸 %2$d × %3$d 录制</string>
+    <string name="rec_size_hint">宽 x 高，例如 1920x1080</string>
+    <string name="rec_frame_rate">帧率</string>
+    <string name="rec_fps">%1$d 帧/秒</string>
+    <string name="rec_frame_rate_screen">与屏幕相同（%1$d 帧/秒）</string>
+    <string name="rec_frames">帧</string>
+    <string name="rec_frames_changes">仅在屏幕变化时</string>
+    <string name="rec_frames_every">每一帧</string>
+    <string name="rec_bitrate">码率</string>
+    <string name="rec_bitrate_auto">自动：随尺寸和帧率变化</string>
+    <string name="rec_bitrate_hint">Mbps</string>
+    <string name="rec_mbps">%1$s Mbps</string>
+    <string name="rec_bitrate_mode">码率模式</string>
+    <string name="rec_mode_variable">可变</string>
+    <string name="rec_mode_constant">恒定</string>
+    <string name="rec_mode_quality">恒定质量</string>
+    <string name="rec_quality">质量</string>
+    <string name="rec_quality_value">%1$d（%2$d 到 %3$d）</string>
+    <string name="rec_key_interval">关键帧间隔</string>
+    <string name="rec_key_every">每一帧</string>
+    <string name="rec_key_first">仅第一帧</string>
+    <string name="rec_seconds_hint">秒</string>
+    <string name="rec_b_frames">B 帧</string>
+    <string name="rec_orientation">方向</string>
+    <string name="rec_orientation_start">与开始时的屏幕方向相同</string>
+    <string name="rec_orientation_portrait">竖屏</string>
+    <string name="rec_orientation_landscape">横屏</string>
+    <string name="rec_audio_source">录制音频</string>
+    <string name="rec_audio_none">关闭</string>
+    <string name="rec_audio_device">设备音频</string>
+    <string name="rec_audio_mic">麦克风</string>
+    <string name="rec_audio_both">设备音频和麦克风</string>
+    <string name="rec_both_sources">两个来源</string>
+    <string name="rec_mixed">混合为一条音轨</string>
+    <string name="rec_separate">分开的音轨</string>
+    <string name="rec_device_volume">设备音频音量</string>
+    <string name="rec_mic_volume">麦克风音量</string>
+    <string name="rec_percent">%1$d%%</string>
+    <string name="rec_audio_codec">编码</string>
+    <string name="rec_sample_rate">采样率</string>
+    <string name="rec_channels">声道</string>
+    <string name="rec_mono">单声道</string>
+    <string name="rec_stereo">立体声</string>
+    <string name="rec_audio_bitrate">码率</string>
+    <string name="rec_kbps">%1$d kbps</string>
+    <string name="rec_kbps_hint">kbps</string>
+    <string name="rec_microphone">麦克风</string>
+    <string name="rec_noise_suppression">降噪</string>
+    <string name="rec_noise_suppression_summary">减少麦克风中的持续噪音</string>
+    <string name="rec_echo_cancellation">回声消除</string>
+    <string name="rec_echo_cancellation_summary">从麦克风中去除手机自身的声音</string>
+    <string name="rec_not_on_phone">此手机不支持</string>
+    <string name="rec_format">格式</string>
+    <string name="rec_folder">文件夹</string>
+    <string name="rec_folder_hint">例如 Movies/Screen recordings</string>
+    <string name="rec_file_name">文件名</string>
+    <string name="rec_file_name_next">下一个录制：%1$s</string>
+    <string name="rec_file_name_hint">yyyy MM dd HH mm ss 代表日期和时间</string>
+    <string name="rec_longest">最长录制时间</string>
+    <string name="rec_largest">最大文件</string>
+    <string name="rec_no_limit">无限制</string>
+    <string name="rec_minutes_hint">分钟</string>
+    <string name="rec_mb">%1$d MB</string>
+    <string name="rec_mb_hint">MB</string>
+    <string name="rec_at_limit">达到限制时</string>
+    <string name="rec_limit_stop">停止</string>
+    <string name="rec_limit_new_file">在新文件中继续</string>
+    <string name="rec_profile_high">高画质</string>
+    <string name="rec_profile_small">小文件</string>
+    <string name="rec_profile_high_summary">屏幕的尺寸和刷新率，高码率</string>
+    <string name="rec_profile_small_summary">一半尺寸，30 帧/秒，低码率</string>
+    <string name="rec_profile_saved_summary">已保存的配置</string>
+    <string name="rec_profile_use">使用</string>
+    <string name="rec_profile_rename">重命名</string>
+    <string name="rec_profile_delete">删除</string>
+    <string name="rec_profile_save">将当前设置保存为配置</string>
+    <string name="rec_profile_name">名称</string>
+    <string name="rec_profile_used">正在使用 %1$s</string>
+    <string name="rec_profiles_footer">“使用”会把视频、声音和文件的每项设置都设为该配置的值。</string>
+    <string name="rec_countdown">倒计时</string>
+    <string name="rec_countdown_none">无</string>
+    <string name="rec_keep_screen_on">保持屏幕常亮</string>
+    <string name="rec_keep_screen_on_summary">录制结束前屏幕不会关闭</string>
+    <string name="rec_dnd">录制时开启勿扰</string>
+    <string name="rec_dnd_summary">从录制开始时仅允许优先通知；结束后恢复之前的状态</string>
+    <string name="rec_error_range">请输入 %1$d 到 %2$d 之间的数字</string>
+    <string name="rec_error_number">请输入数字</string>
+    <string name="rec_error_size">请输入 64 到 8192 之间的宽和高，例如 1920x1080</string>
+    <string name="rec_error_no_size">%1$s · 编码器不支持接近的尺寸</string>
+    <string name="rec_error_frame_rate">编码器在此尺寸下最多支持 %1$d 帧/秒</string>
+    <string name="rec_error_bitrate">编码器支持 %1$s 到 %2$s Mbps</string>
+    <string name="rec_error_bitrate_mode">编码器不支持此码率模式</string>
+    <string name="rec_error_10_bit">编码器没有此编码的 10 位配置文件</string>
+    <string name="rec_error_codec_webm">WebM 只支持 VP8 和 VP9；请先在“文件”中选择 MP4</string>
+    <string name="rec_error_codec_mp4">MP4 不支持 VP8 和 VP9；请先在“文件”中选择 WebM</string>
+    <string name="rec_error_format_webm">WebM 只支持 VP8 和 VP9；请先在“视频”中选择其一</string>
+    <string name="rec_error_format_mp4">MP4 支持 H.264、H.265 和 AV1；请先在“视频”中选择其一</string>
+    <string name="rec_error_webm_audio">WebM 只支持 Opus 声音；请先在“音频”中选择 Opus</string>
+    <string name="rec_error_webm_tracks">WebM 只能有一条音轨；请先选择混合为一条音轨</string>
+    <string name="rec_error_opus_rate">Opus 只能以 48 kHz 录制</string>
+    <string name="rec_error_folder">文件夹必须位于 DCIM、Movies 或 Pictures 中</string>
+    <string name="rec_error_file_name">请输入不含 / 的名称</string>
+    <string name="rec_error_profile">未能设置配置的全部设置</string>
+    <string name="rec_error_profile_name">请输入不以 @ 开头的名称</string>
+    <string name="rec_error_profile_exists">已有同名配置</string>
+    <plurals name="rec_countdown_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="rec_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="rec_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+</resources>

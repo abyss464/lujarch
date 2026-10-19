@@ -1,0 +1,242 @@
+# The video codec's MIME type; empty: H.265 with a hardware encoder, H.264 otherwise.
+[codec]
+table = "secure"
+type = "string"
+default = ""
+item = "REC-2"
+
+# The encoder's name; empty: the codec's hardware encoder.
+[encoder]
+table = "secure"
+type = "string"
+default = ""
+item = "REC-2"
+
+# A MediaCodecInfo.CodecProfileLevel profile; -1: automatic.
+[profile]
+table = "secure"
+type = "int"
+default = -1
+item = "REC-2"
+
+# A MediaCodecInfo.CodecProfileLevel level; -1: automatic.
+[level]
+table = "secure"
+type = "int"
+default = -1
+item = "REC-2"
+
+# 8 or 10.
+[bit_depth]
+table = "secure"
+type = "int"
+default = 8
+item = "REC-2"
+
+# Percent of the screen: 100, 75 or 50; 0: width and height.
+[resolution]
+table = "secure"
+type = "int"
+default = 100
+item = "REC-2"
+
+[width]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+[height]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+# Frames per second; 0: the screen's refresh rate.
+[frame_rate]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+[every_frame]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-2"
+
+# kbps; 0: automatic.
+[bitrate]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+# MediaCodecInfo.EncoderCapabilities: 0 constant quality, 1 variable, 2 constant.
+[bitrate_mode]
+table = "secure"
+type = "int"
+default = 1
+item = "REC-2"
+
+# For constant quality; -1: three quarters of the encoder's range.
+[quality]
+table = "secure"
+type = "int"
+default = -1
+item = "REC-2"
+
+# Seconds; 0: every frame; -1: only the first.
+[key_interval]
+table = "secure"
+type = "int"
+default = 1
+item = "REC-2"
+
+[b_frames]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+# 0 as the screen is at the start, 1 portrait, 2 landscape.
+[orientation]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-2"
+
+# ScreenRecordingAudioSource: 0 none, 1 device audio, 2 microphone, 3 both.
+[audio_source]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-3"
+
+[separate_tracks]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-3"
+
+# Percent, 0 to 200.
+[internal_volume]
+table = "secure"
+type = "int"
+default = 100
+item = "REC-3"
+
+# Percent, 0 to 200.
+[mic_volume]
+table = "secure"
+type = "int"
+default = 100
+item = "REC-3"
+
+# aac_lc, aac_he or opus.
+[audio_codec]
+table = "secure"
+type = "string"
+default = "aac_lc"
+item = "REC-3"
+
+# 44100 or 48000.
+[sample_rate]
+table = "secure"
+type = "int"
+default = 44100
+item = "REC-3"
+
+# 1 or 2.
+[channels]
+table = "secure"
+type = "int"
+default = 2
+item = "REC-3"
+
+# kbps.
+[audio_bitrate]
+table = "secure"
+type = "int"
+default = 192
+item = "REC-3"
+
+[noise_suppression]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-3"
+
+[echo_cancellation]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-3"
+
+# mp4 or webm.
+[format]
+table = "secure"
+type = "string"
+default = "mp4"
+item = "REC-4"
+
+# Under DCIM, Movies or Pictures.
+[folder]
+table = "secure"
+type = "string"
+default = "Movies"
+item = "REC-4"
+
+# yyyy, MM, dd, HH, mm and ss stand for the start's date and time.
+[file_name]
+table = "secure"
+type = "string"
+default = "screen-yyyyMMdd-HHmmss"
+item = "REC-4"
+
+# Minutes; 0: no limit.
+[longest]
+table = "secure"
+type = "int"
+default = 60
+item = "REC-4"
+
+# MB; 0: no limit.
+[largest]
+table = "secure"
+type = "int"
+default = 5000
+item = "REC-4"
+
+# 0 stop, 1 go on in a new file.
+[at_limit]
+table = "secure"
+type = "int"
+default = 0
+item = "REC-4"
+
+# The saved profiles: a JSON object of name to the settings it holds.
+[profiles]
+table = "secure"
+type = "string"
+default = ""
+item = "REC-5"
+
+# Seconds: 0, 3, 5 or 10.
+[countdown]
+table = "secure"
+type = "int"
+default = 3
+item = "REC-6"
+
+[keep_screen_on]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-6"
+
+[dnd]
+table = "secure"
+type = "bool"
+default = false
+item = "REC-6"

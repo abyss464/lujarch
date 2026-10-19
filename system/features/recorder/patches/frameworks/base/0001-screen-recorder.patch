@@ -1,9 +1,180 @@
+diff --git a/packages/SystemUI/Android.bp b/packages/SystemUI/Android.bp
+index 975a02ba07e81c645dadd80f6a3d24198393866a..39b6f0414687267bf48cc343269e8d2b28c319cf 100644
+--- a/packages/SystemUI/Android.bp
++++ b/packages/SystemUI/Android.bp
+@@ -442,6 +442,8 @@ java_defaults {
+     libs: [
+         "keepanno-annotations",
+     ],
++    // Screen record's profiles, shared with its settings page.
++    static_libs: ["LujarchRecorderProfiles"],
+     kotlincflags: [
+         "-Xjvm-default=all",
+         "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+diff --git a/packages/SystemUI/res/layout/screen_record_options.xml b/packages/SystemUI/res/layout/screen_record_options.xml
+index 13ab66109038f950962b77716dcb02fcf1d63daf..d1e0c545c7bc357bc71593b520c888b59f2c8dbc 100644
+--- a/packages/SystemUI/res/layout/screen_record_options.xml
++++ b/packages/SystemUI/res/layout/screen_record_options.xml
+@@ -85,100 +85,6 @@
+             style="@style/ScreenRecord.Switch"
+             android:importantForAccessibility="yes" />
+     </LinearLayout>
+-    <LinearLayout
+-        android:id="@+id/show_lowquality"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:orientation="horizontal"
+-        android:gravity="center_vertical"
+-        android:layout_marginTop="@dimen/screenrecord_option_padding">
+-        <ImageView
+-            android:layout_width="@dimen/screenrecord_option_icon_size"
+-            android:layout_height="@dimen/screenrecord_option_icon_size"
+-            android:src="@drawable/ic_sr_quality"
+-            android:tint="?android:attr/textColorSecondary"
+-            android:layout_marginRight="@dimen/screenrecord_option_padding"
+-            android:importantForAccessibility="no"/>
+-        <LinearLayout
+-            android:layout_width="0dp"
+-            android:layout_height="match_parent"
+-            android:minHeight="48dp"
+-            android:layout_weight="1"
+-            android:orientation="vertical">
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_lowquality_label"
+-                android:textAppearance="?android:attr/textAppearanceMedium"
+-                android:textColor="?android:attr/textColorPrimary"
+-                android:contentDescription="@string/screenrecord_lowquality_label"/>
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:importantForAccessibility="no"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_lowquality_summary"
+-                android:textAppearance="?android:attr/textAppearanceSmall"
+-                android:textColor="?android:textColorSecondary"/>
+-        </LinearLayout>
+-
+-        <Switch
+-            android:layout_width="wrap_content"
+-            android:minWidth="48dp"
+-            android:layout_height="48dp"
+-            android:id="@+id/screenrecord_lowquality_switch"
+-            android:contentDescription="@string/screenrecord_lowquality_label"
+-            style="@style/ScreenRecord.Switch"
+-            android:importantForAccessibility="yes" />
+-    </LinearLayout>
+-    <LinearLayout
+-        android:id="@+id/show_longer_timeout"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:orientation="horizontal"
+-        android:gravity="center_vertical"
+-        android:layout_marginTop="@dimen/screenrecord_option_padding">
+-        <ImageView
+-            android:layout_width="@dimen/screenrecord_option_icon_size"
+-            android:layout_height="@dimen/screenrecord_option_icon_size"
+-            android:src="@drawable/ic_storage"
+-            android:tint="?android:attr/textColorSecondary"
+-            android:layout_marginRight="@dimen/screenrecord_option_padding"
+-            android:importantForAccessibility="no"/>
+-        <LinearLayout
+-            android:layout_width="0dp"
+-            android:layout_height="match_parent"
+-            android:minHeight="48dp"
+-            android:layout_weight="1"
+-            android:orientation="vertical">
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_longer_timeout_switch_label"
+-                android:textAppearance="?android:attr/textAppearanceMedium"
+-                android:textColor="?android:attr/textColorPrimary"
+-                android:contentDescription="@string/screenrecord_longer_timeout_switch_label"/>
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:importantForAccessibility="no"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_longer_timeout_switch_summary"
+-                android:textAppearance="?android:attr/textAppearanceSmall"
+-                android:textColor="?android:textColorSecondary"/>
+-        </LinearLayout>
+-
+-        <Switch
+-            android:layout_width="wrap_content"
+-            android:minWidth="48dp"
+-            android:layout_height="48dp"
+-            android:id="@+id/screenrecord_longer_timeout_switch"
+-            android:contentDescription="@string/screenrecord_longer_timeout_switch_label"
+-            style="@style/ScreenRecord.Switch"
+-            android:importantForAccessibility="yes" />
+-    </LinearLayout>
+     <LinearLayout
+         android:id="@+id/show_skip_time"
+         android:layout_width="match_parent"
+@@ -226,51 +132,4 @@
+             style="@style/ScreenRecord.Switch"
+             android:importantForAccessibility="yes" />
+     </LinearLayout>
+-    <LinearLayout
+-        android:id="@+id/show_hevc"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:orientation="horizontal"
+-        android:gravity="center_vertical"
+-        android:layout_marginTop="@dimen/screenrecord_option_padding">
+-        <ImageView
+-            android:layout_width="@dimen/screenrecord_option_icon_size"
+-            android:layout_height="@dimen/screenrecord_option_icon_size"
+-            android:src="@drawable/ic_hevc"
+-            android:tint="?android:attr/textColorSecondary"
+-            android:layout_marginRight="@dimen/screenrecord_option_padding"
+-            android:importantForAccessibility="no"/>
+-        <LinearLayout
+-            android:layout_width="0dp"
+-            android:layout_height="match_parent"
+-            android:minHeight="48dp"
+-            android:layout_weight="1"
+-            android:orientation="vertical">
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_hevc_switch_label"
+-                android:textAppearance="?android:attr/textAppearanceMedium"
+-                android:textColor="?android:attr/textColorPrimary"
+-                android:contentDescription="@string/screenrecord_hevc_switch_label"/>
+-            <TextView
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:importantForAccessibility="no"
+-                android:fontFamily="@*android:string/config_bodyFontFamily"
+-                android:text="@string/screenrecord_hevc_switch_summary"
+-                android:textAppearance="?android:attr/textAppearanceSmall"
+-                android:textColor="?android:textColorSecondary"/>
+-        </LinearLayout>
+-
+-        <Switch
+-            android:layout_width="wrap_content"
+-            android:minWidth="48dp"
+-            android:layout_height="48dp"
+-            android:id="@+id/screenrecord_hevc_switch"
+-            android:contentDescription="@string/screenrecord_hevc_switch_label"
+-            style="@style/ScreenRecord.Switch"
+-            android:importantForAccessibility="yes" />
+-    </LinearLayout>
+ </LinearLayout>
+\ No newline at end of file
 diff --git a/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml b/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..3806f8b02eb159fb35b658d541ee4f0a1aa61110
+index 0000000000000000000000000000000000000000..825e9665af86fbcdc65070b810d447bbcf3e045c
 --- /dev/null
 +++ b/packages/SystemUI/res/values-ja/lujarch_recorder_strings.xml
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,45 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -38,13 +209,23 @@ index 0000000000000000000000000000000000000000..3806f8b02eb159fb35b658d541ee4f0a
 +    <string name="lujarch_recorder_error_device_audio">デバイスの音声を録音できません</string>
 +    <string name="lujarch_recorder_error_encoding">%1$s で録画に失敗しました：%2$s</string>
 +    <string name="lujarch_recorder_error_file">次のファイルを作成できませんでした</string>
++    <string name="lujarch_recorder_profile">プロファイル</string>
++    <string name="lujarch_recorder_profile_none">なし</string>
++    <string name="lujarch_recorder_profile_failed">プロファイルの設定の一部を設定できませんでした</string>
++    <string name="lujarch_recorder_settings">画面録画の設定</string>
++    <string name="lujarch_recorder_size_per_minute">1 分あたり約 %1$s</string>
++    <string name="lujarch_recorder_size_follows_picture">1 分あたりのサイズは画面の内容によって変わります</string>
++    <string name="lujarch_recorder_pause">一時停止</string>
++    <string name="lujarch_recorder_resume">再開</string>
++    <string name="lujarch_recorder_paused">一時停止中</string>
++    <string name="lujarch_recorder_failed_title">画面録画が途中で終了しました</string>
 +</resources>
 diff --git a/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml b/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..606c671880c4e413f5fe5f716b7862b0d744df5b
+index 0000000000000000000000000000000000000000..347b73fc6303d613eea458b947b8ed23f8055991
 --- /dev/null
 +++ b/packages/SystemUI/res/values-zh-rCN/lujarch_recorder_strings.xml
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,45 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -79,13 +260,23 @@ index 0000000000000000000000000000000000000000..606c671880c4e413f5fe5f716b7862b0
 +    <string name="lujarch_recorder_error_device_audio">无法录制设备音频</string>
 +    <string name="lujarch_recorder_error_encoding">录制在 %1$s 失败：%2$s</string>
 +    <string name="lujarch_recorder_error_file">无法创建下一个文件</string>
++    <string name="lujarch_recorder_profile">配置</string>
++    <string name="lujarch_recorder_profile_none">无</string>
++    <string name="lujarch_recorder_profile_failed">未能设置配置的全部设置</string>
++    <string name="lujarch_recorder_settings">屏幕录制设置</string>
++    <string name="lujarch_recorder_size_per_minute">每分钟约 %1$s</string>
++    <string name="lujarch_recorder_size_follows_picture">每分钟的大小取决于画面</string>
++    <string name="lujarch_recorder_pause">暂停</string>
++    <string name="lujarch_recorder_resume">继续</string>
++    <string name="lujarch_recorder_paused">已暂停</string>
++    <string name="lujarch_recorder_failed_title">屏幕录制提前结束</string>
 +</resources>
 diff --git a/packages/SystemUI/res/values/lujarch_recorder_strings.xml b/packages/SystemUI/res/values/lujarch_recorder_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..9bc42a7368758c5e77ae3591439e88d6f2c32c6c
+index 0000000000000000000000000000000000000000..78bdf7068cfce4bae61f1f7c88edbe14db5b3f5f
 --- /dev/null
 +++ b/packages/SystemUI/res/values/lujarch_recorder_strings.xml
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,45 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -120,13 +311,673 @@ index 0000000000000000000000000000000000000000..9bc42a7368758c5e77ae3591439e88d6
 +    <string name="lujarch_recorder_error_device_audio">Device audio cannot be recorded</string>
 +    <string name="lujarch_recorder_error_encoding">Recording failed in %1$s: %2$s</string>
 +    <string name="lujarch_recorder_error_file">The next file could not be created</string>
++    <string name="lujarch_recorder_profile">Profile</string>
++    <string name="lujarch_recorder_profile_none">None</string>
++    <string name="lujarch_recorder_profile_failed">Not every setting of the profile could be set</string>
++    <string name="lujarch_recorder_settings">Screen record settings</string>
++    <string name="lujarch_recorder_size_per_minute">About %1$s a minute</string>
++    <string name="lujarch_recorder_size_follows_picture">The size a minute takes depends on the picture</string>
++    <string name="lujarch_recorder_pause">Pause</string>
++    <string name="lujarch_recorder_resume">Resume</string>
++    <string name="lujarch_recorder_paused">Paused</string>
++    <string name="lujarch_recorder_failed_title">Screen recording ended early</string>
 +</resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/data/repository/ScreenCaptureRecordParametersRepository.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/data/repository/ScreenCaptureRecordParametersRepository.kt
+index f0448ac59c7390c2611426d52d06132e53fbba22..e3c36dc5f352d67c52e3b1881fa4d306ea1a57a9 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/data/repository/ScreenCaptureRecordParametersRepository.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/data/repository/ScreenCaptureRecordParametersRepository.kt
+@@ -17,15 +17,21 @@
+ package com.android.systemui.screencapture.record.data.repository
+ 
+ import android.content.Context
++import android.text.format.Formatter
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.setValue
+ import com.android.systemui.Prefs
+ import com.android.systemui.dagger.qualifiers.Application
++import com.android.systemui.res.R
+ import com.android.systemui.screencapture.common.ScreenCaptureScope
++import com.android.systemui.screenrecord.LujarchRecorderConfig
++import com.android.systemui.screenrecord.ScreenMediaRecorder
+ import com.android.systemui.screenrecord.ScreenRecordingAudioSource
+ import com.android.systemui.settings.UserTracker
+ import javax.inject.Inject
++import kotlin.time.Duration
++import kotlin.time.Duration.Companion.seconds
+ 
+ @ScreenCaptureScope
+ class ScreenCaptureRecordParametersRepository
+@@ -53,52 +59,66 @@ constructor(@Application private val context: Context, private val userTracker:
+ 
+     var shouldShowFrontCamera: Boolean by mutableStateOf(false)
+ 
+-    private val lowQualityState = mutableStateOf(Prefs.getInt(userContext, PREF_LOW, 0) == 1)
+-    var lowQuality: Boolean
+-        get() = lowQualityState.value
+-        set(value) {
+-            lowQualityState.value = value
+-            Prefs.putInt(userContext, PREF_LOW, if (value) 1 else 0)
+-        }
++    /** The profile chosen in this dialog, if any (REC-1). */
++    var profileInUse: String? by mutableStateOf(null)
++        private set
+ 
+-    private val longerDurationState = mutableStateOf(Prefs.getInt(userContext, PREF_LONGER, 0) == 1)
+-    var longerDuration: Boolean
+-        get() = longerDurationState.value
+-        set(value) {
+-            longerDurationState.value = value
+-            Prefs.putInt(userContext, PREF_LONGER, if (value) 1 else 0)
+-        }
++    /** The countdown before a recording starts (REC-6). */
++    val countdown: Duration
++        get() = LujarchRecorderConfig.countdownSeconds(userContext).seconds
+ 
+-    private val hevcState = mutableStateOf(Prefs.getInt(userContext, PREF_HEVC, 0) == 1)
+-    var hevc: Boolean
+-        get() = hevcState.value
+-        set(value) {
+-            hevcState.value = value
+-            Prefs.putInt(userContext, PREF_HEVC, if (value) 1 else 0)
++    /** Every profile's name and the name it shows (REC-5). */
++    fun profiles(): List<Pair<String, String>> =
++        LujarchRecorderConfig.profileNames(userContext).map {
++            it to LujarchRecorderConfig.profileLabel(userContext, it)
+         }
+ 
+-    private fun loadAudioSource(): ScreenRecordingAudioSource {
+-        val useAudio = Prefs.getInt(userContext, PREF_AUDIO, 0) == 1
+-        if (!useAudio) return ScreenRecordingAudioSource.NONE
+-        val pos = Prefs.getInt(userContext, PREF_AUDIO_SOURCE, 0)
+-        val values = ScreenRecordingAudioSource.values()
+-        return if (pos >= 0 && pos < values.size) values[pos] else ScreenRecordingAudioSource.NONE
++    /** Reads again the settings the settings page may have changed. */
++    fun reload() {
++        audioSourceState.value = loadAudioSource()
+     }
+ 
+-    private fun saveAudioSource(value: ScreenRecordingAudioSource) {
+-        val useAudio = value != ScreenRecordingAudioSource.NONE
+-        Prefs.putInt(userContext, PREF_AUDIO, if (useAudio) 1 else 0)
+-        if (useAudio) {
+-            Prefs.putInt(userContext, PREF_AUDIO_SOURCE, value.ordinal)
++    /** Sets every setting the profile [name] holds. */
++    fun useProfile(name: String): Boolean {
++        val ok = LujarchRecorderConfig.useProfile(userContext, name)
++        profileInUse = name
++        audioSourceState.value = loadAudioSource()
++        return ok
++    }
++
++    /** The size a minute of recording takes on [displayId], in words. */
++    fun sizePerMinute(displayId: Int): String =
++        try {
++            val config = LujarchRecorderConfig.read(userContext)
++            val resolved = ScreenMediaRecorder.resolve(userContext, config, displayId)
++            val tracks =
++                when {
++                    audioSource == ScreenRecordingAudioSource.NONE -> 0
++                    audioSource == ScreenRecordingAudioSource.MIC_AND_INTERNAL &&
++                        config.separateTracks -> 2
++                    else -> 1
++                }
++            val bytes = resolved.bytesPerMinute(tracks > 0, tracks)
++            if (bytes < 0) {
++                userContext.getString(R.string.lujarch_recorder_size_follows_picture)
++            } else {
++                userContext.getString(
++                    R.string.lujarch_recorder_size_per_minute,
++                    Formatter.formatShortFileSize(userContext, bytes),
++                )
++            }
++        } catch (e: LujarchRecorderConfig.Unusable) {
++            e.message ?: ""
+         }
++
++    private fun loadAudioSource(): ScreenRecordingAudioSource =
++        LujarchRecorderConfig.audioSource(userContext)
++
++    private fun saveAudioSource(value: ScreenRecordingAudioSource) {
++        LujarchRecorderConfig.setAudioSource(userContext, value)
+     }
+ 
+     companion object {
+         private const val PREF_TAPS = "screenrecord_show_taps"
+-        private const val PREF_LOW = "screenrecord_use_low_quality"
+-        private const val PREF_LONGER = "screenrecord_use_longer_timeout"
+-        private const val PREF_AUDIO = "screenrecord_use_audio"
+-        private const val PREF_AUDIO_SOURCE = "screenrecord_audio_source"
+-        private const val PREF_HEVC = "screenrecord_use_hevc"
+     }
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/domain/interactor/ScreenCaptureRecordParametersInteractor.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/domain/interactor/ScreenCaptureRecordParametersInteractor.kt
+index e8a1b3dffcd43a6e9892317a2607db6e081ff754..62e9c059aab063b69d6884299781a6b94cd58262 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/domain/interactor/ScreenCaptureRecordParametersInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/domain/interactor/ScreenCaptureRecordParametersInteractor.kt
+@@ -23,6 +23,7 @@ import com.android.systemui.screenrecord.ScreenRecordingAudioSource
+ import com.android.systemui.screenrecord.domain.interactor.ScreenRecordingServiceInteractor
+ import com.android.systemui.screenrecord.shared.model.ScreenRecordingStatus
+ import javax.inject.Inject
++import kotlin.time.Duration
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.StateFlow
+@@ -62,23 +63,19 @@ constructor(
+         }
+         get() = repository.shouldShowFrontCamera
+ 
+-    var lowQuality: Boolean
+-        set(value) {
+-            repository.lowQuality = value
+-        }
+-        get() = repository.lowQuality
++    val profileInUse: String?
++        get() = repository.profileInUse
+ 
+-    var longerDuration: Boolean
+-        set(value) {
+-            repository.longerDuration = value
+-        }
+-        get() = repository.longerDuration
++    val countdown: Duration
++        get() = repository.countdown
+ 
+-    var hevc: Boolean
+-        set(value) {
+-            repository.hevc = value
+-        }
+-        get() = repository.hevc
++    fun profiles(): List<Pair<String, String>> = repository.profiles()
++
++    fun useProfile(name: String): Boolean = repository.useProfile(name)
++
++    fun reload() = repository.reload()
++
++    fun sizePerMinute(displayId: Int): String = repository.sizePerMinute(displayId)
+ 
+     val canChangeAudioSource: StateFlow<Boolean> =
+         serviceInteractor.status
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/compose/CaptureSettingsMenu.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/compose/CaptureSettingsMenu.kt
+index 216d0f9ee49c91133b56d44b1e0274ace4b8654e..790df01b5a7d8cb8bcc74e46d2a5e55ea7075f30 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/compose/CaptureSettingsMenu.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/compose/CaptureSettingsMenu.kt
+@@ -16,8 +16,6 @@
+ 
+ package com.android.systemui.screencapture.record.largescreen.ui.compose
+ 
+-import android.media.MediaCodecList
+-import android.media.MediaFormat
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
+@@ -151,53 +149,6 @@ fun CaptureSettingsMenu(viewModel: PreCaptureToolbarViewModel, screenRecordingSe
+                 )
+             }
+ 
+-            val lowQualityIcon by
+-                loadIcon(
+-                    viewModel = viewModel,
+-                    resId = R.drawable.ic_sr_quality,
+-                    contentDescription = null,
+-                )
+-
+-            SettingsMenuItem(
+-                text = stringResource(R.string.screenrecord_lowquality_label),
+-                leadingIcon = lowQualityIcon,
+-                checked = recordParameters.lowQuality,
+-                onCheckedChange = { recordParameters.setLowQuality(it) },
+-                enabled = screenRecordingSelected,
+-            )
+-
+-            val storageIcon by
+-                loadIcon(
+-                    viewModel = viewModel,
+-                    resId = R.drawable.ic_storage,
+-                    contentDescription = null,
+-                )
+-
+-            SettingsMenuItem(
+-                text = stringResource(R.string.screenrecord_longer_timeout_switch_label),
+-                leadingIcon = storageIcon,
+-                checked = recordParameters.longerDuration,
+-                onCheckedChange = { recordParameters.setLongerDuration(it) },
+-                enabled = screenRecordingSelected,
+-            )
+-
+-            if (hasHevcHwEncoder()) {
+-                val hevcIcon by
+-                    loadIcon(
+-                        viewModel = viewModel,
+-                        resId = R.drawable.ic_hevc,
+-                        contentDescription = null,
+-                    )
+-
+-                SettingsMenuItem(
+-                    text = stringResource(R.string.screenrecord_hevc_switch_label),
+-                    leadingIcon = hevcIcon,
+-                    checked = recordParameters.hevc,
+-                    onCheckedChange = { recordParameters.setHevc(it) },
+-                    enabled = screenRecordingSelected,
+-                )
+-            }
+-
+             if (viewModel.customSaveLocationSupported) {
+                 SaveLocationDropdown(
+                     viewModel = viewModel,
+@@ -234,18 +185,3 @@ private fun SettingsMenuItem(
+         enabled = enabled,
+     )
+ }
+-
+-private fun hasHevcHwEncoder(): Boolean {
+-    val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+-    for (codecInfo in mediaCodecList.codecInfos) {
+-        if (!codecInfo.isEncoder || !codecInfo.isHardwareAccelerated) {
+-            continue
+-        }
+-        for (type in codecInfo.supportedTypes) {
+-            if (type.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, ignoreCase = true)) {
+-                return true
+-            }
+-        }
+-    }
+-    return false
+-}
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/viewmodel/PreCaptureViewModel.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/viewmodel/PreCaptureViewModel.kt
+index e27e67b1e9cbdb39a902c3ec9d323804536aab63..7345f77cc8ee4de6800ab63fc4f33e7fbee08e5d 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/viewmodel/PreCaptureViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/largescreen/ui/viewmodel/PreCaptureViewModel.kt
+@@ -376,10 +376,8 @@ constructor(
+                     audioSource = toolbarViewModel.recordParametersViewModel.audioSource,
+                     displayId = displayId,
+                     shouldShowTaps = toolbarViewModel.recordParametersViewModel.shouldShowTaps,
+-                    lowQuality = toolbarViewModel.recordParametersViewModel.lowQuality,
+-                    longerDuration = toolbarViewModel.recordParametersViewModel.longerDuration,
+-                    hevc = toolbarViewModel.recordParametersViewModel.hevc,
+-                )
++                ),
++                toolbarViewModel.recordParametersViewModel.countdown,
+             )
+         }
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/compose/RecordDetailsSettings.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/compose/RecordDetailsSettings.kt
+index 9f969935836d35ccfe0e723f26e1f85a1a85ab91..e6265bb7d36953fff5f29619d9172a7232c5a2ab 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/compose/RecordDetailsSettings.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/compose/RecordDetailsSettings.kt
+@@ -16,9 +16,17 @@
+ 
+ package com.android.systemui.screencapture.record.smallscreen.ui.compose
+ 
++import android.content.ActivityNotFoundException
++import android.content.Intent
+ import android.content.res.Resources
+-import android.media.MediaCodecList
+-import android.media.MediaFormat
++import android.database.ContentObserver
++import android.net.Uri
++import android.os.Handler
++import android.os.Looper
++import android.os.UserHandle
++import android.provider.Settings
++import android.util.Log
++import android.view.Display
+ import android.widget.Toast
+ import androidx.compose.animation.AnimatedVisibility
+ import androidx.compose.animation.Crossfade
+@@ -29,6 +37,7 @@ import androidx.compose.animation.fadeOut
+ import androidx.compose.animation.shrinkVertically
+ import androidx.compose.foundation.basicMarquee
+ import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.RowScope
+@@ -40,13 +49,21 @@ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.selection.toggleable
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.foundation.verticalScroll
++import androidx.compose.material3.DropdownMenu
++import androidx.compose.material3.DropdownMenuItem
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.DisposableEffect
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.State
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.platform.LocalContext
+@@ -66,6 +83,7 @@ import com.android.systemui.screencapture.common.ui.compose.loadIcon
+ import com.android.systemui.screencapture.common.ui.viewmodel.DrawableLoaderViewModel
+ import com.android.systemui.screencapture.record.smallscreen.ui.viewmodel.RecordDetailsTargetViewModel
+ import com.android.systemui.screencapture.record.ui.viewmodel.ScreenCaptureRecordParametersViewModel
++import com.android.systemui.screenrecord.LujarchRecorderConfig
+ 
+ @Composable
+ fun RecordDetailsSettings(
+@@ -169,45 +187,7 @@ fun RecordDetailsSettings(
+                 onCheckedChange = { parametersViewModel.shouldShowTaps = it },
+                 modifier = Modifier,
+             )
+-            RichSwitch(
+-                visible = true,
+-                icon =
+-                    loadIcon(
+-                        viewModel = drawableLoaderViewModel,
+-                        resId = R.drawable.ic_sr_quality,
+-                        contentDescription = null,
+-                    ),
+-                label = stringResource(R.string.screenrecord_lowquality_label),
+-                checked = parametersViewModel.lowQuality,
+-                onCheckedChange = { parametersViewModel.setLowQuality(it) },
+-                modifier = Modifier,
+-            )
+-            RichSwitch(
+-                visible = true,
+-                icon =
+-                    loadIcon(
+-                        viewModel = drawableLoaderViewModel,
+-                        resId = R.drawable.ic_storage,
+-                        contentDescription = null,
+-                    ),
+-                label = stringResource(R.string.screenrecord_longer_timeout_switch_label),
+-                checked = parametersViewModel.longerDuration,
+-                onCheckedChange = { parametersViewModel.setLongerDuration(it) },
+-                modifier = Modifier,
+-            )
+-            RichSwitch(
+-                visible = hasHevcHwEncoder(),
+-                icon =
+-                    loadIcon(
+-                        viewModel = drawableLoaderViewModel,
+-                        resId = R.drawable.ic_hevc,
+-                        contentDescription = null,
+-                    ),
+-                label = stringResource(R.string.screenrecord_hevc_switch_label),
+-                checked = parametersViewModel.hevc,
+-                onCheckedChange = { parametersViewModel.setHevc(it) },
+-                modifier = Modifier,
+-            )
++            RecorderSettings(parametersViewModel, drawableLoaderViewModel)
+             SettingsRow(visible = true, modifier = Modifier.padding(top = 4.dp)) {
+                 Crossfade(
+                     targetState = targetViewModel.warningMessageRes,
+@@ -367,17 +347,157 @@ private fun SettingsRow(
+     }
+ }
+ 
+-private fun hasHevcHwEncoder(): Boolean {
+-    val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+-    for (codecInfo in mediaCodecList.codecInfos) {
+-        if (!codecInfo.isEncoder || !codecInfo.isHardwareAccelerated) {
+-            continue
++/**
++ * The profile in use with the profiles to choose from, the size a minute of recording takes, and
++ * the way to Settings > System > Screen record (REC-1).
++ */
++@Composable
++private fun RecorderSettings(
++    parametersViewModel: ScreenCaptureRecordParametersViewModel,
++    drawableLoaderViewModel: DrawableLoaderViewModel,
++) {
++    val context = LocalContext.current
++    // Settings changed on the settings page while the dialog is open show at once.
++    var changes by remember { mutableIntStateOf(0) }
++    DisposableEffect(Unit) {
++        val observer =
++            object : ContentObserver(Handler(Looper.getMainLooper())) {
++                override fun onChange(selfChange: Boolean, uri: Uri?) {
++                    if (uri?.lastPathSegment?.startsWith("lujarch_recorder_") != false) {
++                        parametersViewModel.reload()
++                        changes++
++                    }
++                }
++            }
++        context.contentResolver.registerContentObserver(
++            Settings.Secure.CONTENT_URI,
++            true,
++            observer,
++            UserHandle.USER_ALL,
++        )
++        onDispose { context.contentResolver.unregisterContentObserver(observer) }
++    }
++
++    var showProfiles by remember { mutableStateOf(false) }
++    val profiles = remember(changes) { parametersViewModel.profiles() }
++    val inUse = parametersViewModel.profileInUse
++    val profileLabel =
++        profiles.firstOrNull { it.first == inUse }?.second
++            ?: stringResource(R.string.lujarch_recorder_profile_none)
++    Box {
++        SettingsRow(
++            visible = true,
++            modifier =
++                Modifier.semantics { role = Role.Button }.clickable { showProfiles = true },
++        ) {
++            LoadingIcon(
++                icon =
++                    loadIcon(
++                            viewModel = drawableLoaderViewModel,
++                            resId = R.drawable.ic_sr_quality,
++                            contentDescription = null,
++                        )
++                        .value,
++                modifier = Modifier.size(40.dp).padding(8.dp),
++            )
++            Column(modifier = Modifier.padding(horizontal = 8.dp).weight(1f)) {
++                Text(
++                    text = stringResource(R.string.lujarch_recorder_profile),
++                    style = MaterialTheme.typography.titleSmall,
++                    maxLines = 1,
++                )
++                Text(
++                    text = profileLabel,
++                    style = MaterialTheme.typography.bodyMedium,
++                    color = MaterialTheme.colorScheme.onSurfaceVariant,
++                    maxLines = 1,
++                )
++            }
+         }
+-        for (type in codecInfo.supportedTypes) {
+-            if (type.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, ignoreCase = true)) {
+-                return true
++        DropdownMenu(expanded = showProfiles, onDismissRequest = { showProfiles = false }) {
++            profiles.forEach { (name, label) ->
++                DropdownMenuItem(
++                    text = { Text(label) },
++                    onClick = {
++                        showProfiles = false
++                        if (!parametersViewModel.useProfile(name)) {
++                            Toast.makeText(
++                                    context,
++                                    R.string.lujarch_recorder_profile_failed,
++                                    Toast.LENGTH_SHORT,
++                                )
++                                .show()
++                        }
++                        changes++
++                    },
++                )
+             }
+         }
+     }
+-    return false
++
++    val size =
++        remember(changes, parametersViewModel.audioSource, inUse) {
++            parametersViewModel.sizePerMinute(Display.DEFAULT_DISPLAY)
++        }
++    SettingsRow(visible = true) {
++        LoadingIcon(
++            icon =
++                loadIcon(
++                        viewModel = drawableLoaderViewModel,
++                        resId = R.drawable.ic_storage,
++                        contentDescription = null,
++                    )
++                    .value,
++            modifier = Modifier.size(40.dp).padding(8.dp),
++        )
++        Text(
++            text = size,
++            style = MaterialTheme.typography.bodyMedium,
++            color = MaterialTheme.colorScheme.onSurfaceVariant,
++            modifier = Modifier.padding(horizontal = 8.dp).weight(1f),
++        )
++    }
++
++    SettingsRow(
++        visible = true,
++        modifier =
++            Modifier.semantics { role = Role.Button }
++                .clickable {
++                    try {
++                        context.startActivity(
++                            Intent(LujarchRecorderConfig.ACTION_SETTINGS)
++                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
++                        )
++                    } catch (e: ActivityNotFoundException) {
++                        Log.e("lujarch_recorder", "no Screen record settings", e)
++                    }
++                },
++    ) {
++        LoadingIcon(
++            icon =
++                loadIcon(
++                        viewModel = drawableLoaderViewModel,
++                        resId = R.drawable.ic_settings,
++                        contentDescription = null,
++                    )
++                    .value,
++            modifier = Modifier.size(40.dp).padding(8.dp),
++        )
++        Text(
++            text = stringResource(R.string.lujarch_recorder_settings),
++            style = MaterialTheme.typography.titleSmall,
++            maxLines = 1,
++            modifier = Modifier.padding(horizontal = 8.dp).weight(1f).basicMarquee(),
++        )
++        LoadingIcon(
++            icon =
++                loadIcon(
++                        viewModel = drawableLoaderViewModel,
++                        resId = R.drawable.ic_chevron_forward_expressive,
++                        contentDescription = null,
++                    )
++                    .value,
++            modifier = Modifier.padding(12.dp).size(16.dp),
++        )
++    }
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/viewmodel/SmallScreenCaptureRecordViewModel.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/viewmodel/SmallScreenCaptureRecordViewModel.kt
+index 53bd07f622f44bd32d295792d408bcd2c22bde88..0e8716a4da3e331e359999cf5a5c88e6bd8186be 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/viewmodel/SmallScreenCaptureRecordViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/smallscreen/ui/viewmodel/SmallScreenCaptureRecordViewModel.kt
+@@ -253,9 +253,7 @@ constructor(
+     private suspend fun startRecording() {
+         val audioSource = recordDetailsParametersViewModel.audioSource
+         val target = captureTargetModel?.currentTargetModel?.screenCaptureTarget ?: return
+-        val lowQuality = recordDetailsParametersViewModel.lowQuality
+-        val longerDuration = recordDetailsParametersViewModel.longerDuration
+-        val hevc = recordDetailsParametersViewModel.hevc
++        val countdown = recordDetailsParametersViewModel.countdown
+         when (target) {
+             is ScreenCaptureTarget.Fullscreen -> {
+                 val shouldShowTaps = recordDetailsParametersViewModel.shouldShowTaps
+@@ -265,10 +263,8 @@ constructor(
+                         displayId = target.displayId,
+                         shouldShowTaps = shouldShowTaps,
+                         audioSource = audioSource,
+-                        lowQuality = lowQuality,
+-                        longerDuration = longerDuration,
+-                        hevc = hevc,
+-                    )
++                    ),
++                    countdown,
+                 )
+             }
+             is ScreenCaptureTarget.App -> {
+@@ -304,10 +300,8 @@ constructor(
+                         displayId = displayId,
+                         shouldShowTaps = false,
+                         audioSource = audioSource,
+-                        lowQuality = lowQuality,
+-                        longerDuration = longerDuration,
+-                        hevc = hevc,
+-                    )
++                    ),
++                    countdown,
+                 )
+             }
+             else -> error("Unsupported target=$target")
+diff --git a/packages/SystemUI/src/com/android/systemui/screencapture/record/ui/viewmodel/ScreenCaptureRecordParametersViewModel.kt b/packages/SystemUI/src/com/android/systemui/screencapture/record/ui/viewmodel/ScreenCaptureRecordParametersViewModel.kt
+index fbcc3a9df3c79e71e982e34601571a3b014a6995..e5b0ad29d4f4417442f700ac40ae44cf20f49512 100644
+--- a/packages/SystemUI/src/com/android/systemui/screencapture/record/ui/viewmodel/ScreenCaptureRecordParametersViewModel.kt
++++ b/packages/SystemUI/src/com/android/systemui/screencapture/record/ui/viewmodel/ScreenCaptureRecordParametersViewModel.kt
+@@ -31,6 +31,7 @@ import com.android.systemui.screenrecord.ScreenRecordingAudioSource
+ import com.android.systemui.screenrecord.domain.interactor.ScreenRecordingServiceInteractor
+ import dagger.assisted.AssistedFactory
+ import dagger.assisted.AssistedInject
++import kotlin.time.Duration
+ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.flowOf
+ import kotlinx.coroutines.flow.map
+@@ -73,11 +74,19 @@ constructor(
+             interactor.shouldShowFrontCamera = value
+         }
+ 
+-    val lowQuality: Boolean by interactor::lowQuality
++    /** The profile chosen in this dialog, if any (REC-1). */
++    val profileInUse: String? by interactor::profileInUse
+ 
+-    val longerDuration: Boolean by interactor::longerDuration
++    /** The countdown before the recording starts (REC-6). */
++    val countdown: Duration by interactor::countdown
+ 
+-    val hevc: Boolean by interactor::hevc
++    fun profiles(): List<Pair<String, String>> = interactor.profiles()
++
++    fun useProfile(name: String): Boolean = interactor.useProfile(name)
++
++    fun reload() = interactor.reload()
++
++    fun sizePerMinute(displayId: Int): String = interactor.sizePerMinute(displayId)
+ 
+     var shouldRecordDevice: Boolean
+         get() =
+@@ -150,18 +159,6 @@ constructor(
+         screenCaptureCameraHintInteractor.onHintShown()
+     }
+ 
+-    fun setLowQuality(lowQuality: Boolean) {
+-        interactor.lowQuality = lowQuality
+-    }
+-
+-    fun setLongerDuration(longerDuration: Boolean) {
+-        interactor.longerDuration = longerDuration
+-    }
+-
+-    fun setHevc(hevc: Boolean) {
+-        interactor.hevc = hevc
+-    }
+-
+     @AssistedFactory
+     interface Factory {
+         fun create(): ScreenCaptureRecordParametersViewModel
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478e1938d6d
+index 0000000000000000000000000000000000000000..d6187de6d5c760241bf096f6cbc7aceede5a344c
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchRecorderConfig.java
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,471 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -159,11 +1010,10 @@ index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478
 +
 +import com.android.systemui.res.R;
 +
-+import org.json.JSONException;
-+import org.json.JSONObject;
++import org.lujarch.recorder.RecorderProfiles;
 +
 +import java.util.Calendar;
-+import java.util.Iterator;
++import java.util.List;
 +import java.util.Locale;
 +
 +/**
@@ -178,24 +1028,7 @@ index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478
 +    public static final String ACTION_SETTINGS = "org.lujarch.recorder.action.SCREEN_RECORD";
 +
 +    public static final String KEY_AUDIO_SOURCE = PREFIX + "audio_source";
-+    public static final String KEY_PROFILES = PREFIX + "profiles";
 +    public static final String KEY_COUNTDOWN = PREFIX + "countdown";
-+
-+    /** The profiles that come with the system: High quality and Small file (REC-5). */
-+    public static final String BUILT_IN_PROFILES = "{\"@high\":{\"resolution\":100,"
-+            + "\"frame_rate\":0,\"bitrate\":40000,\"bitrate_mode\":1,\"audio_bitrate\":256},"
-+            + "\"@small\":{\"resolution\":50,\"frame_rate\":30,\"bitrate\":3000,"
-+            + "\"bitrate_mode\":1,\"audio_bitrate\":96}}";
-+
-+    /** The settings a profile holds: those of the video, the sound and the file. */
-+    public static final String[] PROFILE_KEYS = {
-+            "codec", "encoder", "profile", "level", "bit_depth", "resolution", "width", "height",
-+            "frame_rate", "every_frame", "bitrate", "bitrate_mode", "quality", "key_interval",
-+            "b_frames", "orientation", "audio_source", "separate_tracks", "internal_volume",
-+            "mic_volume", "audio_codec", "sample_rate", "channels", "audio_bitrate",
-+            "noise_suppression", "echo_cancellation", "format", "folder", "file_name", "longest",
-+            "largest", "at_limit",
-+    };
 +
 +    public static final int BITRATE_MODE_CQ = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CQ;
 +    public static final int BITRATE_MODE_VBR = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR;
@@ -324,53 +1157,26 @@ index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478
 +    // ---------------------------------------------------------------------------------------
 +    // Profiles (REC-5)
 +
-+    /** Every profile by name: the built-in ones (named with @) first, then the saved ones. */
-+    public static JSONObject profiles(Context context) {
-+        JSONObject all = new JSONObject();
-+        try {
-+            JSONObject builtIn = new JSONObject(BUILT_IN_PROFILES);
-+            for (Iterator<String> i = builtIn.keys(); i.hasNext(); ) {
-+                String name = i.next();
-+                all.put(name, builtIn.get(name));
-+            }
-+            String saved = Settings.Secure.getStringForUser(context.getContentResolver(),
-+                    KEY_PROFILES, context.getUserId());
-+            if (saved != null && !saved.isEmpty()) {
-+                JSONObject s = new JSONObject(saved);
-+                for (Iterator<String> i = s.keys(); i.hasNext(); ) {
-+                    String name = i.next();
-+                    all.put(name, s.get(name));
-+                }
-+            }
-+        } catch (JSONException e) {
-+            Log.e(TAG, "profiles not read", e);
-+        }
-+        return all;
++    /** Every profile's name, the built-in ones first. */
++    public static List<String> profileNames(Context context) {
++        return RecorderProfiles.names(context);
 +    }
 +
 +    /** The name a profile shows. */
 +    public static String profileLabel(Context context, String name) {
 +        switch (name) {
-+            case "@high": return context.getString(R.string.lujarch_recorder_profile_high);
-+            case "@small": return context.getString(R.string.lujarch_recorder_profile_small);
-+            default: return name;
++            case RecorderProfiles.HIGH_QUALITY:
++                return context.getString(R.string.lujarch_recorder_profile_high);
++            case RecorderProfiles.SMALL_FILE:
++                return context.getString(R.string.lujarch_recorder_profile_small);
++            default:
++                return name;
 +        }
 +    }
 +
 +    /** Sets every setting [name] holds; returns whether all were written. */
 +    public static boolean useProfile(Context context, String name) {
-+        JSONObject profile = profiles(context).optJSONObject(name);
-+        if (profile == null) {
-+            Log.e(TAG, "no profile " + name);
-+            return false;
-+        }
-+        boolean ok = true;
-+        for (Iterator<String> i = profile.keys(); i.hasNext(); ) {
-+            String key = i.next();
-+            ok &= put(context, PREFIX + key, String.valueOf(profile.opt(key)));
-+        }
-+        Log.i(TAG, "profile " + name + " in use");
-+        return ok;
++        return RecorderProfiles.use(context, name);
 +    }
 +
 +    // ---------------------------------------------------------------------------------------
@@ -645,10 +1451,10 @@ index 0000000000000000000000000000000000000000..42609322097f2419f8c89b224175a478
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..43b41b21ac8dc4ff5fe2af785491739462f569fb
+index 0000000000000000000000000000000000000000..510f937afe4b8861bf6d47a573b134c39eb09423
 --- /dev/null
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/LujarchScreenEncoder.java
-@@ -0,0 +1,702 @@
+@@ -0,0 +1,703 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1043,7 +1849,7 @@ index 0000000000000000000000000000000000000000..43b41b21ac8dc4ff5fe2af7854917394
 +        if (mStopping) return;
 +        mStopping = true;
 +        try {
-+            if (!mFailed) mVideo.signalEndOfInputStream();
++            if (!mFailed && mVideoThread != null) mVideo.signalEndOfInputStream();
 +        } catch (RuntimeException e) {
 +            Log.e(TAG, "video end not signalled", e);
 +        }
@@ -1056,6 +1862,7 @@ index 0000000000000000000000000000000000000000..43b41b21ac8dc4ff5fe2af7854917394
 +        release(mVideo);
 +        for (MediaCodec c : mAudioCodecs) release(c);
 +        if (mSurface != null) mSurface.release();
++        mVideo = null;
 +        synchronized (mLock) {
 +            closeFile();
 +        }
@@ -1352,10 +2159,75 @@ index 0000000000000000000000000000000000000000..43b41b21ac8dc4ff5fe2af7854917394
 +    }
 +}
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java b/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
-index 730678b992d2ca2efba92a5eb604c4d305de4567..141e7d362a23f4d45c35d2393922d6a663240701 100644
+index 730678b992d2ca2efba92a5eb604c4d305de4567..82713cbe93c39e6b0236f7f2e4d7cd786eea1fe4 100644
 --- a/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/RecordingService.java
-@@ -238,9 +238,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+@@ -84,9 +84,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+     private static final String EXTRA_CAPTURE_TARGET = "extra_captureTarget";
+     private static final String EXTRA_DISPLAY_ID = "extra_displayId";
+     private static final String EXTRA_STOP_REASON = "extra_stopReason";
+-    private static final String EXTRA_LOW_QUALITY = "extra_lowQuality";
+-    private static final String EXTRA_LONGER_DURATION = "extra_longerDuration";
+-    private final static String EXTRA_HEVC = "extra_HEVC";
+ 
+     protected static final String ACTION_START = "com.android.systemui.screenrecord.START";
+     protected static final String ACTION_SHOW_START_NOTIF =
+@@ -114,9 +111,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+     private final ScreenRecordingPreferenceRepository mRecordingPreferenceRepository =
+             new ScreenRecordingPreferenceRepository(this);
+ 
+-    private boolean mLowQuality;
+-    private boolean mLongerDuration;
+-    private boolean mHEVC;
+ 
+     @Inject
+     public RecordingService(ScreenRecordUxController controller, @LongRunning Executor executor,
+@@ -148,17 +142,13 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+      */
+     public static Intent getStartIntent(Context context, int resultCode,
+             int audioSource, boolean showTaps,
+-            @Nullable MediaProjectionCaptureTarget captureTarget,
+-            boolean lowQuality, boolean longerDuration, boolean hevc) {
++            @Nullable MediaProjectionCaptureTarget captureTarget) {
+         return new Intent(context, RecordingService.class)
+                 .setAction(ACTION_START)
+                 .putExtra(EXTRA_RESULT_CODE, resultCode)
+                 .putExtra(EXTRA_AUDIO_SOURCE, audioSource)
+                 .putExtra(EXTRA_SHOW_TAPS, showTaps)
+-                .putExtra(EXTRA_CAPTURE_TARGET, captureTarget)
+-                .putExtra(EXTRA_LOW_QUALITY, lowQuality)
+-                .putExtra(EXTRA_LONGER_DURATION, longerDuration)
+-                .putExtra(EXTRA_HEVC, hevc);
++                .putExtra(EXTRA_CAPTURE_TARGET, captureTarget);
+     }
+ 
+     /**
+@@ -180,12 +170,8 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+             int audioSource,
+             boolean showTaps,
+             int displayId,
+-            @Nullable MediaProjectionCaptureTarget captureTarget,
+-            boolean lowQuality,
+-            boolean longerDuration,
+-            boolean hevc) {
+-        return getStartIntent(context, resultCode, audioSource, showTaps, captureTarget, lowQuality,
+-            longerDuration, hevc)
++            @Nullable MediaProjectionCaptureTarget captureTarget) {
++        return getStartIntent(context, resultCode, audioSource, showTaps, captureTarget)
+                 .putExtra(EXTRA_DISPLAY_ID, displayId);
+     }
+ 
+@@ -214,9 +200,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+                 mAudioSource = ScreenRecordingAudioSource
+                         .values()[intent.getIntExtra(EXTRA_AUDIO_SOURCE, 0)];
+                 Log.d(getTag(), "recording with audio source " + mAudioSource);
+-                mLowQuality = intent.getBooleanExtra(EXTRA_LOW_QUALITY, false);
+-                mLongerDuration = intent.getBooleanExtra(EXTRA_LONGER_DURATION, false);
+-                mHEVC = intent.getBooleanExtra(EXTRA_HEVC, true);
+ 
+                 MediaProjectionCaptureTarget captureTarget =
+                         intent.getParcelableExtra(EXTRA_CAPTURE_TARGET,
+@@ -238,9 +221,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                          displayId,
                          this
                  );
@@ -1365,7 +2237,7 @@ index 730678b992d2ca2efba92a5eb604c4d305de4567..141e7d362a23f4d45c35d2393922d6a6
  
                  if (startRecording()) {
                      updateState(true);
-@@ -581,24 +578,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+@@ -581,24 +561,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                  createSaveNotification(savedRecording), currentUser);
      }
  
@@ -1390,7 +2262,7 @@ index 730678b992d2ca2efba92a5eb604c4d305de4567..141e7d362a23f4d45c35d2393922d6a6
      protected String getTag() {
          return TAG;
      }
-@@ -654,6 +633,13 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
+@@ -654,6 +616,13 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
          onStartCommand(stopIntent, 0, 0);
      }
  
@@ -1405,7 +2277,7 @@ index 730678b992d2ca2efba92a5eb604c4d305de4567..141e7d362a23f4d45c35d2393922d6a6
      public void onStarted() {
          mScreenRecordingStartTimeStore.markStartTime();
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
-index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68f5fcc004 100644
+index f8072c678f0b573d4e3a108cde16cc91f3175ab0..7bd4f7efa6f6b051c36ac3769d86c3d2deabce88 100644
 --- a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
 @@ -18,24 +18,14 @@ package com.android.systemui.screenrecord;
@@ -1564,7 +2436,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
          //Setup media projection
          IBinder b = ServiceManager.getService(MEDIA_PROJECTION_SERVICE);
          IMediaProjectionManager mediaService =
-@@ -187,68 +128,33 @@ public class ScreenMediaRecorder {
+@@ -187,68 +128,34 @@ public class ScreenMediaRecorder {
          mMediaProjection = new MediaProjection(mContext, projection);
          mMediaProjection.registerCallback(mediaProjectionCallback, mHandler);
  
@@ -1592,7 +2464,8 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
 +        try {
 +            mInputSurface = mEncoder.prepare();
 +        } catch (IOException | RuntimeException e) {
-+            mEncoder.discardUnfinished();
++            // Frees what was set up; the file, empty, is deleted.
++            mEncoder.stop();
 +            mMediaProjection.stop();
 +            throw e;
          }
@@ -1654,7 +2527,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
                  metrics.densityDpi,
                  DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                  mInputSurface,
-@@ -259,112 +165,6 @@ public class ScreenMediaRecorder {
+@@ -259,112 +166,6 @@ public class ScreenMediaRecorder {
                      }
                  },
                  mHandler);
@@ -1767,7 +2640,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
      }
  
      /**
-@@ -373,13 +173,24 @@ public class ScreenMediaRecorder {
+@@ -373,13 +174,24 @@ public class ScreenMediaRecorder {
      public void start() throws IOException, RemoteException, RuntimeException {
          Log.d(TAG, "start recording");
          prepare();
@@ -1795,7 +2668,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
      /**
       * End screen recording, throws an exception if stopping recording failed
       */
-@@ -387,11 +198,7 @@ public class ScreenMediaRecorder {
+@@ -387,11 +199,7 @@ public class ScreenMediaRecorder {
          if (mIsStarted.compareAndSet(true, false)) {
              Closer closer = new Closer();
  
@@ -1808,7 +2681,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
              closer.register(mVirtualDisplay::release);
              closer.register(() -> {
                  if (stopReason == StopReason.STOP_UNKNOWN) {
-@@ -406,11 +213,9 @@ public class ScreenMediaRecorder {
+@@ -406,11 +214,9 @@ public class ScreenMediaRecorder {
                      mMediaProjection.stop(stopReason);
                  }
              });
@@ -1820,7 +2693,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
              mMediaProjection = null;
  
              Log.d(TAG, "end recording");
-@@ -419,77 +224,36 @@ public class ScreenMediaRecorder {
+@@ -419,77 +225,36 @@ public class ScreenMediaRecorder {
          }
      }
  
@@ -1915,7 +2788,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
      }
  
      /**
-@@ -504,33 +268,10 @@ public class ScreenMediaRecorder {
+@@ -504,33 +269,10 @@ public class ScreenMediaRecorder {
      }
  
      /**
@@ -1951,7 +2824,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
      }
  
      private static final class MediaProjectionCallback extends MediaProjection.Callback {
-@@ -619,6 +360,13 @@ public class ScreenMediaRecorder {
+@@ -619,6 +361,13 @@ public class ScreenMediaRecorder {
           * and the app that is being captured is closed.
           */
          void onStopped(int userId, @StopReason int stopReason);
@@ -1965,7 +2838,7 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
      }
  
      /**
-@@ -667,12 +415,4 @@ public class ScreenMediaRecorder {
+@@ -667,12 +416,4 @@ public class ScreenMediaRecorder {
              }
          }
      }
@@ -1978,24 +2851,487 @@ index f8072c678f0b573d4e3a108cde16cc91f3175ab0..d43c6e27c50b8c73fdf7907fff274b68
 -        }
 -    }
  }
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenRecordPermissionContentManager.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenRecordPermissionContentManager.kt
+index cc9d7ea217f964b75a6bdc140601464cec92d7db..fec4e49288cf6324ec3b2bf4fdcc874cf0d32114 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenRecordPermissionContentManager.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenRecordPermissionContentManager.kt
+@@ -20,8 +20,6 @@ import android.annotation.SuppressLint
+ import android.app.Activity
+ import android.content.Intent
+ import android.hardware.display.DisplayManager
+-import android.media.MediaCodecList
+-import android.media.MediaFormat
+ import android.media.projection.StopReason
+ import android.os.Build
+ import android.os.Bundle
+@@ -111,10 +109,7 @@ class ScreenRecordPermissionContentManager(
+ 
+     private lateinit var tapsSwitch: Switch
+     private lateinit var audioSwitch: Switch
+-    private lateinit var lowQualitySwitch: Switch
+-    private lateinit var longerDurationSwitch: Switch
+     private lateinit var skipTimeSwitch: Switch
+-    private lateinit var hevcSwitch: Switch
+     private lateinit var tapsView: View
+     private lateinit var options: Spinner
+ 
+@@ -164,11 +159,7 @@ class ScreenRecordPermissionContentManager(
+     private fun initRecordOptionsView() {
+         audioSwitch = containerView.requireViewById(R.id.screenrecord_audio_switch)
+         tapsSwitch = containerView.requireViewById(R.id.screenrecord_taps_switch)
+-        lowQualitySwitch = containerView.requireViewById(R.id.screenrecord_lowquality_switch)
+-        longerDurationSwitch =
+-            containerView.requireViewById(R.id.screenrecord_longer_timeout_switch)
+         skipTimeSwitch = containerView.requireViewById(R.id.screenrecord_skip_time_switch)
+-        hevcSwitch = containerView.requireViewById(R.id.screenrecord_hevc_switch)
+ 
+         tapsView = containerView.requireViewById(R.id.show_taps)
+         updateTapsViewVisibility()
+@@ -177,10 +168,7 @@ class ScreenRecordPermissionContentManager(
+         // within its target region, to meet accessibility requirements
+         audioSwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+         tapsSwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+-        lowQualitySwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+-        longerDurationSwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+         skipTimeSwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+-        hevcSwitch.setOnTouchListener { _, event -> event.action == ACTION_MOVE }
+ 
+         options = containerView.requireViewById(R.id.screen_recording_options)
+         val a: ArrayAdapter<*> =
+@@ -195,12 +183,6 @@ class ScreenRecordPermissionContentManager(
+             audioSwitch.isChecked = true
+         }
+ 
+-        // Disable HEVC when hardware accelerated codec is not available
+-        if (!hasHevcHwEncoder()) {
+-            Prefs.putInt(containerView.context, PREF_HEVC, 0)
+-            containerView.requireViewById<View>(R.id.show_hevc).visibility = View.GONE
+-        }
+-
+         // disable redundant Touch & Hold accessibility action for Switch Access
+         options.accessibilityDelegate =
+             object : View.AccessibilityDelegate() {
+@@ -242,15 +224,13 @@ class ScreenRecordPermissionContentManager(
+         val audioMode =
+             if (audioSwitch.isChecked) options.selectedItem as ScreenRecordingAudioSource
+             else ScreenRecordingAudioSource.NONE
+-        val lowQuality = lowQualitySwitch.isChecked
+-        val longerDuration = longerDurationSwitch.isChecked
+         val skipTime = skipTimeSwitch.isChecked
+-        val hevc = hevcSwitch.isChecked
+ 
+         savePrefs()
+ 
++        val delayMs = LujarchRecorderConfig.countdownSeconds(containerView.context) * 1000L
+         controller.startCountdown(
+-            if (skipTime) NO_DELAY else DELAY_MS,
++            if (skipTime || delayMs == 0L) NO_DELAY else delayMs,
+             if (skipTime) NO_DELAY else INTERVAL_MS,
+             {
+                 screenRecordingStartStopRepository.startRecording(
+@@ -259,9 +239,6 @@ class ScreenRecordPermissionContentManager(
+                         audioSource = audioMode,
+                         displayId = displayId,
+                         shouldShowTaps = showTaps,
+-                        lowQuality = lowQuality,
+-                        longerDuration = longerDuration,
+-                        hevc = hevc,
+                     )
+                 )
+             },
+@@ -269,44 +246,20 @@ class ScreenRecordPermissionContentManager(
+         )
+     }
+ 
+-    private fun hasHevcHwEncoder(): Boolean {
+-        val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+-
+-        for (codecInfo in mediaCodecList.getCodecInfos()) {
+-            if (!codecInfo.isEncoder() || !codecInfo.isHardwareAccelerated()) {
+-                continue
+-            }
+-
+-            for (type in codecInfo.getSupportedTypes()) {
+-                if (type.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, ignoreCase = true)) {
+-                    return true
+-                }
+-            }
+-        }
+-
+-        return false
+-    }
+-
+     private fun savePrefs() {
+         val userContext = containerView.context
+         Prefs.putInt(userContext, PREF_TAPS, if (tapsSwitch.isChecked) 1 else 0)
+-        Prefs.putInt(userContext, PREF_LOW, if (lowQualitySwitch.isChecked) 1 else 0)
+-        Prefs.putInt(userContext, PREF_LONGER, if (longerDurationSwitch.isChecked) 1 else 0)
+         Prefs.putInt(userContext, PREF_AUDIO, if (audioSwitch.isChecked) 1 else 0)
+         Prefs.putInt(userContext, PREF_AUDIO_SOURCE, options.selectedItemPosition)
+         Prefs.putInt(userContext, PREF_SKIP, if (skipTimeSwitch.isChecked) 1 else 0)
+-        Prefs.putInt(userContext, PREF_HEVC, if (hevcSwitch.isChecked) 1 else 0)
+     }
+ 
+     private fun loadPrefs() {
+         val userContext = containerView.context
+         tapsSwitch.isChecked = Prefs.getInt(userContext, PREF_TAPS, 0) == 1
+-        lowQualitySwitch.isChecked = Prefs.getInt(userContext, PREF_LOW, 0) == 1
+-        longerDurationSwitch.isChecked = Prefs.getInt(userContext, PREF_LONGER, 0) == 1
+         audioSwitch.isChecked = Prefs.getInt(userContext, PREF_AUDIO, 0) == 1
+         options.setSelection(Prefs.getInt(userContext, PREF_AUDIO_SOURCE, 0))
+         skipTimeSwitch.isChecked = Prefs.getInt(userContext, PREF_SKIP, 0) == 1
+-        hevcSwitch.isChecked = Prefs.getInt(userContext, PREF_HEVC, 1) == 1
+     }
+ 
+     private inner class CaptureTargetResultReceiver :
+@@ -333,17 +286,13 @@ class ScreenRecordPermissionContentManager(
+                 ScreenRecordingAudioSource.MIC_AND_INTERNAL,
+             )
+ 
+-        private const val DELAY_MS: Long = 3000
+         private const val NO_DELAY: Long = 100
+         private const val INTERVAL_MS: Long = 1000
+ 
+         private const val PREF_TAPS = "screenrecord_show_taps"
+-        private const val PREF_LOW = "screenrecord_use_low_quality"
+-        private const val PREF_LONGER = "screenrecord_use_longer_timeout"
+         private const val PREF_AUDIO = "screenrecord_use_audio"
+         private const val PREF_AUDIO_SOURCE = "screenrecord_audio_source"
+         private const val PREF_SKIP = "screenrecord_skip_timer"
+-        private const val PREF_HEVC = "screenrecord_use_hevc"
+ 
+         fun createOptionList(displayManager: DisplayManager): List<ScreenShareOption> {
+             val connectedDisplays = getConnectedDisplays(displayManager)
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/data/repository/LegacyScreenRecordingStartStopRepository.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/data/repository/LegacyScreenRecordingStartStopRepository.kt
+index 918aa27058cb80750126e885b9892deb9044d658..73c15f3f5adc077a801ab29d0a8098f024c7152e 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/data/repository/LegacyScreenRecordingStartStopRepository.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/data/repository/LegacyScreenRecordingStartStopRepository.kt
+@@ -47,9 +47,6 @@ constructor(private val userContextProvider: UserContextProvider) :
+                         shouldShowTaps,
+                         displayId,
+                         captureTarget,
+-                        lowQuality,
+-                        longerDuration,
+-                        hevc,
+                     )
+                 },
+                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/notification/NotificationInteractor.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/notification/NotificationInteractor.kt
+index 5141a6937912805facc4cda1e59b26aa0b0e7ef4..7a66d0c140b1f7a80763a09e53bfee474b166931 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/notification/NotificationInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/notification/NotificationInteractor.kt
+@@ -23,7 +23,10 @@ import com.android.systemui.screenrecord.ScreenRecordingAudioSource
+ /** Notifies user about different stages of screen recording flow. */
+ interface NotificationInteractor {
+ 
+-    fun createRecordingNotification(audioSource: ScreenRecordingAudioSource): Notification
++    fun createRecordingNotification(
++        audioSource: ScreenRecordingAudioSource,
++        paused: Boolean = false,
++    ): Notification
+ 
+     fun notifyProcessing(notificationId: Int, audioSource: ScreenRecordingAudioSource)
+ 
+@@ -31,7 +34,10 @@ interface NotificationInteractor {
+ 
+     fun notifyErrorSaving(notificationId: Int)
+ 
+-    fun notifyErrorStarting(notificationId: Int)
++    fun notifyErrorStarting(notificationId: Int, reason: String? = null)
++
++    /** Says why a recording ended early; what was recorded is saved (REC-8). */
++    fun notifyFailed(notificationId: Int, reason: String)
+ 
+     fun cancel(notificationId: Int)
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/notification/ScreenRecordingServiceNotificationInteractor.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/notification/ScreenRecordingServiceNotificationInteractor.kt
+index 257355634d57bd316b39c328e0e452d0317423f9..7a8f35aa86af354bc25b9bd0b408d6fdc6c7907e 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/notification/ScreenRecordingServiceNotificationInteractor.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/notification/ScreenRecordingServiceNotificationInteractor.kt
+@@ -80,7 +80,8 @@ constructor(
+     }
+ 
+     override fun createRecordingNotification(
+-        audioSource: ScreenRecordingAudioSource
++        audioSource: ScreenRecordingAudioSource,
++        paused: Boolean,
+     ): Notification {
+         val notificationTitle: String =
+             if (audioSource == ScreenRecordingAudioSource.NONE) {
+@@ -106,10 +107,34 @@ constructor(
+                     ),
+                 )
+                 .build()
++        // Pause and Resume (REC-7).
++        val pauseAction: Notification.Action =
++            Notification.Action.Builder(
++                    Icon.createWithResource(context, R.drawable.ic_screenrecord),
++                    context.getString(
++                        if (paused) R.string.lujarch_recorder_resume
++                        else R.string.lujarch_recorder_pause
++                    ),
++                    PendingIntent.getService(
++                        context,
++                        REQUEST_CODE + 1,
++                        Intent(context, ScreenRecordingService::class.java)
++                            .setAction(
++                                if (paused) ScreenRecordingService.ACTION_RESUME
++                                else ScreenRecordingService.ACTION_PAUSE
++                            ),
++                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
++                    ),
++                )
++                .build()
+         return Notification.Builder(context, CHANNEL_ID)
+             .setSmallIcon(R.drawable.ic_screenrecord)
+             .setContentTitle(notificationTitle)
+-            .setUsesChronometer(true)
++            .apply {
++                if (paused) setContentText(context.getString(R.string.lujarch_recorder_paused))
++            }
++            .setOnlyAlertOnce(true)
++            .setUsesChronometer(!paused)
+             .setColorized(true)
+             .setColor(context.getColor(R.color.GM2_red_700))
+             .setOngoing(true)
+@@ -123,6 +148,7 @@ constructor(
+                 )
+             )
+             .addAction(stopAction)
++            .addAction(pauseAction)
+             .addExtras(
+                 Bundle().apply { putString(Notification.EXTRA_SUBSTITUTE_APP_NAME, strings.title) }
+             )
+@@ -148,7 +174,7 @@ constructor(
+                     .addFlags(
+                         Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                     )
+-                    .setDataAndType(savedRecording.uri, MimeTypes.VIDEO_MP4)
++                    .setDataAndType(savedRecording.uri, videoType(savedRecording))
+             }
+ 
+         val shareAction: Notification.Action =
+@@ -162,7 +188,7 @@ constructor(
+                             Intent(Intent.ACTION_SEND)
+                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                 .putExtra(Intent.EXTRA_STREAM, savedRecording.uri)
+-                                .setDataAndType(savedRecording.uri, MimeTypes.VIDEO_MP4),
++                                .setDataAndType(savedRecording.uri, videoType(savedRecording)),
+                             context.getString(R.string.screenrecord_share_label),
+                         ),
+                         PendingIntent.FLAG_IMMUTABLE,
+@@ -217,16 +243,35 @@ constructor(
+         notificationManager.notify(null, notificationId, notification)
+     }
+ 
+-    override fun notifyErrorStarting(notificationId: Int) {
++    override fun notifyErrorStarting(notificationId: Int, reason: String?) {
+         notifyGroupSummary(
+             notificationContentTitle = strings.startError,
+             groupKey = GROUP_KEY_ERROR_STARTING,
+             notificationIdForGroup = NOTIF_GROUP_ID_ERROR_STARTING,
+         )
+-        val notification = createErrorNotification(strings.startError, GROUP_KEY_ERROR_STARTING)
++        val notification =
++            createErrorNotification(strings.startError, GROUP_KEY_ERROR_STARTING, reason)
+         notificationManager.notify(null, notificationId, notification)
+     }
+ 
++    override fun notifyFailed(notificationId: Int, reason: String) {
++        val title = context.getString(R.string.lujarch_recorder_failed_title)
++        notifyGroupSummary(
++            notificationContentTitle = title,
++            groupKey = GROUP_KEY_ERROR_SAVING,
++            notificationIdForGroup = NOTIF_GROUP_ID_ERROR_SAVING,
++        )
++        notificationManager.notify(
++            null,
++            notificationId,
++            createErrorNotification(title, GROUP_KEY_ERROR_SAVING, reason),
++        )
++    }
++
++    /** The recording's type, as MediaStore holds it: MP4 or WebM (REC-4). */
++    private fun videoType(savedRecording: SavedRecording): String =
++        context.contentResolver.getType(savedRecording.uri) ?: MimeTypes.VIDEO_MP4
++
+     override fun cancel(notificationId: Int) {
+         notificationManager.cancel(notificationId)
+     }
+@@ -234,10 +279,17 @@ constructor(
+     private fun createErrorNotification(
+         notificationContentTitle: String,
+         groupKey: String,
++        reason: String? = null,
+     ): Notification =
+         Notification.Builder(context, CHANNEL_ID)
+             .setSmallIcon(R.drawable.ic_screenrecord)
+             .setContentTitle(notificationContentTitle)
++            .apply {
++                if (reason != null) {
++                    setContentText(reason)
++                    setStyle(Notification.BigTextStyle().bigText(reason))
++                }
++            }
+             .setGroup(groupKey)
+             .addExtras(
+                 Bundle().apply { putString(Notification.EXTRA_SUBSTITUTE_APP_NAME, strings.title) }
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
-index 1fb6631869dc9796d9651d3b7a31662132d4a254..514c9c46e39aecbf4e47a6ba6d16f303166ab2a2 100644
+index 1fb6631869dc9796d9651d3b7a31662132d4a254..6dfbcc0e86380ebdb7b8fa81bc1d1541060f8c22 100644
 --- a/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/service/ScreenRecordingService.kt
-@@ -85,6 +85,12 @@ open class ScreenRecordingService : ComponentService() {
+@@ -24,7 +24,9 @@ import android.net.Uri
+ import android.os.Handler
+ import android.os.IBinder
+ import android.os.Looper
++import android.os.PowerManager
+ import android.os.Process
++import android.provider.Settings
+ import android.util.Log
+ import android.widget.Toast
+ import androidx.annotation.StringRes
+@@ -33,6 +35,7 @@ import com.android.systemui.mediaprojection.MediaProjectionCaptureTarget
+ import com.android.systemui.res.R
+ import com.android.systemui.screencapture.data.repository.StaticScreenCaptureDeviceStateRepository
+ import com.android.systemui.screencapture.record.domain.interactor.ScreenCaptureRecordFeaturesInteractor
++import com.android.systemui.screenrecord.LujarchRecorderConfig
+ import com.android.systemui.screenrecord.ScreenMediaRecorder
+ import com.android.systemui.screenrecord.ScreenMediaRecorder.SavedRecording
+ import com.android.systemui.screenrecord.ScreenRecordingAudioSource
+@@ -85,12 +88,24 @@ open class ScreenRecordingService : ComponentService() {
              override fun onStopped(userId: Int, @StopReason stopReason: Int) {
                  launchCallbackAction { onRecordingInterrupted(userId, stopReason) }
              }
 +
 +            override fun onFailed(reason: String) {
 +                Log.e(tag, "Recording failed: $reason")
-+                Toast.makeText(this@ScreenRecordingService, reason, Toast.LENGTH_LONG).show()
++                failure = reason
 +                launchCallbackAction { onRecordingInterrupted(userId, StopReason.STOP_ERROR) }
 +            }
          }
  
      private lateinit var notificationInteractor: NotificationInteractor
-@@ -249,9 +255,6 @@ open class ScreenRecordingService : ComponentService() {
+     private lateinit var screenRecordingPreferenceRepository: ScreenRecordingPreferenceRepository
+ 
+     private var recordingContext: RecordingContext? = null
++    // Why the recording ended early, said once it is saved (REC-8).
++    private var failure: String? = null
++    // Keep the screen on (REC-6).
++    private var screenLock: PowerManager.WakeLock? = null
++    // The Do not disturb state to put back (REC-6); null when it was not changed.
++    private var zenBefore: Int? = null
+     private var callback: IScreenRecordingServiceCallback? = null
+ 
+     override fun onCreate() {
+@@ -102,6 +117,8 @@ open class ScreenRecordingService : ComponentService() {
+     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+         val action = intent?.action
+         when (action) {
++            ACTION_PAUSE -> recordingContext?.setPaused(true)
++            ACTION_RESUME -> recordingContext?.setPaused(false)
+             ACTION_STOP ->
+                 launchCallbackAction {
+                     onRecordingInterrupted(
+@@ -133,15 +150,20 @@ open class ScreenRecordingService : ComponentService() {
+             if (Flags.screenRecordingServiceFix()) {
+                 startForeground(notificationId, notification)
+                 recorder.start()
++                whileRecording(true)
+             } else {
+                 recorder.start()
++                whileRecording(true)
+                 val notificationManager = getSystemService(NotificationManager::class.java)
+                 notificationManager?.notify(null, notificationId, notification)
+             }
+         } catch (e: Exception) {
+             screenRecordingPreferenceRepository.maybeRestoreSetting()
+             Log.e(tag, "Error starting screen recording", e)
+-            notificationInteractor.notifyErrorStarting(notificationId)
++            notificationInteractor.notifyErrorStarting(
++                notificationId,
++                (e as? LujarchRecorderConfig.Unusable)?.message,
++            )
+             showToast(R.string.screenrecord_start_error)
+             if (Flags.screenRecordingServiceFix()) {
+                 stopForeground(STOP_FOREGROUND_DETACH)
+@@ -166,12 +188,15 @@ open class ScreenRecordingService : ComponentService() {
+                     }
+                 }
+             onRecordingSaved(this, savedRecording)
++            failure?.let { notificationInteractor.notifyFailed(notificationId + 1, it) }
+         } catch (e: Exception) {
+             launchCallbackAction { onRecordingSaveError(uri, notificationId) }
+             notificationInteractor.notifyErrorSaving(notificationId)
++            failure?.let { notificationInteractor.notifyFailed(notificationId + 1, it) }
+             Log.e(tag, "Error saving screen recording", e)
+             showToast(R.string.screenrecord_save_error)
+         } finally {
++            failure = null
+             recorder.release()
+             if (Flags.screenRecordingServiceFix()) {
+                 stopForeground(STOP_FOREGROUND_DETACH)
+@@ -187,6 +212,7 @@ open class ScreenRecordingService : ComponentService() {
+             Log.d(tag, "Stopping screen recording reason=$reason")
+             recordingContext = null
+             screenRecordingPreferenceRepository.maybeRestoreSetting()
++            whileRecording(false)
+             recorder.end(reason)
+             coroutineScope.launch { saveRecording(recordingUri) }
+         } catch (e: Exception) {
+@@ -202,6 +228,52 @@ open class ScreenRecordingService : ComponentService() {
+         }
+     }
+ 
++    /** Pauses or resumes the recording and says so in its notification (REC-7). */
++    private fun RecordingContext.setPaused(paused: Boolean) {
++        if (paused) recorder.pause() else recorder.resume()
++        getSystemService(NotificationManager::class.java)
++            ?.notify(
++                null,
++                notificationId,
++                notificationInteractor.createRecordingNotification(audioSource, recorder.isPaused),
++            )
++    }
++
++    /** Keeps the screen on and turns on Do not disturb as the settings say, or puts them back. */
++    private fun whileRecording(recording: Boolean) {
++        val notificationManager = getSystemService(NotificationManager::class.java) ?: return
++        if (recording) {
++            val config = LujarchRecorderConfig.read(this)
++            if (config.keepScreenOn) {
++                @Suppress("DEPRECATION")
++                screenLock =
++                    getSystemService(PowerManager::class.java)
++                        ?.newWakeLock(
++                            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
++                                PowerManager.ON_AFTER_RELEASE,
++                            "lujarch_recorder:screen",
++                        )
++                        ?.apply { acquire() }
++            }
++            if (config.doNotDisturb) {
++                val zen = notificationManager.zenMode
++                if (zen == Settings.Global.ZEN_MODE_OFF) {
++                    zenBefore = zen
++                    notificationManager.setZenMode(
++                        Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS,
++                        null,
++                        "lujarch_recorder",
++                    )
++                }
++            }
++        } else {
++            screenLock?.let { if (it.isHeld) it.release() }
++            screenLock = null
++            zenBefore?.let { notificationManager.setZenMode(it, null, "lujarch_recorder") }
++            zenBefore = null
++        }
++    }
++
+     private fun launchCallbackAction(action: IScreenRecordingServiceCallback.() -> Unit) {
+         callback?.let { coroutineScope.launch(backgroundContext) { it.action() } }
+     }
+@@ -249,9 +321,6 @@ open class ScreenRecordingService : ComponentService() {
                              parameters.captureTarget,
                              parameters.displayId,
                              screenMediaRecorderListener,
@@ -2005,3 +3341,48 @@ index 1fb6631869dc9796d9651d3b7a31662132d4a254..514c9c46e39aecbf4e47a6ba6d16f303
                          ),
                  )
              context.startRecording()
+@@ -273,6 +342,10 @@ open class ScreenRecordingService : ComponentService() {
+ 
+         const val ACTION_STOP =
+             "com.android.systemui.screenrecord.ScreenRecordingService.ACTION_STOP"
++        const val ACTION_PAUSE =
++            "com.android.systemui.screenrecord.ScreenRecordingService.ACTION_PAUSE"
++        const val ACTION_RESUME =
++            "com.android.systemui.screenrecord.ScreenRecordingService.ACTION_RESUME"
+         const val EXTRA_STOP_REASON =
+             "com.android.systemui.screenrecord.ScreenRecordingService.EXTRA_STOP_REASON"
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/shared/model/ScreenRecordingParameters.kt b/packages/SystemUI/src/com/android/systemui/screenrecord/shared/model/ScreenRecordingParameters.kt
+index 7b1a73329e845119d9ab65050d315ffe89b481b5..ed813ac0b508845af83f102f970aaf86f6422b13 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/shared/model/ScreenRecordingParameters.kt
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/shared/model/ScreenRecordingParameters.kt
+@@ -30,9 +30,6 @@ constructor(
+     val shouldShowTaps: Boolean,
+     val shouldShowSeconds: Boolean = false,
+     val notificationId: Int = 0,
+-    val lowQuality: Boolean = false,
+-    val longerDuration: Boolean = false,
+-    val hevc: Boolean = false,
+ ) : Parcelable {
+ 
+     constructor(
+@@ -50,9 +47,6 @@ constructor(
+         parcel.readBoolean(),
+         parcel.readBoolean(),
+         parcel.readInt(),
+-        parcel.readBoolean(),
+-        parcel.readBoolean(),
+-        parcel.readBoolean(),
+     )
+ 
+     override fun describeContents(): Int = 0
+@@ -65,9 +59,6 @@ constructor(
+             writeBoolean(shouldShowTaps)
+             writeBoolean(shouldShowSeconds)
+             writeInt(notificationId)
+-            writeBoolean(lowQuality)
+-            writeBoolean(longerDuration)
+-            writeBoolean(hevc)
+         }
+ 
+     companion object CREATOR : Parcelable.Creator<ScreenRecordingParameters> {
