@@ -48,10 +48,10 @@ index 0000000000000000000000000000000000000000..ad7ce48fbe70559bb20da8e9fd9896eb
 +</vector>
 diff --git a/quickstep/res/values-ja/lujarch_background_strings.xml b/quickstep/res/values-ja/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..38e6ff7bdefd18ed5708a4eae81fde0fca788628
+index 0000000000000000000000000000000000000000..22bc937e6ecf1d592fdd93a18bb6d0ab86fc5f7e
 --- /dev/null
 +++ b/quickstep/res/values-ja/lujarch_background_strings.xml
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -72,7 +72,6 @@ index 0000000000000000000000000000000000000000..38e6ff7bdefd18ed5708a4eae81fde0f
 +<resources>
 +    <string name="lujarch_background_running">"実行中"</string>
 +    <string name="lujarch_background_small_window">"小ウィンドウ"</string>
-+    <string name="lujarch_background_drop">"指を離すと小ウィンドウで開きます"</string>
 +    <string name="lujarch_background_tile">"%1$s、%2$s"</string>
 +    <string name="lujarch_background_end">"実行を終了"</string>
 +    <string name="lujarch_background_usage">"バックグラウンドでの使用"</string>
@@ -86,10 +85,10 @@ index 0000000000000000000000000000000000000000..38e6ff7bdefd18ed5708a4eae81fde0f
 +</resources>
 diff --git a/quickstep/res/values-zh-rCN/lujarch_background_strings.xml b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..e55878b1988c65162a33cb93b492dbf7ddd9791c
+index 0000000000000000000000000000000000000000..f5ebde35a79df8bacfbf5967a28ae162c8d871f8
 --- /dev/null
 +++ b/quickstep/res/values-zh-rCN/lujarch_background_strings.xml
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -110,7 +109,6 @@ index 0000000000000000000000000000000000000000..e55878b1988c65162a33cb93b492dbf7
 +<resources>
 +    <string name="lujarch_background_running">"运行中"</string>
 +    <string name="lujarch_background_small_window">"小窗"</string>
-+    <string name="lujarch_background_drop">"松手即在小窗中打开"</string>
 +    <string name="lujarch_background_tile">"%1$s，%2$s"</string>
 +    <string name="lujarch_background_end">"结束运行"</string>
 +    <string name="lujarch_background_usage">"后台使用"</string>
@@ -165,10 +163,10 @@ index 0000000000000000000000000000000000000000..f853e5ed766517b60afe7013598b3c18
 +</resources>
 diff --git a/quickstep/res/values/lujarch_background_strings.xml b/quickstep/res/values/lujarch_background_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..35c5ac50932040cb0da5eccb0b8fca57e1533a7f
+index 0000000000000000000000000000000000000000..a5b823becbcad7422804388f08a907f8b8135936
 --- /dev/null
 +++ b/quickstep/res/values/lujarch_background_strings.xml
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,31 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -189,7 +187,6 @@ index 0000000000000000000000000000000000000000..35c5ac50932040cb0da5eccb0b8fca57
 +<resources>
 +    <string name="lujarch_background_running">Running</string>
 +    <string name="lujarch_background_small_window">Small window</string>
-+    <string name="lujarch_background_drop">Release to open in a small window</string>
 +    <string name="lujarch_background_tile">%1$s, %2$s</string>
 +    <string name="lujarch_background_end">End running</string>
 +    <string name="lujarch_background_usage">Background usage</string>
@@ -475,27 +472,39 @@ index a8ac4e021d9af5498e918b9232569482864ce4bf..40a4d6049c8110dde40c813997e2b25d
 +    };
  }
 diff --git a/quickstep/src/com/android/quickstep/TaskViewUtils.java b/quickstep/src/com/android/quickstep/TaskViewUtils.java
-index fb16a702a5bae970c2a57521f99c1fc852d5892b..9d2273b5e9ef5be90d0fd6fcdd6edb32e1646e71 100644
+index fb16a702a5bae970c2a57521f99c1fc852d5892b..06d7372350f6a6221325204a80427b7672dde6e2 100644
 --- a/quickstep/src/com/android/quickstep/TaskViewUtils.java
 +++ b/quickstep/src/com/android/quickstep/TaskViewUtils.java
-@@ -293,6 +293,16 @@ public final class TaskViewUtils {
- 
-                     taskView.getThumbnailBounds(TEMP_THUMBNAIL_BOUNDS, /*relativeToDragLayer=*/
-                             true);
+@@ -285,14 +285,25 @@ public final class TaskViewUtils {
+                 @Override
+                 public void onAnimationStart(Animator animation) {
+                     super.onAnimationStart(animation);
++                    taskView.getThumbnailBounds(TEMP_THUMBNAIL_BOUNDS, /*relativeToDragLayer=*/
++                            true);
 +                    if (lujarchFolded(dp, taskView)) {
 +                        // Lujarch's Background (BG-11): the window starts where the folded card
-+                        // is drawn, so that it grows from the card to the screen.
++                        // is drawn, so that it grows from the card to the screen; it is placed
++                        // there before it is shown.
 +                        tvsLocal.apply(targetHandle.getTransformParams(), new SurfaceTransaction());
 +                        RectF drawn = tvsLocal.getCurrentRect();
 +                        tvsLocal.taskGridTranslationX.value +=
 +                                TEMP_THUMBNAIL_BOUNDS.left - drawn.left;
 +                        tvsLocal.taskGridTranslationY.value +=
 +                                TEMP_THUMBNAIL_BOUNDS.top - drawn.top;
++                        tvsLocal.apply(targetHandle.getTransformParams());
 +                    }
+                     final SurfaceTransaction showTransaction = new SurfaceTransaction();
+                     for (int i = targets.apps.length - 1; i >= 0; --i) {
+                         showTransaction.getTransaction().show(targets.apps[i].leash);
+                     }
+                     applier.scheduleApply(showTransaction);
+-
+-                    taskView.getThumbnailBounds(TEMP_THUMBNAIL_BOUNDS, /*relativeToDragLayer=*/
+-                            true);
                      getTaskDimension(container.getDeviceProfile(),
                              TEMP_TASK_DIMENSION);
                      TEMP_FULLSCREEN_BOUNDS.set(0, 0, (int) TEMP_TASK_DIMENSION.x,
-@@ -826,6 +836,11 @@ public final class TaskViewUtils {
+@@ -826,6 +837,11 @@ public final class TaskViewUtils {
          return new Pair<>(targets, animationStates);
      }
  
@@ -507,7 +516,7 @@ index fb16a702a5bae970c2a57521f99c1fc852d5892b..9d2273b5e9ef5be90d0fd6fcdd6edb32
      private static void initTaskViewSimulatorsForRemoteTargetHandles(
              List<RemoteTargetHandle> handleList,
              DeviceProfile deviceProfile,
-@@ -854,6 +869,9 @@ public final class TaskViewUtils {
+@@ -854,6 +870,9 @@ public final class TaskViewUtils {
          for (RemoteTargetHandle handle : handleList) {
              TaskViewSimulator tvsLocal = handle.getTaskViewSimulator();
              tvsLocal.setDp(deviceProfile);
@@ -605,10 +614,10 @@ index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc3038078
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f3417eaaf3b5
+index 0000000000000000000000000000000000000000..137d39e43f88b768dc27184d9ab5452b359d2026
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/LujarchRecents.kt
-@@ -0,0 +1,590 @@
+@@ -0,0 +1,539 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -628,7 +637,6 @@ index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f341
 +package com.android.quickstep.lujarch
 +
 +import android.animation.ValueAnimator
-+import android.annotation.SuppressLint
 +import android.content.Context
 +import android.content.Intent
 +import android.graphics.Rect
@@ -640,7 +648,6 @@ index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f341
 +import android.text.format.Formatter
 +import android.util.Log
 +import android.view.Gravity
-+import android.view.MotionEvent
 +import android.view.View
 +import android.widget.FrameLayout
 +import android.widget.Toast
@@ -687,7 +694,6 @@ index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f341
 +    private var marksAnim: ValueAnimator? = null
 +    private var showRunning = true
 +    private var showMemory = true
-+    private var picked: Pickup? = null
 +
 +    init {
 +        LujarchKeep.refresh = { refresh() }
@@ -1033,68 +1039,20 @@ index 0000000000000000000000000000000000000000..b9746e5e2db27684de507199f731f341
 +            }
 +
 +    // -------------------------------------------------------------------------------------
-+    // A card dropped on the Running layer opens in a small window (WIN-11).
++    // Touching and holding a card opens it in a small window (WIN-11).
 +
-+    private class Pickup(val view: TaskView, val x: Float, val y: Float, val tx: Float, val ty: Float)
-+
-+    @SuppressLint("ClickableViewAccessibility")
 +    private fun installPickup(tv: TaskView) {
 +        if (tv.getTag(R.id.lujarch_background_pickup) != null) return
 +        tv.setTag(R.id.lujarch_background_pickup, true)
-+        var downX = 0f
-+        var downY = 0f
-+        tv.setOnTouchListener { v, ev ->
-+            val p = picked
-+            when (ev.actionMasked) {
-+                MotionEvent.ACTION_DOWN -> {
-+                    downX = ev.rawX
-+                    downY = ev.rawY
-+                    false
-+                }
-+                MotionEvent.ACTION_MOVE -> {
-+                    if (p == null || p.view != v) return@setOnTouchListener false
-+                    v.translationX = p.tx + ev.rawX - p.x
-+                    v.translationY = p.ty + ev.rawY - p.y
-+                    runningLayer.setDropTarget(isOverLayer(ev))
-+                    true
-+                }
-+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-+                    if (p == null || p.view != v) return@setOnTouchListener false
-+                    val drop = ev.actionMasked == MotionEvent.ACTION_UP && isOverLayer(ev)
-+                    picked = null
-+                    runningLayer.setDropTarget(false)
-+                    v.animate().translationX(p.tx).translationY(p.ty).scaleX(1f).scaleY(1f).setDuration(220).start()
-+                    if (drop) openInSmallWindow(tv)
-+                    true
-+                }
-+                else -> false
-+            }
-+        }
-+        tv.setOnLongClickListener { v ->
++        tv.setOnLongClickListener {
 +            if (openTaskInSmallWindow == null || canOpenInSmallWindow?.invoke() != true) {
 +                return@setOnLongClickListener false
 +            }
-+            picked = Pickup(tv, downX, downY, v.translationX, v.translationY)
-+            v.parent?.requestDisallowInterceptTouchEvent(true)
-+            v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(150).start()
-+            runningLayer.showDropSlot(true)
++            val task = tv.taskContainers.firstOrNull()?.task ?: return@setOnLongClickListener false
++            openTaskInSmallWindow?.invoke(tv, task.key.id)
++            Log.i(TAG, "Recents: task ${task.key.id} opens in a small window")
 +            true
 +        }
-+    }
-+
-+    private fun isOverLayer(ev: MotionEvent): Boolean {
-+        val r = Rect()
-+        runningLayer.getGlobalVisibleRect(r)
-+        // The layer's strip and the space just under it take the drop.
-+        r.bottom += (24 * context.resources.displayMetrics.density).toInt()
-+        return r.contains(ev.rawX.toInt(), ev.rawY.toInt())
-+    }
-+
-+    private fun openInSmallWindow(tv: TaskView) {
-+        runningLayer.showDropSlot(false)
-+        val task = tv.taskContainers.firstOrNull()?.task ?: return
-+        openTaskInSmallWindow?.invoke(tv, task.key.id)
-+        Log.i(TAG, "Recents: task ${task.key.id} opens in a small window")
 +    }
 +
 +    /** The Running layer laid out its small windows' places, by bubble key (WIN-11). */
@@ -1435,10 +1393,10 @@ index 0000000000000000000000000000000000000000..f12ab0f4af3a89bdac515c3390584273
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385dd9b51cf4
+index 0000000000000000000000000000000000000000..3cf7872b7a75be0c018d8a14e99ad447bb75a59d
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,881 @@
+@@ -0,0 +1,847 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1465,12 +1423,10 @@ index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385d
 +import android.graphics.Rect
 +import android.graphics.RectF
 +import android.graphics.drawable.Drawable
-+import android.graphics.drawable.GradientDrawable
 +import android.os.UserHandle
 +import android.text.TextPaint
 +import android.text.TextUtils
 +import android.util.TypedValue
-+import android.view.Gravity
 +import android.view.View
 +import android.view.ViewGroup
 +import android.view.ViewTreeObserver
@@ -1513,7 +1469,6 @@ index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385d
 +    private val title = TextView(context)
 +    private val scroller = HorizontalScrollView(context)
 +    private val row = LinearLayout(context)
-+    private val dropSlot = FrameLayout(context)
 +    private val tiles = ArrayList<Tile>()
 +    private val slotRect = Rect()
 +    private var slotsPublished = false
@@ -1574,20 +1529,6 @@ index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385d
 +        row.orientation = LinearLayout.HORIZONTAL
 +        row.clipChildren = false
 +        row.clipToPadding = false
-+        dropSlot.background = GradientDrawable().apply {
-+            cornerRadius = dp(TILE_RADIUS).toFloat()
-+            setStroke(dp(2), context.getColor(android.R.color.system_accent1_200), dp(6).toFloat(), dp(4).toFloat())
-+        }
-+        dropSlot.addView(TextView(context).apply {
-+            setText(R.string.lujarch_background_drop)
-+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-+            setTextColor(context.getColor(android.R.color.system_accent1_100))
-+            gravity = Gravity.CENTER
-+            val p = dp(4)
-+            setPadding(p, p, p, p)
-+        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-+        dropSlot.visibility = GONE
-+        row.addView(dropSlot, LinearLayout.LayoutParams(dp(TILE_W), dp(TILE_H)))
 +        scroller.addView(row, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(TILE_H)))
 +        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, dp(TILE_H)))
 +        applyInsets()
@@ -1673,23 +1614,6 @@ index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385d
 +            rects.add(Rect(slotRect))
 +        }
 +        recents.onSmallWindowSlots(keys.toTypedArray(), rects.toTypedArray())
-+    }
-+
-+    /** While a card is held: the layer offers its place for it, last in the row. */
-+    fun showDropSlot(show: Boolean) {
-+        dropSlot.visibility = if (show) VISIBLE else GONE
-+        if (show) {
-+            visibility = VISIBLE
-+            post { scroller.fullScroll(FOCUS_RIGHT) }
-+        } else if (!hasEntries) {
-+            visibility = INVISIBLE
-+        }
-+    }
-+
-+    fun setDropTarget(over: Boolean) {
-+        dropSlot.alpha = if (over) 1f else 0.6f
-+        dropSlot.scaleX = if (over) 1.06f else 1f
-+        dropSlot.scaleY = dropSlot.scaleX
 +    }
 +
 +    // -----------------------------------------------------------------------------------------
@@ -2912,7 +2836,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d
  
      @Override
 diff --git a/quickstep/src/com/android/quickstep/views/TaskView.kt b/quickstep/src/com/android/quickstep/views/TaskView.kt
-index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..d631712dfa37fdd4b8fa3a51f734a48cd6d96e96 100644
+index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..7ba150e883af55ae94d96641605c279fe82798d7 100644
 --- a/quickstep/src/com/android/quickstep/views/TaskView.kt
 +++ b/quickstep/src/com/android/quickstep/views/TaskView.kt
 @@ -150,7 +150,12 @@ constructor(
@@ -2939,7 +2863,17 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..d631712dfa37fdd4b8fa3a51f734a48c
  
      val recentsView: RecentsView<*, *>?
          get() = parent as? RecentsView<*, *>
-@@ -1186,7 +1192,7 @@ constructor(
+@@ -728,7 +734,8 @@ constructor(
+             pivotX = modalPivot.x
+             pivotY = modalPivot.y
+         } else {
+-            if (container.deviceProfile.deviceProperties.isLargeScreen) {
++            // Lujarch's Background (BG-11): a phone's folded cards scale as the grid's do.
++            if (foldsIntoGrid) {
+                 pivotX =
+                     (if (layoutDirection == LAYOUT_DIRECTION_RTL) 0 else right - left).toFloat()
+                 pivotY = 0f
+@@ -1186,7 +1193,7 @@ constructor(
          val boxTranslationY: Float
          val expectedWidth: Int
          val expectedHeight: Int
@@ -2948,7 +2882,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..d631712dfa37fdd4b8fa3a51f734a48c
              val boxWidth: Int
              val boxHeight: Int
  
-@@ -1222,6 +1228,24 @@ constructor(
+@@ -1222,6 +1229,24 @@ constructor(
              width = expectedWidth
              height = expectedHeight
          }
@@ -2973,7 +2907,7 @@ index f530ac84edafaa3e4bcf252b6f849ab82e1ffab3..d631712dfa37fdd4b8fa3a51f734a48c
          updateThumbnailSize()
      }
  
-@@ -1305,6 +1329,7 @@ constructor(
+@@ -1305,6 +1330,7 @@ constructor(
  
      /** Launch of the current task (both live and inactive tasks) with an animation. */
      fun launchWithAnimation(): RunnableList? {
