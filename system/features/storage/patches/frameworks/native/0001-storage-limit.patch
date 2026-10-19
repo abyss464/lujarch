@@ -1,0 +1,119 @@
+diff --git a/cmds/installd/InstalldNativeService.cpp b/cmds/installd/InstalldNativeService.cpp
+index 21dbf89fe21d9c4dd5d4bcc3a716bf191373b8b9..68f4dfa92c08cb57374551be13c811fb7bcf8d1d 100644
+--- a/cmds/installd/InstalldNativeService.cpp
++++ b/cmds/installd/InstalldNativeService.cpp
+@@ -4443,6 +4443,37 @@ binder::Status InstalldNativeService::isQuotaSupported(
+     return ok();
+ }
+ 
++binder::Status InstalldNativeService::getLujarchAppSpace(const std::optional<std::string>& uuid,
++        int32_t uid, std::vector<int64_t>* _aidl_return) {
++    ENFORCE_UID(AID_SYSTEM);
++    CHECK_ARGUMENT_UUID(uuid);
++    if (multiuser_get_app_id(uid) < AID_APP_START || multiuser_get_app_id(uid) > AID_APP_END) {
++        return error("Not an app uid: " + std::to_string(uid));
++    }
++    const std::string volume = uuid.value_or("");
++    const gid_t cacheGid = multiuser_get_cache_gid(multiuser_get_user_id(uid),
++            multiuser_get_app_id(uid));
++    *_aidl_return = {GetOccupiedSpaceForUid(volume, uid),
++            GetOccupiedSpaceForGid(volume, cacheGid)};
++    return ok();
++}
++
++binder::Status InstalldNativeService::setLujarchAppSpaceLimit(
++        const std::optional<std::string>& uuid, int32_t uid, int64_t bytes) {
++    ENFORCE_UID(AID_SYSTEM);
++    CHECK_ARGUMENT_UUID(uuid);
++    if (multiuser_get_app_id(uid) < AID_APP_START || multiuser_get_app_id(uid) > AID_APP_END) {
++        return error("Not an app uid: " + std::to_string(uid));
++    }
++    if (bytes < 0) {
++        return error("A negative limit for uid " + std::to_string(uid));
++    }
++    if (!SetSpaceLimitForUid(uuid.value_or(""), uid, bytes)) {
++        return error("Failed to set the space limit of uid " + std::to_string(uid));
++    }
++    return ok();
++}
++
+ binder::Status InstalldNativeService::prepareAppProfile(const std::string& packageName,
+         int32_t userId, int32_t appId, const std::string& profileName, const std::string& codePath,
+         const std::optional<std::string>& dexMetadata, bool* _aidl_return) {
+diff --git a/cmds/installd/InstalldNativeService.h b/cmds/installd/InstalldNativeService.h
+index 3f06f89cb81c7d9e204dcc7c8dd3d20e2e026cb0..2e19d196e0dc3a78a817d92af54c4e62bd2491bc 100644
+--- a/cmds/installd/InstalldNativeService.h
++++ b/cmds/installd/InstalldNativeService.h
+@@ -202,6 +202,10 @@ public:
+ 
+     binder::Status invalidateMounts();
+     binder::Status setFirstBoot();
++    binder::Status getLujarchAppSpace(const std::optional<std::string>& uuid, int32_t uid,
++            std::vector<int64_t>* _aidl_return);
++    binder::Status setLujarchAppSpaceLimit(const std::optional<std::string>& uuid, int32_t uid,
++            int64_t bytes);
+     binder::Status isQuotaSupported(const std::optional<std::string>& volumeUuid,
+             bool* _aidl_return);
+     binder::Status tryMountDataMirror(const std::optional<std::string>& volumeUuid);
+diff --git a/cmds/installd/QuotaUtils.cpp b/cmds/installd/QuotaUtils.cpp
+index 54ff0e97acb31d0cc51250d57a8afeb8061e4348..a745dece760d1879e17475d7c27d23b3e957996f 100644
+--- a/cmds/installd/QuotaUtils.cpp
++++ b/cmds/installd/QuotaUtils.cpp
+@@ -185,6 +185,27 @@ bool PrepareAppInodeQuota(const std::string& uuid, uid_t uid) {
+     }
+ }
+ 
++bool SetSpaceLimitForUid(const std::string& uuid, uid_t uid, int64_t bytes) {
++    const std::string device = FindQuotaDeviceForUuid(uuid);
++    if (device.empty()) {
++        LOG(ERROR) << "No quota on the volume of " << uuid << " to limit UID " << uid;
++        return false;
++    }
++    struct dqblk dq = {};
++    // Only the block limits change; the inode limits stay as they are.
++    dq.dqb_valid = QIF_BLIMITS;
++    dq.dqb_bhardlimit = (bytes + QIF_DQBLKSIZE - 1) / QIF_DQBLKSIZE;
++    dq.dqb_bsoftlimit = 0;
++    if (quotactl(QCMD(Q_SETQUOTA, USRQUOTA), device.c_str(), uid,
++            reinterpret_cast<char*>(&dq)) != 0) {
++        PLOG(ERROR) << "Failed to set the space limit of UID " << uid << " on " << device;
++        return false;
++    }
++    LOG(INFO) << "Space limit of UID " << uid << ": " << (bytes == 0 ? "none" :
++            std::to_string(bytes) + " bytes");
++    return true;
++}
++
+ int64_t GetInodesQuotaHardLimitsForUid(const std::string& uuid, uid_t uid) {
+     const std::string device = FindQuotaDeviceForUuid(uuid);
+     if (device.empty()) {
+diff --git a/cmds/installd/QuotaUtils.h b/cmds/installd/QuotaUtils.h
+index 1a4739ce7aa8edc75e3a13bdc44dd80a15197086..40d7bfbfb6f651c82cde9dcea26b4e21bbc09c37 100644
+--- a/cmds/installd/QuotaUtils.h
++++ b/cmds/installd/QuotaUtils.h
+@@ -44,6 +44,9 @@ int64_t GetOccupiedSpaceForProjectId(const std::string& uuid, int projectId);
+  */
+ bool PrepareAppInodeQuota(const std::string& uuid, uid_t uid);
+ 
++/* Set the most a uid may occupy, in bytes; 0 removes the limit. Returns whether it is set. */
++bool SetSpaceLimitForUid(const std::string& uuid, uid_t uid, int64_t bytes);
++
+ /* Get the inode quota hard limits for a uid or -1 if fails */
+ int64_t GetInodesQuotaHardLimitsForUid(const std::string& uuid, uid_t uid);
+ 
+diff --git a/cmds/installd/binder/android/os/IInstalld.aidl b/cmds/installd/binder/android/os/IInstalld.aidl
+index 34e6302af12b50838e255ca0919235edfc91fef3..e1155b0b865a75b14c017c600d2e19148d57afe5 100644
+--- a/cmds/installd/binder/android/os/IInstalld.aidl
++++ b/cmds/installd/binder/android/os/IInstalld.aidl
+@@ -111,6 +111,11 @@ interface IInstalld {
+ 
+     void invalidateMounts();
+     boolean isQuotaSupported(@nullable @utf8InCpp String uuid);
++    // Lujarch's Storage (STO-1): what a uid holds in the volume, and its cache group, in bytes;
++    // -1 each when not known.
++    long[] getLujarchAppSpace(@nullable @utf8InCpp String uuid, int uid);
++    // The most a uid may hold in the volume, in bytes; 0 for no limit.
++    void setLujarchAppSpaceLimit(@nullable @utf8InCpp String uuid, int uid, long bytes);
+ 
+     boolean prepareAppProfile(@utf8InCpp String packageName,
+         int userId, int appId, @utf8InCpp String profileName, @utf8InCpp String codePath,

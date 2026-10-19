@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The privileged permission Storage adds to the apps that show it: Storage & cache in Settings
+    and the Storage limit page in Lujarch Settings (STO-1). A missing entry stops system_server
+    at boot.
+-->
+<permissions>
+    <privapp-permissions package="com.android.settings">
+        <permission name="android.permission.LUJARCH_STORAGE" />
+    </privapp-permissions>
+    <privapp-permissions package="org.lujarch.settings">
+        <permission name="android.permission.LUJARCH_STORAGE" />
+    </privapp-permissions>
+</permissions>

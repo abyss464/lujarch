@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!-- Lujarch's Storage limit page (STO-1). -->
+<resources>
+    <string name="storage_limit_title">"ストレージの上限"</string>
+    <string name="storage_limit_use">"ストレージの上限を使用"</string>
+    <string name="storage_limit_storage">"ストレージ"</string>
+    <string name="storage_limit_when">"いっぱいになったとき"</string>
+    <string name="storage_limit_clear_cache">"先にキャッシュを削除"</string>
+    <string name="storage_limit_clear_cache_summary">"先にキャッシュを削除：キャッシュを削除し、空いた容量に保存を続けます。削除できるキャッシュがなくなると、それ以上保存できません"</string>
+    <string name="storage_limit_stop">"保存を停止"</string>
+    <string name="storage_limit_stop_summary">"保存を停止：スマートフォンのストレージがいっぱいのときと同じように、それ以上保存できなくなります。保存済みのデータはそのまま残ります"</string>
+    <string name="storage_limit_user_data">"ユーザーデータ"</string>
+    <string name="storage_limit_cache">"キャッシュ"</string>
+    <string name="storage_limit_of">"%1$s / %2$s"</string>
+    <string name="storage_limit_state_off">"制限されていません"</string>
+    <string name="storage_limit_state_within">"上限内"</string>
+    <string name="storage_limit_state_full">"上限に到達"</string>
+    <string name="storage_limit_state_full_since">"%1$s から上限に到達"</string>
+    <string name="storage_limit_last_clear">"前回のキャッシュ削除：%1$s"</string>
+    <string name="storage_limit_footer">"上限には、このアプリのユーザーデータとキャッシュが含まれます。共有ストレージ内のファイル（ダウンロードやメディアなど）は含まれません。"</string>
+    <string name="storage_limit_storage_message">"現在 %1$s を使用しています。%2$s から %3$s まで、MB 単位で指定します。"</string>
+    <string name="storage_limit_mb">"MB"</string>
+    <string name="storage_limit_range">"%1$s から %2$s まで"</string>
+    <string name="storage_limit_error_load">"ストレージの上限を読み取れません"</string>
+    <string name="storage_limit_error_set">"ストレージの上限を変更できません"</string>
+    <string name="storage_limit_error_unavailable">"ストレージの上限を読み取れません。システムがまだ起動中の可能性があります。"</string>
+</resources>

@@ -1,0 +1,28 @@
+// The directory of the storage limits (STO-1).
+prebuilt_etc {
+    name: "lujarch-storage.rc",
+    src: "src/init/lujarch-storage.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+// Storage & cache in Settings and the Storage limit page in Lujarch Settings read the limits
+// (STO-1).
+prebuilt_etc {
+    name: "lujarch_storage_privapp_permissions",
+    filename_from_src: true,
+    src: "src/configs/privapp-permissions-lujarch-storage.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+// Storage's page in Lujarch Settings: an app's Storage limit.
+android_library {
+    name: "LujarchStorageSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    libs: ["LujarchSettingsContribution"],
+    static_libs: ["LujarchSettingsPages"],
+}

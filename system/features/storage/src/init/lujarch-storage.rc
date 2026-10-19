@@ -1,0 +1,4 @@
+# The storage limits of Lujarch's Storage (STO-1), written by system_server.
+on post-fs-data
+    mkdir /data/lujarch 0711 root root
+    mkdir /data/lujarch/storage 0700 system system

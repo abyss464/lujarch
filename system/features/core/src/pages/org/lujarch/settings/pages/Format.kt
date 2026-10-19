@@ -36,6 +36,15 @@ object Format {
     fun time(context: Context, millis: Long): String =
         DateFormat.getTimeFormat(context).format(Date(millis))
 
+    /** A moment: its time today, its date and time on another day. */
+    fun at(context: Context, millis: Long): String =
+        if (DateUtils.isToday(millis)) {
+            time(context, millis)
+        } else {
+            DateFormat.format(DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMd Hm"),
+                millis).toString()
+        }
+
     /**
      * A time relative to now for every page: "just now" within a minute, where DateUtils at
      * minute resolution says "0 minutes ago" (or "in 0 minutes" for a time a few seconds

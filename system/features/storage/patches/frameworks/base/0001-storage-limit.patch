@@ -1,0 +1,789 @@
+diff --git a/core/java/com/android/internal/app/ILujarchStorage.aidl b/core/java/com/android/internal/app/ILujarchStorage.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..efd38e3f98ad4bc1d6585593f0b85bb49fa80f49
+--- /dev/null
++++ b/core/java/com/android/internal/app/ILujarchStorage.aidl
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++import com.android.internal.app.LujarchStorageLimit;
++
++/**
++ * How much of the phone's storage each app may keep for itself (Lujarch's Storage). Callers hold
++ * android.permission.LUJARCH_STORAGE.
++ * @hide
++ */
++interface ILujarchStorage {
++    /** The app's storage limit and its use against it (STO-1); null when it is not installed. */
++    @nullable LujarchStorageLimit getLimit(String packageName, int userId);
++
++    /** Sets the app's storage limit; only the fields the owner sets are read. */
++    void setLimit(String packageName, int userId, in LujarchStorageLimit limit);
++}
+diff --git a/core/java/com/android/internal/app/LujarchStorage.java b/core/java/com/android/internal/app/LujarchStorage.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..ff1eb6a22a5b1dea7821cf921dfa24a0ff24226a
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchStorage.java
+@@ -0,0 +1,66 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++import android.os.IBinder;
++import android.os.ServiceManager;
++
++/**
++ * Lujarch's Storage for the pages that show it: how much of the phone's storage an app may keep
++ * for itself (STO-1).
++ *
++ * @hide
++ */
++public final class LujarchStorage {
++    /** The system service, {@link ILujarchStorage}. */
++    public static final String SERVICE = "lujarch_storage";
++    /** Held by the callers of {@link ILujarchStorage}. */
++    public static final String PERMISSION = "android.permission.LUJARCH_STORAGE";
++
++    /** When it is full: its cache is cleared first, and it saves on into the room that frees. */
++    public static final int FULL_CLEAR_CACHE = 0;
++    /** When it is full: it cannot save more. */
++    public static final int FULL_STOP = 1;
++
++    /** Use storage limit is off. */
++    public static final int STATE_OFF = 0;
++    public static final int STATE_WITHIN = 1;
++    /** At its limit: it cannot save more. */
++    public static final int STATE_FULL = 2;
++
++    /** Sizes of storage limits are in MB of 1000 * 1000 bytes, as Android shows sizes. */
++    public static final long MB = 1_000_000L;
++    /** The smallest storage limit. */
++    public static final long MIN_BYTES = 100 * MB;
++    /** The limit once Use storage limit is first turned on. */
++    public static final long DEFAULT_BYTES = 4_000 * MB;
++
++    /**
++     * Settings > Apps > (app) > Storage & cache > Storage limit, for
++     * Intent.EXTRA_PACKAGE_NAME.
++     */
++    public static final String ACTION_STORAGE_LIMIT = "org.lujarch.storage.action.STORAGE_LIMIT";
++
++    private LujarchStorage() {
++    }
++
++    /** The system service; null before it is published. */
++    public static ILujarchStorage get() {
++        final IBinder binder = ServiceManager.getService(SERVICE);
++        return binder != null ? ILujarchStorage.Stub.asInterface(binder) : null;
++    }
++}
+diff --git a/core/java/com/android/internal/app/LujarchStorageLimit.aidl b/core/java/com/android/internal/app/LujarchStorageLimit.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbe70954bb9ab149d3865d6cc8f75df38b49b779
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchStorageLimit.aidl
+@@ -0,0 +1,43 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++/**
++ * An app's storage limit, as the owner set it, and the app's use against it (STO-1).
++ * @hide
++ */
++parcelable LujarchStorageLimit {
++    /** Use storage limit. */
++    boolean on;
++    /** The most its User data and Cache together hold. */
++    long storageBytes;
++    /** When it is full: LujarchStorage.FULL_CLEAR_CACHE or FULL_STOP. */
++    int action;
++
++    // The rest is filled by getLimit only.
++    /** What it holds now: its User data, without Cache, and its Cache; -1 each when not known. */
++    long dataBytes;
++    long cacheBytes;
++    /** LujarchStorage.STATE_*. */
++    int state;
++    /** Since when it is full, as System.currentTimeMillis(); 0 when it is not, or not known. */
++    long sinceMillis;
++    /** When its cache was last cleared for its limit; 0 when never. */
++    long lastClearMillis;
++    /** The phone's storage, the largest limit. */
++    long maxBytes;
++}
+diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
+index 948a5299d348104ec76460d90e7efed8a729cad6..45f2cda30fd76c7cc49b396dfa039d45476b7b5b 100644
+--- a/core/res/AndroidManifest.xml
++++ b/core/res/AndroidManifest.xml
+@@ -7127,6 +7127,11 @@
+     <permission android:name="android.permission.INTERNAL_DELETE_CACHE_FILES"
+         android:protectionLevel="signature" />
+ 
++    <!-- @hide Allows an application to read and set how much of the phone's storage each app
++         may keep for itself (Lujarch's Storage): Settings. -->
++    <permission android:name="android.permission.LUJARCH_STORAGE"
++        android:protectionLevel="signature|privileged" />
++
+     <!-- Allows an application to delete packages.
+          <p>Not for use by third-party applications.
+          <p>Starting in {@link android.os.Build.VERSION_CODES#N}, user confirmation is requested
+diff --git a/services/core/java/com/android/server/pm/Installer.java b/services/core/java/com/android/server/pm/Installer.java
+index 18b2933f9f7aed124b1a34a8ea428c3991081871..4669f11940f78cb91dd84fcad8b87fade7ee51b2 100644
+--- a/services/core/java/com/android/server/pm/Installer.java
++++ b/services/core/java/com/android/server/pm/Installer.java
+@@ -681,6 +681,30 @@ public class Installer extends SystemService {
+         }
+     }
+ 
++    /**
++     * What the app uid holds in the volume, and its cache group, in bytes; -1 each when not
++     * known (Lujarch's Storage).
++     */
++    public long[] getLujarchAppSpace(String volumeUuid, int uid) throws InstallerException {
++        if (!checkBeforeRemote()) return new long[] {-1, -1};
++        try {
++            return mInstalld.getLujarchAppSpace(volumeUuid, uid);
++        } catch (Exception e) {
++            throw InstallerException.from(e);
++        }
++    }
++
++    /** The most the app uid may hold in the volume, in bytes; 0 for no limit. */
++    public void setLujarchAppSpaceLimit(String volumeUuid, int uid, long bytes)
++            throws InstallerException {
++        if (!checkBeforeRemote()) return;
++        try {
++            mInstalld.setLujarchAppSpaceLimit(volumeUuid, uid, bytes);
++        } catch (Exception e) {
++            throw InstallerException.from(e);
++        }
++    }
++
+     /**
+      * Bind mount private volume CE and DE mirror storage.
+      */
+diff --git a/services/core/java/com/android/server/storage/LujarchStorageService.java b/services/core/java/com/android/server/storage/LujarchStorageService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..91086d06e1bec3a21345418d0be21d9476bbbf1f
+--- /dev/null
++++ b/services/core/java/com/android/server/storage/LujarchStorageService.java
+@@ -0,0 +1,552 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.storage;
++
++import android.annotation.Nullable;
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.content.pm.IPackageDataObserver;
++import android.content.pm.PackageManager;
++import android.os.Binder;
++import android.os.Handler;
++import android.os.HandlerThread;
++import android.os.Process;
++import android.os.SystemClock;
++import android.os.UserHandle;
++import android.os.storage.StorageManager;
++import android.util.ArrayMap;
++import android.util.ArraySet;
++import android.util.AtomicFile;
++import android.util.Slog;
++import android.util.SparseArray;
++
++import com.android.internal.app.ILujarchStorage;
++import com.android.internal.app.LujarchStorage;
++import com.android.internal.app.LujarchStorageLimit;
++import com.android.server.SystemService;
++import com.android.server.pm.Installer;
++
++import java.io.BufferedReader;
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.io.FileReader;
++import java.io.IOException;
++import java.io.InputStreamReader;
++import java.nio.charset.StandardCharsets;
++
++/**
++ * Lujarch's Storage (STO-1): the storage limits the owner sets for apps, kept in a file and set
++ * as each app uid's quota on the data volume, which the kernel holds. An app whose limit clears
++ * its cache first is watched, and its cache cleared before it reaches the limit.
++ */
++public final class LujarchStorageService extends ILujarchStorage.Stub {
++    static final String TAG = "lujarch_storage";
++    private static final File DIR = new File("/data/lujarch/storage");
++    /** How often an app with a limit is watched; more often near its limit. */
++    private static final long WATCH_MS = 2_000;
++    private static final long WATCH_NEAR_MS = 250;
++    /** Within this of its limit, an app is full. */
++    private static final long FULL_NEAR_BYTES = 4L << 20;
++    /** A cache this small is not worth clearing. */
++    private static final long CACHE_MIN_BYTES = 1L << 20;
++    /** A cache is cleared again no sooner than this after the last clear. */
++    private static final long CLEAR_AGAIN_MS = 2_000;
++
++    public static final class Lifecycle extends SystemService {
++        private LujarchStorageService mService;
++
++        public Lifecycle(Context context) {
++            super(context);
++        }
++
++        @Override
++        public void onStart() {
++            mService = new LujarchStorageService(getContext());
++            publishBinderService(LujarchStorage.SERVICE, mService);
++        }
++
++        @Override
++        public void onBootPhase(int phase) {
++            if (phase == SystemService.PHASE_SYSTEM_SERVICES_READY) {
++                mService.systemReady();
++            }
++        }
++    }
++
++    /** What the owner set for one app. */
++    private static final class Limit {
++        boolean on;
++        long storageBytes = LujarchStorage.DEFAULT_BYTES;
++        int action = LujarchStorage.FULL_CLEAR_CACHE;
++        /** When its cache was last cleared for its limit; 0 when never. */
++        long lastClearMillis;
++    }
++
++    /** What one uid holds against its limit, as last watched. */
++    private static final class Watch {
++        long used = -1;
++        long cache = -1;
++        boolean full;
++        long sinceMillis;
++        /** A cache clear asked for and not yet done. */
++        boolean clearing;
++        long lastClearElapsed = -CLEAR_AGAIN_MS;
++    }
++
++    private final Context mContext;
++    private final Installer mInstaller;
++    private final File mFile = new File(DIR, "limits");
++    private final Handler mHandler;
++    private final Object mLock = new Object();
++    /** "uid:package" to its limit. */
++    private final ArrayMap<String, Limit> mLimits = new ArrayMap<>();
++    /** The uids with a limit that is on, to what they hold. */
++    private final SparseArray<Watch> mWatches = new SparseArray<>();
++    private final Runnable mWatch = this::watch;
++
++    private LujarchStorageService(Context context) {
++        mContext = context;
++        mInstaller = new Installer(context);
++        mInstaller.onStart();
++        final HandlerThread thread = new HandlerThread(TAG, Process.THREAD_PRIORITY_BACKGROUND);
++        thread.start();
++        // A failure of Storage's own work is logged and ends that piece of work only.
++        mHandler = new Handler(thread.getLooper()) {
++            @Override
++            public void dispatchMessage(android.os.Message msg) {
++                try {
++                    super.dispatchMessage(msg);
++                } catch (RuntimeException e) {
++                    Slog.e(TAG, "Storage's work failed", e);
++                }
++            }
++        };
++    }
++
++    private void systemReady() {
++        final IntentFilter removed = new IntentFilter(Intent.ACTION_PACKAGE_FULLY_REMOVED);
++        removed.addDataScheme("package");
++        mContext.registerReceiverForAllUsers(new BroadcastReceiver() {
++            @Override
++            public void onReceive(Context context, Intent intent) {
++                final String pkg = intent.getData() != null
++                        ? intent.getData().getSchemeSpecificPart() : null;
++                final int uid = intent.getIntExtra(Intent.EXTRA_UID, -1);
++                if (pkg != null && uid >= 0) {
++                    remove(uid, pkg);
++                }
++            }
++        }, removed, null, mHandler);
++        mHandler.post(() -> {
++            checkEnforced();
++            load();
++            dropRemoved();
++            applyAll();
++            watch();
++        });
++    }
++
++    private static String key(int uid, String packageName) {
++        return uid + ":" + packageName;
++    }
++
++    private static int uidOfKey(String key) {
++        return Integer.parseInt(key.substring(0, key.indexOf(':')));
++    }
++
++    private static String packageOfKey(String key) {
++        return key.substring(key.indexOf(':') + 1);
++    }
++
++    /** The kernel holds the limits only where the data volume counts user quotas with limits. */
++    private void checkEnforced() {
++        try (BufferedReader r = new BufferedReader(new FileReader("/proc/mounts"))) {
++            String line;
++            while ((line = r.readLine()) != null) {
++                final String[] f = line.split(" ");
++                if (f.length > 3 && "/data".equals(f[1])) {
++                    if (!(f[3] + ",").contains("usrquota,")) {
++                        Slog.e(TAG, "/data is mounted without usrquota (" + f[3]
++                                + "): storage limits are not held");
++                    }
++                    return;
++                }
++            }
++            Slog.e(TAG, "/data is not in /proc/mounts");
++        } catch (IOException e) {
++            Slog.e(TAG, "cannot read /proc/mounts", e);
++        }
++    }
++
++    // -------------------------------------------------------------------------------------------
++    // The owner's limits
++
++    /** One line an app: "uid:package", then on, storage, action and the last clear, by tabs. */
++    private void load() {
++        if (!mFile.exists()) {
++            return;
++        }
++        try (BufferedReader r = new BufferedReader(new InputStreamReader(
++                new FileInputStream(mFile), StandardCharsets.UTF_8))) {
++            String line;
++            synchronized (mLock) {
++                mLimits.clear();
++                while ((line = r.readLine()) != null) {
++                    final String[] f = line.split("\t");
++                    if (f.length != 5) {
++                        Slog.w(TAG, "a line of " + mFile + " is not understood: " + line);
++                        continue;
++                    }
++                    try {
++                        uidOfKey(f[0]);
++                        final Limit l = new Limit();
++                        l.on = "1".equals(f[1]);
++                        l.storageBytes = Long.parseLong(f[2]);
++                        l.action = Integer.parseInt(f[3]);
++                        l.lastClearMillis = Long.parseLong(f[4]);
++                        mLimits.put(f[0], l);
++                    } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
++                        Slog.w(TAG, "a line of " + mFile + " is not understood: " + line, e);
++                    }
++                }
++            }
++        } catch (IOException e) {
++            Slog.e(TAG, "cannot read " + mFile, e);
++        }
++    }
++
++    private void save() {
++        final StringBuilder out = new StringBuilder();
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                final Limit l = mLimits.valueAt(i);
++                out.append(mLimits.keyAt(i)).append('\t').append(l.on ? 1 : 0).append('\t')
++                        .append(l.storageBytes).append('\t').append(l.action).append('\t')
++                        .append(l.lastClearMillis).append('\n');
++            }
++        }
++        final AtomicFile file = new AtomicFile(mFile);
++        FileOutputStream stream = null;
++        try {
++            stream = file.startWrite();
++            stream.write(out.toString().getBytes(StandardCharsets.UTF_8));
++            file.finishWrite(stream);
++        } catch (IOException e) {
++            Slog.e(TAG, "cannot write " + mFile, e);
++            if (stream != null) {
++                file.failWrite(stream);
++            }
++        }
++    }
++
++    /** Limits of apps removed while the system was not running. */
++    private void dropRemoved() {
++        final PackageManager pm = mContext.getPackageManager();
++        final ArrayMap<String, Integer> gone = new ArrayMap<>();
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                final String k = mLimits.keyAt(i);
++                final int uid = uidOfKey(k);
++                int now;
++                try {
++                    now = pm.getPackageUidAsUser(packageOfKey(k), UserHandle.getUserId(uid));
++                } catch (PackageManager.NameNotFoundException e) {
++                    now = -1;
++                }
++                if (now != uid) {
++                    gone.put(k, uid);
++                }
++            }
++        }
++        for (int i = 0; i < gone.size(); i++) {
++            remove(gone.valueAt(i), packageOfKey(gone.keyAt(i)));
++        }
++    }
++
++    private void remove(int uid, String packageName) {
++        final boolean had;
++        synchronized (mLock) {
++            had = mLimits.remove(key(uid, packageName)) != null;
++        }
++        if (had) {
++            Slog.i(TAG, packageName + " (" + uid + ") is removed: its storage limit with it");
++            save();
++            apply(uid);
++        }
++    }
++
++    // -------------------------------------------------------------------------------------------
++    // Holding them
++
++    /** The smallest limit that is on among the uid's packages, which share its quota; 0 for none. */
++    private long limitOf(int uid) {
++        long bytes = 0;
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                final Limit l = mLimits.valueAt(i);
++                if (l.on && uidOfKey(mLimits.keyAt(i)) == uid
++                        && (bytes == 0 || l.storageBytes < bytes)) {
++                    bytes = l.storageBytes;
++                }
++            }
++        }
++        return bytes;
++    }
++
++    /** The package of the uid whose limit that is on clears its cache first; null for none. */
++    @Nullable
++    private String clearsCache(int uid) {
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                final Limit l = mLimits.valueAt(i);
++                if (l.on && l.action == LujarchStorage.FULL_CLEAR_CACHE
++                        && uidOfKey(mLimits.keyAt(i)) == uid) {
++                    return packageOfKey(mLimits.keyAt(i));
++                }
++            }
++        }
++        return null;
++    }
++
++    private void applyAll() {
++        final ArraySet<Integer> uids = new ArraySet<>();
++        synchronized (mLock) {
++            for (int i = 0; i < mLimits.size(); i++) {
++                uids.add(uidOfKey(mLimits.keyAt(i)));
++            }
++        }
++        for (int i = 0; i < uids.size(); i++) {
++            apply(uids.valueAt(i));
++        }
++    }
++
++    /** Sets the uid's quota to its limit, or none, and watches it while its limit is on. */
++    private void apply(int uid) {
++        final long bytes = limitOf(uid);
++        try {
++            mInstaller.setLujarchAppSpaceLimit(null, uid, bytes);
++        } catch (Installer.InstallerException e) {
++            Slog.e(TAG, "cannot set the storage limit of uid " + uid + " to " + bytes, e);
++        }
++        synchronized (mLock) {
++            if (bytes > 0) {
++                if (mWatches.get(uid) == null) {
++                    mWatches.put(uid, new Watch());
++                }
++            } else {
++                mWatches.delete(uid);
++            }
++        }
++        mHandler.removeCallbacks(mWatch);
++        mHandler.post(mWatch);
++    }
++
++    /** Reads what each limited uid holds, clears caches as their limits say, notes when full. */
++    private void watch() {
++        final int[] uids;
++        synchronized (mLock) {
++            uids = new int[mWatches.size()];
++            for (int i = 0; i < uids.length; i++) {
++                uids[i] = mWatches.keyAt(i);
++            }
++        }
++        boolean near = false;
++        for (int uid : uids) {
++            final long limit = limitOf(uid);
++            if (limit <= 0) {
++                continue;
++            }
++            long[] space;
++            try {
++                space = mInstaller.getLujarchAppSpace(null, uid);
++            } catch (Installer.InstallerException e) {
++                Slog.e(TAG, "cannot read what uid " + uid + " holds", e);
++                space = new long[] {-1, -1};
++            }
++            final long margin = Math.max(32L << 20, limit / 50);
++            final String clearPackage = clearsCache(uid);
++            final Watch w;
++            synchronized (mLock) {
++                w = mWatches.get(uid);
++                if (w == null) {
++                    continue;
++                }
++                w.used = space[0];
++                w.cache = space[1];
++                final boolean full = w.used >= 0 && w.used >= limit - FULL_NEAR_BYTES;
++                if (full != w.full) {
++                    w.full = full;
++                    w.sinceMillis = full ? System.currentTimeMillis() : 0;
++                    Slog.i(TAG, "uid " + uid + (full ? " is full: " : " is within its limit: ")
++                            + w.used + " of " + limit + " bytes");
++                }
++            }
++            if (w.used < 0) {
++                continue;
++            }
++            near |= w.used >= limit - 2 * margin;
++            if (clearPackage != null && w.used >= limit - margin && w.cache >= CACHE_MIN_BYTES
++                    && !w.clearing
++                    && SystemClock.elapsedRealtime() - w.lastClearElapsed >= CLEAR_AGAIN_MS) {
++                clearCache(uid, clearPackage, w);
++            }
++        }
++        mHandler.removeCallbacks(mWatch);
++        if (uids.length > 0) {
++            mHandler.postDelayed(mWatch, near ? WATCH_NEAR_MS : WATCH_MS);
++        }
++    }
++
++    private void clearCache(int uid, String packageName, Watch w) {
++        w.clearing = true;
++        w.lastClearElapsed = SystemClock.elapsedRealtime();
++        Slog.i(TAG, packageName + " (" + uid + ") is near its storage limit: clearing its cache of "
++                + w.cache + " bytes");
++        final IPackageDataObserver observer = new IPackageDataObserver.Stub() {
++            @Override
++            public void onRemoveCompleted(String pkg, boolean succeeded) {
++                mHandler.post(() -> {
++                    synchronized (mLock) {
++                        w.clearing = false;
++                        w.lastClearElapsed = SystemClock.elapsedRealtime();
++                        final Limit l = mLimits.get(key(uid, packageName));
++                        if (succeeded && l != null) {
++                            l.lastClearMillis = System.currentTimeMillis();
++                        }
++                    }
++                    if (succeeded) {
++                        save();
++                    } else {
++                        Slog.e(TAG, "cannot clear the cache of " + packageName + " (" + uid + ")");
++                    }
++                    watch();
++                });
++            }
++        };
++        mContext.getPackageManager().deleteApplicationCacheFilesAsUser(packageName,
++                UserHandle.getUserId(uid), observer);
++    }
++
++    // -------------------------------------------------------------------------------------------
++    // The API
++
++    private void enforce() {
++        mContext.enforceCallingOrSelfPermission(LujarchStorage.PERMISSION, TAG);
++    }
++
++    private int uidOf(String packageName, int userId) {
++        try {
++            return mContext.getPackageManager().getPackageUidAsUser(packageName, userId);
++        } catch (PackageManager.NameNotFoundException e) {
++            throw new IllegalArgumentException(packageName + " is not installed for user "
++                    + userId);
++        }
++    }
++
++    /** The phone's storage, as Settings shows it. */
++    private long maxBytes() {
++        return mContext.getSystemService(StorageManager.class).getPrimaryStorageSize();
++    }
++
++    @Override
++    public LujarchStorageLimit getLimit(String packageName, int userId) {
++        enforce();
++        final long ident = Binder.clearCallingIdentity();
++        try {
++            final int uid;
++            try {
++                uid = mContext.getPackageManager().getPackageUidAsUser(packageName, userId);
++            } catch (PackageManager.NameNotFoundException e) {
++                return null;
++            }
++            final LujarchStorageLimit out = new LujarchStorageLimit();
++            synchronized (mLock) {
++                final Limit l = mLimits.get(key(uid, packageName));
++                final Limit d = l != null ? l : new Limit();
++                out.on = d.on;
++                out.storageBytes = d.storageBytes;
++                out.action = d.action;
++                out.lastClearMillis = d.lastClearMillis;
++            }
++            long[] space;
++            try {
++                space = mInstaller.getLujarchAppSpace(null, uid);
++            } catch (Installer.InstallerException e) {
++                Slog.e(TAG, "cannot read what " + packageName + " (" + uid + ") holds", e);
++                space = new long[] {-1, -1};
++            }
++            out.cacheBytes = space[1];
++            out.dataBytes = space[0] >= 0 && space[1] >= 0 ? Math.max(0, space[0] - space[1])
++                    : space[0];
++            out.state = LujarchStorage.STATE_OFF;
++            if (out.on) {
++                final long limit = limitOf(uid);
++                final boolean full = space[0] >= 0 && space[0] >= limit - FULL_NEAR_BYTES;
++                out.state = full ? LujarchStorage.STATE_FULL : LujarchStorage.STATE_WITHIN;
++                synchronized (mLock) {
++                    final Watch w = mWatches.get(uid);
++                    out.sinceMillis = full && w != null && w.full ? w.sinceMillis : 0;
++                }
++            }
++            out.maxBytes = maxBytes();
++            return out;
++        } finally {
++            Binder.restoreCallingIdentity(ident);
++        }
++    }
++
++    @Override
++    public void setLimit(String packageName, int userId, LujarchStorageLimit in) {
++        enforce();
++        final long ident = Binder.clearCallingIdentity();
++        try {
++            final int uid = uidOf(packageName, userId);
++            if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
++                throw new IllegalArgumentException(packageName + " is part of the system");
++            }
++            final long max = maxBytes();
++            if (in.storageBytes < LujarchStorage.MIN_BYTES || in.storageBytes > max) {
++                throw new IllegalArgumentException("a storage limit outside "
++                        + LujarchStorage.MIN_BYTES + " to " + max + " bytes");
++            }
++            if (in.action != LujarchStorage.FULL_CLEAR_CACHE
++                    && in.action != LujarchStorage.FULL_STOP) {
++                throw new IllegalArgumentException("no such action " + in.action);
++            }
++            synchronized (mLock) {
++                final String k = key(uid, packageName);
++                final Limit l = mLimits.containsKey(k) ? mLimits.get(k) : new Limit();
++                l.on = in.on;
++                l.storageBytes = in.storageBytes;
++                l.action = in.action;
++                mLimits.put(k, l);
++            }
++            Slog.i(TAG, packageName + " (" + uid + "): storage limit " + (in.on ? "on, "
++                    + in.storageBytes + " bytes, " + (in.action == LujarchStorage.FULL_CLEAR_CACHE
++                    ? "clear its cache first" : "stop it saving") : "off"));
++            mHandler.post(() -> {
++                save();
++                apply(uid);
++            });
++        } finally {
++            Binder.restoreCallingIdentity(ident);
++        }
++    }
++}
+diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
+index 0725433786785c0d03f61b61b9c46a91cb1567ad..badec749a326184cefa5c55dc9a494b3da504b04 100644
+--- a/services/java/com/android/server/SystemServer.java
++++ b/services/java/com/android/server/SystemServer.java
+@@ -1964,6 +1964,16 @@ public final class SystemServer implements Dumpable {
+                 }
+                 t.traceEnd();
+ 
++                // Lujarch: how much of the phone's storage each app may keep (STO-1).
++                t.traceBegin("StartLujarchStorageService");
++                try {
++                    mSystemServiceManager.startService(
++                            com.android.server.storage.LujarchStorageService.Lifecycle.class);
++                } catch (Throwable e) {
++                    reportWtf("starting LujarchStorageService", e);
++                }
++                t.traceEnd();
++
+                 if (android.app.privatecompute.flags.Flags.enablePccFrameworkSupport()) {
+                     t.traceBegin("StartFileService");
+                     try {

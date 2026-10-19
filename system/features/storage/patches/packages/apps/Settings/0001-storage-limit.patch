@@ -1,0 +1,230 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 160590e4f818c569ce236fa9290d6df568b07c4a..3aed800f0a32f196f71d0fdc58a6895c7cb3c40b 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -115,6 +115,8 @@
+     <uses-permission android:name="android.permission.MANAGE_APP_OPS_MODES" />
+     <!-- Lujarch's Background (BG-2, BG-6). -->
+     <uses-permission android:name="android.permission.LUJARCH_BACKGROUND" />
++    <!-- Lujarch's Storage (STO-1). -->
++    <uses-permission android:name="android.permission.LUJARCH_STORAGE" />
+     <uses-permission android:name="android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS"/>
+     <uses-permission android:name="android.permission.READ_PRINT_SERVICES" />
+     <uses-permission android:name="android.permission.NETWORK_SETTINGS" />
+diff --git a/res/values-ja/lujarch_storage_strings.xml b/res/values-ja/lujarch_storage_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..81116d4150f24bd139a9b79f743a9404feca90d6
+--- /dev/null
++++ b/res/values-ja/lujarch_storage_strings.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Storage in Settings (target/storage.md). -->
++<resources>
++    <string name="lujarch_storage_limit">"ストレージの上限"</string>
++    <string name="lujarch_storage_limit_off">"OFF"</string>
++    <string name="lujarch_storage_limit_of">"%1$s / %2$s"</string>
++    <string name="lujarch_storage_limit_full">"上限に到達：%1$s / %2$s"</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_storage_strings.xml b/res/values-zh-rCN/lujarch_storage_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..f20df4e277a8f79323b30c9864ccd9a8a7285a27
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_storage_strings.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Storage in Settings (target/storage.md). -->
++<resources>
++    <string name="lujarch_storage_limit">"存储上限"</string>
++    <string name="lujarch_storage_limit_off">"关闭"</string>
++    <string name="lujarch_storage_limit_of">"%1$s / %2$s"</string>
++    <string name="lujarch_storage_limit_full">"已满：%1$s / %2$s"</string>
++</resources>
+diff --git a/res/values/lujarch_storage_strings.xml b/res/values/lujarch_storage_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb29c7cc042f5daf1b3d4c0c00ce1722382c0bc3
+--- /dev/null
++++ b/res/values/lujarch_storage_strings.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<!-- Lujarch's Storage in Settings (target/storage.md). -->
++<resources>
++    <string name="lujarch_storage_limit">Storage limit</string>
++    <string name="lujarch_storage_limit_off">Off</string>
++    <string name="lujarch_storage_limit_of">%1$s of %2$s</string>
++    <string name="lujarch_storage_limit_full">Full: %1$s of %2$s</string>
++</resources>
+diff --git a/res/xml/app_storage_settings.xml b/res/xml/app_storage_settings.xml
+index edf9a122a95ba3dfae060b98ceb6e0234e15d159..b7a9458b94814ad36b7feb8fe81309437bfa77a6 100644
+--- a/res/xml/app_storage_settings.xml
++++ b/res/xml/app_storage_settings.xml
+@@ -64,6 +64,11 @@
+ 
+     </PreferenceCategory>
+ 
++    <!-- Lujarch's Storage (STO-1): what the app holds against its limit; opens its page. -->
++    <Preference
++        android:key="lujarch_storage_limit"
++        android:title="@string/lujarch_storage_limit" />
++
+     <com.android.settingslib.widget.UntitledPreferenceCategory
+         android:key="uri_category"
+         settings:allowDividerAbove="false"
+diff --git a/src/com/android/settings/applications/AppStorageSettings.java b/src/com/android/settings/applications/AppStorageSettings.java
+index 4f422ba9836024da8574e1877db834df53cfdc54..cd09f27a0656c22200a7337f523504e0d8fc7bc5 100644
+--- a/src/com/android/settings/applications/AppStorageSettings.java
++++ b/src/com/android/settings/applications/AppStorageSettings.java
+@@ -23,6 +23,7 @@ import android.app.ActivityManager;
+ import android.app.AppGlobals;
+ import android.app.GrantedUriPermission;
+ import android.app.settings.SettingsEnums;
++import android.content.ActivityNotFoundException;
+ import android.content.Context;
+ import android.content.DialogInterface;
+ import android.content.Intent;
+@@ -34,9 +35,11 @@ import android.os.Bundle;
+ import android.os.Handler;
+ import android.os.Message;
+ import android.os.RemoteException;
++import android.os.Process;
+ import android.os.UserHandle;
+ import android.os.storage.StorageManager;
+ import android.os.storage.VolumeInfo;
++import android.text.format.Formatter;
+ import android.util.Log;
+ import android.util.MutableInt;
+ import android.view.View;
+@@ -50,6 +53,10 @@ import androidx.loader.content.Loader;
+ import androidx.preference.Preference;
+ import androidx.preference.PreferenceCategory;
+ 
++import com.android.internal.app.ILujarchStorage;
++import com.android.internal.app.LujarchBackground;
++import com.android.internal.app.LujarchStorage;
++import com.android.internal.app.LujarchStorageLimit;
+ import com.android.settings.R;
+ import com.android.settings.Utils;
+ import com.android.settings.deviceinfo.StorageWizardMoveConfirm;
+@@ -59,6 +66,7 @@ import com.android.settingslib.applications.ApplicationsState.Callbacks;
+ import com.android.settingslib.applications.StorageStatsSource;
+ import com.android.settingslib.applications.StorageStatsSource.AppStorageStats;
+ import com.android.settingslib.utils.StringUtil;
++import com.android.settingslib.utils.ThreadUtils;
+ import com.android.settingslib.widget.ActionButtonsPreference;
+ import com.android.settingslib.widget.LayoutPreference;
+ 
+@@ -105,6 +113,8 @@ public class AppStorageSettings extends AppInfoWithHeader
+     private static final String KEY_URI_CATEGORY = "uri_category";
+     private static final String KEY_CLEAR_URI = "clear_uri_button";
+ 
++    private static final String KEY_LUJARCH_STORAGE_LIMIT = "lujarch_storage_limit";
++
+     private static final String KEY_CACHE_CLEARED = "cache_cleared";
+     private static final String KEY_DATA_CLEARED = "data_cleared";
+ 
+@@ -152,6 +162,61 @@ public class AppStorageSettings extends AppInfoWithHeader
+     public void onResume() {
+         super.onResume();
+         updateSize();
++        updateStorageLimit();
++    }
++
++    /**
++     * Lujarch's Storage (STO-1): Storage limit with what the app holds against it, or Off; the
++     * row opens the app's Storage limit page. Apps of the system have none.
++     */
++    private void updateStorageLimit() {
++        final Preference pref = findPreference(KEY_LUJARCH_STORAGE_LIMIT);
++        if (pref == null) {
++            return;
++        }
++        final String packageName = mPackageName;
++        final int userId = mUserId;
++        if (packageName == null || mAppEntry == null
++                || UserHandle.getAppId(mAppEntry.info.uid) < Process.FIRST_APPLICATION_UID) {
++            pref.setVisible(false);
++            return;
++        }
++        pref.setOnPreferenceClickListener(p -> {
++            final Intent intent = new Intent(LujarchStorage.ACTION_STORAGE_LIMIT)
++                    .setPackage(LujarchBackground.SETTINGS_PACKAGE)
++                    .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName);
++            try {
++                startActivity(intent);
++            } catch (ActivityNotFoundException e) {
++                Log.e("lujarch_storage", "no Storage limit page for " + packageName, e);
++            }
++            return true;
++        });
++        final Context context = getContext().getApplicationContext();
++        ThreadUtils.postOnBackgroundThread(() -> {
++            String summary;
++            try {
++                final ILujarchStorage storage = LujarchStorage.get();
++                final LujarchStorageLimit l = storage != null
++                        ? storage.getLimit(packageName, userId) : null;
++                if (l == null) {
++                    summary = "";
++                } else if (!l.on) {
++                    summary = context.getString(R.string.lujarch_storage_limit_off);
++                } else {
++                    final long held = Math.max(0, l.dataBytes) + Math.max(0, l.cacheBytes);
++                    summary = context.getString(l.state == LujarchStorage.STATE_FULL
++                            ? R.string.lujarch_storage_limit_full : R.string.lujarch_storage_limit_of,
++                            Formatter.formatFileSize(context, held),
++                            Formatter.formatFileSize(context, l.storageBytes));
++                }
++            } catch (RemoteException | RuntimeException e) {
++                Log.e("lujarch_storage", "the storage limit of " + packageName + " is not known", e);
++                summary = "";
++            }
++            final String shown = summary;
++            ThreadUtils.postOnMainThread(() -> pref.setSummary(shown));
++        });
+     }
+ 
+     @Override

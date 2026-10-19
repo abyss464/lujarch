@@ -1,0 +1,7 @@
+# Lujarch's Storage (target/storage.md): system_server's API, read by Settings (checked for
+# android.permission.LUJARCH_STORAGE), and the limits it keeps.
+type lujarch_storage_service, app_api_service, system_server_service, service_manager_type;
+type lujarch_storage_data_file, file_type, data_file_type, core_data_file_type;
+
+allow system_server lujarch_storage_data_file:dir create_dir_perms;
+allow system_server lujarch_storage_data_file:file create_file_perms;

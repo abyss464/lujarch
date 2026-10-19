@@ -24,7 +24,6 @@ import android.os.ServiceManager
 import android.os.SystemClock
 import android.os.UserHandle
 import android.provider.Settings
-import android.text.format.DateFormat
 import android.text.format.Formatter
 import android.util.Log
 import androidx.preference.Preference
@@ -37,12 +36,12 @@ import com.android.internal.app.LujarchBackgroundLimit
 import com.android.internal.app.LujarchBackgroundMemory
 import com.android.internal.app.procstats.IProcessStats
 import com.android.internal.app.procstats.ProcessStats
-import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.lujarch.settings.pages.BasePreferenceFragment
+import org.lujarch.settings.pages.Format
 import org.lujarch.settings.pages.Pages
 
 /**
@@ -290,13 +289,7 @@ class AppMemoryFragment : BasePreferenceFragment() {
             else if (name.startsWith("$packageName:")) name.substring(packageName.length)
             else name
 
-        fun timeOf(context: Context, millis: Long): String =
-            if (android.text.format.DateUtils.isToday(millis)) {
-                DateFormat.getTimeFormat(context).format(Date(millis))
-            } else {
-                DateFormat.format(DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(),
-                    "MMMd Hm"), millis).toString()
-            }
+        fun timeOf(context: Context, millis: Long): String = Format.at(context, millis)
 
         fun duration(context: Context, ms: Long): String {
             val m = ms / 60_000

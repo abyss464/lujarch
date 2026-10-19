@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!-- Lujarch's Storage limit page (STO-1). -->
+<resources>
+    <string name="storage_limit_title">"存储上限"</string>
+    <string name="storage_limit_use">"使用存储上限"</string>
+    <string name="storage_limit_storage">"存储空间"</string>
+    <string name="storage_limit_when">"存满时"</string>
+    <string name="storage_limit_clear_cache">"先清除缓存"</string>
+    <string name="storage_limit_clear_cache_summary">"先清除缓存：清除它的缓存，它可以继续保存到腾出的空间中；没有缓存可清除后，它无法再保存"</string>
+    <string name="storage_limit_stop">"停止保存"</string>
+    <string name="storage_limit_stop_summary">"停止保存：它无法再保存，就像手机存储空间已满时一样，已保存的内容会保留"</string>
+    <string name="storage_limit_user_data">"用户数据"</string>
+    <string name="storage_limit_cache">"缓存"</string>
+    <string name="storage_limit_of">"%1$s / %2$s"</string>
+    <string name="storage_limit_state_off">"不受限制"</string>
+    <string name="storage_limit_state_within">"未超出上限"</string>
+    <string name="storage_limit_state_full">"已满"</string>
+    <string name="storage_limit_state_full_since">"自 %1$s 起已满"</string>
+    <string name="storage_limit_last_clear">"上次清除缓存：%1$s"</string>
+    <string name="storage_limit_footer">"上限计算这个应用的用户数据和缓存。共享存储中的文件（如“下载”和媒体文件）不计入。"</string>
+    <string name="storage_limit_storage_message">"它当前占用 %1$s。范围为 %2$s 到 %3$s，单位为 MB。"</string>
+    <string name="storage_limit_mb">"MB"</string>
+    <string name="storage_limit_range">"范围为 %1$s 到 %2$s"</string>
+    <string name="storage_limit_error_load">"无法读取存储上限"</string>
+    <string name="storage_limit_error_set">"无法更改存储上限"</string>
+    <string name="storage_limit_error_unavailable">"现在读不到存储上限，系统可能还在启动。"</string>
+</resources>
