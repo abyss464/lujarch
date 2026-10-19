@@ -150,9 +150,9 @@ every app.
 - Default: on
 - Verify: vm
 
-Dragging a card in Recents into the Running layer (BG-8) opens the app in a small window; the card's
+Dragging a card in Recents into the Running layer (BG-9) opens the app in a small window; the card's
 menu has Open in small window. While the gesture to Recents moves the cards, the open window and the
-dock's cards go part of their way to their tiles in the Running layer (BG-8); when Recents settles
+dock's cards go part of their way to their tiles in the Running layer (BG-9); when Recents settles
 they fly on into the tiles, each one shape changing its place, size, corners and turn, and when
 Recents closes they fly back.
 
