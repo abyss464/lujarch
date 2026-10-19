@@ -474,6 +474,49 @@ index a8ac4e021d9af5498e918b9232569482864ce4bf..40a4d6049c8110dde40c813997e2b25d
 +        }
 +    };
  }
+diff --git a/quickstep/src/com/android/quickstep/TaskViewUtils.java b/quickstep/src/com/android/quickstep/TaskViewUtils.java
+index fb16a702a5bae970c2a57521f99c1fc852d5892b..9d2273b5e9ef5be90d0fd6fcdd6edb32e1646e71 100644
+--- a/quickstep/src/com/android/quickstep/TaskViewUtils.java
++++ b/quickstep/src/com/android/quickstep/TaskViewUtils.java
+@@ -293,6 +293,16 @@ public final class TaskViewUtils {
+ 
+                     taskView.getThumbnailBounds(TEMP_THUMBNAIL_BOUNDS, /*relativeToDragLayer=*/
+                             true);
++                    if (lujarchFolded(dp, taskView)) {
++                        // Lujarch's Background (BG-11): the window starts where the folded card
++                        // is drawn, so that it grows from the card to the screen.
++                        tvsLocal.apply(targetHandle.getTransformParams(), new SurfaceTransaction());
++                        RectF drawn = tvsLocal.getCurrentRect();
++                        tvsLocal.taskGridTranslationX.value +=
++                                TEMP_THUMBNAIL_BOUNDS.left - drawn.left;
++                        tvsLocal.taskGridTranslationY.value +=
++                                TEMP_THUMBNAIL_BOUNDS.top - drawn.top;
++                    }
+                     getTaskDimension(container.getDeviceProfile(),
+                             TEMP_TASK_DIMENSION);
+                     TEMP_FULLSCREEN_BOUNDS.set(0, 0, (int) TEMP_TASK_DIMENSION.x,
+@@ -826,6 +836,11 @@ public final class TaskViewUtils {
+         return new Pair<>(targets, animationStates);
+     }
+ 
++    /** Whether a phone's Recents is folded and [taskView] is one of its folded cards (BG-11). */
++    private static boolean lujarchFolded(DeviceProfile dp, TaskView taskView) {
++        return !dp.getDeviceProperties().isLargeScreen() && taskView.isGridTask();
++    }
++
+     private static void initTaskViewSimulatorsForRemoteTargetHandles(
+             List<RemoteTargetHandle> handleList,
+             DeviceProfile deviceProfile,
+@@ -854,6 +869,9 @@ public final class TaskViewUtils {
+         for (RemoteTargetHandle handle : handleList) {
+             TaskViewSimulator tvsLocal = handle.getTaskViewSimulator();
+             tvsLocal.setDp(deviceProfile);
++            if (lujarchFolded(deviceProfile, taskView)) {
++                tvsLocal.setIsGridTask(true);
++            }
+ 
+             tvsLocal.getOrientationState().update(displayRotation, displayRotation);
+             tvsLocal.calculateTaskSize();
 diff --git a/quickstep/src/com/android/quickstep/lujarch/LujarchKeep.kt b/quickstep/src/com/android/quickstep/lujarch/LujarchKeep.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..880e1e65fbedda0f88cfdb1fc303807842eb92f7
@@ -1392,10 +1435,10 @@ index 0000000000000000000000000000000000000000..f12ab0f4af3a89bdac515c3390584273
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10bd7611b2
+index 0000000000000000000000000000000000000000..4153905ff4d597f2ab1e0c56ae3c385dd9b51cf4
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
-@@ -0,0 +1,895 @@
+@@ -0,0 +1,881 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -1759,12 +1802,6 @@ index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10
 +    // -----------------------------------------------------------------------------------------
 +    // Parting around a lifted card.
 +
-+    /** Running's lowest edge at rest with a margin, on the screen. */
-+    private fun restEdge(): Float {
-+        getLocationOnScreen(location)
-+        return location[1] + scroller.top + dp(TILE_H) + dp(EDGE_MARGIN).toFloat()
-+    }
-+
 +    /**
 +     * The lowest part of a tile still in the lifted card's way with a margin, on the screen; null
 +     * once none is: a card above it would touch that tile.
@@ -1799,24 +1836,16 @@ index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10
 +    /** A card the layer parts around. */
 +    inner class Held(private val top: Float, private val apply: (Float) -> Unit) {
 +        private var want = 0f
-+        private var lastWant = 0f
-+        private var lastAt = 0L
-+        private var vy = 0f
 +        private var fly: Fly? = null
 +        private var done = false
 +
 +        /** The finger wants the card [ty] from its place; returns where it may be. */
 +        fun lift(ty: Float): Float {
 +            if (done) return ty
-+            val now = android.os.SystemClock.uptimeMillis()
-+            if (lastAt != 0L && now > lastAt) vy = 0.6f * vy + 0.4f * (ty - lastWant) * 1000f / (now - lastAt)
-+            lastAt = now
-+            lastWant = ty
 +            want = ty
 +            if (!parts) return ty
-+            // From 80 dp below the edge, judged a tenth of a second ahead by the finger's speed.
-+            val ahead = top + want + min(0f, vy) * 0.1f - restEdge()
-+            yieldT = ((dp(NEAR) - ahead) / dp(NEAR)).coerceIn(0f, 1f) * (-want / dp(10)).coerceIn(0f, 1f)
++            // The tiles part as soon as the card rises: within its first 10 dp.
++            yieldT = (-want / dp(10)).coerceIn(0f, 1f)
 +            yieldDrive = true
 +            yieldBack = false
 +            if (!ticker.isStarted) ticker.start()
@@ -1844,7 +1873,8 @@ index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10
 +                returnLayer(LEAVE_RETURN_MS)
 +                return
 +            }
-+            val speed = abs(velocity).coerceIn(dp(1200).toFloat(), dp(2400).toFloat())
++            // [velocity] is in pixels a millisecond.
++            val speed = (abs(velocity) * 1000f).coerceAtLeast(dp(1200).toFloat())
 +            fly = Fly(speed * direction, settle)
 +            if (!ticker.isStarted) ticker.start()
 +        }
@@ -2260,7 +2290,6 @@ index 0000000000000000000000000000000000000000..03608cd1a87b65528c3989e0e38bef10
 +        private const val BAR_STEP = 18
 +        private const val BAR_ICON = 14
 +        /** The parting starts this far below the edge; parted icons are this far apart. */
-+        private const val NEAR = 80
 +        private const val PARTED_STEP = 40
 +
 +        private const val ARRIVE_EACH_MS = 600f
