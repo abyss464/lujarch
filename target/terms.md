@@ -235,6 +235,15 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Within its limits | 未超出上限 | 上限内 |
 | Compressing | 正在压缩 | 圧縮中 |
 | Needs more memory | 需要更多内存 | メモリが不足 |
+| Storage limit | 存储上限 | ストレージの上限 |
+| Use storage limit | 使用存储上限 | ストレージの上限を使用 |
+| When it is full | 存满时 | いっぱいになったとき |
+| Clear its cache first | 先清除缓存 | 先にキャッシュを削除 |
+| Stop it saving | 停止保存 | 保存を停止 |
+| Within its limit | 未超出上限 | 上限内 |
+| Full since %1$s | 自 %1$s 起已满 | %1$s から上限に到達 |
+| Cache last cleared %1$s | 上次清除缓存：%1$s | 前回のキャッシュ削除：%1$s |
+| Files in shared storage, such as Download and media, are not counted | 共享存储中的文件（如“下载”和媒体文件）不计入 | 共有ストレージ内のファイル（ダウンロードやメディアなど）は含まれません |
 | Running | 运行中 | 実行中 |
 | End running | 结束运行 | 実行を終了 |
 | View running | 查看运行中 | 実行中を表示 |
