@@ -150,7 +150,7 @@ every app.
 - Default: on
 - Verify: vm
 
-Dragging a card in Recents into the Running layer (BG-9) opens the app in a small window; the card's
+Touching and holding a card in Recents opens the app in a small window; the card's
 menu has Open in small window. While the gesture to Recents moves the cards, the open window and the
 dock's cards go part of their way to their tiles in the Running layer (BG-9); when Recents settles
 they fly on into the tiles, each one shape changing its place, size, corners and turn, and when
