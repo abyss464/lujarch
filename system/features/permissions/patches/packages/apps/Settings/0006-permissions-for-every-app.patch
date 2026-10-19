@@ -1,0 +1,31 @@
+diff --git a/src/com/android/settings/applications/appinfo/AppPermissionPreferenceController.java b/src/com/android/settings/applications/appinfo/AppPermissionPreferenceController.java
+index 6ba4e467363949d703478079fe11260b4435f74c..ab656d84a15f81a6cfe493ea2b23c98be5acbe0b 100644
+--- a/src/com/android/settings/applications/appinfo/AppPermissionPreferenceController.java
++++ b/src/com/android/settings/applications/appinfo/AppPermissionPreferenceController.java
+@@ -67,9 +67,9 @@ public class AppPermissionPreferenceController extends AppInfoPreferenceControll
+             CharSequence summary;
+ 
+             if (requestedPermissionCount == 0) {
++                // Lujarch's permissions are every app's: the page opens for each app.
+                 summary = res.getString(
+                         R.string.runtime_permissions_summary_no_permissions_requested);
+-                mPreference.setEnabled(false);
+             } else {
+                 final ArrayList<CharSequence> list = new ArrayList<>(grantedGroupLabels);
+                 if (additionalGrantedPermissionCount > 0) {
+diff --git a/src/com/android/settings/spa/app/appinfo/AppPermissionSummary.kt b/src/com/android/settings/spa/app/appinfo/AppPermissionSummary.kt
+index d0bdd6b3eac35fa471f486b5e5c6f15edecf05e6..10ab3dfcf0e2c484ab5b818988c25cd92d8cbe99 100644
+--- a/src/com/android/settings/spa/app/appinfo/AppPermissionSummary.kt
++++ b/src/com/android/settings/spa/app/appinfo/AppPermissionSummary.kt
+@@ -78,9 +78,10 @@ class AppPermissionSummaryRepository(
+         }
+     }
+ 
++    // Lujarch's permissions are every app's: the page opens for each app.
+     private fun noPermissionRequestedState() = AppPermissionSummaryState(
+         summary = context.getString(R.string.runtime_permissions_summary_no_permissions_requested),
+-        enabled = false,
++        enabled = true,
+     )
+ 
+     private fun getDisplayLabels(

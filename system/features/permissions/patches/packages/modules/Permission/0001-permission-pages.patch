@@ -40,6 +40,38 @@ index 7bd569967cd4947ca9f3bd68ef303615726816a7..b535b683b48706c2b593628e274e59c0
                    android:label="@string/special_app_access"
                    android:exported="true"
                    android:permission="android.permission.MANAGE_ROLE_HOLDERS"
+diff --git a/PermissionController/res/drawable/ic_lujarch_autostart.xml b/PermissionController/res/drawable/ic_lujarch_autostart.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..01f06387e9449c70dc4bf68b4c0ab57c65791337
+--- /dev/null
++++ b/PermissionController/res/drawable/ic_lujarch_autostart.xml
+@@ -0,0 +1,26 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (C) 2026 The Lujarch Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++
++    <path
++        android:fillColor="#000000"
++        android:pathData="M12,5V2L8,6l4,4V7c3.31,0 6,2.69 6,6c0,2.97 -2.17,5.43 -5,5.91v2.02c3.95,-0.49 7,-3.85 7,-7.93C20,8.58 16.42,5 12,5zM6,13c0,-1.65 0.67,-3.15 1.76,-4.24L6.34,7.34C4.9,8.79 4,10.79 4,13c0,4.08 3.05,7.44 7,7.93v-2.02C8.17,18.43 6,15.97 6,13z" />
++</vector>
 diff --git a/PermissionController/res/layout/lujarch_ask.xml b/PermissionController/res/layout/lujarch_ask.xml
 new file mode 100644
 index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175a96f07a8
@@ -128,10 +160,10 @@ index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175
 +</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..6ed31694b928289f2df091612ad81136af981cbe
+index 0000000000000000000000000000000000000000..8d5408e95f79d2f25764501c9c64f5ba0f55bb87
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,77 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -194,13 +226,27 @@ index 0000000000000000000000000000000000000000..6ed31694b928289f2df091612ad81136
 +    <string name="lujarch_menu_show_days">"{count,plural, =1{過去 1 日間を表示}other{過去 # 日間を表示}}"</string>
 +    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{過去 1 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}other{過去 # 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}}"</string>
 +    <string name="lujarch_label_past_days">"{count,plural, =1{過去\n1 日間}other{過去\n# 日間}}"</string>
++    <string name="lujarch_footer_autostart">"自動起動では、このアプリが閉じているときに、システムがブロードキャストで起動します。対象は、スマートフォンの起動時、アプリのアラーム、プッシュ メッセージです。[毎回確認する] では確認が表示され、回答するまでは、アプリのアラームと優先度の高いプッシュ メッセージでのみ起動されます。[許可しない] では、開いたときにのみ起動し、閉じている間に届いたプッシュ メッセージは失われることがあります。"</string>
++    <string name="lujarch_autostart_denied">"開いたときにのみ起動。プッシュ メッセージが失われることがあります"</string>
++    <string name="lujarch_autostart_starts">"過去 7 日間の起動"</string>
++    <string name="lujarch_autostart_starts_none">"過去 7 日間の起動はありません"</string>
++    <string name="lujarch_autostart_woke">"このアプリが起動したアプリ"</string>
++    <string name="lujarch_autostart_woke_none">"過去 7 日間に起動したアプリはありません"</string>
++    <string name="lujarch_autostart_started">"起動"</string>
++    <string name="lujarch_autostart_stopped">"阻止"</string>
++    <string name="lujarch_autostart_alarm">"アラーム"</string>
++    <string name="lujarch_autostart_push">"プッシュ メッセージ"</string>
++    <string name="lujarch_autostart_broadcast">"ブロードキャスト"</string>
++    <string name="lujarch_autostart_system">"システム"</string>
++    <string name="lujarch_autostart_self">"このアプリ"</string>
++    <string name="lujarch_autostart_summary">"%1$s · %2$s · %3$s"</string>
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..6c7cd5d5ae5cf02a2893a00d1e5df0e765f80814
+index 0000000000000000000000000000000000000000..637ea7c5f1b68a3b832d13b668c4ec9be9612a52
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,77 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -263,13 +309,27 @@ index 0000000000000000000000000000000000000000..6c7cd5d5ae5cf02a2893a00d1e5df0e7
 +    <string name="lujarch_menu_show_days">"{count,plural, =1{显示过去 1 天内的访问记录}other{显示过去 # 天内的访问记录}}"</string>
 +    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{过去 1 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}other{过去 # 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}}"</string>
 +    <string name="lujarch_label_past_days">"{count,plural, =1{过去\n1 天}other{过去\n# 天}}"</string>
++    <string name="lujarch_footer_autostart">"自启动让系统在此应用关闭时因广播而启动它：手机开机时、其闹钟响起时或收到推送消息时。选择“每次都询问”时会询问您；在您回答之前，它仅会因其闹钟和高优先级推送消息而启动。选择“不允许”时，它仅在您打开时启动，关闭期间到达的推送消息可能会丢失。"</string>
++    <string name="lujarch_autostart_denied">"仅在您打开时启动；推送消息可能会丢失"</string>
++    <string name="lujarch_autostart_starts">"过去 7 天的启动"</string>
++    <string name="lujarch_autostart_starts_none">"过去 7 天没有启动"</string>
++    <string name="lujarch_autostart_woke">"它唤醒的应用"</string>
++    <string name="lujarch_autostart_woke_none">"过去 7 天未唤醒任何应用"</string>
++    <string name="lujarch_autostart_started">"已启动"</string>
++    <string name="lujarch_autostart_stopped">"已阻止"</string>
++    <string name="lujarch_autostart_alarm">"因闹钟"</string>
++    <string name="lujarch_autostart_push">"因推送消息"</string>
++    <string name="lujarch_autostart_broadcast">"因广播"</string>
++    <string name="lujarch_autostart_system">"系统"</string>
++    <string name="lujarch_autostart_self">"此应用"</string>
++    <string name="lujarch_autostart_summary">"%1$s · %2$s · %3$s"</string>
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..e98c4cf5b6fcd0b6fd7dae466070fe5a1c577cb2
+index 0000000000000000000000000000000000000000..a8c0b254387821b0e1e9d8efba73f4f4fd0a584c
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,96 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -351,6 +411,20 @@ index 0000000000000000000000000000000000000000..e98c4cf5b6fcd0b6fd7dae466070fe5a
 +        =1      {Past\n1 day}
 +        other   {Past\n# days}
 +    }</string>
++    <string name="lujarch_footer_autostart">Autostart lets the system start this app while it is closed, for a broadcast: when the phone starts, for one of its alarms, or for a push message. With Ask every time, you are asked; until you answer, it is started only for its alarm clocks and high-priority push messages. With Don\'t allow, it starts only when you open it, and push messages that arrive while it is closed can be lost.</string>
++    <string name="lujarch_autostart_denied">Starts only when you open it; push messages can be lost</string>
++    <string name="lujarch_autostart_starts">Starts in the last 7 days</string>
++    <string name="lujarch_autostart_starts_none">No starts in the last 7 days</string>
++    <string name="lujarch_autostart_woke">Apps it woke</string>
++    <string name="lujarch_autostart_woke_none">It woke no apps in the last 7 days</string>
++    <string name="lujarch_autostart_started">Started</string>
++    <string name="lujarch_autostart_stopped">Stopped</string>
++    <string name="lujarch_autostart_alarm">For an alarm</string>
++    <string name="lujarch_autostart_push">For a push message</string>
++    <string name="lujarch_autostart_broadcast">For a broadcast</string>
++    <string name="lujarch_autostart_system">System</string>
++    <string name="lujarch_autostart_self">This app</string>
++    <string name="lujarch_autostart_summary">%1$s · %2$s · %3$s</string>
 +</resources>
 diff --git a/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java b/PermissionController/src/com/android/permissioncontroller/PermissionControllerApplication.java
 index 50da28149fe55439f3e79f39f606a583bc3ef9da..ac1bec4c32d88a879c6df52d42a837ab55c8283d 100644
@@ -498,10 +572,10 @@ index c990f9d876fcdcd7d2f60dba21a9029d9513560d..663de569b03f9ea2677b272eca0e3b03
          if (SdkLevel.isAtLeastT()) {
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b053723146fd43ab
+index 0000000000000000000000000000000000000000..f402290d7ac099cc8b381fc744dcccbda1d6c444
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppFragment.kt
-@@ -0,0 +1,204 @@
+@@ -0,0 +1,311 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -539,10 +613,13 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +import androidx.lifecycle.lifecycleScope
 +import com.android.permissioncontroller.R
 +import com.android.permissioncontroller.permission.ui.handheld.PermissionFooterPreference
++import com.android.permissioncontroller.permission.ui.handheld.PermissionPreference
 +import com.android.permissioncontroller.permission.ui.handheld.PermissionPreferenceCategory
 +import com.android.permissioncontroller.permission.ui.handheld.SettingsWithLargeHeader
++import com.android.permissioncontroller.permission.ui.handheld.SmartIconLoadPackagePermissionPreference
 +import com.android.permissioncontroller.permission.ui.handheld.pressBack
 +import com.android.permissioncontroller.permission.ui.handheld.v36.AppPermissionFooterLinkPreference
++import com.android.permissioncontroller.permission.ui.handheld.v31.getAbsoluteTimeString
 +import com.android.permissioncontroller.permission.ui.handheld.v36.PermissionSelectorWithWidgetPreference
 +import com.android.permissioncontroller.permission.utils.KotlinUtils
 +import kotlinx.coroutines.Dispatchers
@@ -553,7 +630,8 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 + * One of Lujarch's permissions for one app, in the place and the look of AppPermissionFragment:
 + * the app's header, "<permission> access for this app", the permission's choices as radios, the
 + * footer that says what the permission covers and what it does not reach, and the link to all
-+ * the app's permissions.
++ * the app's permissions. Autostart's page also lists the app's starts of the last days, who asked
++ * and how, and the apps it woke.
 + */
 +@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 +class LujarchAppFragment : SettingsWithLargeHeader() {
@@ -563,6 +641,8 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +    private var uid = Process.INVALID_UID
 +    private lateinit var category: PermissionPreferenceCategory
 +    private val radios = LinkedHashMap<LujarchChoice, PermissionSelectorWithWidgetPreference>()
++    private var starts: PermissionPreferenceCategory? = null
++    private var woke: PermissionPreferenceCategory? = null
 +    private val main = Handler(Looper.getMainLooper())
 +
 +    /** A change made elsewhere (a question answered, another page) shows here at once. */
@@ -600,6 +680,7 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +            r.key = "lujarch_$choice"
 +            r.isPersistent = false
 +            r.setTitle(permission.label(choice))
++            permission.summaries[choice]?.let { r.setSummary(it) }
 +            r.setOnClickListener { choose(choice) }
 +            category.addPreference(r)
 +            radios[choice] = r
@@ -611,6 +692,10 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +                setTitle(permission.footer)
 +            }
 +        )
++        if (permission == LujarchPermissions.AUTOSTART) {
++            starts = section(screen, "lujarch_starts", R.string.lujarch_autostart_starts)
++            woke = section(screen, "lujarch_woke", R.string.lujarch_autostart_woke)
++        }
 +        val app = requireActivity().application
 +        screen.addPreference(
 +            AppPermissionFooterLinkPreference(ctx).apply {
@@ -691,6 +776,97 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +                return@launch
 +            }
 +            radios.forEach { (choice, r) -> r.isChecked = choice == current }
++            if (starts != null) {
++                showStarts(withContext(Dispatchers.IO) { LujarchStarts.of(app, user) })
++            }
++        }
++    }
++
++    private fun section(screen: androidx.preference.PreferenceScreen, key: String, title: Int) =
++        PermissionPreferenceCategory(preferenceManager.context).also {
++            it.key = key
++            it.setTitle(title)
++            screen.addPreference(it)
++        }
++
++    /** The app's starts, by who asked, and the apps it woke, each opening its own page. */
++    private fun showStarts(all: List<LujarchStarts.Start>) {
++        val ctx = preferenceManager.context
++        val app = requireActivity().application
++        fill(starts!!, all.filter { it.packageName == packageName }, R.string.lujarch_autostart_starts_none) {
++            val who = it.who
++            if (who == null || who == packageName) {
++                PermissionPreference(ctx).apply {
++                    setTitle(
++                        if (who == null) R.string.lujarch_autostart_system
++                        else R.string.lujarch_autostart_self
++                    )
++                    icon = KotlinUtils.getBadgedPackageIcon(app, who ?: SYSTEM, user)
++                    isSelectable = false
++                }
++            } else {
++                appRow(who)
++            }
++        }
++        fill(
++            woke!!,
++            all.filter { it.who == packageName && it.packageName != packageName && it.started },
++            R.string.lujarch_autostart_woke_none,
++        ) {
++            appRow(it.packageName)
++        }
++    }
++
++    private fun appRow(pkg: String) =
++        SmartIconLoadPackagePermissionPreference(requireActivity().application, pkg, user, preferenceManager.context)
++            .apply {
++                title = KotlinUtils.getPackageLabel(requireActivity().application, pkg, user)
++                setOnPreferenceClickListener {
++                    startActivity(
++                        Intent(Intent.ACTION_MANAGE_APP_PERMISSION)
++                            .putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
++                            .putExtra(Intent.EXTRA_PERMISSION_GROUP_NAME, permission.group)
++                            .putExtra(Intent.EXTRA_USER, user)
++                    )
++                    true
++                }
++            }
++
++    private fun fill(
++        category: PermissionPreferenceCategory,
++        rows: List<LujarchStarts.Start>,
++        none: Int,
++        row: (LujarchStarts.Start) -> androidx.preference.Preference,
++    ) {
++        val ctx = preferenceManager.context
++        category.removeAll()
++        if (rows.isEmpty()) {
++            category.addPreference(
++                PermissionPreference(ctx).apply {
++                    key = "${category.key}_none"
++                    setTitle(none)
++                    isSelectable = false
++                }
++            )
++            return
++        }
++        rows.forEachIndexed { i, s ->
++            category.addPreference(
++                row(s).apply {
++                    key = "${category.key}_$i"
++                    order = i
++                    summary =
++                        ctx.getString(
++                            R.string.lujarch_autostart_summary,
++                            ctx.getString(
++                                if (s.started) R.string.lujarch_autostart_started
++                                else R.string.lujarch_autostart_stopped
++                            ),
++                            ctx.getString(s.how.label),
++                            getAbsoluteTimeString(ctx, s.lastMillis),
++                        )
++                }
++            )
 +        }
 +    }
 +
@@ -705,13 +881,18 @@ index 0000000000000000000000000000000000000000..9ed609e2f945ab3a126604b3b0537231
 +            reload()
 +        }
 +    }
++
++    companion object {
++        /** The package whose icon stands for the system. */
++        private const val SYSTEM = "android"
++    }
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d57b3e9fa8
+index 0000000000000000000000000000000000000000..c33a96037e63518f3a6d929108df858370fddbb4
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppPermissions.kt
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,263 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -757,7 +938,7 @@ index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d5
 + * App info > Permissions with Lujarch's permissions: each in the page's own sections (allowed,
 + * ask, not allowed) as the app's choice places it, opening its page for the app; an Android group
 + * set to Return empty data moves from Allowed to Not allowed and says so; the Phone permission of
-+ * an app that never asked for it shows its basic phone info.
++ * an app that never asked for it shows its basic phone info; Autostart shows with them.
 + *
 + * AppPermissionGroupsFragment creates it in onCreate and calls [apply] at the end of each
 + * updatePreferences.
@@ -800,7 +981,7 @@ index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d5
 +                            return@withContext null
 +                        }
 +                    State(
-+                        LujarchPermissions.ALL.associate {
++                        ROWS.associate {
 +                            it.group to LujarchPermissions.choice(app, it, uid, packageName)
 +                        },
 +                        LujarchPermissions.emptyGroups(app, uid, packageName, groups),
@@ -862,7 +1043,7 @@ index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d5
 +        }
 +
 +        // Lujarch's permissions.
-+        for (p in LujarchPermissions.ALL) {
++        for (p in ROWS) {
 +            val choice = s.choices[p.group] ?: continue
 +            val section = sectionOf(choice)
 +            val target = screen.findPreference<PreferenceGroup>(section) ?: continue
@@ -870,11 +1051,12 @@ index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d5
 +                row(ctx, p.group, section).apply {
 +                    title = LujarchPermissions.label(ctx, p.group)
 +                    LujarchPermissions.icon(ctx, p.group)?.let { icon = it }
-+                    when (choice) {
-+                        LujarchChoice.EMPTY -> summary = emptyText
-+                        LujarchChoice.ALLOW_FOREGROUND ->
++                    val note = p.summaries[choice]
++                    when {
++                        note != null -> summary = ctx.getString(note)
++                        choice == LujarchChoice.EMPTY -> summary = emptyText
++                        choice == LujarchChoice.ALLOW_FOREGROUND ->
 +                            summary = ctx.getString(R.string.app_permission_button_allow_foreground)
-+                        else -> {}
 +                    }
 +                }
 +            )
@@ -969,6 +1151,9 @@ index 0000000000000000000000000000000000000000..36f51f5e012c64dd156b3a14ce2a53d5
 +
 +    companion object {
 +        private val CATEGORIES = listOf(Category.ALLOWED, Category.ASK, Category.DENIED)
++
++        /** The permissions with a row of their own here. */
++        private val ROWS = LujarchPermissions.ALL + LujarchPermissions.AUTOSTART
 +    }
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppsFragment.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchAppsFragment.kt
@@ -2138,10 +2323,10 @@ index 0000000000000000000000000000000000000000..26565c6f6c1ed272fd09fccc2a398c26
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568cfdd100da
+index 0000000000000000000000000000000000000000..50734f07c8cfc1a36b257f48a81883f351952960
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchPermissions.kt
-@@ -0,0 +1,365 @@
+@@ -0,0 +1,376 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2170,6 +2355,7 @@ index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568c
 +import android.os.Process
 +import android.os.UserHandle
 +import android.util.Log
++import androidx.annotation.DrawableRes
 +import androidx.annotation.StringRes
 +import com.android.permissioncontroller.R
 +import com.android.permissioncontroller.permission.utils.PermissionMapping
@@ -2215,6 +2401,10 @@ index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568c
 +    @StringRes val title: Int = 0,
 +    /** What the app asks to do, for "Allow <app> to <request>?"; 0: the group's description. */
 +    @StringRes val request: Int = 0,
++    /** The icon of an other access. */
++    @DrawableRes val icon: Int = R.drawable.ic_more_items,
++    /** What a choice means for the app, under its radio and on the app's row while chosen. */
++    val summaries: Map<LujarchChoice, Int> = emptyMap(),
 +) {
 +    @StringRes fun label(choice: LujarchChoice): Int = labels[choice] ?: choice.label
 +
@@ -2225,11 +2415,15 @@ index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568c
 +    fun mode(choice: LujarchChoice): Int =
 +        if (other && choice == LujarchChoice.DENY) AppOpsManager.MODE_IGNORED else choice.mode
 +
-+    /** The choice a stored mode shows; an other access left to Android is allowed. */
++    /**
++     * The choice a stored mode shows; an other access left to Android is allowed, unless it can
++     * ask, which the default mode stores.
++     */
 +    fun choiceOf(mode: Int): LujarchChoice =
 +        when {
 +            !other -> LujarchChoice.ofMode(mode)
 +            mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED -> LujarchChoice.DENY
++            mode == AppOpsManager.MODE_DEFAULT && LujarchChoice.ASK in choices -> LujarchChoice.ASK
 +            else -> LujarchChoice.ALLOW
 +        }
 +}
@@ -2295,17 +2489,19 @@ index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568c
 +        )
 +
 +    /**
-+     * Autostart, the system starting an app that is not running, for a broadcast; its page is
-+     * the app's Background page, and Ask every time asks here.
++     * Autostart, the system starting an app that is not running, for a broadcast; its page also
++     * lists the starts of the last days (LujarchStarts).
 +     */
 +    val AUTOSTART =
 +        LujarchPermission(
 +            "lujarch:autostart",
 +            "android:lujarch_autostart",
 +            listOf(LujarchChoice.ALLOW, LujarchChoice.ASK, LujarchChoice.DENY),
-+            0,
++            R.string.lujarch_footer_autostart,
 +            title = R.string.lujarch_autostart,
 +            request = R.string.lujarch_ask_autostart,
++            icon = R.drawable.ic_lujarch_autostart,
++            summaries = mapOf(LujarchChoice.DENY to R.string.lujarch_autostart_denied),
 +        )
 +
 +    /**
@@ -2395,8 +2591,8 @@ index 0000000000000000000000000000000000000000..886208fe847035989d2369f85c6d568c
 +    fun icon(context: Context, group: String): Drawable? =
 +        try {
 +            val icon =
-+                if (of(group)?.other == true) context.getDrawable(R.drawable.ic_more_items)
-+                else context.packageManager.getPermissionGroupInfo(group, 0).loadIcon(context.packageManager)
++                of(group)?.takeIf { it.other }?.let { context.getDrawable(it.icon) }
++                    ?: context.packageManager.getPermissionGroupInfo(group, 0).loadIcon(context.packageManager)
 +            Utils.applyTint(context, icon, android.R.attr.colorControlNormal)
 +        } catch (e: PackageManager.NameNotFoundException) {
 +            Log.e(TAG, "$group is not defined", e)
@@ -2914,6 +3110,133 @@ index 0000000000000000000000000000000000000000..d80bddecbc24ae2208031d916f0e4b01
 +        list.post {
 +            if (intent.getStringExtra(EXTRA_HIGHLIGHT) == key) fragment.scrollToPreference(key)
 +        }
++    }
++}
+diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6eba8cf2d15583f8fed1f87fa89a8c67abd0b9a
+--- /dev/null
++++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt
+@@ -0,0 +1,121 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.permissioncontroller.lujarch
++
++import android.app.AppOpsManager
++import android.app.AppOpsManager.HistoricalOps
++import android.app.AppOpsManager.HistoricalOpsRequest
++import android.content.Context
++import android.os.UserHandle
++import android.util.Log
++import androidx.annotation.StringRes
++import com.android.permissioncontroller.R
++import java.util.concurrent.TimeUnit
++import kotlin.coroutines.resume
++import kotlin.coroutines.suspendCoroutine
++
++/**
++ * The starts of apps that Autostart let through or stopped, from the access history. The system
++ * records each start under its result, how the app would start and who asked, in place of the
++ * attribution tag: `lujarch:started:<how>:<package>` or `lujarch:stopped:<how>:<package>`, the
++ * package empty for the system (AppOpsService's LUJARCH_START* hold the same tags).
++ */
++object LujarchStarts {
++    private const val STARTED = "lujarch:started:"
++    private const val STOPPED = "lujarch:stopped:"
++
++    /** The days the Autostart page looks back. */
++    const val DAYS = 7
++
++    enum class How(val tag: String, @StringRes val label: Int) {
++        ALARM("alarm", R.string.lujarch_autostart_alarm),
++        PUSH("push", R.string.lujarch_autostart_push),
++        BROADCAST("broadcast", R.string.lujarch_autostart_broadcast),
++    }
++
++    /**
++     * The starts of [packageName] alike in result, how and who asked ([who] null for the system),
++     * the last of them at [lastMillis].
++     */
++    data class Start(
++        val packageName: String,
++        val started: Boolean,
++        val how: How,
++        val who: String?,
++        val lastMillis: Long,
++    )
++
++    /** The starts of the last [DAYS] days of the apps of [user], the latest first. */
++    suspend fun of(context: Context, user: UserHandle): List<Start> {
++        val now = System.currentTimeMillis()
++        val request =
++            HistoricalOpsRequest.Builder(now - TimeUnit.DAYS.toMillis(DAYS.toLong()), now)
++                .setOpNames(listOf(LujarchPermissions.AUTOSTART.op))
++                .setFlags(AppOpsManager.OP_FLAGS_ALL)
++                .setHistoryFlags(AppOpsManager.HISTORY_FLAG_DISCRETE)
++                .build()
++        val ops: HistoricalOps? =
++            try {
++                suspendCoroutine { c ->
++                    context.getSystemService(AppOpsManager::class.java)!!.getHistoricalOps(
++                        request,
++                        { it.run() },
++                    ) {
++                        c.resume(it)
++                    }
++                }
++            } catch (e: RuntimeException) {
++                Log.e(LujarchPermissions.TAG, "starts not read", e)
++                null
++            }
++        if (ops == null) return emptyList()
++        val last = HashMap<Start, Long>()
++        for (u in 0 until ops.uidCount) {
++            val uidOps = ops.getUidOpsAt(u)
++            if (UserHandle.getUserHandleForUid(uidOps.uid) != user) continue
++            for (p in 0 until uidOps.packageCount) {
++                val packageOps = uidOps.getPackageOpsAt(p)
++                for (t in 0 until packageOps.attributedOpsCount) {
++                    val attributed = packageOps.getAttributedOpsAt(t)
++                    val start = parse(packageOps.packageName, attributed.tag) ?: continue
++                    for (o in 0 until attributed.opCount) {
++                        val op = attributed.getOpAt(o)
++                        for (i in 0 until op.discreteAccessCount) {
++                            val time =
++                                op.getDiscreteAccessAt(i).getLastAccessTime(AppOpsManager.OP_FLAGS_ALL)
++                            if (time > (last[start] ?: 0L)) last[start] = time
++                        }
++                    }
++                }
++            }
++        }
++        return last.map { (s, t) -> s.copy(lastMillis = t) }.sortedByDescending { it.lastMillis }
++    }
++
++    private fun parse(packageName: String, tag: String?): Start? {
++        val started =
++            when {
++                tag == null -> return null
++                tag.startsWith(STARTED) -> true
++                tag.startsWith(STOPPED) -> false
++                else -> return null
++            }
++        val f = tag.substring(if (started) STARTED.length else STOPPED.length).split(":", limit = 2)
++        val how = How.entries.firstOrNull { it.tag == f[0] } ?: How.BROADCAST
++        return Start(packageName, started, how, f.getOrNull(1)?.takeIf { it.isNotEmpty() }, 0L)
 +    }
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/permission/data/repository/v31/PermissionRepository.kt b/PermissionController/src/com/android/permissioncontroller/permission/data/repository/v31/PermissionRepository.kt
