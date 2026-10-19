@@ -223,6 +223,18 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | System services | 系统服务 | システム サービス |
 | Show system processes | 显示系统进程 | システム プロセスを表示 |
 | End this process | 结束这个进程 | このプロセスを終了 |
+| Memory limit | 内存上限 | メモリの上限 |
+| Use memory limit | 使用内存上限 | メモリの上限を使用 |
+| Compressed | 压缩 | 圧縮 |
+| No limit | 无限制 | 制限なし |
+| When it needs more | 需要更多时 | さらに必要なとき |
+| Hold it back | 让它等待 | 待機させる |
+| End it at once | 立即结束 | すぐに終了 |
+| End it after %1$s | %1$s后结束 | %1$s後に終了 |
+| Also on screen | 在屏幕上时也限制 | 画面に表示中も制限 |
+| Within its limits | 未超出上限 | 上限内 |
+| Compressing | 正在压缩 | 圧縮中 |
+| Needs more memory | 需要更多内存 | メモリが不足 |
 | Running | 运行中 | 実行中 |
 | End running | 结束运行 | 実行を終了 |
 | View running | 查看运行中 | 実行中を表示 |

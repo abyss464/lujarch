@@ -52,7 +52,7 @@ level; Battery manager > Restricted apps opens that list filtered to Restricted.
 When a process the owner chose keeps calling the app's paused main process, which the system then
 ends (five times in 10 minutes), or a chosen process ends without the system ending it, the page
 shows a suggestion under the level: what happened, with the times, and Add the main process. The
-same suggestion arrives as an alert (BG-12); acting on it or dismissing it in either place removes
+same suggestion arrives as an alert (BG-13); acting on it or dismissing it in either place removes
 both. Nothing changes until the owner acts. Each app gets at most one suggestion a day for each
 cause.
 
@@ -92,9 +92,10 @@ options' Memory and Running services open this page.
 - Default: none
 - Verify: vm
 
-App info always shows Memory, summarized as the app's average use and whether it is kept. The page
-shows its average and highest use over the last 3 hours, its processes each with its state and
-memory, whether it is kept, its background usage level and its last reclaim, each leading home.
+App info always shows Memory, summarized as the app's average use, whether it is kept and its
+memory limit when it has one. The page shows its average and highest use over the last 3 hours,
+its memory limit, its processes each with its state and memory, whether it is kept, its
+background usage level and its last reclaim, each leading home.
 
 ### BG-7 A process shows why it is where it is
 
@@ -108,9 +109,29 @@ actual use, resident and compressed; its place in the order of reclaiming, with 
 score in brackets; its CPU time today; and its threads by CPU time, read only. End this process
 ends it once, recorded as User; it then follows the app's choices again.
 
+### BG-8 An app's memory has the limits the owner sets
+
+- Home: Settings > Apps > (app) > Memory > Memory limit
+- Switch: Use memory limit; Memory: a size; Compressed: a size or No limit; When it needs more: Hold it back, End it at once, End it after 10 seconds, 30 seconds, 1 minute or 5 minutes; Also on screen
+- Default: off; once turned on, Memory 1 GB, Compressed No limit, Hold it back, Also on screen on
+- Verify: vm
+
+With Use memory limit on, the app's processes together hold at most Memory in memory, and what
+they use beyond it is compressed, up to Compressed. Once both are full, the app needs more: Hold
+it back makes it wait until it frees memory, and it may stop responding meanwhile; End it ends the
+app at once or once it has needed more for the time chosen, recorded as User with the reason that
+it needed more than its memory limit (BG-1). With Also on screen off, the limits hold only while
+the app is off screen, and what it holds beyond Memory when it leaves is compressed then. Every
+size from 32 MB to the device's memory can be set.
+
+The page shows what the app holds now, in memory and compressed, against each limit; whether it
+is within its limits, at its memory limit and compressing, or needing more, with since when; and
+when its limit last ended it. Memory the app uses for graphics, and pages it shows in a separate
+sandboxed process, are not counted, and the page says so.
+
 ## Running
 
-### BG-8 Recents' Running layer holds what runs off screen
+### BG-9 Recents' Running layer holds what runs off screen
 
 - Home: Recents
 - Switch: Home settings > Recents > Show running
@@ -140,7 +161,7 @@ held back only while a tile is still there. When the card
 is gone or back in its place, the tiles slide back from the gap outward, overshoot a little and
 open again.
 
-### BG-9 The shade's footer leads to Running
+### BG-10 The shade's footer leads to Running
 
 - Home: the notification shade
 - Switch: none
@@ -152,7 +173,7 @@ and opens Recents, after unlocking. It carries Android's dot when an app starts 
 new, until Recents is next shown. Android's dialog of active apps is not shown while the Running
 layer is on, and the system has no notification of its own listing what runs.
 
-### BG-10 Recents folds into two rows
+### BG-11 Recents folds into two rows
 
 - Home: Recents
 - Switch: Home settings > Recents > Show app state
@@ -166,11 +187,11 @@ at the far left (hidden when every card is kept). A card shows the app's memory 
 memory, Keep's mark, and for a reclaimed app a dimmed screen, a dashed outline and Opens again. Its
 menu has Android's items, Open in small window and Keep, and below a divider the app's background
 usage level and memory, each leading home. The fold follows Android's own transition to the grid;
-the memory fades in after it and the Running layer arrives as BG-8 says; tapping a card fades the
+the memory fades in after it and the Running layer arrives as BG-9 says; tapping a card fades the
 memory and the cards' marks out and opens it as Android does. In landscape the same structure holds,
 the Running layer as one row.
 
-### BG-11 Recents shows the memory
+### BG-12 Recents shows the memory
 
 - Home: Recents
 - Switch: Home settings > Recents > Show memory
@@ -183,7 +204,7 @@ in Memory's type and color; when the line has no room for its label, it shows it
 
 ## Alerts
 
-### BG-12 Background activity speaks only before a decision
+### BG-13 Background activity speaks only before a decision
 
 - Home: the notification shade
 - Switch: Settings > Notifications > App notifications > Android System > Background activity
