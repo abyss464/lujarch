@@ -1,0 +1,227 @@
+diff --git a/services/core/java/com/android/server/am/ActiveServices.java b/services/core/java/com/android/server/am/ActiveServices.java
+index 32c6f6f031c86d02e75df7474af213ac451ea1df..54127adafb21ec53b07e66539f35f1aa1e0aac28 100644
+--- a/services/core/java/com/android/server/am/ActiveServices.java
++++ b/services/core/java/com/android/server/am/ActiveServices.java
+@@ -265,6 +265,7 @@ import com.android.server.am.ServiceRecord.ShortFgsInfo;
+ import com.android.server.am.ServiceRecord.TimeLimitedFgsInfo;
+ import com.android.server.am.psc.Constants.OomAdjust;
+ import com.android.server.am.psc.SyncBatchSession;
++import com.android.server.appop.AppOpsService;
+ import com.android.server.pm.KnownPackages;
+ import com.android.server.privatecompute.PccSandboxManagerInternal;
+ import com.android.server.uri.NeededUriGrants;
+@@ -1059,6 +1060,12 @@ public final class ActiveServices {
+             return null;
+         }
+ 
++        // Autostart: another app starts this app for its service only as the owner allows.
++        if (LujarchAutostart.refusesCall(mAm, r.appInfo, callingUid, callingPackage,
++                AppOpsService.LUJARCH_START_SERVICE, "start of " + r.shortInstanceName)) {
++            return null;
++        }
++
+         // For the SDK sandbox, we start the service on behalf of the client app.
+         final int appUid = isSdkSandboxService ? sdkSandboxClientAppUid : getServiceUid(r);
+         final String appPackageName =
+@@ -4322,6 +4329,12 @@ public final class ActiveServices {
+             return -1;
+         }
+         ServiceRecord s = res.record;
++        // Autostart: another app starts this app for its service only as the owner allows.
++        if ((flags & Context.BIND_AUTO_CREATE) != 0 && LujarchAutostart.refusesCall(mAm,
++                s.appInfo, callingUid, callingPackage, AppOpsService.LUJARCH_START_SERVICE,
++                "binding of " + s.shortInstanceName)) {
++            return 0;
++        }
+         final AppBindRecord b = s.retrieveAppBindingLocked(service, callerApp, attributedApp);
+         final ProcessServiceRecord clientPsr = b.client.mServices;
+         if (clientPsr.numberOfConnections() >= mAm.mConstants.mMaxServiceConnectionsPerProcess) {
+diff --git a/services/core/java/com/android/server/am/BroadcastQueueImpl.java b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+index 567fe5a5a4a3e63ec0427025bc94f2c09ec3aefd..c6f9e20ee582a0c423bfbc636cedf0a2533e0e81 100644
+--- a/services/core/java/com/android/server/am/BroadcastQueueImpl.java
++++ b/services/core/java/com/android/server/am/BroadcastQueueImpl.java
+@@ -1156,43 +1156,14 @@ class BroadcastQueueImpl extends BroadcastQueue {
+         return false;
+     }
+ 
+-    /**
+-     * Whether the cold start of {@code info} for {@code r} is refused by its autostart
+-     * permission. Notes the op, so the refusal lands in history. Uids below 10000 always
+-     * start, and a failed check allows the start (logged).
+-     */
+-
++    /** Whether the cold start of {@code info} for {@code r} is refused by its Autostart. */
+     private boolean shouldSkipLujarchAutostart(@NonNull ApplicationInfo info,
+             @NonNull BroadcastRecord r) {
+-        try {
+-            final int uid = info.uid;
+-            if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {
+-                return false;
+-            }
+-            final String action = (r.intent != null) ? r.intent.getAction() : null;
+-            final boolean whileAsking = lujarchStartsWhileAsking(r);
+-            final int mode = mService.getAppOpsManager().noteOpNoThrow(
+-                    AppOpsManager.OP_LUJARCH_AUTOSTART, uid, info.packageName,
+-                    AppOpsService.lujarchStartTag(lujarchStartHow(r), whileAsking,
+-                            UserHandle.getAppId(r.callingUid) >= Process.FIRST_APPLICATION_UID
+-                                    ? r.callerPackage : null),
+-                    "broadcast " + action);
+-            if (mode == AppOpsManager.MODE_IGNORED || mode == AppOpsManager.MODE_ERRORED) {
+-                if (whileAsking && mService.getAppOpsManager()
+-                        .unsafeCheckOpRawNoThrow(AppOpsManager.OP_LUJARCH_AUTOSTART, uid,
+-                                info.packageName) == AppOpsManager.MODE_DEFAULT) {
+-                    Slog.i(TAG, "lujarch_autostart: starting " + info.packageName + " (uid " + uid
+-                            + ") for " + action + " while its question waits");
+-                    return false;
+-                }
+-                Slog.w(TAG, "lujarch_autostart: skipping cold start of " + info.packageName
+-                        + " (uid " + uid + ") for " + action);
+-                return true;
+-            }
+-        } catch (Exception e) {
+-            Slog.w(TAG, "lujarch_autostart check failed, allowing start", e);
+-        }
+-        return false;
++        return LujarchAutostart.refuses(mService.getAppOpsManager(), info, lujarchStartHow(r),
++                lujarchStartsWhileAsking(r),
++                UserHandle.getAppId(r.callingUid) >= Process.FIRST_APPLICATION_UID
++                        ? r.callerPackage : null,
++                "broadcast " + (r.intent != null ? r.intent.getAction() : null));
+     }
+ 
+     /** How {@code r} would start the app, as the Autostart page names it. */
+diff --git a/services/core/java/com/android/server/am/ContentProviderHelper.java b/services/core/java/com/android/server/am/ContentProviderHelper.java
+index e48a38430e0351da238432c46266989464c5374c..edc2ed8b01b86d9f777644a5d19056f337e49a3d 100644
+--- a/services/core/java/com/android/server/am/ContentProviderHelper.java
++++ b/services/core/java/com/android/server/am/ContentProviderHelper.java
+@@ -92,6 +92,7 @@ import com.android.internal.util.ArrayUtils;
+ import com.android.internal.util.FrameworkStatsLog;
+ import com.android.server.LocalManagerRegistry;
+ import com.android.server.LocalServices;
++import com.android.server.appop.AppOpsService;
+ import com.android.server.pm.UserManagerInternal;
+ import com.android.server.pm.pkg.AndroidPackage;
+ import com.android.server.sdksandbox.SdkSandboxManagerLocal;
+@@ -557,6 +558,13 @@ public class ContentProviderHelper {
+                             final int packageState = getPackageStateAtom(stopped);
+                             final boolean firstLaunch = cpr.mAppInfo.isNotLaunched();
+                             checkTime(startTime, "getContentProviderImpl: before start process");
++                            // Autostart: another app starts this app for its provider only as
++                            // the owner allows.
++                            if (LujarchAutostart.refusesCall(mService, cpr.mAppInfo, callingUid,
++                                    callingPackage, AppOpsService.LUJARCH_START_PROVIDER,
++                                    "provider " + name)) {
++                                return null;
++                            }
+ 
+                             final HostingRecord hostingRecord = HostingRecord.forContentProvider(
+                                     new ComponentName(cpi.applicationInfo.packageName, cpi.name),
+diff --git a/services/core/java/com/android/server/am/LujarchAutostart.java b/services/core/java/com/android/server/am/LujarchAutostart.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..03a7d82ebbcc6088abc90769795a8017763e632c
+--- /dev/null
++++ b/services/core/java/com/android/server/am/LujarchAutostart.java
+@@ -0,0 +1,90 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.am;
++
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.app.AppOpsManager;
++import android.content.pm.ApplicationInfo;
++import android.os.Binder;
++import android.os.Process;
++import android.os.UserHandle;
++import android.util.Slog;
++
++import com.android.server.appop.AppOpsService;
++
++/**
++ * Autostart: whether the system starts an app that is not running, for a broadcast or for another
++ * app's call. Each start is noted, so that it lands in the history with how and who asked. Uids
++ * below 10000 always start, and a failed check allows the start (logged).
++ */
++final class LujarchAutostart {
++    private static final String TAG = "lujarch_autostart";
++
++    private LujarchAutostart() {
++    }
++
++    /**
++     * Whether the start of {@code info} is refused. {@code how} is one of AppOpsService's
++     * LUJARCH_START_*; {@code whileAsking}: it still starts while its question waits; {@code who}:
++     * the app that asked, null for the system; {@code what} names the start in the log.
++     */
++    static boolean refuses(@NonNull AppOpsManager ops, @NonNull ApplicationInfo info,
++            @NonNull String how, boolean whileAsking, @Nullable String who, @NonNull String what) {
++        if (UserHandle.getAppId(info.uid) < Process.FIRST_APPLICATION_UID) {
++            return false;
++        }
++        // The system notes the start, also within another app's call.
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final int mode = ops.noteOpNoThrow(AppOpsManager.OP_LUJARCH_AUTOSTART, info.uid,
++                    info.packageName, AppOpsService.lujarchStartTag(how, whileAsking, who), what);
++            if (mode != AppOpsManager.MODE_IGNORED && mode != AppOpsManager.MODE_ERRORED) {
++                return false;
++            }
++            if (whileAsking && ops.unsafeCheckOpRawNoThrow(AppOpsManager.OP_LUJARCH_AUTOSTART,
++                    info.uid, info.packageName) == AppOpsManager.MODE_DEFAULT) {
++                Slog.i(TAG, "starting " + info.packageName + " (uid " + info.uid + ") for "
++                        + what + " while its question waits");
++                return false;
++            }
++            Slog.w(TAG, "not starting " + info.packageName + " (uid " + info.uid + ") for "
++                    + what);
++            return true;
++        } catch (RuntimeException e) {
++            Slog.w(TAG, "check failed, allowing the start of " + info.packageName, e);
++            return false;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
++    }
++
++    /**
++     * Whether another app's call that would start {@code info}, which is not running, is refused.
++     * Only an app other than {@code info} is asked about: the system and the roles it binds for
++     * the owner call as the system. While the question waits, such a call is refused.
++     */
++    static boolean refusesCall(@NonNull ActivityManagerService am, @NonNull ApplicationInfo info,
++            int callingUid, @Nullable String callingPackage, @NonNull String how,
++            @NonNull String what) {
++        if (UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID
++                || callingUid == info.uid || am.mProcessList.getUidRecordLOSP(info.uid) != null) {
++            return false;
++        }
++        return refuses(am.getAppOpsManager(), info, how, false, callingPackage, what);
++    }
++}
+diff --git a/services/core/java/com/android/server/appop/AppOpsService.java b/services/core/java/com/android/server/appop/AppOpsService.java
+index 2939d42e8bd7501bb2f0ff3de8553d61d0135d67..da06560e6109637117649284063325be1c6d031d 100644
+--- a/services/core/java/com/android/server/appop/AppOpsService.java
++++ b/services/core/java/com/android/server/appop/AppOpsService.java
+@@ -3070,6 +3070,8 @@ public class AppOpsService extends IAppOpsService.Stub {
+     public static final String LUJARCH_START_ALARM = "alarm";
+     public static final String LUJARCH_START_PUSH = "push";
+     public static final String LUJARCH_START_BROADCAST = "broadcast";
++    public static final String LUJARCH_START_SERVICE = "service";
++    public static final String LUJARCH_START_PROVIDER = "provider";
+     private static final String LUJARCH_START = "lujarch:start:";
+     private static final String LUJARCH_STARTED = "lujarch:started:";
+     private static final String LUJARCH_STOPPED = "lujarch:stopped:";

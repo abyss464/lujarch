@@ -160,10 +160,10 @@ index 0000000000000000000000000000000000000000..b30fe92d68c0cf60117c2062af514175
 +</ScrollView>
 diff --git a/PermissionController/res/values-ja/lujarch_strings.xml b/PermissionController/res/values-ja/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..8d5408e95f79d2f25764501c9c64f5ba0f55bb87
+index 0000000000000000000000000000000000000000..765c32d393d02aafc8a0b692c41894aae55777f1
 --- /dev/null
 +++ b/PermissionController/res/values-ja/lujarch_strings.xml
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,79 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -226,7 +226,7 @@ index 0000000000000000000000000000000000000000..8d5408e95f79d2f25764501c9c64f5ba
 +    <string name="lujarch_menu_show_days">"{count,plural, =1{過去 1 日間を表示}other{過去 # 日間を表示}}"</string>
 +    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{過去 1 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}other{過去 # 日間におけるアプリによる<xliff:g id="PERMGROUP">%1$s</xliff:g>の使用状況}}"</string>
 +    <string name="lujarch_label_past_days">"{count,plural, =1{過去\n1 日間}other{過去\n# 日間}}"</string>
-+    <string name="lujarch_footer_autostart">"自動起動では、このアプリが閉じているときに、システムがブロードキャストで起動します。対象は、スマートフォンの起動時、アプリのアラーム、プッシュ メッセージです。[毎回確認する] では確認が表示され、回答するまでは、アプリのアラームと優先度の高いプッシュ メッセージでのみ起動されます。[許可しない] では、開いたときにのみ起動し、閉じている間に届いたプッシュ メッセージは失われることがあります。"</string>
++    <string name="lujarch_footer_autostart">"自動起動では、このアプリが閉じているときにシステムが起動します。対象は、ブロードキャスト（スマートフォンの起動時、アプリのアラーム、プッシュ メッセージなど）と、ほかのアプリがこのアプリのサービスを呼び出したりコンテンツ プロバイダを開いたりしたときです。[毎回確認する] では確認が表示され、回答するまでは、アプリのアラームと優先度の高いプッシュ メッセージでのみ起動されます。[許可しない] では、開いたときにのみ起動し、閉じている間に届いたプッシュ メッセージは失われることがあります。"</string>
 +    <string name="lujarch_autostart_denied">"開いたときにのみ起動。プッシュ メッセージが失われることがあります"</string>
 +    <string name="lujarch_autostart_starts">"過去 7 日間の起動"</string>
 +    <string name="lujarch_autostart_starts_none">"過去 7 日間の起動はありません"</string>
@@ -237,16 +237,18 @@ index 0000000000000000000000000000000000000000..8d5408e95f79d2f25764501c9c64f5ba
 +    <string name="lujarch_autostart_alarm">"アラーム"</string>
 +    <string name="lujarch_autostart_push">"プッシュ メッセージ"</string>
 +    <string name="lujarch_autostart_broadcast">"ブロードキャスト"</string>
++    <string name="lujarch_autostart_service">"サービス"</string>
++    <string name="lujarch_autostart_provider">"コンテンツ プロバイダ"</string>
 +    <string name="lujarch_autostart_system">"システム"</string>
 +    <string name="lujarch_autostart_self">"このアプリ"</string>
 +    <string name="lujarch_autostart_summary">"%1$s · %2$s · %3$s"</string>
 +</resources>
 diff --git a/PermissionController/res/values-zh-rCN/lujarch_strings.xml b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..637ea7c5f1b68a3b832d13b668c4ec9be9612a52
+index 0000000000000000000000000000000000000000..d2c2659e1dfdfc140cadff266b8bc1bd4bf4398e
 --- /dev/null
 +++ b/PermissionController/res/values-zh-rCN/lujarch_strings.xml
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,79 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -309,7 +311,7 @@ index 0000000000000000000000000000000000000000..637ea7c5f1b68a3b832d13b668c4ec9b
 +    <string name="lujarch_menu_show_days">"{count,plural, =1{显示过去 1 天内的访问记录}other{显示过去 # 天内的访问记录}}"</string>
 +    <string name="lujarch_usage_subtitle_days">"{count,plural, =1{过去 1 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}other{过去 # 天内应用使用“<xliff:g id="PERMGROUP">%1$s</xliff:g>”权限的时间轴}}"</string>
 +    <string name="lujarch_label_past_days">"{count,plural, =1{过去\n1 天}other{过去\n# 天}}"</string>
-+    <string name="lujarch_footer_autostart">"自启动让系统在此应用关闭时因广播而启动它：手机开机时、其闹钟响起时或收到推送消息时。选择“每次都询问”时会询问您；在您回答之前，它仅会因其闹钟和高优先级推送消息而启动。选择“不允许”时，它仅在您打开时启动，关闭期间到达的推送消息可能会丢失。"</string>
++    <string name="lujarch_footer_autostart">"自启动让系统在此应用关闭时启动它：因广播，例如手机开机时、其闹钟响起时或收到推送消息时；以及其他应用调用它的服务或打开它的内容提供器时。选择“每次都询问”时会询问您；在您回答之前，它仅会因其闹钟和高优先级推送消息而启动。选择“不允许”时，它仅在您打开时启动，关闭期间到达的推送消息可能会丢失。"</string>
 +    <string name="lujarch_autostart_denied">"仅在您打开时启动；推送消息可能会丢失"</string>
 +    <string name="lujarch_autostart_starts">"过去 7 天的启动"</string>
 +    <string name="lujarch_autostart_starts_none">"过去 7 天没有启动"</string>
@@ -320,16 +322,18 @@ index 0000000000000000000000000000000000000000..637ea7c5f1b68a3b832d13b668c4ec9b
 +    <string name="lujarch_autostart_alarm">"因闹钟"</string>
 +    <string name="lujarch_autostart_push">"因推送消息"</string>
 +    <string name="lujarch_autostart_broadcast">"因广播"</string>
++    <string name="lujarch_autostart_service">"因服务"</string>
++    <string name="lujarch_autostart_provider">"因内容提供器"</string>
 +    <string name="lujarch_autostart_system">"系统"</string>
 +    <string name="lujarch_autostart_self">"此应用"</string>
 +    <string name="lujarch_autostart_summary">"%1$s · %2$s · %3$s"</string>
 +</resources>
 diff --git a/PermissionController/res/values/lujarch_strings.xml b/PermissionController/res/values/lujarch_strings.xml
 new file mode 100644
-index 0000000000000000000000000000000000000000..a8c0b254387821b0e1e9d8efba73f4f4fd0a584c
+index 0000000000000000000000000000000000000000..3708fd9c96da17bc0aa3ced0152b7e002845fdde
 --- /dev/null
 +++ b/PermissionController/res/values/lujarch_strings.xml
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,98 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!--
 +    Copyright (C) 2026 The Lujarch Project
@@ -411,7 +415,7 @@ index 0000000000000000000000000000000000000000..a8c0b254387821b0e1e9d8efba73f4f4
 +        =1      {Past\n1 day}
 +        other   {Past\n# days}
 +    }</string>
-+    <string name="lujarch_footer_autostart">Autostart lets the system start this app while it is closed, for a broadcast: when the phone starts, for one of its alarms, or for a push message. With Ask every time, you are asked; until you answer, it is started only for its alarm clocks and high-priority push messages. With Don\'t allow, it starts only when you open it, and push messages that arrive while it is closed can be lost.</string>
++    <string name="lujarch_footer_autostart">Autostart lets the system start this app while it is closed: for a broadcast, such as when the phone starts, for one of its alarms or for a push message, and when another app calls one of its services or opens its content provider. With Ask every time, you are asked; until you answer, it is started only for its alarm clocks and high-priority push messages. With Don\'t allow, it starts only when you open it, and push messages that arrive while it is closed can be lost.</string>
 +    <string name="lujarch_autostart_denied">Starts only when you open it; push messages can be lost</string>
 +    <string name="lujarch_autostart_starts">Starts in the last 7 days</string>
 +    <string name="lujarch_autostart_starts_none">No starts in the last 7 days</string>
@@ -422,6 +426,8 @@ index 0000000000000000000000000000000000000000..a8c0b254387821b0e1e9d8efba73f4f4
 +    <string name="lujarch_autostart_alarm">For an alarm</string>
 +    <string name="lujarch_autostart_push">For a push message</string>
 +    <string name="lujarch_autostart_broadcast">For a broadcast</string>
++    <string name="lujarch_autostart_service">For a service</string>
++    <string name="lujarch_autostart_provider">For a content provider</string>
 +    <string name="lujarch_autostart_system">System</string>
 +    <string name="lujarch_autostart_self">This app</string>
 +    <string name="lujarch_autostart_summary">%1$s · %2$s · %3$s</string>
@@ -3114,10 +3120,10 @@ index 0000000000000000000000000000000000000000..d80bddecbc24ae2208031d916f0e4b01
 +}
 diff --git a/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..b6eba8cf2d15583f8fed1f87fa89a8c67abd0b9a
+index 0000000000000000000000000000000000000000..78410bbfbd22cd94b39000ff6bcd8cc1f8314254
 --- /dev/null
 +++ b/PermissionController/src/com/android/permissioncontroller/lujarch/LujarchStarts.kt
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,123 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -3165,6 +3171,8 @@ index 0000000000000000000000000000000000000000..b6eba8cf2d15583f8fed1f87fa89a8c6
 +        ALARM("alarm", R.string.lujarch_autostart_alarm),
 +        PUSH("push", R.string.lujarch_autostart_push),
 +        BROADCAST("broadcast", R.string.lujarch_autostart_broadcast),
++        SERVICE("service", R.string.lujarch_autostart_service),
++        PROVIDER("provider", R.string.lujarch_autostart_provider),
 +    }
 +
 +    /**
