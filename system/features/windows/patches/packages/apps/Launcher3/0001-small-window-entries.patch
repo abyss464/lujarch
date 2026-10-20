@@ -11,10 +11,10 @@ index ef03af48b221cd99b9634a095935a97da596ff8b..9a962271a0ddf4770e4285cf19664e82
              TaskShortcutFactory.INSTALL,
              TaskShortcutFactory.FREE_FORM,
 diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
-index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6fd0654606 100644
+index bc5ca6ed1f4b21daacff0b71e226c874199aa24e..5bc7002dfb4033b36a949b6b64366cbd5138e2dc 100644
 --- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
 +++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
-@@ -196,6 +196,7 @@ import com.android.launcher3.util.WindowBlurState;
+@@ -198,6 +198,7 @@ import com.android.launcher3.util.WindowBlurState;
  import com.android.launcher3.views.FloatingIconView;
  import com.android.quickstep.BaseContainerInterface;
  import com.android.quickstep.LauncherActivityInterface;
@@ -22,7 +22,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
  import com.android.quickstep.OverviewComponentObserver;
  import com.android.quickstep.OverviewComponentObserver.OverviewChangeListener;
  import com.android.quickstep.RecentsAnimationDeviceState;
-@@ -345,6 +346,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -347,6 +348,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
          mActionsView = findViewById(R.id.overview_actions_view);
          RecentsView<?, LauncherState> overviewPanel = getOverviewPanel();
          SystemUiProxy systemUiProxy = SystemUiProxy.INSTANCE.get(this);
@@ -30,7 +30,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
          mSplitSelectStateController =
                  new SplitSelectStateController(this, getStateManager(),
                          getDepthController(), getStatsLogManager(),
-@@ -474,6 +476,9 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -476,6 +478,9 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
  
      @Override
      public RunnableList startActivitySafely(View v, Intent intent, ItemInfo item) {
@@ -40,7 +40,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
          PredictionRowView<?> predictionRowView =
                  getAppsView().getFloatingHeaderView().findFixedRowByType(PredictionRowView.class);
          // Pause the prediction row updates until the transition (if it exists) ends.
-@@ -558,12 +563,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -560,12 +565,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
          if (Flags.enablePrivateSpace()) {
              shortcuts.add(UNINSTALL_APP);
          }
@@ -58,7 +58,7 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
          return shortcuts.stream();
      }
  
-@@ -935,6 +942,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
+@@ -958,6 +965,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
      @Override
      protected void onStop() {
          super.onStop();
@@ -68,10 +68,10 @@ index edb13e16cd9d115df4ddc763d8844a583f806dfb..8ea87d94320f81c2eadabd5877a1ee6f
              ti.onLauncherStop();
 diff --git a/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..55942df926162a14ae543e84e63918a7fdd73f75
+index 0000000000000000000000000000000000000000..212f32e4b4b194d65b653cf58a0b459abc5fd131
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/LujarchSmallWindows.kt
-@@ -0,0 +1,140 @@
+@@ -0,0 +1,173 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -92,7 +92,13 @@ index 0000000000000000000000000000000000000000..55942df926162a14ae543e84e63918a7
 +
 +import android.content.Context
 +import android.content.Intent
++import android.graphics.Matrix
 +import android.graphics.Rect
++import android.graphics.RectF
++import android.os.Bundle
++import android.os.Handler
++import android.os.IRemoteCallback
++import android.os.Looper
 +import android.os.RemoteException
 +import android.provider.Settings
 +import android.util.Log
@@ -111,6 +117,8 @@ index 0000000000000000000000000000000000000000..55942df926162a14ae543e84e63918a7
 +    private const val TAG = "lujarch_windows"
 +    private const val KEY_HOME = "lujarch_windows_home"
 +    private const val KEY_RECENTS = "lujarch_windows_recents"
++    /** The longest Recents waits for the Shell to show the card's picture. */
++    private const val STAND_IN_WAIT_MS = 250L
 +
 +    private fun on(context: Context, key: String): Boolean {
 +        val resolver = context.contentResolver
@@ -201,22 +209,55 @@ index 0000000000000000000000000000000000000000..55942df926162a14ae543e84e63918a7
 +
 +    /**
 +     * Opens the task of a Recents card in a small window: the window grows out of the card, and
-+     * Recents leaves as a tap outside the cards leaves it.
++     * Recents leaves as a tap outside the cards leaves it, once the card's picture stands in for
++     * the card, so that no frame shows neither.
 +     */
 +    @JvmStatic
 +    fun openTask(taskView: TaskView, taskId: Int) {
-+        val from = Rect()
-+        val shown = taskView.getGlobalVisibleRect(from)
++        val recentsView = taskView.recentsView
++        val main = Handler(Looper.getMainLooper())
++        var left = false
++        val leave = Runnable {
++            if (!left) {
++                left = true
++                recentsView?.startHome()
++            }
++        }
 +        SystemUiProxy.INSTANCE.get(taskView.context)
-+            .showTaskInSmallWindow(taskId, if (shown) from else null)
-+        taskView.recentsView?.startHome()
++            .showTaskInSmallWindow(taskId, cardOnScreen(taskView), object : IRemoteCallback.Stub() {
++                override fun sendResult(data: Bundle?) {
++                    main.post(leave)
++                }
++            })
++        main.postDelayed(leave, STAND_IN_WAIT_MS)
++    }
++
++    /** The whole card on the screen, also the part of a card at an edge that is off it. */
++    private fun cardOnScreen(taskView: TaskView): Rect? {
++        if (!taskView.isAttachedToWindow || taskView.width <= 0) return null
++        val m = Matrix()
++        taskView.transformMatrixToGlobal(m)
++        val r = RectF(0f, 0f, taskView.width.toFloat(), taskView.height.toFloat())
++        m.mapRect(r)
++        val at = IntArray(2)
++        taskView.rootView.getLocationOnScreen(at)
++        r.offset(at[0].toFloat(), at[1].toFloat())
++        return Rect().also { r.round(it) }
 +    }
 +}
 diff --git a/quickstep/src/com/android/quickstep/SystemUiProxy.kt b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-index 097c61f47a235d8b0118244e1d323d7c01eb4223..565015e2792fa5626351035e5b66252e0a25c4b6 100644
+index 097c61f47a235d8b0118244e1d323d7c01eb4223..6ea3eeb18b69f67b00dbb96815ac421eb1092ef8 100644
 --- a/quickstep/src/com/android/quickstep/SystemUiProxy.kt
 +++ b/quickstep/src/com/android/quickstep/SystemUiProxy.kt
-@@ -785,6 +785,41 @@ constructor(
+@@ -29,6 +29,7 @@ import android.graphics.Rect
+ import android.os.Bundle
+ import android.os.Handler
+ import android.os.IBinder
++import android.os.IRemoteCallback
+ import android.os.Message
+ import android.os.RemoteException
+ import android.os.Trace
+@@ -785,6 +786,44 @@ constructor(
              bubbles?.showAppBubble(intent, user, entryPoint, bubbleBarLocation)
          }
  
@@ -249,10 +290,13 @@ index 097c61f47a235d8b0118244e1d323d7c01eb4223..565015e2792fa5626351035e5b66252e
 +            bubbles?.setSmallWindowsHidden(hidden)
 +        }
 +
-+    /** Tells the Shell to show a running task in a small window, growing out of from. */
-+    fun showTaskInSmallWindow(taskId: Int, from: Rect?) =
++    /**
++     * Tells the Shell to show a running task in a small window, growing out of from; shown is told
++     * once the card's picture stands in for the card.
++     */
++    fun showTaskInSmallWindow(taskId: Int, from: Rect?, shown: IRemoteCallback?) =
 +        executeWithErrorLog({ "Failed call showTaskInSmallWindow" }) {
-+            bubbles?.showTaskInSmallWindow(taskId, from)
++            bubbles?.showTaskInSmallWindow(taskId, from, shown)
 +        }
 +
      /** Tells SysUI to show the expanded view. */

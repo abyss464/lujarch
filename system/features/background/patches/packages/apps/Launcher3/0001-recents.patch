@@ -1414,7 +1414,7 @@ index 0000000000000000000000000000000000000000..f12ab0f4af3a89bdac515c3390584273
 +}
 diff --git a/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..3cf7872b7a75be0c018d8a14e99ad447bb75a59d
+index 0000000000000000000000000000000000000000..d0e309cfbc4a1bd4773cbcb42934680dd1204090
 --- /dev/null
 +++ b/quickstep/src/com/android/quickstep/lujarch/RunningLayerView.kt
 @@ -0,0 +1,847 @@
@@ -1708,18 +1708,18 @@ index 0000000000000000000000000000000000000000..3cf7872b7a75be0c018d8a14e99ad447
 +            applyMotion()
 +            onArrival?.invoke()
 +        }
-+        if (done != null) {
-+            anim.addListener(object : android.animation.AnimatorListenerAdapter() {
-+                private var canceled = false
-+                override fun onAnimationCancel(animation: android.animation.Animator) {
-+                    canceled = true
-+                }
++        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
++            private var canceled = false
++            override fun onAnimationCancel(animation: android.animation.Animator) {
++                canceled = true
++            }
 +
-+                override fun onAnimationEnd(animation: android.animation.Animator) {
-+                    if (!canceled) done()
-+                }
-+            })
-+        }
++            override fun onAnimationEnd(animation: android.animation.Animator) {
++                // Its last frame comes while it still runs: the layer is told it rests only now.
++                onArrival?.invoke()
++                if (!canceled) done?.invoke()
++            }
++        })
 +        arrivalAnim = anim
 +        anim.start()
 +    }

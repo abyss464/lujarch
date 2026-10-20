@@ -49,6 +49,7 @@ import android.view.Window
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -268,7 +269,13 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
         val p = pages[which] ?: return
         p.pause()
         p.stop()
-        p.view?.visibility = View.GONE
+        p.view?.let { v ->
+            // The keyboard is the page's: it closes as the page leaves.
+            v.findFocus()?.clearFocus()
+            activity.getSystemService(InputMethodManager::class.java)
+                ?.hideSoftInputFromWindow(v.windowToken, 0)
+            v.visibility = View.GONE
+        }
     }
 
     /** Brings everything in line with shown, started, resumed and focused. */
