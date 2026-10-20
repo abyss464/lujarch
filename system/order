@@ -20,3 +20,4 @@ features/background
 features/windows
 features/storage
 features/recorder
+features/installer

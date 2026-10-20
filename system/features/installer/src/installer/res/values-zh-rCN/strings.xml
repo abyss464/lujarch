@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_install_for">安装给</string>
+    <string name="ins_this_user">此用户</string>
+    <string name="ins_all_users">所有用户</string>
+    <string name="ins_permissions">权限</string>
+    <string name="ins_permissions_ask">照常询问</string>
+    <string name="ins_permissions_grant">全部允许</string>
+    <string name="ins_permissions_deny">全部拒绝</string>
+    <string name="ins_permissions_grant_all">允许所有权限</string>
+    <string name="ins_permissions_deny_all">拒绝所有权限</string>
+    <string name="ins_optimization">优化</string>
+    <string name="ins_optimize_auto">自动</string>
+    <string name="ins_optimize_speed_profile">配置文件</string>
+    <string name="ins_optimize_speed">速度</string>
+    <string name="ins_optimize_verify">仅验证</string>
+    <string name="ins_after">安装后</string>
+    <string name="ins_after_done">完成</string>
+    <string name="ins_after_open">打开</string>
+    <string name="ins_after_info">应用信息</string>
+    <string name="ins_abi">处理器类型</string>
+    <string name="ins_abi_auto">自动</string>
+    <string name="ins_allow_downgrade">允许降级</string>
+    <string name="ins_allow_downgrade_summary">在 Android 允许的范围内</string>
+    <string name="ins_allow_test_only">允许仅限测试的应用</string>
+    <string name="ins_allow_old_sdk">允许适用于旧版 Android 的应用</string>
+    <string name="ins_ask_updates">其他应用更新时先询问</string>
+    <string name="ins_ask_updates_summary">其他安装程序更新此应用时</string>
+    <string name="ins_delete_file">安装后删除文件</string>
+    <string name="ins_kind_new">新安装</string>
+    <string name="ins_kind_update">更新</string>
+    <string name="ins_kind_downgrade">降级</string>
+    <string name="ins_kind_reinstall">重新安装</string>
+    <string name="ins_fail_already_exists">已安装同一软件包名称的应用，且其安装方式不允许本次安装。</string>
+    <string name="ins_fail_invalid">该文件不是有效的应用软件包，或已损坏。</string>
+    <string name="ins_fail_manifest">应用的清单文件缺失或格式有误。</string>
+    <string name="ins_fail_storage">存储空间不足。</string>
+    <string name="ins_fail_duplicate">该应用已在安装中。</string>
+    <string name="ins_fail_signature">该文件的签名与已安装的应用不同：它由其他作者签名，或签名密钥已更改。</string>
+    <string name="ins_fail_unsigned">该文件没有有效的签名。</string>
+    <string name="ins_fail_shared_user">该应用与另一个应用共享用户 ID，但两者不匹配。</string>
+    <string name="ins_fail_library">手机上没有该应用所需的库。</string>
+    <string name="ins_fail_dexopt">Android 无法准备该应用的代码。</string>
+    <string name="ins_fail_older_sdk">该应用需要更新版本的 Android。</string>
+    <string name="ins_fail_newer_sdk">该应用适用的 Android 版本低于此版本所允许的范围。</string>
+    <string name="ins_fail_old_target">该应用适用的 Android 版本过旧，无法在此手机上安装。开启“允许适用于旧版 Android 的应用”后，可在 Android 允许的范围内安装。</string>
+    <string name="ins_fail_provider">该应用声明的内容提供程序已由另一个已安装的应用使用。</string>
+    <string name="ins_fail_permission">该应用定义的权限已由另一个已安装的应用定义。</string>
+    <string name="ins_fail_test_only">该应用仅限测试使用。开启“允许仅限测试的应用”后即可安装。</string>
+    <string name="ins_fail_abi">该应用没有适用于此手机处理器的代码。</string>
+    <string name="ins_fail_feature">该应用需要此手机不具备的功能。</string>
+    <string name="ins_fail_verification">未能及时完成安装验证，或验证拒绝了本次安装。</string>
+    <string name="ins_fail_downgrade">已安装的版本更新，且 Android 不允许此次降级。</string>
+    <string name="ins_fail_missing_split">该应用需要未选择的软件包组件。</string>
+    <string name="ins_fail_restricted">此手机限制安装应用。</string>
+    <string name="ins_fail_aborted">安装已停止。</string>
+    <string name="ins_fail_unknown">Android 未安装该应用。</string>
+    <string name="ins_fail_already_exists_short">与已安装的应用冲突</string>
+    <string name="ins_fail_invalid_short">不是有效的软件包</string>
+    <string name="ins_fail_manifest_short">清单有误</string>
+    <string name="ins_fail_storage_short">存储空间不足</string>
+    <string name="ins_fail_duplicate_short">已在安装中</string>
+    <string name="ins_fail_signature_short">签名不同</string>
+    <string name="ins_fail_unsigned_short">未签名</string>
+    <string name="ins_fail_shared_user_short">共享用户 ID 不匹配</string>
+    <string name="ins_fail_library_short">缺少库</string>
+    <string name="ins_fail_dexopt_short">无法准备代码</string>
+    <string name="ins_fail_older_sdk_short">需要更新的 Android</string>
+    <string name="ins_fail_newer_sdk_short">适用于旧版 Android</string>
+    <string name="ins_fail_old_target_short">适用于过旧的 Android</string>
+    <string name="ins_fail_provider_short">提供程序冲突</string>
+    <string name="ins_fail_permission_short">权限冲突</string>
+    <string name="ins_fail_test_only_short">仅供测试</string>
+    <string name="ins_fail_abi_short">无适用于此处理器的代码</string>
+    <string name="ins_fail_feature_short">缺少功能</string>
+    <string name="ins_fail_verification_short">未通过验证</string>
+    <string name="ins_fail_downgrade_short">不允许降级</string>
+    <string name="ins_fail_missing_split_short">缺少组件</string>
+    <string name="ins_fail_restricted_short">受限制</string>
+    <string name="ins_fail_aborted_short">已停止</string>
+    <string name="ins_fail_unknown_short">未安装</string>
+</resources>

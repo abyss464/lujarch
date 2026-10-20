@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_install_for">インストール先</string>
+    <string name="ins_this_user">このユーザー</string>
+    <string name="ins_all_users">すべてのユーザー</string>
+    <string name="ins_permissions">権限</string>
+    <string name="ins_permissions_ask">通常どおり</string>
+    <string name="ins_permissions_grant">すべて許可</string>
+    <string name="ins_permissions_deny">すべて拒否</string>
+    <string name="ins_permissions_grant_all">権限をすべて許可</string>
+    <string name="ins_permissions_deny_all">権限をすべて拒否</string>
+    <string name="ins_optimization">最適化</string>
+    <string name="ins_optimize_auto">自動</string>
+    <string name="ins_optimize_speed_profile">プロファイル</string>
+    <string name="ins_optimize_speed">速度</string>
+    <string name="ins_optimize_verify">確認のみ</string>
+    <string name="ins_after">インストール後</string>
+    <string name="ins_after_done">完了</string>
+    <string name="ins_after_open">開く</string>
+    <string name="ins_after_info">アプリ情報</string>
+    <string name="ins_abi">プロセッサ</string>
+    <string name="ins_abi_auto">自動</string>
+    <string name="ins_allow_downgrade">ダウングレードを許可</string>
+    <string name="ins_allow_downgrade_summary">Android が許す範囲で</string>
+    <string name="ins_allow_test_only">テスト専用アプリを許可</string>
+    <string name="ins_allow_old_sdk">古い Android 向けのアプリを許可</string>
+    <string name="ins_ask_updates">ほかのアプリによる更新は確認する</string>
+    <string name="ins_ask_updates_summary">ほかのインストーラが更新するとき</string>
+    <string name="ins_delete_file">インストール後にファイルを削除</string>
+    <string name="ins_kind_new">新規</string>
+    <string name="ins_kind_update">更新</string>
+    <string name="ins_kind_downgrade">ダウングレード</string>
+    <string name="ins_kind_reinstall">再インストール</string>
+    <string name="ins_fail_already_exists">同じパッケージ名のアプリが、このインストールを許さない形ですでにインストールされています。</string>
+    <string name="ins_fail_invalid">このファイルは有効なアプリのパッケージではないか、破損しています。</string>
+    <string name="ins_fail_manifest">アプリのマニフェストがないか、形式が正しくありません。</string>
+    <string name="ins_fail_storage">ストレージの空き容量が不足しています。</string>
+    <string name="ins_fail_duplicate">このアプリはすでにインストール中です。</string>
+    <string name="ins_fail_signature">このファイルの署名は、インストール済みのアプリと異なります。別の作成者が署名したものか、署名鍵が変わったものです。</string>
+    <string name="ins_fail_unsigned">このファイルには有効な署名がありません。</string>
+    <string name="ins_fail_shared_user">このアプリはユーザー ID を共有するアプリと一致しません。</string>
+    <string name="ins_fail_library">アプリが必要とするライブラリがスマートフォンにありません。</string>
+    <string name="ins_fail_dexopt">Android はアプリのコードを準備できませんでした。</string>
+    <string name="ins_fail_older_sdk">このアプリには新しいバージョンの Android が必要です。</string>
+    <string name="ins_fail_newer_sdk">このアプリは、このバージョンが許すより古い Android 向けです。</string>
+    <string name="ins_fail_old_target">このアプリは古すぎる Android 向けのため、このスマートフォンにはインストールできません。「古い Android 向けのアプリを許可」をオンにすると、Android が許す範囲でインストールできます。</string>
+    <string name="ins_fail_provider">このアプリが宣言するコンテンツ プロバイダは、インストール済みの別のアプリがすでに使っています。</string>
+    <string name="ins_fail_permission">このアプリが定義する権限は、インストール済みの別のアプリがすでに定義しています。</string>
+    <string name="ins_fail_test_only">このアプリはテスト専用です。「テスト専用アプリを許可」をオンにするとインストールできます。</string>
+    <string name="ins_fail_abi">このアプリには、このスマートフォンのプロセッサ向けのコードがありません。</string>
+    <string name="ins_fail_feature">このアプリには、このスマートフォンにない機能が必要です。</string>
+    <string name="ins_fail_verification">インストールの確認が時間内に終わらなかったか、確認で拒否されました。</string>
+    <string name="ins_fail_downgrade">インストール済みのバージョンのほうが新しく、Android はこのダウングレードを許可していません。</string>
+    <string name="ins_fail_missing_split">このアプリには、選ばれていないバンドルのパーツが必要です。</string>
+    <string name="ins_fail_restricted">このスマートフォンではアプリのインストールが制限されています。</string>
+    <string name="ins_fail_aborted">インストールは中止されました。</string>
+    <string name="ins_fail_unknown">Android はアプリをインストールしませんでした。</string>
+    <string name="ins_fail_already_exists_short">インストール済みのアプリと競合</string>
+    <string name="ins_fail_invalid_short">有効なパッケージではない</string>
+    <string name="ins_fail_manifest_short">マニフェストが不正</string>
+    <string name="ins_fail_storage_short">空き容量不足</string>
+    <string name="ins_fail_duplicate_short">インストール中</string>
+    <string name="ins_fail_signature_short">署名が異なる</string>
+    <string name="ins_fail_unsigned_short">署名なし</string>
+    <string name="ins_fail_shared_user_short">共有ユーザー ID が不一致</string>
+    <string name="ins_fail_library_short">ライブラリがない</string>
+    <string name="ins_fail_dexopt_short">コードを準備できない</string>
+    <string name="ins_fail_older_sdk_short">新しい Android が必要</string>
+    <string name="ins_fail_newer_sdk_short">古い Android 向け</string>
+    <string name="ins_fail_old_target_short">古すぎる Android 向け</string>
+    <string name="ins_fail_provider_short">プロバイダが競合</string>
+    <string name="ins_fail_permission_short">権限が競合</string>
+    <string name="ins_fail_test_only_short">テスト専用</string>
+    <string name="ins_fail_abi_short">プロセッサ非対応</string>
+    <string name="ins_fail_feature_short">機能がない</string>
+    <string name="ins_fail_verification_short">確認されなかった</string>
+    <string name="ins_fail_downgrade_short">ダウングレード不可</string>
+    <string name="ins_fail_missing_split_short">パーツがない</string>
+    <string name="ins_fail_restricted_short">制限あり</string>
+    <string name="ins_fail_aborted_short">中止</string>
+    <string name="ins_fail_unknown_short">インストールされなかった</string>
+</resources>

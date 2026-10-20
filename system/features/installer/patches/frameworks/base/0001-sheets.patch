@@ -1,0 +1,85 @@
+diff --git a/mime/java-res/android.mime.types b/mime/java-res/android.mime.types
+index 17cdee48a082d3ec67975ff66eedee00d89bf671..27ffc11bf802c26a5a5c6f26493d8cd9f899f706 100644
+--- a/mime/java-res/android.mime.types
++++ b/mime/java-res/android.mime.types
+@@ -54,6 +54,7 @@
+ ?application/ttml+xml ttml dfxp
+ ?application/vnd.android.haptics.vibration+xml ahv
+ ?application/vnd.android.ota ota
++?application/vnd.apkm apkm
+ ?application/vnd.apple.mpegurl m3u8
+ ?application/vnd.apple.pkpass pkpass
+ ?application/vnd.apple.pkpasses pkpasses
+@@ -64,6 +65,7 @@
+ ?application/vnd.stardivision.writer vor
+ ?application/vnd.youtube.yt yt
+ ?application/x-android-drm-fl fl
++?application/x-apks apks
+ ?application/x-flac flac
+ ?application/x-font pcf
+ ?application/x-mobipocket-ebook prc mobi
+@@ -75,6 +77,7 @@
+ ?application/x-webarchive-xml webarchivexml
+ ?application/x-x509-server-cert crt
+ ?application/x-x509-user-cert crt
++?application/xapk-package-archive xapk
+ 
+ ?audio/3gpp 3ga 3gpp
+ ?audio/aac-adts aac
+diff --git a/packages/PackageInstaller/Android.bp b/packages/PackageInstaller/Android.bp
+index 8027634b7239a030494b8e0d2b8b10b5a4b94184..5aeb9cc88e26abd89c6e14f1a211b285a56c76f6 100644
+--- a/packages/PackageInstaller/Android.bp
++++ b/packages/PackageInstaller/Android.bp
+@@ -44,8 +44,7 @@ java_defaults {
+ 
+     certificate: "platform",
+     privileged: true,
+-    platform_apis: false,
+-    sdk_version: "system_current",
++    platform_apis: true,
+     rename_resources_package: false,
+     static_libs: [
+         "android.content.pm.flags-aconfig-java",
+@@ -58,8 +57,9 @@ java_defaults {
+         "androidx.lifecycle_lifecycle-livedata",
+         "com.google.android.material_material",
+         "kotlin-parcelize-runtime",
++        "LujarchInstallerSheet",
+     ],
+-    min_sdk_version: "36",
++    min_sdk_version: "37",
+     lint: {
+         error_checks: ["Recycle"],
+     },
+diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/InstallStart.java b/packages/PackageInstaller/src/com/android/packageinstaller/InstallStart.java
+index 129ac441b0c7cf8d0e335927713567c08c2476ba..51860b80b5a2a9722fe579925f51b510d07eca93 100644
+--- a/packages/PackageInstaller/src/com/android/packageinstaller/InstallStart.java
++++ b/packages/PackageInstaller/src/com/android/packageinstaller/InstallStart.java
+@@ -65,6 +65,11 @@ public class InstallStart extends Activity {
+     protected void onCreate(@Nullable Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+ 
++        if (org.lujarch.installer.sheet.Entry.install(this)) {
++            finish();
++            return;
++        }
++
+         if (PackageUtil.isVersionTwoEnabled(this)) {
+             Intent piaV2 = new Intent(getIntent());
+             piaV2.putExtra(InstallLaunch.EXTRA_CALLING_PKG_NAME, getLaunchedFromPackage());
+diff --git a/packages/PackageInstaller/src/com/android/packageinstaller/UninstallerActivity.java b/packages/PackageInstaller/src/com/android/packageinstaller/UninstallerActivity.java
+index 37f3055c8f19a1f3a752e3112691b31639fa372a..72bb7621d9f3ea4c8ed52c134d81ad51314fd82d 100644
+--- a/packages/PackageInstaller/src/com/android/packageinstaller/UninstallerActivity.java
++++ b/packages/PackageInstaller/src/com/android/packageinstaller/UninstallerActivity.java
+@@ -90,6 +90,11 @@ public class UninstallerActivity extends Activity {
+         // be stale, if e.g. the app was uninstalled while the activity was destroyed.
+         super.onCreate(null);
+ 
++        if (org.lujarch.installer.sheet.Entry.uninstall(this)) {
++            finish();
++            return;
++        }
++
+         if (PackageUtil.isVersionTwoEnabled(this)) {
+             boolean returnResult = getIntent().getBooleanExtra(Intent.EXTRA_RETURN_RESULT, false);
+             Intent piaV2 = new Intent(getIntent());

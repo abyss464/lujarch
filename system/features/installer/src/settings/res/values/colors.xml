@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<!-- The result tags of the install history, from the phone's palette. -->
+<resources>
+    <color name="ins_tag_ok">@android:color/system_primary_container_light</color>
+    <color name="ins_on_tag_ok">@android:color/system_on_primary_container_light</color>
+    <color name="ins_tag_bad">@android:color/system_error_container_light</color>
+    <color name="ins_on_tag_bad">@android:color/system_on_error_container_light</color>
+</resources>

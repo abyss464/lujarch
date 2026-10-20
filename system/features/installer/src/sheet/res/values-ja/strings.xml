@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_unreadable_open">開けませんでした：%1$s</string>
+    <string name="ins_unreadable_not_zip">APK でも APK バンドルでもありません</string>
+    <string name="ins_unreadable_no_apk">APK が含まれていません</string>
+    <string name="ins_unreadable_no_base">%1$s のパーツがありますが、ベース APK がありません</string>
+    <string name="ins_unreadable_parse">Android が読み取れません：%1$s</string>
+    <string name="ins_unreadable_manifest">マニフェストを読み取れません</string>
+    <string name="ins_cannot_read">ファイルを読み取れません</string>
+    <string name="ins_cannot_read_some">読み取れないファイル</string>
+    <string name="ins_reading">ファイルを読み取っています</string>
+    <string name="ins_amount">%1$s / %2$s</string>
+    <string name="ins_version_change">%1$s → %2$s</string>
+    <string name="ins_code">（コード %1$d）</string>
+    <string name="ins_code_change">（コード %1$d → %2$d）</string>
+    <string name="ins_sig_matches">署名はインストール済みのアプリと一致</string>
+    <string name="ins_sig_differs">署名はインストール済みのアプリと異なります</string>
+    <string name="ins_sig_signed">署名済み</string>
+    <string name="ins_sig_unsigned">署名なし</string>
+    <string name="ins_fact_size">インストールするサイズ</string>
+    <string name="ins_fact_android">Android</string>
+    <string name="ins_android_range">%1$s 以上 · 対象 %2$s</string>
+    <string name="ins_fact_abi">プロセッサ</string>
+    <string name="ins_abi_any">すべて</string>
+    <string name="ins_fact_build">ビルド</string>
+    <string name="ins_build_release">リリース</string>
+    <string name="ins_build_debuggable">デバッグ可能</string>
+    <string name="ins_build_test_only">テスト専用</string>
+    <plurals name="ins_perms_count">
+        <item quantity="one">%d 件の権限</item>
+        <item quantity="other">%d 件の権限</item>
+    </plurals>
+    <plurals name="ins_perms_consent">
+        <item quantity="one">同意が必要 %d 件</item>
+        <item quantity="other">同意が必要 %d 件</item>
+    </plurals>
+    <string name="ins_perms_none">権限を求めません</string>
+    <string name="ins_tag_new">新規</string>
+    <string name="ins_tag_new_count">新規 %1$d</string>
+    <string name="ins_tag_consent">同意</string>
+    <string name="ins_parts">パーツ</string>
+    <string name="ins_parts_summary">%2$d 個中 %1$d 個 · %3$s</string>
+    <string name="ins_components">コンポーネント</string>
+    <string name="ins_count">%1$s %2$d</string>
+    <string name="ins_signature">署名</string>
+    <string name="ins_options">オプション</string>
+    <string name="ins_options_default">既定のまま</string>
+    <string name="ins_perms_added">この更新で追加</string>
+    <string name="ins_perms_needs_consent">同意が必要</string>
+    <string name="ins_perms_other">そのほか</string>
+    <plurals name="ins_show_more">
+        <item quantity="one">ほか %d 件を表示</item>
+        <item quantity="other">ほか %d 件を表示</item>
+    </plurals>
+    <string name="ins_part_base">ベース</string>
+    <string name="ins_part_features">機能</string>
+    <string name="ins_part_languages">言語</string>
+    <string name="ins_part_densities">画面密度</string>
+    <string name="ins_part_abis">プロセッサ</string>
+    <string name="ins_part_other">そのほか</string>
+    <string name="ins_part_expansion">拡張ファイル</string>
+    <string name="ins_part_required">必須</string>
+    <string name="ins_part_fits">この端末に合う</string>
+    <string name="ins_part_expansion_summary">Android/obb にコピー</string>
+    <string name="ins_activities">アクティビティ</string>
+    <string name="ins_services">サービス</string>
+    <string name="ins_receivers">レシーバー</string>
+    <string name="ins_providers">プロバイダ</string>
+    <string name="ins_activity">アクティビティ</string>
+    <string name="ins_service">サービス</string>
+    <string name="ins_receiver">レシーバー</string>
+    <string name="ins_provider">プロバイダ</string>
+    <string name="ins_component_counts">%1$d · 公開 %2$d</string>
+    <string name="ins_usable">ほかのアプリに公開</string>
+    <string name="ins_usable_none">なし</string>
+    <string name="ins_open_to_all">すべてのアプリに公開</string>
+    <string name="ins_guarded">%1$s が必要</string>
+    <string name="ins_sig_certificate">証明書の SHA-256</string>
+    <string name="ins_sig_schemes">署名方式</string>
+    <string name="ins_scheme_absent">%1$s なし</string>
+    <string name="ins_sig_matches_summary">そのまま更新できます</string>
+    <string name="ins_sig_differs_summary">インストールするには、先にインストール済みのアプリをアンインストールします</string>
+    <string name="ins_debuggable">デバッグ可能</string>
+    <string name="ins_test_only">テスト専用</string>
+    <string name="ins_yes">はい</string>
+    <string name="ins_no">いいえ</string>
+    <string name="ins_cancel">キャンセル</string>
+    <string name="ins_install">インストール</string>
+    <string name="ins_close">閉じる</string>
+    <string name="ins_settings">設定</string>
+    <string name="ins_background">バックグラウンドで続ける</string>
+    <string name="ins_installing">インストールしています</string>
+    <string name="ins_updating">更新しています</string>
+    <string name="ins_downgrading">ダウングレードしています</string>
+    <string name="ins_reinstalling">再インストールしています</string>
+    <string name="ins_installed">インストールしました</string>
+    <string name="ins_updated">更新しました</string>
+    <string name="ins_downgraded">ダウングレードしました</string>
+    <string name="ins_reinstalled">再インストールしました</string>
+    <string name="ins_not_installed">インストールできませんでした</string>
+    <string name="ins_not_updated">更新できませんでした</string>
+    <string name="ins_not_downgraded">ダウングレードできませんでした</string>
+    <string name="ins_not_reinstalled">再インストールできませんでした</string>
+    <string name="ins_step_copying">ファイルをコピーしています · %1$s / %2$s</string>
+    <string name="ins_step_installing">Android がアプリをインストールしています</string>
+    <string name="ins_step_finishing">仕上げています</string>
+    <string name="ins_step_uninstalling">インストール済みのアプリをアンインストールしています</string>
+    <string name="ins_uninstall_and_install">アンインストールしてインストール</string>
+    <string name="ins_data_deleted">アンインストールしてインストールすると、このアプリのデータはすべて削除されます。</string>
+    <string name="ins_note_obb_failed">拡張ファイルをコピーできませんでした：%1$s</string>
+    <string name="ins_note_deny_failed">%1$s を拒否できませんでした</string>
+    <string name="ins_note_not_deleted">「%1$s」を削除できませんでした</string>
+    <string name="ins_note_not_opened">このアプリには開く画面がありません</string>
+    <plurals name="ins_batch_title">
+        <item quantity="one">%d 個のアプリをインストール</item>
+        <item quantity="other">%d 個のアプリをインストール</item>
+    </plurals>
+    <string name="ins_batch_note">オプションはすべてのアプリに適用されます</string>
+    <string name="ins_batch_result">%2$d 個中 %1$d 個をインストールしました</string>
+    <string name="ins_install_all">すべてインストール</string>
+    <string name="ins_stop_rest">残りを中止</string>
+    <string name="ins_waiting">待機中</string>
+    <string name="ins_succeeded">完了</string>
+    <string name="ins_failed">失敗</string>
+    <string name="ins_stopped">中止</string>
+    <string name="ins_skipped">選択なし</string>
+    <string name="ins_unknown_title">不明なアプリのインストール</string>
+    <string name="ins_unknown_body">セキュリティ上の理由から、お使いのスマートフォンでは現在、この提供元からの不明なアプリをインストールすることはできません。これは [設定] で変更できます。</string>
+    <string name="ins_unknown_no_request">%1$s はアプリをインストールできません。Android に「不明なアプリのインストール」を求めていません。</string>
+    <string name="ins_blocked">このユーザーはアプリをインストールできません</string>
+    <string name="ins_uninstall">アンインストール</string>
+    <string name="ins_uninstall_update">アップデートのアンインストール</string>
+    <string name="ins_uninstall_sub">%1$s · データ %2$s</string>
+    <string name="ins_keep_data">アプリのデータを残す</string>
+    <string name="ins_keep_data_summary">同じアプリを後でインストールするときに使う</string>
+    <string name="ins_uninstall_all_users">すべてのユーザーからアンインストール</string>
+    <string name="ins_uninstall_all_users_summary">この端末のすべてのユーザーから削除</string>
+    <string name="ins_archive_instead">代わりにアーカイブ</string>
+    <string name="ins_archive_instead_summary">データとアイコンを残し、アイコンから戻せる</string>
+    <string name="ins_archive">アーカイブ</string>
+    <string name="ins_system_update">アップデートを削除し、システムのバージョンを残します</string>
+    <string name="ins_uninstalling">アンインストールしています</string>
+    <string name="ins_archiving">アーカイブしています</string>
+    <string name="ins_not_uninstalled">アンインストールできませんでした</string>
+    <string name="ins_not_archived">アーカイブできませんでした</string>
+    <string name="ins_channel">アプリのインストール</string>
+</resources>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.installer.sheet">
+
+    <!-- Reads the install history; Lujarch Settings shows and clears it. -->
+    <permission
+        android:name="org.lujarch.installer.permission.HISTORY"
+        android:protectionLevel="signature" />
+
+    <!-- Grant all and Deny all. -->
+    <uses-permission android:name="android.permission.INSTALL_GRANT_RUNTIME_PERMISSIONS" />
+    <uses-permission android:name="android.permission.REVOKE_RUNTIME_PERMISSIONS" />
+    <!-- Updates by other apps ask first. -->
+    <uses-permission android:name="android.permission.ENFORCE_UPDATE_OWNERSHIP" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!-- Opening or sharing an APK or an APK bundle, and Install from files (INS-1, INS-4). -->
+        <activity
+            android:name="org.lujarch.installer.sheet.InstallActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="standard"
+            android:taskAffinity="org.lujarch.installer"
+            android:theme="@style/Theme.LujarchInstallerSheet">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/x-apks" />
+                <data android:mimeType="application/xapk-package-archive" />
+                <data android:mimeType="application/vnd.apkm" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+                <data android:mimeType="application/x-apks" />
+                <data android:mimeType="application/xapk-package-archive" />
+                <data android:mimeType="application/vnd.apkm" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="org.lujarch.installer.action.INSTALL_FROM_FILES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Uninstall an app (INS-7); Package installer's uninstall entry forwards here. -->
+        <activity
+            android:name="org.lujarch.installer.sheet.UninstallActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity="org.lujarch.installer.uninstall"
+            android:theme="@style/Theme.LujarchInstallerSheet" />
+
+        <!-- Keeps an install going when the sheet is closed, with its progress. -->
+        <service
+            android:name="org.lujarch.installer.sheet.InstallService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Installing apps the owner chose in Package installer" />
+        </service>
+
+        <!-- The install history (INS-6). -->
+        <provider
+            android:name="org.lujarch.installer.sheet.HistoryProvider"
+            android:authorities="org.lujarch.installer.history"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="org.lujarch.installer.permission.HISTORY" />
+
+        <!-- Every install and update on the phone: Android tells Package installer of new apps
+             and, as the required verifier, of updates. -->
+        <receiver
+            android:name="org.lujarch.installer.sheet.HistoryReceiver"
+            android:directBootAware="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

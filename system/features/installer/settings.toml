@@ -1,0 +1,67 @@
+# The defaults the installer's options start from (Settings > Apps > App installer > Default
+# options); the installer's own options apply to one install.
+
+[allow_downgrade]
+table = "secure"
+type = "bool"
+default = false
+item = "INS-3"
+
+# 0 this user, 1 all users.
+[install_for]
+table = "secure"
+type = "int"
+default = 0
+item = "INS-3"
+
+# 0 ask as usual, 1 grant all, 2 deny all.
+[permissions]
+table = "secure"
+type = "int"
+default = 0
+item = "INS-3"
+
+[allow_test_only]
+table = "secure"
+type = "bool"
+default = false
+item = "INS-3"
+
+[allow_old_sdk]
+table = "secure"
+type = "bool"
+default = false
+item = "INS-3"
+
+# A processor type the phone runs, as Build.SUPPORTED_ABIS names it; empty: automatic.
+[abi]
+table = "secure"
+type = "string"
+default = ""
+item = "INS-3"
+
+[ask_updates]
+table = "secure"
+type = "bool"
+default = false
+item = "INS-3"
+
+# 0 as Android chooses, 1 speed profile, 2 speed, 3 verify only.
+[optimization]
+table = "secure"
+type = "int"
+default = 0
+item = "INS-3"
+
+# 0 done, 1 open, 2 app info.
+[after]
+table = "secure"
+type = "int"
+default = 0
+item = "INS-3"
+
+[delete_file]
+table = "secure"
+type = "bool"
+default = false
+item = "INS-3"

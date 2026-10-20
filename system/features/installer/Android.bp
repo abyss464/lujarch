@@ -1,0 +1,50 @@
+// The installer's options with their defaults, the reasons an install fails, and the install
+// history's contract: used by the installer in Package installer and by the settings pages.
+android_library {
+    name: "LujarchInstaller",
+    srcs: ["src/installer/**/*.kt"],
+    manifest: "src/installer/AndroidManifest.xml",
+    resource_dirs: ["src/installer/res"],
+    platform_apis: true,
+    visibility: ["//visibility:public"],
+}
+
+// The installer and uninstaller sheets, the install history and its receiver, built into
+// Package installer.
+android_library {
+    name: "LujarchInstallerSheet",
+    srcs: ["src/sheet/**/*.kt"],
+    manifest: "src/sheet/AndroidManifest.xml",
+    resource_dirs: ["src/sheet/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchInstaller",
+        "PlatformComposeCore",
+        "androidx.activity_activity-compose",
+        "androidx.compose.animation_animation",
+        "androidx.compose.foundation_foundation",
+        "androidx.compose.material3_material3",
+        "androidx.compose.runtime_runtime",
+        "androidx.compose.ui_ui",
+        "androidx.core_core-ktx",
+        "androidx.lifecycle_lifecycle-runtime-ktx",
+        "kotlinx-coroutines-android",
+        "kotlinx-coroutines-core",
+    ],
+    kotlincflags: ["-Xjvm-default=all"],
+    visibility: ["//visibility:public"],
+}
+
+// The installer's pages in Lujarch Settings: Settings > Apps > App installer.
+android_library {
+    name: "LujarchInstallerSettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+        "LujarchInstaller",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}

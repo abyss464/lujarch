@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_install_for">Install for</string>
+    <string name="ins_this_user">This user</string>
+    <string name="ins_all_users">All users</string>
+    <string name="ins_permissions">Permissions</string>
+    <string name="ins_permissions_ask">Ask as usual</string>
+    <string name="ins_permissions_grant">Grant all</string>
+    <string name="ins_permissions_deny">Deny all</string>
+    <string name="ins_permissions_grant_all">Grant all permissions</string>
+    <string name="ins_permissions_deny_all">Deny all permissions</string>
+    <string name="ins_optimization">Optimization</string>
+    <string name="ins_optimize_auto">Automatic</string>
+    <string name="ins_optimize_speed_profile">Profile</string>
+    <string name="ins_optimize_speed">Speed</string>
+    <string name="ins_optimize_verify">Verify only</string>
+    <string name="ins_after">After installing</string>
+    <string name="ins_after_done">Done</string>
+    <string name="ins_after_open">Open</string>
+    <string name="ins_after_info">App info</string>
+    <string name="ins_abi">Processor type</string>
+    <string name="ins_abi_auto">Automatic</string>
+    <string name="ins_allow_downgrade">Allow downgrade</string>
+    <string name="ins_allow_downgrade_summary">Where Android allows it</string>
+    <string name="ins_allow_test_only">Allow test-only apps</string>
+    <string name="ins_allow_old_sdk">Allow apps for old Android versions</string>
+    <string name="ins_ask_updates">Updates by other apps ask first</string>
+    <string name="ins_ask_updates_summary">When another installer updates the app</string>
+    <string name="ins_delete_file">Delete the file after installing</string>
+    <string name="ins_kind_new">New</string>
+    <string name="ins_kind_update">Update</string>
+    <string name="ins_kind_downgrade">Downgrade</string>
+    <string name="ins_kind_reinstall">Reinstall</string>
+    <string name="ins_fail_already_exists">An app with this package name is already installed in a way that does not allow this install.</string>
+    <string name="ins_fail_invalid">The file is not a valid app package, or it is damaged.</string>
+    <string name="ins_fail_manifest">The app\'s manifest is missing or malformed.</string>
+    <string name="ins_fail_storage">There is not enough storage space.</string>
+    <string name="ins_fail_duplicate">The app is already being installed.</string>
+    <string name="ins_fail_signature">The file is signed differently from the installed app: it was signed by another author, or its signing key changed.</string>
+    <string name="ins_fail_unsigned">The file has no valid signature.</string>
+    <string name="ins_fail_shared_user">The app shares a user ID with another app that does not match it.</string>
+    <string name="ins_fail_library">A library the app needs is not on the phone.</string>
+    <string name="ins_fail_dexopt">Android could not prepare the app\'s code.</string>
+    <string name="ins_fail_older_sdk">The app needs a newer version of Android.</string>
+    <string name="ins_fail_newer_sdk">The app is made for an older version of Android than this one allows.</string>
+    <string name="ins_fail_old_target">The app is made for an Android version too old to install on this phone. Allow apps for old Android versions lets it install where Android allows it.</string>
+    <string name="ins_fail_provider">The app declares a content provider that another installed app already has.</string>
+    <string name="ins_fail_permission">The app defines a permission another installed app already defines.</string>
+    <string name="ins_fail_test_only">The app is for testing only. Allow test-only apps lets it install.</string>
+    <string name="ins_fail_abi">The app has no code for this phone\'s processor.</string>
+    <string name="ins_fail_feature">The app needs a feature this phone does not have.</string>
+    <string name="ins_fail_verification">The install was not verified in time, or its verification refused it.</string>
+    <string name="ins_fail_downgrade">The installed version is newer, and Android does not allow this downgrade.</string>
+    <string name="ins_fail_missing_split">The app needs a part of its bundle that was not chosen.</string>
+    <string name="ins_fail_restricted">Installing apps is restricted on this phone.</string>
+    <string name="ins_fail_aborted">The install was stopped.</string>
+    <string name="ins_fail_unknown">Android did not install the app.</string>
+    <string name="ins_fail_already_exists_short">Conflicts with the installed app</string>
+    <string name="ins_fail_invalid_short">Not a valid package</string>
+    <string name="ins_fail_manifest_short">Malformed manifest</string>
+    <string name="ins_fail_storage_short">Not enough storage</string>
+    <string name="ins_fail_duplicate_short">Already installing</string>
+    <string name="ins_fail_signature_short">Signature differs</string>
+    <string name="ins_fail_unsigned_short">Not signed</string>
+    <string name="ins_fail_shared_user_short">Shared user ID differs</string>
+    <string name="ins_fail_library_short">Library missing</string>
+    <string name="ins_fail_dexopt_short">Code not prepared</string>
+    <string name="ins_fail_older_sdk_short">Needs a newer Android</string>
+    <string name="ins_fail_newer_sdk_short">Made for an older Android</string>
+    <string name="ins_fail_old_target_short">Made for an old Android</string>
+    <string name="ins_fail_provider_short">Provider conflict</string>
+    <string name="ins_fail_permission_short">Permission conflict</string>
+    <string name="ins_fail_test_only_short">Test only</string>
+    <string name="ins_fail_abi_short">No code for this processor</string>
+    <string name="ins_fail_feature_short">Feature missing</string>
+    <string name="ins_fail_verification_short">Not verified</string>
+    <string name="ins_fail_downgrade_short">Downgrade not allowed</string>
+    <string name="ins_fail_missing_split_short">Part missing</string>
+    <string name="ins_fail_restricted_short">Restricted</string>
+    <string name="ins_fail_aborted_short">Stopped</string>
+    <string name="ins_fail_unknown_short">Not installed</string>
+</resources>

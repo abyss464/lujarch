@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_title">App installer</string>
+    <string name="ins_summary">Default options, install history</string>
+    <string name="ins_apps">Apps</string>
+    <string name="ins_keywords">APK, APKS, XAPK, APKM, bundle, install, uninstall, downgrade, history</string>
+    <string name="ins_from_files">Install from files</string>
+    <string name="ins_from_files_summary">APK, APKS, XAPK, APKM, zip of APKs</string>
+    <string name="ins_defaults">Default options</string>
+    <string name="ins_defaults_summary">What the installer’s options start from</string>
+    <string name="ins_history">Install history</string>
+    <string name="ins_history_search">Each install and update, and its result</string>
+    <string name="ins_history_empty">No installs yet</string>
+    <string name="ins_clear_history">Clear history</string>
+    <string name="ins_clear_history_message">The install history is deleted.</string>
+    <string name="ins_clear">Clear</string>
+    <string name="ins_result_ok">Succeeded</string>
+    <string name="ins_result_failed">Failed</string>
+    <string name="ins_history_line_title">%1$s %2$s</string>
+    <string name="ins_history_line">%1$s · %2$s · %3$s</string>
+    <string name="ins_installer_unknown">Unknown installer</string>
+    <string name="ins_failure_code">Code: %1$s</string>
+    <string name="ins_failure_message">System message: %1$s</string>
+    <string name="ins_error_from_files">Couldn’t open the installer</string>
+    <string name="ins_error_history">Couldn’t load the install history</string>
+    <string name="ins_error_clear">Couldn’t clear the install history</string>
+    <string name="ins_error_default">Couldn’t save the default</string>
+</resources>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_title">アプリのインストール</string>
+    <string name="ins_summary">既定のオプション、インストール履歴</string>
+    <string name="ins_apps">アプリ</string>
+    <string name="ins_keywords">APK, APKS, XAPK, APKM, バンドル, インストール, アンインストール, ダウングレード, 履歴</string>
+    <string name="ins_from_files">ファイルからインストール</string>
+    <string name="ins_from_files_summary">APK、APKS、XAPK、APKM、APK の ZIP</string>
+    <string name="ins_defaults">既定のオプション</string>
+    <string name="ins_defaults_summary">インストーラのオプションの初期値</string>
+    <string name="ins_history">インストール履歴</string>
+    <string name="ins_history_search">それぞれのインストールと更新、その結果</string>
+    <string name="ins_history_empty">まだインストールはありません</string>
+    <string name="ins_clear_history">履歴を消去</string>
+    <string name="ins_clear_history_message">インストール履歴を削除します。</string>
+    <string name="ins_clear">消去</string>
+    <string name="ins_result_ok">成功</string>
+    <string name="ins_result_failed">失敗</string>
+    <string name="ins_history_line_title">%1$s %2$s</string>
+    <string name="ins_history_line">%1$s · %2$s · %3$s</string>
+    <string name="ins_installer_unknown">不明なインストーラ</string>
+    <string name="ins_failure_code">コード：%1$s</string>
+    <string name="ins_failure_message">システムのメッセージ：%1$s</string>
+    <string name="ins_error_from_files">インストーラを開けませんでした</string>
+    <string name="ins_error_history">インストール履歴を読み込めませんでした</string>
+    <string name="ins_error_clear">インストール履歴を消去できませんでした</string>
+    <string name="ins_error_default">既定値を保存できませんでした</string>
+</resources>

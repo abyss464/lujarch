@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Lujarch Project
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <string name="ins_unreadable_open">无法打开：%1$s</string>
+    <string name="ins_unreadable_not_zip">不是 APK 或 APK 包</string>
+    <string name="ins_unreadable_no_apk">不含 APK</string>
+    <string name="ins_unreadable_no_base">包含 %1$s 的部件，但不含其基础 APK</string>
+    <string name="ins_unreadable_parse">Android 无法读取它：%1$s</string>
+    <string name="ins_unreadable_manifest">无法读取其清单</string>
+    <string name="ins_cannot_read">无法读取文件</string>
+    <string name="ins_cannot_read_some">无法读取</string>
+    <string name="ins_reading">正在读取文件</string>
+    <string name="ins_amount">%1$s / %2$s</string>
+    <string name="ins_version_change">%1$s → %2$s</string>
+    <string name="ins_code">（代码 %1$d）</string>
+    <string name="ins_code_change">（代码 %1$d → %2$d）</string>
+    <string name="ins_sig_matches">签名与已安装的应用一致</string>
+    <string name="ins_sig_differs">签名与已安装的应用不同</string>
+    <string name="ins_sig_signed">已签名</string>
+    <string name="ins_sig_unsigned">未签名</string>
+    <string name="ins_fact_size">要安装的大小</string>
+    <string name="ins_fact_android">Android</string>
+    <string name="ins_android_range">%1$s 及更高版本 · 目标 %2$s</string>
+    <string name="ins_fact_abi">处理器</string>
+    <string name="ins_abi_any">任意</string>
+    <string name="ins_fact_build">构建</string>
+    <string name="ins_build_release">发布版</string>
+    <string name="ins_build_debuggable">可调试</string>
+    <string name="ins_build_test_only">仅供测试</string>
+    <plurals name="ins_perms_count">
+        <item quantity="one">%d 项权限</item>
+        <item quantity="other">%d 项权限</item>
+    </plurals>
+    <plurals name="ins_perms_consent">
+        <item quantity="one">%d 项需要同意</item>
+        <item quantity="other">%d 项需要同意</item>
+    </plurals>
+    <string name="ins_perms_none">不请求任何权限</string>
+    <string name="ins_tag_new">新增</string>
+    <string name="ins_tag_new_count">新增 %1$d</string>
+    <string name="ins_tag_consent">需同意</string>
+    <string name="ins_parts">部件</string>
+    <string name="ins_parts_summary">%2$d 个中的 %1$d 个 · %3$s</string>
+    <string name="ins_components">组件</string>
+    <string name="ins_count">%1$s %2$d</string>
+    <string name="ins_signature">签名</string>
+    <string name="ins_options">选项</string>
+    <string name="ins_options_default">默认设置</string>
+    <string name="ins_perms_added">此更新中新增</string>
+    <string name="ins_perms_needs_consent">需要同意</string>
+    <string name="ins_perms_other">其他</string>
+    <plurals name="ins_show_more">
+        <item quantity="one">再显示 %d 项</item>
+        <item quantity="other">再显示 %d 项</item>
+    </plurals>
+    <string name="ins_part_base">基础</string>
+    <string name="ins_part_features">功能</string>
+    <string name="ins_part_languages">语言</string>
+    <string name="ins_part_densities">屏幕密度</string>
+    <string name="ins_part_abis">处理器类型</string>
+    <string name="ins_part_other">其他</string>
+    <string name="ins_part_expansion">扩展文件</string>
+    <string name="ins_part_required">必需</string>
+    <string name="ins_part_fits">适合此手机</string>
+    <string name="ins_part_expansion_summary">复制到 Android/obb</string>
+    <string name="ins_activities">活动</string>
+    <string name="ins_services">服务</string>
+    <string name="ins_receivers">接收器</string>
+    <string name="ins_providers">提供程序</string>
+    <string name="ins_activity">活动</string>
+    <string name="ins_service">服务</string>
+    <string name="ins_receiver">接收器</string>
+    <string name="ins_provider">提供程序</string>
+    <string name="ins_component_counts">%1$d · 共享 %2$d</string>
+    <string name="ins_usable">与其他应用共享</string>
+    <string name="ins_usable_none">无</string>
+    <string name="ins_open_to_all">对所有应用开放</string>
+    <string name="ins_guarded">需要 %1$s</string>
+    <string name="ins_sig_certificate">证书 SHA-256</string>
+    <string name="ins_sig_schemes">签名方案</string>
+    <string name="ins_scheme_absent">无 %1$s</string>
+    <string name="ins_sig_matches_summary">可以直接更新</string>
+    <string name="ins_sig_differs_summary">安装前需先卸载已安装的应用</string>
+    <string name="ins_debuggable">可调试</string>
+    <string name="ins_test_only">仅供测试</string>
+    <string name="ins_yes">是</string>
+    <string name="ins_no">否</string>
+    <string name="ins_cancel">取消</string>
+    <string name="ins_install">安装</string>
+    <string name="ins_close">关闭</string>
+    <string name="ins_settings">设置</string>
+    <string name="ins_background">在后台继续</string>
+    <string name="ins_installing">正在安装</string>
+    <string name="ins_updating">正在更新</string>
+    <string name="ins_downgrading">正在降级</string>
+    <string name="ins_reinstalling">正在重新安装</string>
+    <string name="ins_installed">已安装</string>
+    <string name="ins_updated">已更新</string>
+    <string name="ins_downgraded">已降级</string>
+    <string name="ins_reinstalled">已重新安装</string>
+    <string name="ins_not_installed">未安装</string>
+    <string name="ins_not_updated">未更新</string>
+    <string name="ins_not_downgraded">未降级</string>
+    <string name="ins_not_reinstalled">未重新安装</string>
+    <string name="ins_step_copying">正在复制文件 · %1$s / %2$s</string>
+    <string name="ins_step_installing">Android 正在安装应用</string>
+    <string name="ins_step_finishing">正在完成</string>
+    <string name="ins_step_uninstalling">正在卸载已安装的应用</string>
+    <string name="ins_uninstall_and_install">卸载并安装</string>
+    <string name="ins_data_deleted">卸载并安装会删除此应用的所有数据。</string>
+    <string name="ins_note_obb_failed">未复制扩展文件：%1$s</string>
+    <string name="ins_note_deny_failed">未拒绝 %1$s</string>
+    <string name="ins_note_not_deleted">未删除“%1$s”</string>
+    <string name="ins_note_not_opened">此应用没有可打开的内容</string>
+    <plurals name="ins_batch_title">
+        <item quantity="one">安装 %d 个应用</item>
+        <item quantity="other">安装 %d 个应用</item>
+    </plurals>
+    <string name="ins_batch_note">选项适用于所有应用</string>
+    <string name="ins_batch_result">已安装 %1$d 个（共 %2$d 个）</string>
+    <string name="ins_install_all">全部安装</string>
+    <string name="ins_stop_rest">停止其余</string>
+    <string name="ins_waiting">等待中</string>
+    <string name="ins_succeeded">完成</string>
+    <string name="ins_failed">失败</string>
+    <string name="ins_stopped">已停止</string>
+    <string name="ins_skipped">未选择</string>
+    <string name="ins_unknown_title">安装未知应用</string>
+    <string name="ins_unknown_body">出于安全考虑，您的手机目前不允许安装来自此来源的未知应用。您可以在“设置”中对此进行更改。</string>
+    <string name="ins_unknown_no_request">%1$s 无法安装应用：它未向 Android 请求“安装未知应用”权限。</string>
+    <string name="ins_blocked">此用户不能安装应用</string>
+    <string name="ins_uninstall">卸载</string>
+    <string name="ins_uninstall_update">卸载更新</string>
+    <string name="ins_uninstall_sub">%1$s · 数据 %2$s</string>
+    <string name="ins_keep_data">保留应用数据</string>
+    <string name="ins_keep_data_summary">供以后安装同一应用时使用</string>
+    <string name="ins_uninstall_all_users">为所有用户卸载</string>
+    <string name="ins_uninstall_all_users_summary">从此手机的所有用户中移除</string>
+    <string name="ins_archive_instead">改为归档</string>
+    <string name="ins_archive_instead_summary">保留其数据和图标，可通过图标恢复</string>
+    <string name="ins_archive">归档</string>
+    <string name="ins_system_update">移除更新并保留系统版本</string>
+    <string name="ins_uninstalling">正在卸载</string>
+    <string name="ins_archiving">正在归档</string>
+    <string name="ins_not_uninstalled">未卸载</string>
+    <string name="ins_not_archived">未归档</string>
+    <string name="ins_channel">应用安装</string>
+</resources>
