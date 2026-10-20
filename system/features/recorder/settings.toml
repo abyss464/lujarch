@@ -215,6 +215,13 @@ type = "int"
 default = 0
 item = "REC-4"
 
+# The profile last chosen, by name; empty: none.
+[profile_chosen]
+table = "secure"
+type = "string"
+default = ""
+item = "REC-1"
+
 # The saved profiles: a JSON object of name to the settings it holds.
 [profiles]
 table = "secure"

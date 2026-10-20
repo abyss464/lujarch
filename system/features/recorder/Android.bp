@@ -1,7 +1,14 @@
-// Screen record's profiles, used by the recording dialog in SystemUI and by the settings page.
-java_library {
-    name: "LujarchRecorderProfiles",
-    srcs: ["src/profiles/**/*.java"],
+// Screen record's settings, profiles and pages, the strings they show, and what the settings come
+// to on the phone's encoders: used by the recorder and its card in SystemUI and by the settings
+// pages.
+android_library {
+    name: "LujarchRecorder",
+    srcs: [
+        "src/recorder/**/*.java",
+        "src/recorder/**/*.kt",
+    ],
+    manifest: "src/recorder/AndroidManifest.xml",
+    resource_dirs: ["src/recorder/res"],
     platform_apis: true,
     visibility: ["//visibility:public"],
 }
@@ -15,7 +22,7 @@ android_library {
     platform_apis: true,
     static_libs: [
         "LujarchSettingsPages",
-        "LujarchRecorderProfiles",
+        "LujarchRecorder",
     ],
     libs: ["LujarchSettingsContribution"],
 }

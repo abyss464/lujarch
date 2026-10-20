@@ -59,6 +59,18 @@ public final class RecorderProfiles {
     private RecorderProfiles() {
     }
 
+    /** The name a profile shows. */
+    public static String label(Context context, String name) {
+        switch (name) {
+            case HIGH_QUALITY:
+                return context.getString(R.string.rec_profile_high);
+            case SMALL_FILE:
+                return context.getString(R.string.rec_profile_small);
+            default:
+                return name;
+        }
+    }
+
     public static boolean isBuiltIn(String name) {
         return name.startsWith("@");
     }
@@ -160,7 +172,11 @@ public final class RecorderProfiles {
             Log.e(TAG, "profile " + name + " not renamed", e);
             return false;
         }
-        return writeSaved(context, saved);
+        if (!writeSaved(context, saved)) return false;
+        if (name.equals(RecorderConfig.chosenProfile(context))) {
+            RecorderConfig.set(context, "profile_chosen", newName);
+        }
+        return true;
     }
 
     public static boolean delete(Context context, String name) {
