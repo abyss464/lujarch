@@ -60,6 +60,7 @@
     <string name="ins_signature">署名</string>
     <string name="ins_options">オプション</string>
     <string name="ins_options_default">既定のまま</string>
+    <string name="ins_options_by_app">%1$s が選択</string>
     <string name="ins_perms_added">この更新で追加</string>
     <string name="ins_perms_needs_consent">同意が必要</string>
     <string name="ins_perms_other">そのほか</string>

@@ -18,6 +18,7 @@
 
 package org.lujarch.installer.sheet
 
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -289,7 +290,7 @@ private fun DetailsPage(work: Work, app: AppFile, single: Boolean, onPage: (InsP
                 if (fitsAll) stringResource(R.string.ins_part_fits) else Texts.size(context, work.size(app)),
             ),
             icon = InsIcons.parts,
-            onClick = { onPage(InsPage.PARTS) },
+            onClick = if (work.session != null) null else ({ onPage(InsPage.PARTS) }),
         )
     }
     val c = app.components
@@ -313,7 +314,7 @@ private fun DetailsPage(work: Work, app: AppFile, single: Boolean, onPage: (InsP
         stringResource(R.string.ins_options),
         optionsSummary(work),
         icon = InsIcons.options,
-        onClick = { onPage(InsPage.OPTIONS) },
+        onClick = if (work.session != null) null else ({ onPage(InsPage.OPTIONS) }),
     )
 }
 
@@ -348,6 +349,17 @@ private fun permissionsSummary(app: AppFile): String {
 @Composable
 private fun optionsSummary(work: Work): String {
     val context = LocalContext.current
+    if (work.session != null) {
+        val pkg = work.origin.callingPackage
+        val label = pkg?.let {
+            try {
+                context.packageManager.getApplicationInfo(it, PackageManager.ApplicationInfoFlags.of(0)).loadLabel(context.packageManager).toString()
+            } catch (e: PackageManager.NameNotFoundException) {
+                null
+            }
+        } ?: pkg.orEmpty()
+        return stringResource(R.string.ins_options_by_app, label)
+    }
     val list = work.options.summary(context)
     return if (list.isEmpty()) stringResource(R.string.ins_options_default) else list.joinToString(" · ")
 }

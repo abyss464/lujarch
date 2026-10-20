@@ -60,6 +60,7 @@
     <string name="ins_signature">签名</string>
     <string name="ins_options">选项</string>
     <string name="ins_options_default">默认设置</string>
+    <string name="ins_options_by_app">由 %1$s 选择</string>
     <string name="ins_perms_added">此更新中新增</string>
     <string name="ins_perms_needs_consent">需要同意</string>
     <string name="ins_perms_other">其他</string>

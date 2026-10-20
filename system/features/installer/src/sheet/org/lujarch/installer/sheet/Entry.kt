@@ -18,15 +18,17 @@ package org.lujarch.installer.sheet
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.util.Log
 import org.lujarch.installer.TAG
 
 /** Package installer's own entries, handed to the sheets with the app that opened them. */
 object Entry {
-    /** Opens [activity]'s app file in the installer's sheet; false for a session's confirmation. */
+    /** Opens [activity]'s app file, or another app's session that waits for the owner, in the installer's sheet. */
     @JvmStatic
     fun install(activity: Activity): Boolean {
         val intent = activity.intent
+        if (intent.action == PackageInstaller.ACTION_CONFIRM_INSTALL) return forward(activity, InstallActivity::class.java)
         if (intent.action != Intent.ACTION_VIEW && intent.action != Intent.ACTION_INSTALL_PACKAGE) return false
         val scheme = intent.data?.scheme
         if (scheme != "content" && scheme != "file") return false

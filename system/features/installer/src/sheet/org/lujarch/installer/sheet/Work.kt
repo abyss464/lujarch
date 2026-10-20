@@ -76,6 +76,8 @@ class Work(
     val sources: List<SourceFile>,
     val origin: Origin,
     val returnResult: Boolean,
+    /** Another app's session that waits for the owner; it installs as that app staged it. */
+    val session: Int? = null,
 ) {
     var gate by mutableStateOf<Gate?>(null)
     var readDone by mutableStateOf(0L)
@@ -177,20 +179,22 @@ class Work(
 
     private suspend fun installOne(app: AppFile) {
         val pkg = app.packageName
-        status[pkg] = AppStatus.Working(Step.Copying(0, size(app)), 0f)
+        status[pkg] = AppStatus.Working(if (session != null) Step.Installing else Step.Copying(0, size(app)), 0f)
         var shown = -1f
-        val outcome =
-            Installer(context).install(app, app.partsToInstall(parts[pkg].orEmpty()), options, origin) { step, p ->
-                if (p - shown >= 0.005f || step !is Step.Copying) {
-                    shown = p
-                    main.post { if (status[pkg] is AppStatus.Working) status[pkg] = AppStatus.Working(step, p) }
-                }
+        val onStep = { step: Step, p: Float ->
+            if (p - shown >= 0.005f || step !is Step.Copying) {
+                shown = p
+                main.post { if (status[pkg] is AppStatus.Working) status[pkg] = AppStatus.Working(step, p) }
             }
+        }
+        val outcome =
+            if (session != null) Installer(context).confirm(session, onStep)
+            else Installer(context).install(app, app.partsToInstall(parts[pkg].orEmpty()), options, origin, onStep)
         when (outcome) {
             is Outcome.Installed -> {
                 legacyResult = android.content.pm.PackageManager.INSTALL_SUCCEEDED
                 val notes = ArrayList(outcome.notes)
-                if (options.deleteFile) {
+                if (options.deleteFile && session == null) {
                     val left = withContext(Dispatchers.IO) { Installer(context).deleteSources(app.sources) }
                     left.forEach { notes += context.getString(R.string.ins_note_not_deleted, it) }
                 }
@@ -244,6 +248,8 @@ class Work(
             inBackground = true
             return
         }
+        // The app that staged the session hears that the owner did not install it.
+        if (session != null && !finished) Installer(context).decline(session)
         job?.cancel()
         works.remove(id)
         scope.launch(Dispatchers.IO) { dir.deleteRecursively() }
@@ -254,9 +260,9 @@ class Work(
         private val works = java.util.concurrent.ConcurrentHashMap<String, Work>()
         private val started = System.currentTimeMillis()
 
-        fun create(context: Context, sources: List<SourceFile>, origin: Origin, returnResult: Boolean): Work {
+        fun create(context: Context, sources: List<SourceFile>, origin: Origin, returnResult: Boolean, session: Int? = null): Work {
             val app = context.applicationContext
-            val work = Work(app, UUID.randomUUID().toString(), sources, origin, returnResult)
+            val work = Work(app, UUID.randomUUID().toString(), sources, origin, returnResult, session)
             works[work.id] = work
             // The files of works gone with an earlier process.
             scope.launch(Dispatchers.IO) {

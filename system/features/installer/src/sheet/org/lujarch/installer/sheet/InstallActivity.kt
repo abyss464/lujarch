@@ -21,6 +21,7 @@ import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -39,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.android.compose.theme.PlatformTheme
+import java.io.File
 import org.lujarch.installer.TAG
 
 /**
@@ -78,6 +80,7 @@ class InstallActivity : ComponentActivity() {
                 return
             }
             intent.action == ACTION_INSTALL_FROM_FILES -> pick.launch(MIME_TYPES)
+            intent.action == PackageInstaller.ACTION_CONFIRM_INSTALL -> fromSession()
             else -> fromIntent(self)
         }
         setContent {
@@ -172,8 +175,24 @@ class InstallActivity : ComponentActivity() {
         start(sources(uris), origin, intent.getBooleanExtra(Intent.EXTRA_RETURN_RESULT, false))
     }
 
-    private fun start(sources: List<SourceFile>, origin: Origin, returnResult: Boolean) {
-        val w = Work.create(this, sources, origin, returnResult)
+    /** Shows the files another app staged in its session, as that app staged them. */
+    private fun fromSession() {
+        val id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+        val info = packageManager.packageInstaller.getSessionInfo(id)
+        val base = info?.resolvedBaseApkPath
+        if (info == null || !info.isSealed || base == null) {
+            Log.e(TAG, "session $id does not wait for the owner")
+            finish()
+            return
+        }
+        val dir = File(base).parentFile
+        val files = dir?.listFiles { f -> f.name.endsWith(".apk") }?.sortedBy { it.name }.orEmpty().ifEmpty { listOf(File(base)) }
+        val origin = Origin(info.installerUid, info.installerPackageName, info.installerUid, info.originatingUri, info.referrerUri, null)
+        start(files.map { SourceFile(Uri.fromFile(it), it.name, it.length()) }, origin, false, id)
+    }
+
+    private fun start(sources: List<SourceFile>, origin: Origin, returnResult: Boolean, session: Int? = null) {
+        val w = Work.create(this, sources, origin, returnResult, session)
         w.gate = gate(this, origin, trusted)
         if (w.gate == null) w.read()
         work = w

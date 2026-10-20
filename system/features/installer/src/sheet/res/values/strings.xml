@@ -60,6 +60,7 @@
     <string name="ins_signature">Signature</string>
     <string name="ins_options">Options</string>
     <string name="ins_options_default">As set by default</string>
+    <string name="ins_options_by_app">Chosen by %1$s</string>
     <string name="ins_perms_added">Added in this update</string>
     <string name="ins_perms_needs_consent">Needs consent</string>
     <string name="ins_perms_other">Other</string>

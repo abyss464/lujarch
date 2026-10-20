@@ -235,6 +235,54 @@ class Installer(private val context: Context, user: UserHandle = context.user) {
             session.commit(pending.intentSender)
         }
 
+    /**
+     * Lets another app's session [id], which waits for the owner, install as that app staged it,
+     * and waits for its end (INS-8).
+     */
+    suspend fun confirm(id: Int, onStep: (Step, Float) -> Unit): Outcome =
+        suspendCancellableCoroutine { cont ->
+            val callback =
+                object : PackageInstaller.SessionCallback() {
+                    override fun onCreated(sessionId: Int) {}
+                    override fun onBadgingChanged(sessionId: Int) {}
+                    override fun onActiveChanged(sessionId: Int, active: Boolean) {}
+
+                    override fun onProgressChanged(sessionId: Int, progress: Float) {
+                        if (sessionId == id) onStep(Step.Installing, progress)
+                    }
+
+                    override fun onFinished(sessionId: Int, success: Boolean) {
+                        if (sessionId != id) return
+                        installer.unregisterSessionCallback(this)
+                        if (!success) Log.e(TAG, "session $id of another app failed")
+                        val outcome =
+                            if (success) Outcome.Installed("", emptyList())
+                            else Outcome.Failed(PackageManager.INSTALL_FAILED_INTERNAL_ERROR, PackageInstaller.STATUS_FAILURE, null)
+                        if (cont.isActive) cont.resume(outcome)
+                    }
+                }
+            installer.registerSessionCallback(callback, Handler(Looper.getMainLooper()))
+            cont.invokeOnCancellation { installer.unregisterSessionCallback(callback) }
+            try {
+                installer.setPermissionsResult(id, true)
+            } catch (e: Exception) {
+                Log.e(TAG, "session $id not confirmed", e)
+                installer.unregisterSessionCallback(callback)
+                if (cont.isActive) {
+                    cont.resume(Outcome.Failed(PackageManager.INSTALL_FAILED_INTERNAL_ERROR, PackageInstaller.STATUS_FAILURE, e.message))
+                }
+            }
+        }
+
+    /** Tells another app's session [id] that the owner did not install it. */
+    fun decline(id: Int) {
+        try {
+            installer.setPermissionsResult(id, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "session $id not declined", e)
+        }
+    }
+
     /** Expansion files and Deny all, once the app is installed; what failed of them. */
     private fun after(app: AppFile, options: InstallOptions): List<String> {
         val notes = ArrayList<String>()
