@@ -2063,10 +2063,10 @@ index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c4
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be4ecdd78f
+index 0000000000000000000000000000000000000000..4ff71dc9daf30e45814b58acf3b0ee413eaf9dd1
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
-@@ -0,0 +1,2310 @@
+@@ -0,0 +1,2324 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2088,6 +2088,7 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +import android.annotation.SuppressLint
 +import android.app.ActivityManager
 +import android.app.ActivityTaskManager.INVALID_TASK_ID
++import android.app.AppOpsManager
 +import android.app.WindowConfiguration
 +import android.content.Context
 +import android.content.pm.ActivityInfo
@@ -2534,7 +2535,7 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +            counted.filter { it !== newcomer && it !== open }.sortedBy { it.lastUsed }
 +        for (item in candidates) {
 +            if (excess <= 0) break
-+            moveToRecents(item)
++            moveToRecents(item, "over the limit")
 +            excess--
 +        }
 +    }
@@ -2543,7 +2544,7 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +     * Makes the small window an ordinary task behind the app on screen, so that it is a card in
 +     * Recents and its app keeps running.
 +     */
-+    private fun moveToRecents(item: LujarchSmallWindowItem) {
++    private fun moveToRecents(item: LujarchSmallWindowItem, why: String) {
 +        val bubble = item.bubble
 +        val taskView = bubble.bubbleTaskView?.taskView
 +        val task = taskView?.taskInfo
@@ -2551,7 +2552,7 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +            controller.dismissBubble(bubble, Bubbles.DISMISS_AGED)
 +            return
 +        }
-+        Log.i(TAG, "moving ${bubble.key} (task ${task.taskId}) to Recents: over the limit")
++        Log.i(TAG, "moving ${bubble.key} (task ${task.taskId}) to Recents: $why")
 +        val wct =
 +            if (controller.bubbleHelper.isAppBubbleTask(task)) {
 +                BubbleUtils.getExitBubbleTransaction(controller.bubbleHelper, task.token,
@@ -2576,7 +2577,7 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +    private fun onSettingsChanged() {
 +        if (!settings.enabled) {
 +            // Off (WIN-1): the dock and its rail are gone; the apps stay in Recents.
-+            items.values.filter { !it.isConversation }.forEach { moveToRecents(it) }
++            items.values.filter { !it.isConversation }.forEach { moveToRecents(it, "small windows are off") }
 +            return
 +        }
 +        items.values.lastOrNull { it.counts }?.let { enforceLimit(it) }
@@ -3223,7 +3224,20 @@ index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be
 +
 +    private fun close(item: LujarchSmallWindowItem) {
 +        hideMenu()
++        // A kept app's card stays in Recents when its small window closes (BG-4).
++        if (isKept(item)) {
++            moveToRecents(item, "closed, and its app is kept")
++            return
++        }
 +        controller.dismissBubble(item.bubble, Bubbles.DISMISS_USER_GESTURE)
++    }
++
++    private fun isKept(item: LujarchSmallWindowItem): Boolean {
++        if (item.isConversation) return false
++        val app = item.bubble.bubbleTaskView?.taskView?.taskInfo?.topActivityInfo?.applicationInfo ?: return false
++        return context.getSystemService(AppOpsManager::class.java)
++            .unsafeCheckOpRawNoThrow(AppOpsManager.OP_LUJARCH_KEEP, app.uid, app.packageName) ==
++            AppOpsManager.MODE_ALLOWED
 +    }
 +
 +    /**
