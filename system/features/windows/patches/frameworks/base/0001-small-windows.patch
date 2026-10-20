@@ -2008,10 +2008,10 @@ index 0000000000000000000000000000000000000000..2c17c44b19babdd3e8c7fc4af14352c4
 +}
 diff --git a/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..7d44b5b2128be638ab4381379f649ee80f4be588
+index 0000000000000000000000000000000000000000..78fd5364b1a8db7f54b7922c189f08be4ecdd78f
 --- /dev/null
 +++ b/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles/LujarchSmallWindowsView.kt
-@@ -0,0 +1,2308 @@
+@@ -0,0 +1,2310 @@
 +/*
 + * Copyright (C) 2026 The Lujarch Project
 + *
@@ -2322,6 +2322,8 @@ index 0000000000000000000000000000000000000000..7d44b5b2128be638ab4381379f649ee8
 +    /** The next shape that comes in starts where its Recents card is (WIN-11). */
 +    fun growNextFrom(from: Rect) {
 +        nextFrom = Rect(from)
++        // Recents leaves for this window, which grows from the card to its place, not into a tile.
++        if (recentsShown) setRecentsShown(false, null, null)
 +    }
 +
 +    /**

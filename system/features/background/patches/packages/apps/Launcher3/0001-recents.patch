@@ -2630,7 +2630,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
          private const val SPEED_UP_STIFFNESS = 100_000f
      }
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsView.java b/quickstep/src/com/android/quickstep/views/RecentsView.java
-index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d3f96a96d 100644
+index 4ca0a119f5eaade708989b74d4c0ed6b55594959..7a1094b38f2cc093b9af7954f9bdacef988413f7 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsView.java
 +++ b/quickstep/src/com/android/quickstep/views/RecentsView.java
 @@ -920,6 +920,10 @@ public abstract class RecentsView<
@@ -2759,25 +2759,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d
      private void animateRotation(int newRotation) {
          AbstractFloatingView.closeAllOpenViewsExcept(mContainer, false, TYPE_REBIND_SAFE);
          AnimatorSet pa = setRecentsChangedOrientation(true);
-@@ -3248,8 +3312,16 @@ public abstract class RecentsView<
-             mAddDesktopButton.setGridTranslationX(translationX);
-         }
- 
-+        // Lujarch's Background (BG-11): on a phone the folded cards sit against the right edge,
-+        // the current card keeping its size there.
-+        float lujarchShift = lujarchGridShift();
-+        if (lujarchShift != 0) {
-+            for (TaskView taskView : getTaskViews()) {
-+                taskView.setGridTranslationX(taskView.getGridTranslationX() + lujarchShift);
-+            }
-+        }
-         mClearAllButton.setGridTranslationPrimary(
--                clearAllTotalTranslationX - snappedTaskGridTranslationX);
-+                clearAllTotalTranslationX - snappedTaskGridTranslationX + lujarchShift);
-         mClearAllButton.setGridScrollOffset(
-                 mIsRtl ? mLastComputedTaskSize.left - mLastComputedGridSize.left
-                         : mLastComputedTaskSize.right - mLastComputedGridSize.right);
-@@ -3641,6 +3713,9 @@ public abstract class RecentsView<
+@@ -3641,6 +3705,9 @@ public abstract class RecentsView<
              mEmptyIcon.setAlpha(alphaInt);
          }
          mActionsView.getContentAlpha().updateValue(mContentAlpha);
@@ -2787,7 +2769,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d
  
          if (alpha > 0) {
              setVisibility(VISIBLE);
-@@ -3678,6 +3753,10 @@ public abstract class RecentsView<
+@@ -3678,6 +3745,10 @@ public abstract class RecentsView<
      protected void onConfigurationChanged(Configuration newConfig) {
          super.onConfigurationChanged(newConfig);
          updateRecentsRotation();
@@ -2798,7 +2780,7 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d
          onOrientationChanged();
          updateEmptyMessageConfiguration();
          if (enableLowResThumbnailPreloading()) {
-@@ -3759,7 +3838,56 @@ public abstract class RecentsView<
+@@ -3759,7 +3830,44 @@ public abstract class RecentsView<
       * returns true.
       */
      public boolean canRemoveTaskView(TaskView taskView) {
@@ -2835,18 +2817,6 @@ index 4ca0a119f5eaade708989b74d4c0ed6b55594959..9f0328b933fa3d603637669da4a95c6d
 +        }
 +        TaskView running = getRunningTaskView();
 +        return running != null ? running : getFirstTaskView();
-+    }
-+
-+    /** How far the folded cards move to rest against the right edge (BG-11). */
-+    private float lujarchGridShift() {
-+        if (mLujarchRecents == null || !lujarchFoldsIntoRows()) {
-+            return 0;
-+        }
-+        DeviceProfile dp = mContainer.getDeviceProfile();
-+        int width = dp.getDeviceProperties().getWidthPx();
-+        int margin = dp.getOverviewProfile().getGridSideMargin();
-+        float shift = (width - mLastComputedTaskSize.width()) / 2f - margin;
-+        return mIsRtl ? -shift : shift;
 +    }
 +
 +    /** The Recents switches changed where the cards are (BG-9, BG-11). */
