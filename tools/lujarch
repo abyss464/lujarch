@@ -2391,7 +2391,32 @@ m -j{jobs} {modules}
         "image": image,
     }, indent=2) + "\n")
     log(f"built {args.device} in {minutes} min")
+    if args.modules and device.get("platform") != "cuttlefish" and "droid" not in args.modules:
+        sign_module_apks(host, args.device, Path(tree / product_out), args.modules)
     return 0
+
+
+def sign_module_apks(host, device, product, modules):
+    """Signs the APKs the modules install with the keys a release gives them, into
+    <out>/modules/<device>/, for module tests on a phone (process/test-flow.md, Keys)."""
+    apks = [product / rel for rel in Modules(host, product).installs(modules)
+            if rel.endswith(".apk")]
+    if not apks:
+        return
+    work = host.out / "modules" / device
+    shutil.rmtree(work, ignore_errors=True)
+    app_keys = [f"--app-key={spec['module']}.apk={spec['key']}"
+                for _, _, spec in feature_components() if spec.get("key")]
+    apkcerts = (product / "obj" / "PACKAGING" / "apkcerts_intermediates"
+                / f"{device_config(device)['product']}-apkcerts.txt")
+    if not apkcerts.is_file():
+        die(f"no {apkcerts}: a full build of {device} lists the APKs' keys")
+    log("signing the modules' APKs with the release keys")
+    if subprocess.run([sys.executable, str(ROOT / "release" / "sign.py"),
+                       "--tree", str(host.tree), "--keys", str(host.path_of("paths", "keys")),
+                       *app_keys, "--apkcerts", str(apkcerts), *map(str, apks), str(work)],
+                      env=build_environment()).returncode:
+        die("signing the modules' APKs failed")
 
 
 # ---------------------------------------------------------------------------

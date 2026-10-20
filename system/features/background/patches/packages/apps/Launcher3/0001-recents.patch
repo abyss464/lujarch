@@ -472,7 +472,7 @@ index a8ac4e021d9af5498e918b9232569482864ce4bf..40a4d6049c8110dde40c813997e2b25d
 +    };
  }
 diff --git a/quickstep/src/com/android/quickstep/TaskViewUtils.java b/quickstep/src/com/android/quickstep/TaskViewUtils.java
-index fb16a702a5bae970c2a57521f99c1fc852d5892b..06d7372350f6a6221325204a80427b7672dde6e2 100644
+index fb16a702a5bae970c2a57521f99c1fc852d5892b..6c120db0427638fbc27744a71b279862a752168c 100644
 --- a/quickstep/src/com/android/quickstep/TaskViewUtils.java
 +++ b/quickstep/src/com/android/quickstep/TaskViewUtils.java
 @@ -285,14 +285,25 @@ public final class TaskViewUtils {
@@ -504,7 +504,28 @@ index fb16a702a5bae970c2a57521f99c1fc852d5892b..06d7372350f6a6221325204a80427b76
                      getTaskDimension(container.getDeviceProfile(),
                              TEMP_TASK_DIMENSION);
                      TEMP_FULLSCREEN_BOUNDS.set(0, 0, (int) TEMP_TASK_DIMENSION.x,
-@@ -826,6 +837,11 @@ public final class TaskViewUtils {
+@@ -413,6 +424,20 @@ public final class TaskViewUtils {
+                 k0i[i] = new Matrix();
+                 simulatorCopies[i].getTaskViewSimulator().getCurrentMatrix().invert(k0i[i]);
+             }
++            if (lujarchFolded(dp, taskView)) {
++                // Lujarch's Background (BG-11): K(0) is the window's matrix once it is placed
++                // on the folded card at the start; before that it is a row off, and the
++                // snapshot would follow the window a row off.
++                out.addListener(new AnimatorListenerAdapter() {
++                    @Override
++                    public void onAnimationStart(Animator animation) {
++                        for (int i = 0; i < matrixSize; i++) {
++                            simulatorCopies[i].getTaskViewSimulator().getCurrentMatrix()
++                                    .invert(k0i[i]);
++                        }
++                    }
++                });
++            }
+             Matrix animationMatrix = new Matrix();
+             out.addOnFrameCallback(() -> {
+                 for (int i = 0; i < matrixSize; i++) {
+@@ -826,6 +851,11 @@ public final class TaskViewUtils {
          return new Pair<>(targets, animationStates);
      }
  
@@ -516,7 +537,7 @@ index fb16a702a5bae970c2a57521f99c1fc852d5892b..06d7372350f6a6221325204a80427b76
      private static void initTaskViewSimulatorsForRemoteTargetHandles(
              List<RemoteTargetHandle> handleList,
              DeviceProfile deviceProfile,
-@@ -854,6 +870,9 @@ public final class TaskViewUtils {
+@@ -854,6 +884,9 @@ public final class TaskViewUtils {
          for (RemoteTargetHandle handle : handleList) {
              TaskViewSimulator tvsLocal = handle.getTaskViewSimulator();
              tvsLocal.setDp(deviceProfile);

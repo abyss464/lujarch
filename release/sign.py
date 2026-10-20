@@ -2,6 +2,7 @@
 """The signing step of a release (process/release-flow.md), with the tree's own tools.
 
   sign.py --tree TREE --keys KEYS [--app-key APK=KEY ...] TARGET_FILES WORK
+  sign.py --tree TREE --keys KEYS [--app-key APK=KEY ...] --apkcerts APKCERTS APK... WORK
 
 Signs TARGET_FILES, a build's target files, with the keys in KEYS and writes into WORK:
 
@@ -11,7 +12,10 @@ Signs TARGET_FILES, a build's target files, with the keys in KEYS and writes int
   keys.txt                 the key that signs each APK and APEX, "<file>: <key>"; PRESIGNED for
                            those that keep the signatures they were built with
 
-This is the one step of a release that is given the keys' location. It passes it on to the
+With --apkcerts, signs each APK of a module build, for a module test on a phone, with the key
+the release gives it by APKCERTS, the product's apkcerts.txt, and writes it into WORK by its name.
+
+This is the one step of a release or a module test that is given the keys' location. It passes it on to the
 tree's tools and opens no key itself.
 """
 
@@ -33,6 +37,7 @@ AVB_ALGORITHM = "SHA256_RSA4096"
 AVB_OPTIONS = {"vbmeta", "boot", "init_boot", "dtbo", "recovery", "system", "system_other",
                "vendor", "vbmeta_system", "vbmeta_vendor"}
 PRESIGNED = "PRESIGNED"
+DEFAULT_DEV_CERTIFICATE = "build/make/target/product/security/testkey"
 
 
 def log(message):
@@ -54,6 +59,31 @@ def apex_name(entry):
     return name[:-len(".capex")] + ".apex" if name.endswith(".capex") else name
 
 
+def platform_keys(tree, dev_dir):
+    """The build's platform keys by name, each mapped to the release key of its name."""
+    platform = {}
+    for cert in sorted((tree / dev_dir).glob("*.x509.pem")):
+        name = cert.name[:-len(".x509.pem")]
+        platform[name] = DEFAULT_KEYS.get(name, name)
+    for name in DEFAULT_KEYS:
+        platform.setdefault(name, RELEASE_KEY)
+    return platform
+
+
+def apk_key(entry, dev_dir, platform, app_keys):
+    """The release key of an APK of apkcerts.txt, and the platform key it replaces, if any."""
+    apk, cert = entry.get("name"), entry.get("certificate", "")
+    base = cert[:-len(".x509.pem")] if cert.endswith(".x509.pem") else None
+    if apk in app_keys:
+        return app_keys[apk], None
+    if cert == PRESIGNED:
+        return PRESIGNED, None
+    if base and os.path.dirname(base) == dev_dir and os.path.basename(base) in platform:
+        return platform[os.path.basename(base)], os.path.basename(base)
+    # A module's own key, whose private half is in the tree.
+    return RELEASE_KEY, None
+
+
 def key_plan(tree, keys, target_files, app_keys):
     """sign_target_files_apks' key options, the key of each APK and APEX by file name, and the
     key files they need."""
@@ -63,38 +93,22 @@ def key_plan(tree, keys, target_files, app_keys):
                     if "=" in line)
         apkcerts = [fields(line) for line in z.read("META/apkcerts.txt").decode().split("\n")]
         apexkeys = [fields(line) for line in z.read("META/apexkeys.txt").decode().split("\n")]
-    dev_dir = os.path.dirname(misc.get("default_system_dev_certificate",
-                                       "build/make/target/product/security/testkey"))
+    dev_dir = os.path.dirname(misc.get("default_system_dev_certificate", DEFAULT_DEV_CERTIFICATE))
     options, assigned, needed = [], {}, set()
-
-    # The build's platform keys: each becomes the release key of its name.
-    platform = {}
-    for cert in sorted((tree / dev_dir).glob("*.x509.pem")):
-        name = cert.name[:-len(".x509.pem")]
-        platform[name] = DEFAULT_KEYS.get(name, name)
-    for name in DEFAULT_KEYS:
-        platform.setdefault(name, RELEASE_KEY)
+    platform = platform_keys(tree, dev_dir)
     used = set()
 
     known = set()
     for entry in apkcerts:
-        apk, cert = entry.get("name"), entry.get("certificate", "")
+        apk = entry.get("name")
         # The data partition's APKs are tests, which the image does not hold.
         if not apk or entry.get("partition") == "data":
             continue
         known.add(apk)
-        base = cert[:-len(".x509.pem")] if cert.endswith(".x509.pem") else None
-        if apk in app_keys:
-            key = app_keys[apk]
-            options += ["-e", f"{apk}={keys / key}"]
-        elif cert == PRESIGNED:
-            key = PRESIGNED
-        elif base and os.path.dirname(base) == dev_dir and os.path.basename(base) in platform:
-            key = platform[os.path.basename(base)]
-            used.add(os.path.basename(base))
-        else:
-            # A module's own key, whose private half is in the tree.
-            key = RELEASE_KEY
+        key, replaced = apk_key(entry, dev_dir, platform, app_keys)
+        if replaced:
+            used.add(replaced)
+        elif key != PRESIGNED:
             options += ["-e", f"{apk}={keys / key}"]
         assigned[apk] = key
         if key != PRESIGNED:
@@ -147,21 +161,61 @@ def run(tools, env, work, name, *args):
         die(f"{name} failed (exit {status}); log {logfile}")
 
 
+def sign_modules(tree, keys, apkcerts, apks, app_keys, work):
+    """Signs each APK with the key the release gives it, into WORK by its name."""
+    entries = {e["name"]: e for e in (fields(line) for line in apkcerts.read_text().split("\n"))
+               if e.get("name")}
+    dev_dir = os.path.dirname(DEFAULT_DEV_CERTIFICATE)
+    platform = platform_keys(tree, dev_dir)
+    plan = []
+    for apk in apks:
+        entry = entries.get(apk.name)
+        if entry is None:
+            die(f"{apkcerts} has no {apk.name}: a full build of the device lists it")
+        key, _ = apk_key(entry, dev_dir, platform, app_keys)
+        if key == PRESIGNED:
+            die(f"{apk.name} is presigned and keeps its signature")
+        plan.append((apk, key))
+    missing = sorted({f"{key}.{ext}" for _, key in plan for ext in ("pk8", "x509.pem")
+                      if not (keys / f"{key}.{ext}").is_file()})
+    if missing:
+        die(f"the keys directory {keys} has no " + ", ".join(missing))
+    tools = tree / "out" / "host" / "linux-x86"
+    jdk = tree / "prebuilts" / "jdk" / "jdk21" / "linux-x86" / "bin"
+    env = dict(os.environ, PATH=os.pathsep.join([str(jdk), os.environ.get("PATH", "")]))
+    work.mkdir(parents=True, exist_ok=True)
+    for apk, key in plan:
+        out = work / apk.name
+        status = subprocess.run([str(tools / "bin" / "apksigner"), "sign",
+                                 "--key", str(keys / f"{key}.pk8"),
+                                 "--cert", str(keys / f"{key}.x509.pem"),
+                                 "--in", str(apk), "--out", str(out)], env=env).returncode
+        if status:
+            die(f"apksigner failed on {apk.name} (exit {status})")
+        log(f"{apk.name}: {key}, {out}")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--tree", required=True, type=Path)
     parser.add_argument("--keys", required=True, type=Path)
     parser.add_argument("--app-key", action="append", default=[], metavar="APK=KEY",
                         help="sign this APK with this key of KEYS")
-    parser.add_argument("target_files", type=Path)
+    parser.add_argument("--apkcerts", type=Path, help="sign the APKs of a module build")
+    parser.add_argument("inputs", nargs="+", type=Path, metavar="TARGET_FILES | APK...")
     parser.add_argument("work", type=Path)
     args = parser.parse_args()
     tree, keys, work = args.tree.resolve(), args.keys.resolve(), args.work.resolve()
-    target_files = args.target_files.resolve()
     app_keys = dict(a.split("=", 1) for a in args.app_key)
+    if args.apkcerts:
+        return sign_modules(tree, keys, args.apkcerts.resolve(),
+                            [a.resolve() for a in args.inputs], app_keys, work)
+    if len(args.inputs) != 1:
+        parser.error("a release signs one TARGET_FILES")
+    target_files = args.inputs[0].resolve()
     tmp = work / "tmp"
     tmp.mkdir(parents=True, exist_ok=True)
-
     options, assigned, needed = key_plan(tree, keys, target_files, app_keys)
     missing = sorted(f for f in needed if not (keys / f).is_file())
     if missing:

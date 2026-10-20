@@ -111,7 +111,10 @@ records the recipe's state, so that Install the desktop finds them current.
   signature.
 - Builds and modules for a phone are signed with the release keys, found at the host
   configuration's key location. Keys are never read, printed or copied by anything but the
-  signing step.
+  signing step (`release/sign.py`).
+- `tools/lujarch build fuxi <module>...` signs the APKs the modules install with the key a release
+  gives each, by the last full build's apkcerts.txt, into `<out>/modules/fuxi/`; a module test
+  installs them from there as an app update.
 
 ## Tests
 
