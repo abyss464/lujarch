@@ -5,18 +5,25 @@ the recording itself can be chosen.
 
 ## Starting a recording
 
-### REC-1 Recording starts from the screen record dialog
+### REC-1 Recording starts from the screen record card
 
 - Home: Quick Settings > Screen record
-- Switch: the dialog's Record audio and its source (Device audio, Microphone, Device audio and microphone), Show touches on screen, Profile, and Settings
-- Default: as the settings page says (REC-2 to REC-6); no profile chosen
+- Switch: the card's What to record, Record device audio, Record microphone audio (with Both sources when both are on), Show touches on screen and the other choices Android has there; Quality and file: each profile, Save current settings as a profile, Manage profiles, and Video, Audio, File and Recording
+- Default: as the settings pages say (REC-2 to REC-6); no profile chosen
 - Verify: vm
 
-The dialog shows what is recorded, the audio choice, Show touches on screen and the profile in use.
-It shows the size a minute of recording takes with the current settings, or that it depends on the
-picture when the size follows the picture's quality. Choosing a profile sets every setting it holds.
-Settings opens Settings > System > Screen record. The audio choice is the one on the settings page.
-After Start, the countdown of REC-6 runs before the recording starts.
+Below Android's own choices, the card shows Quality and file: the profiles, the one in use marked
+and marked changed once a setting differs from it; the size a minute of recording takes with the
+current settings, or that it depends on the picture when the size follows the picture's quality;
+a line with the codec, the size, the frame rate and the bitrate a recording gets; and Video,
+Audio, File and Recording, each with what it is set to. Choosing a profile sets every setting it
+holds. Video, Audio, File, Recording and Manage profiles open their page inside the card, with
+every setting of REC-2 to REC-6 as the settings pages have them, and Back returns to the card.
+A setting changed in the card or on the settings pages shows in the other at once.
+
+After Start, the Start button counts down the seconds of REC-6 and becomes Cancel, which stops the
+recording from starting. Settings > System > Screen record shows the size a minute takes, the
+line and the profiles above its pages.
 
 ### REC-2 The video has the settings the owner chooses
 
@@ -82,13 +89,14 @@ earlier state when it ends.
 
 ### REC-7 A recording can be paused
 
-- Home: the screen recording notification
+- Home: the screen recording notification; the screen record toolbar while recording
 - Switch: Pause, Resume
 - Default: none
 - Verify: vm
 
 Pause stops recording the picture and the sound until Resume; the file plays on from the moment of
-the pause to the moment of the resume. While paused the notification says Paused.
+the pause to the moment of the resume. While recording, the toolbar shows the time recorded, Pause
+or Resume, and Stop. While paused the notification and the toolbar say Paused.
 
 ### REC-8 A recording that fails says why
 
