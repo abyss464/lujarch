@@ -92,3 +92,16 @@ Keep the app's data leaves its data for a later install of the same app. Uninsta
 removes it from every user of the phone. Archive instead keeps the app's data and icon and removes
 the app, to be restored from its icon. For an update of a system app, uninstalling removes the
 update and keeps the system's version.
+
+### INS-8 An install another app makes is confirmed in the installer
+
+- Home: an app that installs apps itself, such as an app store, asking the owner to install
+- Switch: none
+- Default: none
+- Verify: vm
+
+The installer opens for an install that another app prepared and asks the owner to confirm. It
+shows all that INS-1 shows of the app as that app prepared it, and installs it so: its parts and
+options are the other app's, and Options names the app that chose them. Closing the installer
+without installing tells that app the owner did not install it. The other app needs Install
+unknown apps (PERM-12) as Android asks.
