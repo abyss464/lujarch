@@ -28,6 +28,7 @@
     <string name="lnx_qs_auto_rotate">自動回転</string>
     <string name="lnx_qs_dnd">サイレント モード</string>
     <string name="lnx_qs_caffeine">カフェイン</string>
+    <string name="lnx_nav_terminal">ターミナル</string>
     <string name="lnx_qs_caffeine_on">画面をオンのままにします</string>
     <string name="lnx_qs_battery">バッテリー</string>
     <string name="lnx_qs_charging">充電中</string>

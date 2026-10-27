@@ -61,6 +61,8 @@ abstract class LinuxPage : BasePreferenceFragment() {
 
         override fun onAndroidSet(key: String, value: String) {}
 
+        override fun onShowTerminal() {}
+
         override fun onVibrate(pattern: String) {}
 
         override fun onStream(stream: String, wanted: Boolean) {}

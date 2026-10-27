@@ -95,6 +95,8 @@ allow lujarch_linux self:netlink_kobject_uevent_socket create_socket_perms_no_io
 # Linux's /dev (/dev/video40 and /dev/video41, v4l2loopback's), Android's time zone.
 get_prop(lujarch_linux, timezone_prop)
 allow lujarch_linux video_device:chr_file getattr;
+# The shared storage it binds into the owner's home while it is lent.
+allow lujarch_linux media_rw_data_file:dir { search getattr };
 allow lujarch_linux sensorservice_service:service_manager find;
 binder_call(lujarch_linux, system_server)
 allow lujarch_linux system_server:unix_stream_socket { read write getattr getopt setopt };

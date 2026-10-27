@@ -31,6 +31,7 @@
     <string name="lnx_qs_auto_rotate">Auto-rotate</string>
     <string name="lnx_qs_dnd">Do Not Disturb</string>
     <string name="lnx_qs_caffeine">Caffeine</string>
+    <string name="lnx_nav_terminal">Terminal</string>
     <string name="lnx_qs_caffeine_on">The screen stays on</string>
     <string name="lnx_qs_battery">Battery</string>
     <string name="lnx_qs_charging">Charging</string>

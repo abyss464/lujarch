@@ -28,6 +28,7 @@
     <string name="lnx_qs_auto_rotate">自动屏幕旋转</string>
     <string name="lnx_qs_dnd">勿扰</string>
     <string name="lnx_qs_caffeine">保持亮屏</string>
+    <string name="lnx_nav_terminal">终端</string>
     <string name="lnx_qs_caffeine_on">屏幕保持开启</string>
     <string name="lnx_qs_battery">电池</string>
     <string name="lnx_qs_charging">正在充电</string>

@@ -106,6 +106,8 @@
     <string name="lnx_lend_vibration_summary">デスクトップのキーボードとプログラムがタッチ フィードバックとしてスマートフォンを振動させます</string>
     <string name="lnx_lend_quick_settings">Android のクイック設定</string>
     <string name="lnx_lend_quick_settings_summary">デスクトップのクイック設定とステータスバーで Wi-Fi、モバイルデータ、Bluetooth、機内モード、テザリング、ライト、自動回転、サイレント モード、画面の点灯維持、明るさを表示、切り替えます</string>
+    <string name="lnx_lend_storage">共有ストレージ</string>
+    <string name="lnx_lend_storage_summary">スマートフォンのダウンロード、DCIM、画像などのフォルダが、ホームの Android フォルダになり、Dolphin の「場所」にも表示されます</string>
     <string name="lnx_services">サービス</string>
     <string name="lnx_remote">リモート アクセス</string>
     <string name="lnx_footer">Arch Linux ARM は Android と同じカーネルとネットワークで、専用のユーザーとして並行して動作します。ターミナルとデスクトップはホーム画面のもう一つの面です。ホーム画面をダブルタップすると開きます。</string>

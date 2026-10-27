@@ -122,6 +122,12 @@ type = "bool"
 default = false
 item = "LNX-7"
 
+[lend_storage]
+table = "global"
+type = "bool"
+default = false
+item = "LNX-7"
+
 # The phone's screen stays on while the desktop is shown: the desktop's Caffeine tile.
 [caffeine]
 table = "secure"

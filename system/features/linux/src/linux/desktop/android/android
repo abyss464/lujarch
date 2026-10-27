@@ -7,6 +7,8 @@
                           mobile, bluetooth, airplane, hotspot, flashlight, rotation, dnd, caffeine (1 or 0)
                           or brightness (the slider's position); exit 1 when Android's quick settings are
                           not lent
+  android terminal        turns the phone from the desktop to the terminal (the navigation panel's Terminal
+                          key, LNX-6); exit 1 when lujarch_linux does not read it
 
 Android's switches and readings come from /run/lujarch/android, which the Terminal app keeps while Android's
 quick settings are lent; the quick settings (org.lujarch.android in QML) read it themselves. The daemon puts
@@ -28,6 +30,7 @@ import heapq
 import json
 import math
 import os
+import re
 import selectors
 import socket
 import struct
@@ -40,6 +43,8 @@ import urllib.parse
 RUN = "/run/lujarch"
 STATE = RUN + "/android"
 SET_FIFO = RUN + "/android-set"
+TERMINAL_FIFO = RUN + "/terminal"
+STORAGE = RUN + "/storage"
 VIBRATE_FIFO = RUN + "/vibrate"
 LOCATION_FIFO = RUN + "/location"
 DIR = "/tmp/lujarch-android"
@@ -1690,6 +1695,79 @@ class Battery:
         self.conn.properties_changed(UPOWER_LINE, UPOWER_DEVICE_IFACE, ["Online", "IsPresent", "UpdateTime"])
 
 
+# ------------------------------------------------------------------ the shared storage in Places
+
+class Places:
+    """The shared storage under Places in Dolphin while it is lent (LNX-7): an entry of the user's places
+    (KDE's user-places.xbel) for the folder /run/lujarch/storage names, taken out again when it goes. The
+    file is KDE's: the entry goes in and out as text, the rest stays as KDE wrote it, and nothing happens
+    before KDE has made the file."""
+
+    POLL_S = 2.0
+    ID = "lujarch-shared-storage"
+    ENTRY = re.compile(r'[ \t]*<bookmark href="[^"]*">(?:(?!</bookmark>).)*?<ID>%s</ID>.*?</bookmark>\n?' % ID, re.S)
+
+    def __init__(self, loop):
+        self.loop = loop
+        data = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        self.path = os.path.join(data, "user-places.xbel")
+
+    def start(self):
+        self.poll()
+
+    def poll(self):
+        self.loop.call_later(self.POLL_S, self.poll)
+        try:
+            with open(STORAGE, encoding="utf-8") as f:
+                folder = f.read().strip()
+        except FileNotFoundError:
+            folder = ""
+        except OSError as e:
+            log("%s: %s" % (STORAGE, e))
+            return
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                text = f.read()
+        except FileNotFoundError:
+            return
+        except OSError as e:
+            log("%s: %s" % (self.path, e))
+            return
+        entries = self.ENTRY.findall(text)
+        href = "file://" + urllib.parse.quote(folder) if folder else ""
+        if folder and len(entries) == 1 and ('href="%s"' % href) in entries[0]:
+            return
+        if not folder and not entries:
+            return
+        text = self.ENTRY.sub("", text)
+        if folder:
+            end = text.rfind("</xbel>")
+            if end < 0:
+                log("%s: no </xbel>" % self.path)
+                return
+            entry = (' <bookmark href="%s">\n'
+                     '  <title>%s</title>\n'
+                     '  <info>\n'
+                     '   <metadata owner="http://freedesktop.org">\n'
+                     '    <bookmark:icon name="smartphone"/>\n'
+                     '   </metadata>\n'
+                     '   <metadata owner="http://www.kde.org">\n'
+                     '    <ID>%s</ID>\n'
+                     '   </metadata>\n'
+                     '  </info>\n'
+                     ' </bookmark>\n') % (href, os.path.basename(folder), self.ID)
+            text = text[:end] + entry + text[end:]
+        tmp = self.path + ".lujarch"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+            os.replace(tmp, self.path)
+        except OSError as e:
+            log("%s: %s" % (self.path, e))
+            return
+        log("shared storage %s Places" % ("in" if folder else "out of"))
+
+
 # ------------------------------------------------------------------ the daemon
 
 def daemon():
@@ -1701,11 +1779,13 @@ def daemon():
     Feedback(loop, session)
     battery = Battery(loop, system)
     Location(loop, system)
+    places = Places(loop)
     state.on_change(lambda s: brightness.update(s.get("brightness")))
     state.on_change(battery.update)
     session.start()
     system.start()
     state.start()
+    places.start()
     log("started")
     loop.run()
 
@@ -1727,10 +1807,20 @@ def command_set(key, value):
     return 0
 
 
+def command_terminal():
+    error = fifo_line(TERMINAL_FIFO, "show")
+    if error is not None:
+        print("android: the terminal is not shown (%s)" % error, file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv):
     if len(argv) == 2 and argv[1] == "daemon":
         daemon()
         return 0
+    if len(argv) == 2 and argv[1] == "terminal":
+        return command_terminal()
     if len(argv) == 4 and argv[1] == "set":
         return command_set(argv[2], argv[3])
     print(__doc__.split("\n\n")[1], file=sys.stderr)

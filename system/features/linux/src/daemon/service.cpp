@@ -171,7 +171,8 @@ Service::Service()
                       },
                       [this](const std::string& stream, bool wanted) {
                           ForTerminal([&](ILinuxListener& l) { l.onStream(stream, wanted); });
-                      }}),
+                      },
+                      [this] { ForTerminal([](ILinuxListener& l) { l.onShowTerminal(); }); }}),
       death_(AIBinder_DeathRecipient_new(&Service::OnListenerDied)) {
     // The cookie is the service, which outlives every link: nothing to release when one ends.
     AIBinder_DeathRecipient_setOnUnlinked(death_.get(), [](void*) {});

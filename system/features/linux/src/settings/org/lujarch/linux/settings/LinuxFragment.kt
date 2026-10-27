@@ -616,6 +616,7 @@ class LinuxFragment : LinuxPage() {
             "location" to (R.string.lnx_lend_location to R.string.lnx_lend_location_summary),
             "vibration" to (R.string.lnx_lend_vibration to R.string.lnx_lend_vibration_summary),
             "quick_settings" to (R.string.lnx_lend_quick_settings to R.string.lnx_lend_quick_settings_summary),
+            "storage" to (R.string.lnx_lend_storage to R.string.lnx_lend_storage_summary),
         )
     }
 }

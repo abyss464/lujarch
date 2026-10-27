@@ -119,6 +119,8 @@
     <string name="lnx_lend_vibration_summary">The desktop\'s keyboard and programs vibrate the phone as touch feedback</string>
     <string name="lnx_lend_quick_settings">Android\'s quick settings</string>
     <string name="lnx_lend_quick_settings_summary">The desktop\'s quick settings and status bar show and switch Wi-Fi, mobile data, Bluetooth, airplane mode, hotspot, flashlight, auto-rotate, Do Not Disturb, the screen staying on and the brightness</string>
+    <string name="lnx_lend_storage">Shared storage</string>
+    <string name="lnx_lend_storage_summary">Download, DCIM, Pictures and the other folders of the phone are the folder Android in your home, also under Places in Dolphin</string>
     <string name="lnx_services">Services</string>
     <string name="lnx_remote">Remote access</string>
     <string name="lnx_footer">Arch Linux ARM runs beside Android on the same kernel and network, as a user of its own. Its terminal and desktop are the home screen\'s other face: double tap the home screen.</string>

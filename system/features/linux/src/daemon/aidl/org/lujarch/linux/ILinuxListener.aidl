@@ -40,6 +40,9 @@ oneway interface ILinuxListener {
      */
     void onAndroidSet(String key, String value);
 
+    /** Linux's desktop asks for the terminal: its navigation panel's Terminal key. */
+    void onShowTerminal();
+
     /** A program in Linux vibrates, while vibration is lent: "<amplitude 0-255>:<ms>,...". */
     void onVibrate(String pattern);
 

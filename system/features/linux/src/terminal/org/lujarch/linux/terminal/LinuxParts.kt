@@ -53,6 +53,8 @@ class LinuxParts(private val context: Context) {
             handler.post { if (Linux.lent(context, "quick_settings")) switches.set(key, value) }
         }
 
+        override fun onShowTerminal() {}
+
         override fun onVibrate(pattern: String) {
             handler.post { if (Linux.lent(context, "vibration")) vibration.play(pattern) }
         }

@@ -64,6 +64,7 @@ constexpr int kSensorsIdent = 6;
 constexpr int kClipboardIdent = 7;
 constexpr int kVibrateIdent = 8;
 constexpr int kAndroidSetIdent = 9;
+constexpr int kTerminalIdent = 10;
 // The readers' write ends, kReaderIdent + their index.
 constexpr int kReaderIdent = 16;
 
@@ -74,6 +75,8 @@ constexpr size_t kMaxClipboard = 64 << 10;
 constexpr size_t kMaxText = 200;
 constexpr gid_t kUsbGroup = 1018;  // AID_USB
 constexpr char kUsbGroupName[] = "aid_usb";
+constexpr gid_t kMediaRwGroup = 1023;  // AID_MEDIA_RW, the shared storage's group
+constexpr char kMediaRwGroupName[] = "aid_media_rw";
 // The sampling period of the lent sensors, in microseconds.
 constexpr int32_t kSensorPeriodUs = 200000;
 // A vibration's pattern: at most this many steps and this long in all.
@@ -210,7 +213,7 @@ void Bridge::Recheck() {
     Wake();
 }
 
-Result<void> Bridge::UsbGroup(bool lend) {
+Result<void> Bridge::Group(gid_t id, const char* name, bool member) {
     if (user_.empty()) return {};
     auto root = files::OpenRoot(kRoot);
     if (!root.ok()) return root.error();
@@ -223,13 +226,13 @@ Result<void> Bridge::UsbGroup(bool lend) {
     for (std::string& line : lines) {
         std::vector<std::string> f = android::base::Split(line, ":");
         unsigned gid;
-        if (f.size() < 4 || !android::base::ParseUint(f[2], &gid) || gid != kUsbGroup) continue;
+        if (f.size() < 4 || !android::base::ParseUint(f[2], &gid) || gid != id) continue;
         found = true;
         std::vector<std::string> members;
         for (const std::string& m : android::base::Split(f[3], ",")) {
             if (!m.empty() && m != user_) members.push_back(m);
         }
-        if (lend) members.push_back(user_);
+        if (member) members.push_back(user_);
         const std::string joined = android::base::Join(members, ",");
         if (joined != f[3]) {
             f[3] = joined;
@@ -237,8 +240,8 @@ Result<void> Bridge::UsbGroup(bool lend) {
             changed = true;
         }
     }
-    if (!found && lend) {
-        lines.push_back(std::string(kUsbGroupName) + ":x:" + std::to_string(kUsbGroup) + ":" + user_);
+    if (!found && member) {
+        lines.push_back(std::string(name) + ":x:" + std::to_string(id) + ":" + user_);
         changed = true;
     }
     if (!changed) return {};
@@ -262,12 +265,13 @@ void Bridge::Arrange() {
             if (r.watch >= 0) inotify_rm_watch(inotify_.get(), r.watch);
             r.watch = -1;
         }
-        for (unique_fd* fd : {&vibrate_fifo_, &android_set_fifo_}) {
+        for (unique_fd* fd : {&vibrate_fifo_, &android_set_fifo_, &terminal_fifo_}) {
             if (*fd >= 0) ALooper_removeFd(looper, fd->get());
             fd->reset();
         }
         android_lent_ = false;
         cameras_checked_ = false;
+        storage_checked_ = false;
         timezone_.clear();
     }
     auto root = files::OpenRoot(kRoot);
@@ -278,7 +282,7 @@ void Bridge::Arrange() {
     const bool usb = linux_ && lent("usb");
     if (usb != usb_lent_ || (linux_ && !usb_checked_)) {
         if (auto r = system_.LendUsb(usb); !r.ok()) LOG(ERROR) << "bridge: " << r.error();
-        if (auto r = UsbGroup(usb); !r.ok()) {
+        if (auto r = Group(kUsbGroup, kUsbGroupName, usb); !r.ok()) {
             LOG(ERROR) << "bridge: aid_usb in /etc/group: " << r.error();
         }
         if (usb != usb_lent_) LOG(INFO) << "bridge: USB devices " << (usb ? "lent" : "taken back");
@@ -296,6 +300,35 @@ void Bridge::Arrange() {
         cameras_lent_ = cameras;
     }
     cameras_checked_ = linux_;
+
+    // The shared storage; bound again into every new namespace. The owner's user is in its group
+    // whenever Linux runs, so that programs running before it is lent reach it too.
+    const bool storage = linux_ && lent("storage");
+    if (storage != storage_lent_ || (linux_ && !storage_checked_)) {
+        if (linux_ && !storage_checked_) {
+            if (auto r = Group(kMediaRwGroup, kMediaRwGroupName, true); !r.ok()) {
+                LOG(ERROR) << "bridge: aid_media_rw in /etc/group: " << r.error();
+            }
+        }
+        if (auto r = system_.LendStorage(storage, user_); !r.ok()) {
+            LOG(ERROR) << "bridge: " << r.error();
+        }
+        if (ready && storage) {
+            const std::string folder =
+                    "/home/" + user_ + "/" + kSharedStorageFolder + "\n";
+            if (auto w = files::WriteIn(root->get(), Run("storage"), folder, 0640, 0, aid::kLinux);
+                !w.ok()) {
+                LOG(ERROR) << "bridge: storage: " << w.error();
+            }
+        } else if (ready && files::ExistsIn(root->get(), Run("storage"))) {
+            files::RemoveIn(root->get(), Run("storage"));
+        }
+        if (storage != storage_lent_) {
+            LOG(INFO) << "bridge: shared storage " << (storage ? "lent" : "taken back");
+        }
+        storage_lent_ = storage;
+    }
+    storage_checked_ = linux_;
 
     // A FIFO the daemon reads.
     auto fifo = [&](const char* name, bool want, unique_fd& fd, int ident, mode_t mode,
@@ -333,6 +366,7 @@ void Bridge::Arrange() {
     fifo("clipboard-set", lent("clipboard"), clipboard_fifo_, kClipboardIdent, 0620, nullptr);
     fifo("vibrate", lent("vibration"), vibrate_fifo_, kVibrateIdent, 0620, nullptr);
     fifo("android-set", lent("quick_settings"), android_set_fifo_, kAndroidSetIdent, 0620, nullptr);
+    fifo("terminal", linux_, terminal_fifo_, kTerminalIdent, 0620, nullptr);
     if (clipboard_was_lent && clipboard_fifo_ < 0) {
         if (root.ok() && linux_) files::RemoveIn(root->get(), Run("clipboard"));
         android_clipboard_.clear();
@@ -572,6 +606,18 @@ void Bridge::AndroidSet(const std::string& line) {
         return;
     }
     asks_.android_set(key, value);
+}
+
+void Bridge::ShowTerminal(const std::string& line) {
+    if (android::base::Trim(line) != "show") {
+        LOG(WARNING) << "bridge: terminal: not 'show': " << text::SanitizeUtf8(line.substr(0, 64));
+        return;
+    }
+    if (!asks_.answerable()) {
+        LOG(INFO) << "bridge: terminal: the Terminal app is not on screen";
+        return;
+    }
+    asks_.show_terminal();
 }
 
 void Bridge::Vibrate(const std::string& line) {
@@ -959,6 +1005,9 @@ void Bridge::Loop() {
             case kAndroidSetIdent:
                 Lines(android_set_fifo_, android_set_buffer_,
                       [this](const std::string& l) { AndroidSet(l); });
+                break;
+            case kTerminalIdent:
+                Lines(terminal_fifo_, terminal_buffer_, [this](const std::string& l) { ShowTerminal(l); });
                 break;
             case kInotifyIdent: {
                 alignas(inotify_event) char buf[4096];

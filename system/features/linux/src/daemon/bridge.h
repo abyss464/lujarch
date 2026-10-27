@@ -46,12 +46,16 @@
 //                  desktop's quick settings and status bar
 //   android-set    FIFO: a line "<key> <value>" flips one of Android's switches through the
 //                  Terminal app on screen (ILinuxListener.onAndroidSet)
+//   terminal       FIFO, there while Linux runs, lent or not: a line "show" turns the desktop on
+//                  screen to the terminal (ILinuxListener.onShowTerminal)
 //
 // The terminal's sessions share the clipboard in the Terminal app itself; the desktop shares it
 // through clipboard and clipboard-set. USB devices are /dev/bus/usb in Linux and the owner's user
 // in the group aid_usb (1018) of its /etc/group; the cameras are /dev/video40 (back) and
 // /dev/video41 (front), v4l2loopback devices of Linux's user that Linux's desktop writes the
-// camera FIFOs' frames into. Linux's /etc/localtime follows Android's time zone while Linux runs.
+// camera FIFOs' frames into. The shared storage is the folder Android in the owner's home, which
+// the owner's user reads and writes as a member of aid_media_rw (1023), and the file storage
+// holds that folder's path while it is lent. Linux's /etc/localtime follows Android's time zone while Linux runs.
 #pragma once
 
 #include <aidl/org/lujarch/linux/AndroidState.h>
@@ -83,6 +87,7 @@ class Bridge {
         std::function<void(const std::string& key, const std::string& value)> android_set;
         std::function<void(const std::string& pattern)> vibrate;
         std::function<void(const std::string& stream, bool wanted)> stream;
+        std::function<void()> show_terminal;
     };
 
     Bridge(System& system, Asks asks);
@@ -141,6 +146,7 @@ class Bridge {
     void Nfc(const std::string& line);
     void Clipboard(const std::string& line);
     void AndroidSet(const std::string& line);
+    void ShowTerminal(const std::string& line);
     void Vibrate(const std::string& line);
     void WriteAndroidState();
     void ReaderOpened(Reader& r);
@@ -151,7 +157,8 @@ class Bridge {
     void SensorsReader();
     void SensorsStop();
     void SensorsWrite();
-    Result<void> UsbGroup(bool lend);
+    // Makes the owner's user a member of the group id (name) in Linux's /etc/group, or not.
+    Result<void> Group(gid_t id, const char* name, bool member);
 
     System& system_;
     Asks asks_;
@@ -185,11 +192,15 @@ class Bridge {
     bool usb_lent_ = false;
     bool cameras_lent_ = false;
     bool cameras_checked_ = false;
+    bool storage_lent_ = false;
+    bool storage_checked_ = false;
     std::array<Reader, 4> readers_;
     android::base::unique_fd vibrate_fifo_;
     std::string vibrate_buffer_;
     android::base::unique_fd android_set_fifo_;
     std::string android_set_buffer_;
+    android::base::unique_fd terminal_fifo_;
+    std::string terminal_buffer_;
     std::optional<aidl::org::lujarch::linux::AndroidState> android_state_;
     bool android_lent_ = false;
     std::string timezone_;

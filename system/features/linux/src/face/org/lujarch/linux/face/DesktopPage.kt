@@ -44,8 +44,8 @@ import org.lujarch.linux.client.TAG
  * allocates and shows with SurfaceControl (NativeDisplay), with touch, a mouse, hardware keys and
  * the phone's sound going both ways; text comes from Linux's own on-screen keyboard. The desktop
  * is on screen while this window is resumed and focused; otherwise KWin draws nothing and
- * lujarch_linux freezes it. It is the face's second page: a swipe from the bottom goes to the
- * terminal (LinuxFace).
+ * lujarch_linux freezes it. It is the face's second page: a swipe from the bottom is the desktop's
+ * own touch, and the navigation panel's Terminal key goes to the terminal (LinuxFace).
  */
 class DesktopPage(face: LinuxFace) : FacePage(face) {
     private lateinit var surface: SurfaceView
@@ -237,6 +237,17 @@ class DesktopPage(face: LinuxFace) : FacePage(face) {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     /** One MotionEvent as one touch frame: the pointer that went down or up, or every pointer that moved. */
+    /** The bottom gesture's touches are the desktop's (LNX-6): they reach KWin as any touch. */
+    override fun onEdgeTouch(event: MotionEvent): Boolean {
+        val at = IntArray(2)
+        surface.getLocationOnScreen(at)
+        val e = MotionEvent.obtain(event)
+        e.offsetLocation(event.rawX - event.x - at[0], event.rawY - event.y - at[1])
+        touch(e)
+        e.recycle()
+        return true
+    }
+
     private fun touch(e: MotionEvent) {
         val h = handle
         if (h == 0L) return

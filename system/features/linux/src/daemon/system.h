@@ -90,6 +90,10 @@ class System {
     // takes them away; either any number of times.
     Result<void> LendCameras(bool lend);
 
+    // Binds Android's shared storage (kSharedStorage) into the namespace as the folder Android in
+    // the user's home, or takes it away and removes the folder while it is empty.
+    Result<void> LendStorage(bool lend, const std::string& user);
+
   private:
     // Enters the namespace from a child of the daemon.
     std::mutex mutex_;

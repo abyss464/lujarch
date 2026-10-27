@@ -103,6 +103,7 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
         fun onAuthRequest(id: Int, text: String)
         fun onNfcRequest(id: Int, command: ByteArray)
         fun onClipboard(text: String)
+        fun onShowTerminal()
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -125,6 +126,10 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
 
     override fun onClipboard(text: String) {
         main.post { sink.onClipboard(text) }
+    }
+
+    override fun onShowTerminal() {
+        main.post { sink.onShowTerminal() }
     }
 
     // LinuxParts hears these with a listener of its own.

@@ -1,5 +1,6 @@
 Plasma Mobile's landscape layout on the phone (LNX-6): the status bar a column at the screen's left
-end, the navigation panel a column at its right end, the keyboard beside it (KWin, kwin.patch).
+end, the navigation panel a column at its right end, the keyboard beside it (KWin, kwin.patch); and
+the navigation panel's Terminal key, which turns the phone to the terminal.
 
 diff -ruN a/components/mobileshell/qml/components/Constants.qml b/components/mobileshell/qml/components/Constants.qml
 --- a/components/mobileshell/qml/components/Constants.qml
@@ -228,3 +229,41 @@ diff -ruN a/shell/contents/views/Panel.qml b/shell/contents/views/Panel.qml
      // NOTE: Below is taken straight out of Plasma Desktop so that we can
      //       support desktop panels properly, try to keep it in sync:
      //       plasma-desktop/desktoppackage/contents/views/Panel.qml
+diff -ruN a/containments/taskpanel/qml/NavigationPanelComponent.qml b/containments/taskpanel/qml/NavigationPanelComponent.qml
+--- a/containments/taskpanel/qml/NavigationPanelComponent.qml
++++ b/containments/taskpanel/qml/NavigationPanelComponent.qml
+@@ -14,9 +14,9 @@
+ import org.kde.taskmanager as TaskManager
+ import org.kde.plasma.private.mobileshell.windowplugin as WindowPlugin
+ import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+-import org.kde.plasma.private.mobileshell.rotationplugin as RotationPlugin
+ 
+ import org.kde.kirigami as Kirigami
++import org.lujarch.android as Android
+ 
+ MobileShell.NavigationPanel {
+     id: root
+@@ -119,16 +119,18 @@
+         }
+     }
+ 
++    // Lujarch: the Terminal key beside the task switcher turns the phone to the terminal (LNX-6). It
++    // takes the corner of the rotation suggestion, which never shows: the desktop turns with Android.
+     leftCornerAction: MobileShell.NavigationPanelAction {
+-        id: rotationAction
+-        visible: RotationPlugin.RotationUtil.showRotationButton
++        id: terminalAction
++        visible: true
+         enabled: true
+-        iconSource: "rotation-allowed-symbolic"
+-        accessibleText: i18nc("@action:button", "Rotate screen")
++        iconSource: "utilities-terminal"
++        accessibleText: Android.Bridge.text("lnx_nav_terminal")
+         shrinkSize: 4
+ 
+         onTriggered: {
+-            RotationPlugin.RotationUtil.rotateToSuggestedRotation();
++            MobileShell.ShellUtil.executeCommand(Android.Bridge.cli + " terminal");
+         }
+     }
+ 

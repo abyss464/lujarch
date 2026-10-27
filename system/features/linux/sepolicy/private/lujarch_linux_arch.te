@@ -70,6 +70,11 @@ allow lujarch_linux_arch usb_device:chr_file rw_file_perms;
 # The cameras while they are lent: the two v4l2loopback nodes bound into its /dev, which Linux's
 # desktop writes Android's frames into and programs read (no other video node is in its /dev).
 allow lujarch_linux_arch video_device:chr_file { rw_file_perms map };
+# The shared storage while it is lent: the folder Android in the owner's home, which the owner's
+# user reads and writes as a member of its group.
+allow lujarch_linux_arch media_rw_data_file:dir create_dir_perms;
+allow lujarch_linux_arch media_rw_data_file:file { create_file_perms map };
+allow lujarch_linux_arch media_rw_data_file:lnk_file create_file_perms;
 
 # Lujarch's files for Linux (the initial setup, the fingerprint helper, the desktop's files) and
 # Android's fonts, which fontconfig maps.

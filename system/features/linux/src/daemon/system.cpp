@@ -421,6 +421,74 @@ Result<void> System::LendCameras(bool lend) {
     return report;
 }
 
+Result<void> System::LendStorage(bool lend, const std::string& user) {
+    std::lock_guard lock(mutex_);
+    if (anchor_.pid <= 0 || user.empty()) return {};
+    const std::string home = "home/" + user;
+    const std::string folder = home + "/" + kSharedStorageFolder;
+    if (lend) {
+        auto root = files::OpenRoot(kRoot);
+        if (!root.ok()) return root.error();
+        if (auto made =
+                    files::MakeDirsIn(root->get(), "/" + folder, 0755, aid::kLinux, aid::kLinux);
+            !made.ok()) {
+            return made.error();
+        }
+    }
+    int status[2];
+    if (pipe2(status, O_CLOEXEC) != 0) return ErrnoError() << "pipe";
+    unique_fd status_r(status[0]), status_w(status[1]);
+    const int ns = anchor_.pidfd.get();
+    const pid_t pid = fork();
+    if (pid < 0) return ErrnoError() << "fork";
+    if (pid == 0) {
+        const int out = status_w.get();
+        if (setns(ns, CLONE_NEWNS) != 0) ChildFail(out, 0);
+        const int root = open(kRoot, O_PATH | O_DIRECTORY | O_CLOEXEC);
+        if (root < 0) ChildFail(out, 1);
+        const int target = OpenInRoot(root, folder.c_str(), O_PATH | O_NOFOLLOW);
+        if (target < 0) {
+            if (lend) ChildFail(out, 2);
+        } else {
+            char path[32];
+            FdPath(target, path);
+            // Earlier binds go first, so that one bind is there at most.
+            while (umount2(path, MNT_DETACH) == 0) {
+            }
+            if (errno != EINVAL) ChildFail(out, 3);
+            close(target);
+            if (lend) {
+                const int fresh = OpenInRoot(root, folder.c_str(), O_PATH | O_NOFOLLOW);
+                if (fresh < 0) ChildFail(out, 2);
+                FdPath(fresh, path);
+                if (mount(kSharedStorage, path, nullptr, MS_BIND | MS_REC, nullptr) != 0) {
+                    ChildFail(out, 2);
+                }
+                close(fresh);
+            } else {
+                // Only an empty folder goes: what is in it stays where it is.
+                const int parent =
+                        OpenInRoot(root, home.c_str(), O_PATH | O_DIRECTORY | O_NOFOLLOW);
+                if (parent >= 0 && unlinkat(parent, kSharedStorageFolder, AT_REMOVEDIR) != 0 &&
+                    errno != ENOENT && errno != ENOTEMPTY) {
+                    ChildFail(out, 4);
+                }
+            }
+        }
+        const char ok = 1;
+        TEMP_FAILURE_RETRY(write(out, &ok, 1));
+        _exit(0);
+    }
+    status_w.reset();
+    Result<void> report =
+            ReadReport(status_r.get(),
+                       lend ? "lend the shared storage" : "take the shared storage back",
+                       {"enter the namespace", "open the root", "bind the shared storage",
+                        "unmount the shared storage", "remove the empty folder"});
+    TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
+    return report;
+}
+
 Result<Process> System::Start(const Spawn& s) {
     unique_fd ns;
     {

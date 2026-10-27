@@ -187,6 +187,12 @@ cmd_plasma() { # name version
     [ -f "$X/$tar" ] || fetch "$tar" "$url"
     echo "$(curl -fsSL "$url.sha256" | awk '{print $1}')  $X/$tar" | sha256sum -c --quiet
     [ -d "$X/src/$name-$version" ] || { mkdir -p "$X/src"; tar -C "$X/src" -xf "$X/$tar"; }
+    # The recipe's patch of the component, as its PKGBUILD applies it on the phone.
+    local patchfile=$RECIPE/$name/$name.patch
+    if [ -f "$patchfile" ]; then
+        patch -d "$X/src/$name-$version" -p1 -R --dry-run -s -f <"$patchfile" >/dev/null 2>&1 ||
+            patch -d "$X/src/$name-$version" -p1 -N <"$patchfile"
+    fi
     local stage
     stage=$(build_tree "$X/src/$name-$version" "$X/build-$name-$version")
     # The next component builds against this one.
