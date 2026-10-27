@@ -2496,7 +2496,7 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..d9346e100ac745efe30d70e87ae17bad
              LauncherState state = getStateManager().getState();
              boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c7178fa2914d 100644
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..d4beac0f8ba9db4e96b9ff88071d5008cde536c8 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 +++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 @@ -18,11 +18,13 @@ package com.android.quickstep.views
@@ -2534,7 +2534,17 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
          val allDismissSprings =
              recentsView.mUtils.taskViews
                  .reversed()
-@@ -974,6 +983,9 @@ constructor(
+@@ -540,6 +549,9 @@ constructor(
+         // Grid end translation to run after all reflow animations have completed.
+         val gridEndSpringSet =
+             if (reflowSplitFromDesktopTile) null else createGridEndTranslationSpringSet(gridEndData)
++        lujarchFoldedReflow(dismissedTaskView, isSplitSelection, gridEndSpringSet)?.let {
++            return it
++        }
+         val tasksWithOffsetsToReflow = getTasksToReflow(dismissedTaskView, towardsStart)
+         if (tasksWithOffsetsToReflow.isEmpty()) {
+             return Pair(gridEndSpringSet, emptyList())
+@@ -974,11 +986,16 @@ constructor(
  
              // Page snapping and relayout to run after all animations have completed.
              val onFinishComplete = {
@@ -2544,7 +2554,15 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
                  // Reset task translations as they may have updated via the dismiss animations.
                  resetTaskVisuals()
  
-@@ -1006,6 +1018,7 @@ constructor(
+                 // Denote if any task has been dismissed for grid rebalancing.
+-                mAnyTaskHasBeenDismissed = true
++                // Lujarch's Background (BG-11): a phone's folded cards are laid out again from the
++                // newest, each column top then bottom, where lujarchFoldedReflow moved them.
++                mAnyTaskHasBeenDismissed = lujarchPlaces == null
+                 if (shouldRemoveTask && dismissedTaskView != null) {
+                     // Call removeTask API before removing the TaskView.
+                     handleGroupTaskRemoval(dismissedTaskView)
+@@ -1006,6 +1023,7 @@ constructor(
  
                  // Update the UI after removal and snap to page.
                  updateUiAfterTaskRemoval(dismissedTaskView, pageToSnapTo, isDismissingHomeTask)
@@ -2552,7 +2570,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
  
                  if (!dismissingForSplitSelection) {
                      InteractionJankMonitorWrapper.end(Cuj.CUJ_LAUNCHER_OVERVIEW_TASK_DISMISS)
-@@ -1021,6 +1034,67 @@ constructor(
+@@ -1021,6 +1039,120 @@ constructor(
          }
      }
  
@@ -2568,6 +2586,59 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
 +            return mUtils.taskViews
 +                .filter { it != dismissedTaskView }
 +                .associate { it.taskViewId to lujarchPlace(it) }
++        }
++    }
++
++    /**
++     * Lujarch's Background (BG-11): on a phone's folded Recents, the cards older than a dismissed
++     * folded card each move to the place of the card before them, column by column, top then
++     * bottom, in one motion that starts as the grid's reflow does; null for any other dismissal.
++     */
++    private fun lujarchFoldedReflow(
++        dismissedTaskView: TaskView?,
++        isSplitSelection: Boolean,
++        gridEndSpringSet: SpringSet?,
++    ): Pair<SpringSet?, List<TaskView>>? {
++        with(recentsView) {
++            if (dismissedTaskView == null || isSplitSelection || !dismissedTaskView.isGridTask ||
++                !LujarchRecents.foldsIntoRows((mContainer as ActivityContext).getDeviceProfile())) {
++                return null
++            }
++            val folded = mUtils.taskViews.filter { it.isGridTask }
++            val dismissed = folded.indexOf(dismissedTaskView)
++            if (dismissed < 0) return null
++            // The dismissed card's place is where it was before the finger moved it.
++            val places = folded.map { lujarchPlace(it) }
++            places[dismissed][0] -=
++                dismissedTaskView.primaryDismissTranslationProperty.get(dismissedTaskView)
++            places[dismissed][1] -=
++                dismissedTaskView.secondaryDismissTranslationProperty.get(dismissedTaskView)
++            val moves =
++                (dismissed + 1 until folded.size).map { i ->
++                    folded[i] to floatArrayOf(
++                        places[i - 1][0] - places[i][0], places[i - 1][1] - places[i][1])
++                }
++            mTaskViewsDismissPrimaryTranslations.clear()
++            if (moves.isEmpty()) return Pair(gridEndSpringSet, emptyList())
++            for ((taskView, move) in moves) {
++                mTaskViewsDismissPrimaryTranslations[taskView] = move[0].toInt()
++            }
++            val driver =
++                SpringAnimation(FloatValueHolder(0f))
++                    .setSpring(createExpressiveGridReflowSpringForce(finalPosition = LUJARCH_SPAN))
++                    .addUpdateListener { _, value, _ ->
++                        val done = value / LUJARCH_SPAN
++                        for ((taskView, move) in moves) {
++                            taskView.primaryDismissTranslationProperty.setValue(
++                                taskView, move[0] * done)
++                            taskView.secondaryDismissTranslationProperty.setValue(
++                                taskView, move[1] * done)
++                        }
++                    }
++            // The grid's end closes up together with the cards, so all of it is one motion.
++            val reflowSpringSet = SpringSet(driver, LUJARCH_SPAN)
++            if (gridEndSpringSet != null) reflowSpringSet.playTogether(gridEndSpringSet)
++            return Pair(reflowSpringSet, moves.map { it.first })
 +        }
 +    }
 +
@@ -2620,7 +2691,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
      /**
       * Caches the groupTask before removing it. As the deskId might become invalid by
       * removeViewInLayout called on the dismissed task. It might happen before
-@@ -1474,6 +1548,8 @@ constructor(
+@@ -1474,6 +1606,8 @@ constructor(
          // The additional damping to apply to tasks further from the dismissed task.
          private const val ADDITIONAL_DISMISS_DAMPING_RATIO = 0.15f
          private const val RECENTS_SCALE_SPRING_MULTIPLIER = 1000f
