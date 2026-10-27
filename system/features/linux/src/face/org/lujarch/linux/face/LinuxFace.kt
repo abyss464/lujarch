@@ -65,8 +65,8 @@ import org.lujarch.linux.client.TAG
 /**
  * Linux mode as the home screen's other face (LNX-3): the home screen shows Android's home or
  * this, one at a time, and while it shows this, this is the home. It holds the terminal and the
- * desktop as two pages of one window, takes the bottom swipe the home screen hands it (the terminal
- * goes to Android's home; on the desktop the swipe is the desktop's own touch), hides Android's bars and locks the
+ * desktop as two pages of one window, takes the bottom swipe the home screen hands it (the desktop
+ * goes to the terminal, the terminal to Android's home), hides Android's bars and locks the
  * notification shade while on screen, answers what Linux asks of the owner (an authorization, an
  * NFC card, the clipboard) and keeps the Terminal app's service of the lent parts bound, with this
  * window's capabilities, for as long as Linux is on screen.
@@ -181,7 +181,7 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
     /** The bottom swipe while the face is the home: true when it took it. */
     fun onSwipeUp(): Boolean {
         if (!shown) return false
-        leave()
+        if (page == Page.DESKTOP) show(Page.TERMINAL) else leave()
         return true
     }
 
@@ -462,7 +462,6 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
      */
     fun onGestureMotion(ev: MotionEvent): Boolean {
         if (!shown) return false
-        if (pages[page]?.onEdgeTouch(ev) == true) return true
         val slop = ViewConfiguration.get(activity).scaledTouchSlop
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -574,8 +573,7 @@ abstract class FacePage(val face: LinuxFace) : ContextWrapper(face.activity) {
     open fun onSessionExited(id: String, status: Int) {}
     /** A key of the window before its views: true when the page took it. */
     open fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = false
-    /** A touch of the home screen's bottom gesture: true when the page takes it as its own touch. */
-    open fun onEdgeTouch(event: MotionEvent): Boolean = false
+
 
     open fun onDestroy() {
         scope.cancel()
