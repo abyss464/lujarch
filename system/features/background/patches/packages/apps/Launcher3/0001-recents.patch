@@ -2496,7 +2496,7 @@ index 1b0786164dfd3192ee677e4850c480b2a0c6fc17..d9346e100ac745efe30d70e87ae17bad
              LauncherState state = getStateManager().getState();
              boolean hasClearAllButton = (state.getVisibleElements(mContainer.getLauncherUiState())
 diff --git a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
-index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c7178fa2914d 100644
+index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..1eb5131660a8cfd5a7da2f3fef61a8e4284b58b4 100644
 --- a/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 +++ b/quickstep/src/com/android/quickstep/views/RecentsDismissUtils.kt
 @@ -18,11 +18,13 @@ package com.android.quickstep.views
@@ -2534,7 +2534,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
          val allDismissSprings =
              recentsView.mUtils.taskViews
                  .reversed()
-@@ -974,6 +983,9 @@ constructor(
+@@ -974,11 +983,16 @@ constructor(
  
              // Page snapping and relayout to run after all animations have completed.
              val onFinishComplete = {
@@ -2544,7 +2544,15 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
                  // Reset task translations as they may have updated via the dismiss animations.
                  resetTaskVisuals()
  
-@@ -1006,6 +1018,7 @@ constructor(
+                 // Denote if any task has been dismissed for grid rebalancing.
+-                mAnyTaskHasBeenDismissed = true
++                // Lujarch's Background (BG-11): a phone's folded cards are laid out again from the
++                // newest, each column top then bottom, instead of keeping their rows.
++                mAnyTaskHasBeenDismissed = lujarchPlaces == null
+                 if (shouldRemoveTask && dismissedTaskView != null) {
+                     // Call removeTask API before removing the TaskView.
+                     handleGroupTaskRemoval(dismissedTaskView)
+@@ -1006,6 +1020,7 @@ constructor(
  
                  // Update the UI after removal and snap to page.
                  updateUiAfterTaskRemoval(dismissedTaskView, pageToSnapTo, isDismissingHomeTask)
@@ -2552,7 +2560,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
  
                  if (!dismissingForSplitSelection) {
                      InteractionJankMonitorWrapper.end(Cuj.CUJ_LAUNCHER_OVERVIEW_TASK_DISMISS)
-@@ -1021,6 +1034,67 @@ constructor(
+@@ -1021,6 +1036,67 @@ constructor(
          }
      }
  
@@ -2620,7 +2628,7 @@ index 266cdcc6566bc8e5b2ee70b3a9939e66fc790e49..4b747c01d017f042cc145656a0e4c717
      /**
       * Caches the groupTask before removing it. As the deskId might become invalid by
       * removeViewInLayout called on the dismissed task. It might happen before
-@@ -1474,6 +1548,8 @@ constructor(
+@@ -1474,6 +1550,8 @@ constructor(
          // The additional damping to apply to tasks further from the dismissed task.
          private const val ADDITIONAL_DISMISS_DAMPING_RATIO = 0.15f
          private const val RECENTS_SCALE_SPRING_MULTIPLIER = 1000f
