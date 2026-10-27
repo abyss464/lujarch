@@ -1925,128 +1925,23 @@ def pull_lfs(tree, env):
 # Build
 
 
-def mem_available_gb():
-    with open("/proc/meminfo") as f:
-        for line in f:
-            if line.startswith("MemAvailable:"):
-                return int(line.split()[1]) // 1048576
-    return 0
-
-
-# The memory a build leaves to the desktop and everything else running.
-DESKTOP_RESERVE_GB = 10
-# The analysis's Go memory limit (GOMEMLIMIT): its live heap peaks at about 29 GB, under a 38 GB
-# limit it runs as fast as under more, and the rest of the build holds under 1 GB beside it
-# (BESIDE_ANALYSIS_GB). The limit is part of the analysis's command line, so it stays one value:
-# a limit that followed free memory would make every build run the analysis again.
-ANALYSIS_GO_GB = 38
-BESIDE_ANALYSIS_GB = 2
-# The least memory cap of a build that analyses the tree.
-BUILD_MIN_GB = ANALYSIS_GO_GB + BESIDE_ANALYSIS_GB
-# The least memory cap of a build that reuses the last analysis: Kati holds up to 17 GB, then siso
-# 23 GB and its two jobs.
-NINJA_MIN_GB = 28
-# How long a build waits for the memory it needs to come free.
-MEMORY_WAIT_MIN = 20
-
-
 def clip(text, width):
     return text if len(text) <= width else f"{text[:width * 2 // 3 - 3]} ... {text[-(width // 3):]}"
 
 
-def memory_holders():
-    """What holds the computer's memory, largest first, one line each: the programs, by the
-    resident anonymous memory of all their processes, and the files of every memory-backed file
-    system, by the deepest directories holding 512 MB or more."""
-    home = str(Path.home())
-    programs = {}
-    for proc in Path("/proc").iterdir():
-        if not proc.name.isdigit():
-            continue
-        try:
-            argv = (proc / "cmdline").read_bytes().decode(errors="replace").split("\0")
-            anon = re.search(r"^RssAnon:\s+(\d+)", (proc / "status").read_text(), re.M)
-        except OSError:
-            continue
-        if not argv[0] or not anon:
-            continue
-        kb, name = int(anon.group(1)), Path(argv[0]).name
-        cmd = clip(" ".join(a for a in argv if a).replace(home, "~"), 110)
-        total, count, largest = programs.get(name, (0, 0, (0, "")))
-        programs[name] = (total + kb, count + 1, max(largest, (kb, f"pid {proc.name}: {cmd}")))
-    held = []
-    for name, (kb, count, (_, largest)) in sorted(programs.items(), key=lambda p: -p[1][0])[:6]:
-        processes = f" ({count} processes)" if count > 1 else ""
-        held.append((kb << 10, f"{name}{processes}, the largest {largest}"))
-    for line in Path("/proc/mounts").read_text().split("\n"):
-        fields = line.split()
-        if len(fields) < 3 or fields[2] != "tmpfs":
-            continue
-        mount = fields[1].replace("\\040", " ")
-        try:
-            fs = os.statvfs(mount)
-        except OSError:
-            continue
-        used = (fs.f_blocks - fs.f_bfree) * fs.f_frsize
-        if used < 1 << 30:
-            continue
-        du = subprocess.run(["du", "-x", "-k", "-0", mount], capture_output=True, text=True)
-        big = {}
-        for entry in du.stdout.split("\0"):
-            size, _, path = entry.partition("\t")
-            if path and path != mount and int(size) >= 1 << 19:
-                big[path] = int(size) << 10
-        deepest = sorted((p for p in big if not any(q.startswith(p + "/") for q in big)),
-                         key=lambda p: -big[p])[:4]
-        held.append((used, f"files in {mount}" + "".join(
-            f"\n{big[p] / 2**30:17.1f} GB  {clip(p.replace(home, '~'), 100)}" for p in deepest)))
-    return "\n".join(f"  {size / 2**30:5.1f} GB  {text}" for size, text in sorted(held)[::-1])
-
-
-def wait_for_memory(need, what="a build"):
-    """Free memory in GB once it reaches need, waited for up to MEMORY_WAIT_MIN minutes."""
-    gb = mem_available_gb()
-    if gb >= need:
-        return gb
-    log(f"only {gb} GB of memory free: {what} needs {need}; waiting up to {MEMORY_WAIT_MIN} min "
-        f"for it to come free. What holds memory:\n{memory_holders()}")
-    start = time.monotonic()
-    while time.monotonic() - start < MEMORY_WAIT_MIN * 60:
-        time.sleep(15)
-        gb = mem_available_gb()
-        if gb >= need:
-            log(f"{gb} GB of memory free after {(time.monotonic() - start) / 60:.1f} min")
-            return gb
-    die(f"only {gb} GB of memory free after {MEMORY_WAIT_MIN} min: {what} needs {need} (or set "
-        f"build.memory_max in host.toml). What holds memory:\n{memory_holders()}")
-
-
-def analysed_before(tree, product):
-    """Whether Soong has analysed the tree for the product: only then does it refuse to analyse
-    it again when the build forbids it (SOONG_ENFORCE_NO_REANALYSIS); a first analysis it runs."""
-    return (tree / "out" / "soong" / f"soong.environment.used.{product}.build").is_file()
-
-
-def build_budget(host, reusable):
-    """The build's memory cap, pressure point and jobs, and whether it may analyse the tree: from
-    host.toml; else from free memory, once enough is free for the analysis, or, while less is free
-    and the last analysis is reusable, for a build that reuses it."""
-    mem_max = host.get("build", "memory_max") or ""
-    analyse = True
-    if not mem_max:
-        # Android 17's analysis of the virtual device grows past 60 GB unless GOMEMLIMIT holds
-        # it; squeezed by the cap instead, it stalls for hours.
-        full = BUILD_MIN_GB + DESKTOP_RESERVE_GB
-        if reusable and mem_available_gb() < full:
-            gb = wait_for_memory(NINJA_MIN_GB + DESKTOP_RESERVE_GB,
-                                 "a build that reuses the last analysis")
-            analyse = gb >= full
-        else:
-            gb = wait_for_memory(full, "a build that analyses the tree")
-        mem_max = f"{min(gb - DESKTOP_RESERVE_GB, 60)}G"
-    mem_high = host.get("build", "memory_high") or mem_max
-    jobs = int(host.get("build", "jobs", 0) or 0) or fitting_jobs(mem_max)
-    return mem_max, mem_high, jobs, analyse
+def build_jobs(host):
+    """The build's jobs: host.toml's, else one for each CPU the build runs on."""
+    jobs = int(host.get("build", "jobs", 0) or 0)
+    if jobs:
+        return jobs
+    cpus = host.get("computer", "cpus")
+    if not cpus:
+        return os.cpu_count() or 1
+    count = 0
+    for part in str(cpus).split(","):
+        first, _, last = part.partition("-")
+        count += int(last or first) - int(first) + 1
+    return count
 
 
 # Of the caller's environment a build sees only these: the build writes its whole environment
@@ -2057,11 +1952,6 @@ BUILD_ENV_KEEP = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "LANG", "L
 
 def build_environment():
     return {k: v for k, v in os.environ.items() if k in BUILD_ENV_KEEP}
-
-
-def fitting_jobs(mem_max):
-    # siso keeps about 26 GB, and every Java or R8 job, which no job pool limits, up to 4 GB.
-    return max(2, (int(mem_max.rstrip("G")) - 26) // 4)
 
 
 def run_scoped(command, script, logfile, mode, **kwargs):
@@ -2277,7 +2167,7 @@ def build_device(host, args):
     pin = lock_file().get("stock", {}).get(args.device)
     if pin and pin.get("files") and not (stock_dump_dir(host, pin) / STOCK_UNPACKED).is_file():
         die(f"{args.device} needs files of its stock release: lujarch stock {args.device}")
-    mem_max, mem_high, jobs, analyse = build_budget(host, analysed_before(tree, device["product"]))
+    jobs = build_jobs(host)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     logs = host.out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -2310,30 +2200,21 @@ m -j{jobs} {modules}
         "CCACHE_EXEC": "/usr/bin/ccache",
         "CCACHE_DIR": str(host.path_of("paths", "ccache")),
         "NINJA_HIGHMEM_NUM_JOBS": str(host.get("build", "highmem_jobs", 3)),
-        # The analysis's Go heap stays under the cap (tools/patches/build/soong).
-        "GOMEMLIMIT": f"{ANALYSIS_GO_GB}GiB",
     })
     env.update({k: str(v) for k, v in device.get("build", {}).get("env", {}).items()})
     cpus = host.get("computer", "cpus")
 
     def run(jobs, mode):
+        # No memory cap: what does not fit in memory goes to swap.
         scope = ["systemd-run", "--user", "--scope", "--quiet", "--collect",
-                 "-p", f"MemoryHigh={mem_high}", "-p", f"MemoryMax={mem_max}",
-                 "-p", "MemorySwapMax=0", "-p", "CPUWeight=20", "-p", "IOWeight=20"]
+                 "-p", "CPUWeight=20", "-p", "IOWeight=20"]
         if cpus:
             scope += ["taskset", "-c", cpus]
-        # Under a cap that does not hold the analysis, Soong stops before it analyses the tree.
-        held = {} if analyse else {"SOONG_ENFORCE_NO_REANALYSIS": "true"}
-        return run_scoped(scope, script(jobs), logfile, mode, cwd=tree, env={**env, **held})
+        return run_scoped(scope, script(jobs), logfile, mode, cwd=tree, env=env)
 
     def begin():
         log(f"building {args.device} ({lunch}{', ' + modules if modules else ''}): "
-            f"{jobs} jobs, memory cap {mem_max}"
-            f"{'' if analyse else ', reusing the last analysis'}; log {logfile}")
-
-    def merged(used, more):
-        return {k: max(v, more[k]) if k in ("peak", "anon") else v + more[k]
-                for k, v in used.items()}
+            f"{jobs} jobs; log {logfile}")
 
     try:
         with open("/proc/self/oom_score_adj", "w") as f:
@@ -2346,27 +2227,11 @@ m -j{jobs} {modules}
     begin()
     start, started = time.monotonic(), time.time()
     status, used = run(jobs, "w")
-    refusal = re.search(r"Reanalysis will run due to ([^\n]*)",
-                        logfile.read_text(errors="replace")) if status and not analyse else None
-    if refusal:
-        log(f"the build analyses the tree again: {refusal.group(1).rstrip('.')}")
-        mem_max, mem_high, jobs, analyse = build_budget(host, False)
-        begin()
-        status, more = run(jobs, "a")
-        used = merged(used, more)
-    if status < 0 or status in (137, 143):
-        # The scope's memory cap killed the build: it goes on from where it stopped with half
-        # the jobs.
-        jobs = max(2, jobs // 2)
-        log(f"the build hit its memory cap (exit {status}); continuing with {jobs} jobs")
-        status, more = run(jobs, "a")
-        used = merged(used, more)
     minutes = int((time.monotonic() - start) // 60)
-    # What the build used, so that its cap and jobs follow from measured builds.
+    # What the build used.
     analysis = analysis_seconds(tree, started)
-    usage = (f"memory: cap {mem_max}, {jobs} jobs; peak {used['peak'] / 2**30:.1f}G, anonymous "
-             f"at most {used['anon'] / 2**30:.1f}G; the cap reached {used['max']} times, "
-             f"{used['oom_kill']} processes killed by it; "
+    usage = (f"memory: {jobs} jobs; peak {used['peak'] / 2**30:.1f}G, anonymous at most "
+             f"{used['anon'] / 2**30:.1f}G; "
              + (f"analysis {analysis:.0f} s" if analysis is not None else "no analysis"))
     if status:
         print("\n".join(logfile.read_text(errors="replace").split("\n")[-40:]), file=sys.stderr)

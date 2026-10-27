@@ -200,9 +200,7 @@ jobs = 12
 gitconfig = "..."     # git configuration used for repo sync (mirrors)
 
 [build]
-jobs = 0              # 0: derived from memory
-memory_high = ""      # empty: derived from free memory
-memory_max = ""       # empty: derived from free memory; a build waits until enough is free
+jobs = 0              # 0: one for each CPU the build runs on
 highmem_jobs = 3
 lock = "..."          # one lock for every Android build on the computer; its queue beside it
 
