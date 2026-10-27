@@ -50,8 +50,9 @@ home screen shows Linux, Linux is the home: an app opened from Linux goes back t
 from the bottom, and no gesture, recents, notification shade or back gesture of Android acts on
 Linux. Android's bars are hidden and Linux's own status line (user@host, network, battery, time)
 stands where the status bar was; the session tabs carry + (new session), Display and Settings. A
-swipe from the bottom on the desktop goes to the terminal; a swipe from the bottom on the terminal,
-or Ctrl+Alt+F1 on a hardware keyboard, turns the home screen to Android's home, and Linux goes on.
+swipe from the bottom on the terminal, or Ctrl+Alt+F1 on a hardware keyboard, turns the home screen
+to Android's home, and Linux goes on; the desktop goes back to the terminal by its Terminal key
+(LNX-6).
 The terminal holds up to 16 sessions as tabs, each a shell of the owner's user, of root in Arch
 Linux, or of root in Android; sessions go on while Linux is left and end when Linux stops. Each
 can be renamed and ended, shows whether a command runs, and keeps the phone awake only if the owner
@@ -96,8 +97,9 @@ installs Plasma Mobile in Linux and builds KWin with Lujarch's display, Plasma M
 phone's landscape layout and Mesa for the phone's GPU, as root in Linux while it runs and on the
 small cores only; installing again updates it. The page shows the last install with its outcome.
 While Linux is on screen, the Mode Linux (Settings > Modes) lets calls, repeat callers, alarms and
-media through and holds other notifications; the status bar stays locked and a swipe from the
-bottom goes to the terminal (LNX-3).
+media through and holds other notifications; the status bar stays locked, and Android's swipe from
+the bottom does not leave the desktop: the swipe is the desktop's own. The desktop's navigation
+panel has a Terminal key beside Plasma Mobile's task switcher, which turns to the terminal (LNX-3).
 
 In landscape the desktop's status bar is a column at the screen's left end, its navigation panel a
 column at its right end, and its on-screen keyboard a column beside the navigation panel, the
@@ -116,7 +118,7 @@ draw CJK text with Android's fonts.
 ### LNX-7 Linux uses the phone's parts only when lent
 
 - Home: Settings > System > Linux development environment
-- Switch: Shared clipboard, Android notifications, Sensors, USB devices, Confirm authorization with fingerprint, Infrared transmitter, NFC card reading, Microphone, Camera, Location, Vibration, Android's quick settings: on, off each
+- Switch: Shared clipboard, Android notifications, Sensors, USB devices, Confirm authorization with fingerprint, Infrared transmitter, NFC card reading, Microphone, Camera, Location, Vibration, Android's quick settings, Shared storage: on, off each
 - Default: off each
 - Verify: phone
 
@@ -129,7 +131,10 @@ location (for GeoClue, and through it the desktop's programs), vibration (the de
 programs vibrate the phone as touch feedback) and Android's quick settings: the desktop's quick
 settings and status bar show and switch Android's Wi-Fi, mobile data, Bluetooth, airplane mode,
 hotspot, flashlight, auto-rotate, Do Not Disturb and Caffeine (the screen stays on while the desktop
-is shown), show the battery, and the brightness slider is Android's brightness. The microphone, a
+is shown), show the battery, and the brightness slider is Android's brightness; and the phone's
+shared storage: the folders Files shows on the phone (Download, DCIM, Pictures and the rest) are the
+folder Android in the owner's home, also under Places in Dolphin, and the owner's user reads and
+writes them; Android's apps see the files Linux saves there. The microphone, a
 camera and the location are on only while a program in Linux uses them and the terminal or the
 desktop is on screen, after Android's own permission dialog, with Android's privacy indicator.
 Off, Linux cannot reach that part.
