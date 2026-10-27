@@ -10,7 +10,6 @@
     <string name="lnx_end_session">结束会话</string>
     <string name="lnx_display">显示</string>
     <string name="lnx_settings">设置</string>
-    <string name="lnx_session_ended">已结束</string>
     <string name="lnx_tab_busy">正在运行 %1$s</string>
     <string name="lnx_no_sessions">没有会话</string>
     <string name="lnx_service_missing">Linux 开发环境没有响应。</string>

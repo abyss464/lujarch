@@ -44,7 +44,6 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
     var busy = false
     var job: String? = null
     var awake = false
-    var ended = false
 
     val session = TerminalSession(TRANSCRIPT_ROWS, client).also { it.setTransport(this) }
 

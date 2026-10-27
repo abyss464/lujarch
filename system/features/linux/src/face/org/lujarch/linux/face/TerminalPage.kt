@@ -292,11 +292,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
 
     override fun onSessionExited(id: String, status: Int) {
         val tab = tabs.firstOrNull { it.id == id } ?: return
-        if (tab.ended) return
-        tab.ended = true
-        tab.detach()
-        tab.session.onHostExit(status)
-        renderTabs()
+        closeTab(tab)
     }
 
     private suspend fun refresh(reattach: Boolean) {
@@ -321,23 +317,19 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
             tab.job = info.job
             tab.awake = info.awake
         }
-        for (tab in tabs.filter { it.id !in ids && !it.ended }) {
-            tab.ended = true
-            tab.detach()
-            tab.session.onHostExit(0)
-        }
-        if (s.state == ILinux.STATE_RUNNING && s.sessions.isEmpty() && !opened && tabs.none { !it.ended }) {
+        for (tab in tabs.filter { it.id !in ids }) removeTab(tab)
+        if (s.state == ILinux.STATE_RUNNING && s.sessions.isEmpty() && !opened && tabs.isEmpty()) {
             opened = true
             create(Linux.openKind(this))
             return
         }
         opened = true
         if (current == null || current !in tabs) {
-            current = tabs.firstOrNull { it.id == wanted } ?: tabs.firstOrNull { !it.ended } ?: tabs.firstOrNull()
+            current = tabs.firstOrNull { it.id == wanted } ?: tabs.firstOrNull()
         }
         wanted?.let { id -> tabs.firstOrNull { it.id == id }?.let { current = it; wanted = null } }
         for (tab in tabs) {
-            if (!tab.ended && (reattach || !attached.contains(tab.id))) attach(tab)
+            if (reattach || !attached.contains(tab.id)) attach(tab)
         }
         current?.let { show(it) }
         renderTabs()
@@ -400,7 +392,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
             tabsRow.addView(
                 Chrome.tabView(
                     this, tab, tab === current,
-                    onClick = { if (tab.ended) closeTab(tab) else select(tab) },
+                    onClick = { select(tab) },
                     onLongClick = { tabSheet(tab) },
                 )
             )
@@ -423,16 +415,21 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         terminal.requestFocus()
     }
 
+    /** A session that ended leaves the tabs at once. */
     private fun closeTab(tab: TerminalTab) {
+        removeTab(tab)
+        renderTabs()
+        if (tabs.isEmpty()) scope.launch { refresh(reattach = false) }
+    }
+
+    private fun removeTab(tab: TerminalTab) {
         tab.close()
         tabs.remove(tab)
         attached.remove(tab.id)
         if (current === tab) {
-            current = tabs.firstOrNull { !it.ended } ?: tabs.firstOrNull()
+            current = tabs.firstOrNull()
             current?.let { show(it) } ?: terminal.attachSession(null)
         }
-        renderTabs()
-        if (tabs.isEmpty()) scope.launch { refresh(reattach = false) }
     }
 
     private fun tabSheet(tab: TerminalTab) {
@@ -440,7 +437,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
             this, tab,
             onAwake = { awake -> act("setSessionAwake") { it.setSessionAwake(tab.id, awake) } },
             onRename = { name -> act("renameSession") { it.renameSession(tab.id, name) } },
-            onEnd = { if (tab.ended) closeTab(tab) else act("endSession") { it.endSession(tab.id) } },
+            onEnd = { act("endSession") { it.endSession(tab.id) } },
         )
     }
 
@@ -512,11 +509,6 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
     }
 
     override fun onSingleTapUp(e: MotionEvent) {
-        val tab = current
-        if (tab != null && tab.ended) {
-            closeTab(tab)
-            return
-        }
         getSystemService(InputMethodManager::class.java)?.showSoftInput(terminal, 0)
     }
 
@@ -530,11 +522,6 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         // Ctrl+Alt+F1 on a hardware keyboard turns the home screen to Android's home.
         if (e.isCtrlPressed && e.isAltPressed && keyCode == KeyEvent.KEYCODE_F1) {
             face.leave()
-            return true
-        }
-        val tab = current
-        if (tab != null && tab.ended && keyCode == KeyEvent.KEYCODE_ENTER) {
-            closeTab(tab)
             return true
         }
         return false

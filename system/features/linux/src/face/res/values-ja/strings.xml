@@ -10,7 +10,6 @@
     <string name="lnx_end_session">セッションを終了</string>
     <string name="lnx_display">ディスプレイ</string>
     <string name="lnx_settings">設定</string>
-    <string name="lnx_session_ended">終了しました</string>
     <string name="lnx_tab_busy">%1$s を実行中</string>
     <string name="lnx_no_sessions">セッションはありません</string>
     <string name="lnx_service_missing">Linux 開発環境が応答しません。</string>

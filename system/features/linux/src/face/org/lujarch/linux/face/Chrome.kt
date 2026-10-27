@@ -85,7 +85,6 @@ object Chrome {
         row.setPadding(dp(c, 14), 0, dp(c, 14), 0)
         row.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(c, 40))
             .also { it.marginEnd = dp(c, 4) }
-        row.alpha = if (tab.ended) 0.5f else 1f
         row.addView(text(c, glyphOf(tab.kind), glyphSp(tab.kind, 12f, 15f), c.getColor(R.color.lnx_primary), medium = true, mono = true))
         val label = text(c, labelOf(c, tab.kind, tab.name), 14f, fg, medium = true)
         label.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -106,7 +105,6 @@ object Chrome {
             append(labelOf(c, tab.kind, tab.name))
             if (tab.busy) append(", ").append(c.getString(R.string.lnx_tab_busy, tab.job ?: ""))
             if (tab.awake) append(", ").append(c.getString(R.string.lnx_keep_awake))
-            if (tab.ended) append(", ").append(c.getString(R.string.lnx_session_ended))
         }
         row.isClickable = true
         row.isLongClickable = true
@@ -150,7 +148,6 @@ object Chrome {
         val state = text(
             c,
             when {
-                tab.ended -> c.getString(R.string.lnx_session_ended)
                 tab.busy -> tab.job?.takeIf { it.isNotBlank() } ?: c.getString(R.string.lnx_sheet_busy)
                 else -> c.getString(R.string.lnx_sheet_idle)
             },
@@ -163,29 +160,27 @@ object Chrome {
         root.addView(header)
         root.addView(divider(c))
 
-        if (!tab.ended) {
-            val section = text(c, c.getString(R.string.lnx_sheet_sleep_title), 14f, c.getColor(R.color.lnx_primary), medium = true)
-            section.setPadding(dp(c, 24), dp(c, 12), dp(c, 24), dp(c, 4))
-            root.addView(section)
-            for ((awake, title) in listOf(false to R.string.lnx_sheet_sleep_option, true to R.string.lnx_keep_awake)) {
-                val row = row(c)
-                row.minimumHeight = dp(c, 56)
-                row.setPadding(dp(c, 24), dp(c, 8), dp(c, 24), dp(c, 8))
-                row.addView(radio(c, tab.awake == awake), LinearLayout.LayoutParams(dp(c, 20), dp(c, 20)))
-                row.addView(text(c, c.getString(title), 16f, c.getColor(R.color.lnx_on_surface)),
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = dp(c, 16) })
-                row.setOnClickListener {
-                    dialog.dismiss()
-                    if (tab.awake != awake) onAwake(awake)
-                }
-                root.addView(row)
-            }
-            root.addView(divider(c).also { (it.layoutParams as LinearLayout.LayoutParams).topMargin = dp(c, 6) })
-            root.addView(action(c, R.drawable.lnx_ic_edit, R.string.lnx_rename) {
+        val section = text(c, c.getString(R.string.lnx_sheet_sleep_title), 14f, c.getColor(R.color.lnx_primary), medium = true)
+        section.setPadding(dp(c, 24), dp(c, 12), dp(c, 24), dp(c, 4))
+        root.addView(section)
+        for ((awake, title) in listOf(false to R.string.lnx_sheet_sleep_option, true to R.string.lnx_keep_awake)) {
+            val row = row(c)
+            row.minimumHeight = dp(c, 56)
+            row.setPadding(dp(c, 24), dp(c, 8), dp(c, 24), dp(c, 8))
+            row.addView(radio(c, tab.awake == awake), LinearLayout.LayoutParams(dp(c, 20), dp(c, 20)))
+            row.addView(text(c, c.getString(title), 16f, c.getColor(R.color.lnx_on_surface)),
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = dp(c, 16) })
+            row.setOnClickListener {
                 dialog.dismiss()
-                rename(c, tab.name, onRename)
-            })
+                if (tab.awake != awake) onAwake(awake)
+            }
+            root.addView(row)
         }
+        root.addView(divider(c).also { (it.layoutParams as LinearLayout.LayoutParams).topMargin = dp(c, 6) })
+        root.addView(action(c, R.drawable.lnx_ic_edit, R.string.lnx_rename) {
+            dialog.dismiss()
+            rename(c, tab.name, onRename)
+        })
         root.addView(action(c, R.drawable.lnx_ic_close, R.string.lnx_end_session) {
             dialog.dismiss()
             onEnd()
