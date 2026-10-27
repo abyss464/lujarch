@@ -153,7 +153,7 @@ diff -ruN a/components/mobileshell/qml/statusbar/StatusBar.qml b/components/mobi
 diff -ruN a/shell/contents/views/Panel.qml b/shell/contents/views/Panel.qml
 --- a/shell/contents/views/Panel.qml
 +++ b/shell/contents/views/Panel.qml
-@@ -33,6 +33,75 @@
+@@ -33,6 +33,78 @@
          }
      }
  
@@ -179,7 +179,10 @@ diff -ruN a/shell/contents/views/Panel.qml b/shell/contents/views/Panel.qml
 +                if (panel.location !== edge) {
 +                    panel.location = edge;
 +                }
-+                panel.maximize();
++                // Plasma 6.8 fills the edge by itself; earlier ones are asked to.
++                if (typeof panel.maximize === "function") {
++                    panel.maximize();
++                }
 +            } else if (root.lujarchTaskPanel && root.lujarchLandscape && panel.offset !== 0) {
 +                panel.offset = 0;
 +            }

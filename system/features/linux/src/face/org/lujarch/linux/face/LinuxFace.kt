@@ -47,6 +47,7 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsets
+import android.view.WindowInsetsAnimation
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -113,7 +114,17 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
         root.visibility = View.GONE
         root.setBackgroundColor(Color.BLACK)
         root.isClickable = true
-        // An edge swipe shows Android's bars again; Linux has its own, so they go at once.
+        // An edge swipe shows Android's bars again; Linux has its own, so they go at once: before
+        // the first frame of their animation, and, should one get through, once they are laid out.
+        root.setWindowInsetsAnimationCallback(object :
+            WindowInsetsAnimation.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+            override fun onPrepare(animation: WindowInsetsAnimation) {
+                if (inFront && animation.typeMask and WindowInsets.Type.systemBars() != 0) hideBars()
+            }
+
+            override fun onProgress(insets: WindowInsets, running: List<WindowInsetsAnimation>) =
+                insets
+        })
         root.setOnApplyWindowInsetsListener { v, insets ->
             if (inFront && (insets.isVisible(WindowInsets.Type.statusBars()) ||
                     insets.isVisible(WindowInsets.Type.navigationBars()))) {
