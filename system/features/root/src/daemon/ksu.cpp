@@ -59,12 +59,21 @@ struct VersionTagCmd {
     char tag[32];
 };
 
+struct ManageMarkCmd {
+    uint32_t operation;  // KSU_MARK_*
+    int32_t pid;
+    uint32_t result;
+};
+static_assert(sizeof(ManageMarkCmd) == 12);
+
 constexpr uint32_t kIoctlGetInfo = _IOR('K', 2, GetInfoCmd);
 constexpr uint32_t kIoctlNewGetAllowList = _IOWR('K', 6, ListHeader);
 constexpr uint32_t kIoctlNewGetDenyList = _IOWR('K', 7, ListHeader);
 constexpr uint32_t kIoctlGetAppProfile = _IOC(_IOC_READ | _IOC_WRITE, 'K', 11, 0);
 constexpr uint32_t kIoctlSetAppProfile = _IOC(_IOC_WRITE, 'K', 12, 0);
+constexpr uint32_t kIoctlManageMark = _IOC(_IOC_READ | _IOC_WRITE, 'K', 16, 0);
 constexpr uint32_t kIoctlGetVersionTag = _IOC(_IOC_READ, 'K', 99, 0);
+constexpr uint32_t kMarkMark = 2;  // KSU_MARK_MARK
 constexpr unsigned long kInstallMagic1 = 0xDEADBEEF;
 constexpr unsigned long kInstallMagic2 = 0xCAFEBABE;
 
@@ -435,6 +444,16 @@ Result<bool> SetFields(const std::string& package, int32_t uid, const Fields& fi
     if (SameEffect(**current, wanted)) return false;
     if (auto written = Write(*fd, package, uid, wanted); !written.ok()) return written.error();
     return true;
+}
+
+Result<void> Mark(pid_t pid) {
+    auto fd = DriverFd();
+    if (!fd.ok()) return fd.error();
+    ManageMarkCmd cmd{kMarkMark, pid, 0};
+    if (ioctl(*fd, kIoctlManageMark, &cmd) != 0) {
+        return ErrnoError() << "KernelSU MANAGE_MARK of " << pid;
+    }
+    return {};
 }
 
 }  // namespace lujarch::root::ksu

@@ -218,4 +218,18 @@ ndk::ScopedAStatus Service::setLinuxRootSessions(bool allowed) {
     return ndk::ScopedAStatus::ok();
 }
 
+ndk::ScopedAStatus Service::markLinuxRootSession(int32_t pid) {
+    if (AIBinder_getCallingUid() != 0) {
+        return Error(IRoot::ERROR_REFUSED, "only lujarch_linux may start root sessions");
+    }
+    auto profile = ksu::Get(static_cast<int32_t>(aid::kLinuxRoot));
+    if (!profile.ok()) return Failure(profile.error());
+    if (!profile->has_value() || !(*profile)->allow_su) {
+        return Error(IRoot::ERROR_NO_ROOT, "root sessions in Android are not allowed");
+    }
+    if (pid <= 0) return Error(IRoot::ERROR_INVALID, "no process " + std::to_string(pid));
+    if (auto marked = ksu::Mark(pid); !marked.ok()) return Failure(marked.error());
+    return ndk::ScopedAStatus::ok();
+}
+
 }  // namespace lujarch::root

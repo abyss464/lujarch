@@ -29,6 +29,7 @@ class Service : public aidl::org::lujarch::root::BnRoot {
                                   const aidl::org::lujarch::root::RootProfile& profile) override;
     ndk::ScopedAStatus resetProfile(const std::string& package) override;
     ndk::ScopedAStatus setLinuxRootSessions(bool allowed) override;
+    ndk::ScopedAStatus markLinuxRootSession(int32_t pid) override;
 };
 
 }  // namespace lujarch::root

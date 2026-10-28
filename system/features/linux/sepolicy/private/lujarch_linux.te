@@ -57,8 +57,10 @@ allow lujarch_linux lujarch_linux_arch_file:fifo_file { create_file_perms rename
 allow lujarch_linux lujarch_linux_arch_file:sock_file { create getattr setattr unlink write };
 allow lujarch_linux self:unix_stream_socket create_stream_socket_perms;
 
-# The system's namespace: binds only, and Android's /dev/bus/usb taken back.
+# The system's namespace: binds only, Android's /dev/bus/usb lent over its own node and taken
+# back.
 allow lujarch_linux rootfs:dir mounton;
+allow lujarch_linux usb_device:dir mounton;
 allow lujarch_linux tmpfs:filesystem unmount;
 
 # The terminals of the sessions.

@@ -93,6 +93,13 @@ std::string Run(const char* name) {
     return std::string(kBridgeDir) + "/" + name;
 }
 
+// Polls fd on the bridge's looper, which returns ident for it.
+void Watch(ALooper* looper, int fd, int ident, int events, const char* what) {
+    if (ALooper_addFd(looper, fd, ident, events, nullptr, nullptr) != 1) {
+        LOG(ERROR) << "bridge: the looper does not poll " << what;
+    }
+}
+
 struct SensorKind {
     int type;
     const char* name;
@@ -350,7 +357,7 @@ void Bridge::Arrange() {
                 return;
             }
             fd = std::move(*opened);
-            ALooper_addFd(looper, fd.get(), ident, ALOOPER_EVENT_INPUT, nullptr, nullptr);
+            Watch(looper, fd.get(), ident, ALOOPER_EVENT_INPUT, name);
             LOG(INFO) << "bridge: " << name << " lent";
         } else if (!want && fd >= 0) {
             ALooper_removeFd(looper, fd.get());
@@ -650,7 +657,7 @@ void Bridge::ReaderOpened(Reader& r) {
     if (!fd.ok()) return;
     r.out = std::move(*fd);
     // Only errors: the last reader leaving.
-    ALooper_addFd(ALooper_forThread(), r.out.get(), r.ident, 0, nullptr, nullptr);
+    Watch(ALooper_forThread(), r.out.get(), r.ident, 0, r.name);
     LOG(INFO) << "bridge: a program reads " << r.name;
     asks_.stream(r.name, true);
 }
@@ -959,9 +966,10 @@ void Bridge::SensorsWrite() {
 }
 
 void Bridge::Loop() {
-    ALooper* looper = ALooper_prepare(0);
-    ALooper_addFd(looper, wake_.get(), kWakeIdent, ALOOPER_EVENT_INPUT, nullptr, nullptr);
-    ALooper_addFd(looper, inotify_.get(), kInotifyIdent, ALOOPER_EVENT_INPUT, nullptr, nullptr);
+    // Every fd is polled by ident, without a callback.
+    ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+    Watch(looper, wake_.get(), kWakeIdent, ALOOPER_EVENT_INPUT, "its wake-up");
+    Watch(looper, inotify_.get(), kInotifyIdent, ALOOPER_EVENT_INPUT, "inotify");
     auto last_write = Clock::now();
     for (;;) {
         int timeout = -1;

@@ -64,4 +64,10 @@ interface IRoot {
      * in Android while Root sessions is on (LNX-4); lujarch_linux calls it.
      */
     void setLinuxRootSessions(boolean allowed);
+
+    /**
+     * Readies the process of a root session in Android, before it becomes that user ID and runs
+     * su, for KernelSU to see it; lujarch_linux calls it while Root sessions is on.
+     */
+    void markLinuxRootSession(int pid);
 }

@@ -124,6 +124,8 @@ class Service : public aidl::org::lujarch::linux::BnLinux {
     // KernelSU's grant for root sessions in Android, applied by its own thread through lujarch_root.
     void SetKernelSuRoot(bool allowed);
     void KernelSuRootLoop();
+    // Lets KernelSU see a root session in Android before it becomes aid::kLinuxRoot (System::Start).
+    static Result<void> MarkForKernelSu(pid_t pid);
     void SetState(const std::string& state, const std::string& reason = "");
     void SaveState();
     void Changed();

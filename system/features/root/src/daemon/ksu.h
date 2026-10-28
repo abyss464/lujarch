@@ -20,6 +20,7 @@
 #include <android-base/result.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include <optional>
 #include <string>
@@ -137,5 +138,10 @@ android::base::Result<bool> SetAllowSu(const std::string& package, int32_t uid, 
 // Writes the root profile of package (uid), which must have root; fields equal to the default
 // become the default profile again. Returns false when nothing had to change.
 android::base::Result<bool> SetFields(const std::string& package, int32_t uid, const Fields& fields);
+
+// Puts pid under KernelSU's syscall hooks (hook/tp_marker.c), which see a process's setresuid and
+// its su only while it is marked; KernelSU leaves unmarked the services init starts and their
+// children.
+android::base::Result<void> Mark(pid_t pid);
 
 }  // namespace lujarch::root::ksu

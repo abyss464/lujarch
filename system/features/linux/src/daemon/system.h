@@ -31,6 +31,7 @@
 #include <android-base/unique_fd.h>
 #include <sys/types.h>
 
+#include <functional>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -70,6 +71,8 @@ struct Spawn {
     int err = -1;
     // It runs in kDesktopCgroup instead of kCgroup.
     bool desktop = false;
+    // Called with the program's process before it goes on; an error ends the start.
+    std::function<Result<void>(pid_t)> prepare;
 };
 
 class System {

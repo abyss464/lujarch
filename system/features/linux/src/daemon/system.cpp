@@ -585,6 +585,13 @@ Result<Process> System::Start(const Spawn& s) {
     if (auto joined = Join(pid, s.desktop); !joined.ok()) {
         LOG(ERROR) << "cgroup of " << path << ": " << joined.error();
     }
+    if (s.prepare) {
+        if (auto prepared = s.prepare(pid); !prepared.ok()) {
+            kill(pid, SIGKILL);
+            TEMP_FAILURE_RETRY(waitpid(pid, nullptr, 0));
+            return prepared.error();
+        }
+    }
     gate_w.reset();
     Result<void> started = ReadReport(report_r.get(), path.c_str(),
                                       {"setsid", "standard streams", "become the root session user",

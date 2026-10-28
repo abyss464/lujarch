@@ -62,6 +62,7 @@ using aidl::org::lujarch::linux::LinuxService;
 using aidl::org::lujarch::linux::RemoteConfig;
 using aidl::org::lujarch::linux::RemoteStatus;
 using aidl::org::lujarch::linux::Status;
+using android::base::Error;
 using android::base::unique_fd;
 
 constexpr size_t kMaxColors = 64 << 10;
@@ -675,6 +676,17 @@ void Service::KernelSuRootLoop() {
     }
 }
 
+Result<void> Service::MarkForKernelSu(pid_t pid) {
+    using aidl::org::lujarch::root::IRoot;
+    ndk::SpAIBinder binder(AServiceManager_checkService("lujarch_root"));
+    auto root = IRoot::fromBinder(binder);
+    if (!root) return Error() << "lujarch_root is not there";
+    if (auto status = root->markLinuxRootSession(pid); !status.isOk()) {
+        return Error() << "lujarch_root: " << status.getDescription();
+    }
+    return {};
+}
+
 void Service::Changed() {
     std::vector<std::shared_ptr<ILinuxListener>> targets;
     {
@@ -797,6 +809,7 @@ ndk::ScopedAStatus Service::createSession(const std::string& kind, const std::st
         spawn.as = Spawn::As::kRoot;
     } else if (kind == ILinux::KIND_ANDROID_ROOT) {
         spawn.as = Spawn::As::kAndroidRoot;
+        spawn.prepare = MarkForKernelSu;
     } else {
         return Fail(ILinux::ERROR_INVALID, "no kind " + kind);
     }
