@@ -3171,8 +3171,8 @@ def copy_images(host, info):
 
 def cmd_desktop(args):
     """Builds Linux's desktop on this computer for the phone's Linux and installs it there
-    (tools/desktop/xbuild.sh): KWin from the recipe and its pin, and Plasma components the
-    distribution has not built yet."""
+    (tools/desktop/xbuild.sh): KWin and Plasma Mobile from the recipe and their pins, and Plasma
+    components the distribution has not built yet."""
     host = Host()
     env = dict(os.environ,
                X=str(host.path_of("paths", "out") / "desktop"),
@@ -3194,13 +3194,13 @@ def cmd_desktop(args):
 
     if args.action == "sysroot":
         run("sysroot")
-    elif args.action == "kwin":
-        pin = lock_file().get("downloads", {}).get("kwin")
+    elif args.action in ("kwin", "plasma-mobile"):
+        pin = lock_file().get("downloads", {}).get(args.action)
         if not pin:
-            die("lock.toml has no [downloads.kwin]")
-        run("kwin", pin["url"], pin["version"], pin["sha256"])
+            die(f"lock.toml has no [downloads.{args.action}]")
+        run(args.action, pin["url"], pin["version"], pin["sha256"])
         if args.install:
-            run("install-kwin")
+            run(f"install-{args.action}")
     elif args.action == "plasma":
         for name in args.names:
             run("plasma", name, args.version)
@@ -3766,6 +3766,9 @@ def main():
     kwin = desktop.add_parser("kwin", help="KWin with the Lujarch backend, from the recipe and "
                                            "lock.toml")
     kwin.add_argument("--install", action="store_true", help="install it in the phone's Linux")
+    mobile = desktop.add_parser("plasma-mobile", help="Plasma Mobile with the phone's landscape "
+                                                      "layout, from the recipe and lock.toml")
+    mobile.add_argument("--install", action="store_true", help="install it in the phone's Linux")
     plasma = desktop.add_parser("plasma", help="Plasma components the distribution has not "
                                                "built yet, in this order")
     plasma.add_argument("version")

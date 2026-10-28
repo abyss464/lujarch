@@ -99,7 +99,8 @@ Rules:
 
 Linux's desktop is built on this computer, not on the phone's small cores: `tools/lujarch desktop`
 streams the headers and libraries of the phone's Linux (`sysroot`), builds KWin with the Lujarch
-backend from the recipe and its pin in lock.toml (`kwin`), and builds the Plasma components the
+backend (`kwin`) and Plasma Mobile with the phone's landscape layout (`plasma-mobile`) from the
+recipe and their pins in lock.toml, and builds the Plasma components the
 distribution has not built yet (`plasma VERSION NAME...`, packaged with release 0 so that the
 distribution's own replaces them); `--install` installs the packages in the phone's Linux and
 records the recipe's state, so that Install the desktop finds them current.

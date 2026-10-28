@@ -5,8 +5,11 @@
 #
 #   xbuild.sh sysroot                      stream the sysroot from the phone's Linux
 #   xbuild.sh kwin URL VERSION SHA256      kwin-lujarch from the recipe and the pin
+#   xbuild.sh plasma-mobile URL VERSION SHA256
+#                                          plasma-mobile-lujarch from the recipe and the pin
 #   xbuild.sh plasma NAME VERSION          a Plasma component the distribution has not built yet
 #   xbuild.sh install-kwin                 the last kwin-lujarch into the phone's Linux
+#   xbuild.sh install-plasma-mobile        the last plasma-mobile-lujarch into it
 #   xbuild.sh install-plasma NAME...       the last builds of these components into it
 #
 # X is the work directory, RECIPE the recipe (src/linux/desktop of the linux feature), JOBS the
@@ -153,6 +156,14 @@ pack() { # stage name version description depends...
     echo "$pkg"
 }
 
+# The depends of a recipe's PKGBUILD, as .PKGINFO lines.
+recipe_depends() { # recipe
+    local d
+    for d in $(sed -n '/^depends=(/,/)/p' "$RECIPE/$1/PKGBUILD" | tr -d '()' | sed 's/depends=//'); do
+        echo "depend = $d"
+    done
+}
+
 cmd_kwin() { # url version sha256
     local url=$1 version=$2 sha=$3
     local tar=kwin-$version.tar.xz tree=$X/src/kwin-$version
@@ -171,14 +182,33 @@ cmd_kwin() { # url version sha256
         patch -d "$tree" -p1 -N <"$RECIPE/kwin/kwin.patch"
     local stage
     stage=$(build_tree "$tree" "$X/build-kwin-$version")
-    local deps=() d
-    for d in $(sed -n '/^depends=(/,/)/p' "$RECIPE/kwin/PKGBUILD" | tr -d '()' | sed 's/depends=//'); do
-        deps+=("depend = $d")
-    done
+    local deps=()
+    mapfile -t deps < <(recipe_depends kwin)
     pack "$stage" kwin-lujarch "$version-1" \
         "KWin with the Lujarch output backend (the desktop in the Terminal app)" \
         "provides = kwin=$version" "conflict = kwin" "${deps[@]}" >"$X/last-kwin"
     log "packed $(cat "$X/last-kwin")"
+}
+
+cmd_plasma_mobile() { # url version sha256
+    local url=$1 version=$2 sha=$3
+    local tar=plasma-mobile-$version.tar.xz tree=$X/src/plasma-mobile-lujarch-$version
+    [ -f "$X/$tar" ] || fetch "$tar" "$url"
+    echo "$sha  $X/$tar" | sha256sum -c --quiet
+    if [ ! -d "$tree" ]; then
+        mkdir -p "$tree"
+        tar -C "$tree" --strip-components=1 -xf "$X/$tar"
+    fi
+    patch -d "$tree" -p1 -R --dry-run -s -f <"$RECIPE/plasma-mobile/plasma-mobile.patch" >/dev/null 2>&1 ||
+        patch -d "$tree" -p1 -N <"$RECIPE/plasma-mobile/plasma-mobile.patch"
+    local stage
+    stage=$(build_tree "$tree" "$X/build-plasma-mobile-lujarch-$version")
+    local deps=()
+    mapfile -t deps < <(recipe_depends plasma-mobile)
+    pack "$stage" plasma-mobile-lujarch "$version-1" \
+        "Plasma shell for mobile devices, with the landscape layout of the Lujarch desktop" \
+        "provides = plasma-mobile=$version" "conflict = plasma-mobile" "${deps[@]}" >"$X/last-plasma-mobile"
+    log "packed $(cat "$X/last-plasma-mobile")"
 }
 
 cmd_plasma() { # name version
@@ -187,12 +217,6 @@ cmd_plasma() { # name version
     [ -f "$X/$tar" ] || fetch "$tar" "$url"
     echo "$(curl -fsSL "$url.sha256" | awk '{print $1}')  $X/$tar" | sha256sum -c --quiet
     [ -d "$X/src/$name-$version" ] || { mkdir -p "$X/src"; tar -C "$X/src" -xf "$X/$tar"; }
-    # The recipe's patch of the component, as its PKGBUILD applies it on the phone.
-    local patchfile=$RECIPE/$name/$name.patch
-    if [ -f "$patchfile" ]; then
-        patch -d "$X/src/$name-$version" -p1 -R --dry-run -s -f <"$patchfile" >/dev/null 2>&1 ||
-            patch -d "$X/src/$name-$version" -p1 -N <"$patchfile"
-    fi
     local stage
     stage=$(build_tree "$X/src/$name-$version" "$X/build-$name-$version")
     # The next component builds against this one.
@@ -219,19 +243,30 @@ install_packages() {
     in_linux "pacman -U --noconfirm --ask 4 --overwrite '*' ${pkgs[*]} && rm -f ${pkgs[*]}"
 }
 
-cmd_install_kwin() {
-    install_packages "$(cat "$X/last-kwin")"
-    # What the desktop's install compares: KWin and Mesa are then the current recipe's.
+# Records in the desktop's install state that these parts are the current recipe's, as the install
+# script does after it builds them (src/linux/desktop/install, fingerprint).
+record() { # commands
     in_linux '
         here=/usr/lib/lujarch/desktop
         pin() { sed -n "s|^$1: ||p" $here/downloads; }
         fingerprint() { local name=$1; shift; { (cd $here && find "$@" -type f -print0 | sort -z | xargs -0 sha256sum); pin $name.url; pin $name.sha256; } | sha256sum | cut -d" " -f1; }
         umask 022
         mkdir -p /var/lib/lujarch/desktop
-        fingerprint kwin kwin protocol >/var/lib/lujarch/desktop/kwin
+        '"$1"
+}
+
+cmd_install_kwin() {
+    install_packages "$(cat "$X/last-kwin")"
+    record 'fingerprint kwin kwin protocol >/var/lib/lujarch/desktop/kwin
         [ -f /opt/mesa-kgsl/share/vulkan/icd.d/freedreno_icd.aarch64.json ] &&
             fingerprint mesa mesa >/var/lib/lujarch/desktop/mesa
         pacman -Q kwin-lujarch'
+}
+
+cmd_install_plasma_mobile() {
+    install_packages "$(cat "$X/last-plasma-mobile")"
+    record 'fingerprint plasma-mobile plasma-mobile >/var/lib/lujarch/desktop/plasma-mobile
+        pacman -Q plasma-mobile-lujarch'
 }
 
 cmd_install_plasma() {
@@ -245,8 +280,10 @@ shift
 case $action in
     sysroot) cmd_sysroot ;;
     kwin) cmd_kwin "$@" ;;
+    plasma-mobile) cmd_plasma_mobile "$@" ;;
     plasma) cmd_plasma "$@" ;;
     install-kwin) cmd_install_kwin ;;
+    install-plasma-mobile) cmd_install_plasma_mobile ;;
     install-plasma) cmd_install_plasma "$@" ;;
     *) die "unknown action $action" ;;
 esac

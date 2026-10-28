@@ -105,9 +105,9 @@ version = "6.8.0"
 sha256 = "4bfaf31e29a8f9fdf231dc3bbb9b09b0ce07cae9fee7a01cfc86425ece796258"
 
 [downloads.plasma-mobile]
-url = "https://download.kde.org/stable/plasma/6.7.5/plasma-mobile-6.7.5.tar.xz"
-version = "6.7.5"
-sha256 = "e25d53707be3bf86aad2b2712bcdcb9133f7c75a54c434724de5663aa78b773f"
+url = "https://download.kde.org/stable/plasma/6.8.0/plasma-mobile-6.8.0.tar.xz"
+version = "6.8.0"
+sha256 = "8323525a40c8e7a3fbf9fb002bc9655627ed53cd302391fbee5d543db4f390af"
 
 [downloads.mesa]
 url = "https://archive.mesa3d.org/mesa-26.2.3.tar.xz"
