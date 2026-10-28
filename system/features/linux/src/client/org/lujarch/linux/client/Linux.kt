@@ -19,6 +19,7 @@ package org.lujarch.linux.client
 import android.content.Context
 import android.os.DeadObjectException
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.os.RemoteException
 import android.os.ServiceManager
@@ -38,7 +39,7 @@ class LinuxException(val code: Int, message: String, cause: Throwable? = null) :
 
 /** The Linux development environment's service and its switches the app follows. */
 object Linux {
-    private const val SERVICE = "lujarch_linux"
+    const val SERVICE = "lujarch_linux"
 
     const val ACTION_SETTINGS = "org.lujarch.linux.action.LINUX"
     const val ACTION_REMOTE = "org.lujarch.linux.action.REMOTE"
@@ -139,19 +140,54 @@ class LinuxEvents(private val sink: Sink) : ILinuxListener.Stub() {
 
     override fun onStream(stream: String, wanted: Boolean) {}
 
-    fun register() {
-        try {
-            Linux.blocking("registerListener") { it.registerListener(this) }
-        } catch (e: LinuxException) {
-            Log.w(TAG, e.message ?: "registerListener")
-        }
+    private val lock = Any()
+    private var wanted = false
+    private var linked: IBinder? = null
+
+    // lujarch_linux restarted: its listeners are gone with it, and its sessions with Linux. Once it
+    // is back this listens again and the sink looks at what there is now.
+    private val death = IBinder.DeathRecipient {
+        synchronized(lock) { linked = null }
+        Thread({
+            ServiceManager.waitForService(Linux.SERVICE)
+            if (listen()) main.post { sink.onChanged() }
+        }, "lujarch_linux-events").start()
     }
 
+    /** Off the main thread. */
+    fun register() {
+        synchronized(lock) { wanted = true }
+        listen()
+    }
+
+    /** Off the main thread. */
     fun unregister() {
+        synchronized(lock) {
+            wanted = false
+            linked?.unlinkToDeath(death, 0)
+            linked = null
+        }
         try {
             Linux.blocking("unregisterListener") { it.unregisterListener(this) }
         } catch (e: LinuxException) {
             Log.w(TAG, e.message ?: "unregisterListener")
+        }
+    }
+
+    private fun listen(): Boolean = synchronized(lock) {
+        if (!wanted) return false
+        try {
+            Linux.blocking("registerListener") {
+                if (linked == null) {
+                    it.asBinder().linkToDeath(death, 0)
+                    linked = it.asBinder()
+                }
+                it.registerListener(this)
+            }
+            true
+        } catch (e: LinuxException) {
+            Log.w(TAG, e.message ?: "registerListener")
+            false
         }
     }
 }

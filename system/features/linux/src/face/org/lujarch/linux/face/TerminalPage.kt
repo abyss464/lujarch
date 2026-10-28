@@ -63,6 +63,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
     private lateinit var root: LinearLayout
     private lateinit var tabsRow: LinearLayout
     private lateinit var terminal: ComposingTerminalView
+    private lateinit var tabsScroll: HorizontalScrollView
     private lateinit var model: InputModel
     private lateinit var empty: Chrome.Empty
     private lateinit var keys: KeysRow
@@ -150,28 +151,25 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         }
         statusLine = StatusLine(this)
         root.addView(statusLine, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(STATUS_LINE_DP)))
-        val bar = LinearLayout(this).apply {
+        tabsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), 0, dp(6), 0)
         }
-        tabsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val tabsAndNew = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(tabsRow)
-            addView(iconButton(R.drawable.lnx_ic_add, R.string.lnx_new_session, 40) { newSession(it) })
-        }
-        val scroll = HorizontalScrollView(this).apply {
+        tabsScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
+            // Tabs cut off at the row's ends fade out instead of ending in a sliver.
+            isHorizontalFadingEdgeEnabled = true
+            setFadingEdgeLength(dp(24))
             overScrollMode = View.OVER_SCROLL_NEVER
-            addView(tabsAndNew)
+            addView(tabsRow)
         }
-        bar.addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        bar.addView(iconButton(R.drawable.lnx_ic_display, R.string.lnx_display, 44) {
-            face.show(LinuxFace.Page.DESKTOP)
-        })
-        bar.addView(iconButton(R.drawable.lnx_ic_settings, R.string.lnx_settings, 44) { openSettings() })
+        val bar = TabBar(
+            this, tabsScroll,
+            iconButton(R.drawable.lnx_ic_add, R.string.lnx_new_session, 40) { newSession(it) },
+            iconButton(R.drawable.lnx_ic_display, R.string.lnx_display, 44) { face.show(LinuxFace.Page.DESKTOP) },
+            iconButton(R.drawable.lnx_ic_settings, R.string.lnx_settings, 44) { openSettings() },
+        )
+        bar.setPadding(dp(8), 0, dp(6), 0)
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
 
         val frame = FrameLayout(this).apply {
@@ -310,7 +308,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         }
         val ids = s.sessions.map { it.id }.toSet()
         for (info in s.sessions) {
-            val tab = tabs.firstOrNull { it.id == info.id } ?: TerminalTab(info.id, this).also { tabs.add(it) }
+            val tab = tabs.firstOrNull { it.id == info.id } ?: TerminalTab(info.id, this, ::lost).also { tabs.add(it) }
             tab.kind = info.kind
             tab.name = info.name
             tab.busy = info.busy
@@ -365,6 +363,15 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         }
     }
 
+    /** A tab whose stream ended while its session went on takes it again, with its output. */
+    private fun lost(tab: TerminalTab) {
+        scope.launch {
+            if (tab !in tabs) return@launch
+            attached.remove(tab.id)
+            refresh(reattach = false)
+        }
+    }
+
     private fun stateText(s: Status): String =
         when (s.state) {
             ILinux.STATE_NOT_INSTALLED -> getString(R.string.lnx_state_not_installed)
@@ -397,6 +404,7 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
                 )
             )
         }
+        revealCurrent()
     }
 
     private fun select(tab: TerminalTab) {
@@ -405,6 +413,21 @@ class TerminalPage(face: LinuxFace) : FacePage(face), TerminalViewClient, Termin
         current = tab
         show(tab)
         renderTabs()
+    }
+
+    /** The tab on screen scrolled into the tab row's view. */
+    private fun revealCurrent() {
+        val i = tabs.indexOf(current)
+        if (i < 0) return
+        tabsScroll.post {
+            val v = tabsRow.getChildAt(i) ?: return@post
+            val left = v.left - tabsScroll.scrollX
+            val right = v.right - tabsScroll.scrollX
+            when {
+                left < 0 -> tabsScroll.smoothScrollBy(left, 0)
+                right > tabsScroll.width -> tabsScroll.smoothScrollBy(right - tabsScroll.width, 0)
+            }
+        }
     }
 
     private fun show(tab: TerminalTab) {

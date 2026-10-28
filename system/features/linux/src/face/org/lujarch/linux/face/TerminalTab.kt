@@ -38,7 +38,13 @@ import org.lujarch.linux.client.TAG
  * its output; input and size changes go back. The stream is let go when the app leaves the
  * screen, and the session goes on.
  */
-class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSession.HostTransport {
+class TerminalTab(
+    val id: String,
+    client: TerminalSessionClient,
+    // The stream ended while the session went on (another window took it, the daemon restarted):
+    // called on the stream's reader thread.
+    private val onLost: (TerminalTab) -> Unit,
+) : TerminalSession.HostTransport {
     var kind: String = ""
     var name: String = ""
     var busy = false
@@ -50,6 +56,9 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
     @Volatile private var stream: ParcelFileDescriptor? = null
     @Volatile private var output: FileOutputStream? = null
     private val writer: ExecutorService = Executors.newSingleThreadExecutor()
+    // Input typed while no stream is attached, written in order once one is; the writer's own.
+    private val pending = ArrayList<ByteArray>()
+    @Volatile private var closed = false
 
     /**
      * Takes the session's stream; off the main thread. The emulator starts empty: the stream replays
@@ -60,6 +69,7 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
         val pfd = Linux.blocking("attachSession") { it.attachSession(id, columns, rows) }
         stream = pfd
         output = FileOutputStream(pfd.fileDescriptor)
+        writer.execute { write(null) }
         // Answers to queries in the replayed output would be typed into the shell. A new session's
         // shell asks while it starts (fish: its terminal's attributes) and waits for the answer.
         if (replay) session.holdReplies(REPLAY_HOLD_MS)
@@ -77,6 +87,10 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
             }
         } catch (e: IOException) {
             if (stream === pfd) Log.w(TAG, "session $id: stream: ${e.message}")
+        }
+        if (stream === pfd && !closed) {
+            Log.w(TAG, "session $id: the stream ended; attaching again")
+            onLost(this)
         }
     }
 
@@ -98,18 +112,27 @@ class TerminalTab(val id: String, client: TerminalSessionClient) : TerminalSessi
     }
 
     fun close() {
+        closed = true
         detach()
         writer.shutdown()
     }
 
     override fun sendInput(data: ByteArray, offset: Int, count: Int) {
         val bytes = data.copyOfRange(offset, offset + count)
-        writer.execute {
-            try {
-                output?.write(bytes)
-            } catch (e: IOException) {
-                Log.w(TAG, "session $id: input: ${e.message}")
+        writer.execute { write(bytes) }
+    }
+
+    /** On the writer: what was pending, then bytes, or all of it pending while no stream is attached. */
+    private fun write(bytes: ByteArray?) {
+        bytes?.let { pending.add(it) }
+        val out = output ?: return
+        try {
+            while (pending.isNotEmpty()) {
+                out.write(pending[0])
+                pending.removeAt(0)
             }
+        } catch (e: IOException) {
+            Log.w(TAG, "session $id: input: ${e.message}")
         }
     }
 

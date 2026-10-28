@@ -116,10 +116,14 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
         root.isClickable = true
         // An edge swipe shows Android's bars again; Linux has its own, so they go at once: before
         // the first frame of their animation, and, should one get through, once they are laid out.
+        // Only an animation that shows them is stopped: a hide asked for again while its own
+        // animation prepares leaves the bars drawn where they were.
         root.setWindowInsetsAnimationCallback(object :
             WindowInsetsAnimation.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
             override fun onPrepare(animation: WindowInsetsAnimation) {
-                if (inFront && animation.typeMask and WindowInsets.Type.systemBars() != 0) hideBars()
+                val bars = WindowInsets.Type.systemBars()
+                val shown = root.rootWindowInsets?.isVisible(bars) ?: false
+                if (inFront && animation.typeMask and bars != 0 && !shown) hideBars()
             }
 
             override fun onProgress(insets: WindowInsets, running: List<WindowInsetsAnimation>) =
@@ -338,16 +342,14 @@ class LinuxFace(val activity: Activity, private val host: Host) : LinuxEvents.Si
         }
     }
 
-    /** Android's bars out of the way of Linux's own status line. */
+    /**
+     * Android's bars out of the way of Linux's own status line. The behavior stays the default one,
+     * with which the bottom swipe reaches the home screen without first showing the bars.
+     */
     private fun hideBars() {
         val controller = activity.window.insetsController ?: return
-        // A hide under the default behavior fades the bars for 1.5 s over Linux's status line;
-        // under the swipe behavior they move out in a third of a second. The hide takes the
-        // behavior when it starts, and the default one comes back at once: with it the bottom
-        // swipe reaches the home screen without first showing the bars.
-        controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller.hide(WindowInsets.Type.systemBars())
         controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_DEFAULT
+        controller.hide(WindowInsets.Type.systemBars())
     }
 
     // ---- what Linux asks of the owner ----
