@@ -1,0 +1,12 @@
+# Xiaomi's camera is platform-signed without a shared user id and targets an SDK below 37, so it
+# runs as platform_app_36.
+
+# IBGService: offline processing of captures (the full-size photo, multi-frame, night, Leica looks).
+hal_client_domain(platform_app_36, vendor_hal_camerapostproc_xiaomi)
+
+# Sensor module information and the P3 colour space switch.
+get_prop(platform_app_36, vendor_camera_sensor_prop)
+get_prop(platform_app_36, vendor_camera_p3enable_prop)
+
+# DSP algorithms through libcdsprpc look up their skeletons in /vendor/dsp.
+allow platform_app_36 adsprpcd_file:dir { getattr search };
