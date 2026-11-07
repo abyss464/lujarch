@@ -197,7 +197,7 @@ index 4d78f6034829e1244b8b7c01ddc1e2c76f94e81c..0dc4283498e6993f6f0dccad0b263706
  
      /**
 diff --git a/core/java/android/os/Build.java b/core/java/android/os/Build.java
-index 25912a0a53436489a76a8a327c2a85e9a0301909..9e0d0976f33347a5b465508a171ce74dff8607f3 100644
+index 25912a0a53436489a76a8a327c2a85e9a0301909..9e7ef5d3edbb0b9179296d25a96a9bf5f7ed0743 100644
 --- a/core/java/android/os/Build.java
 +++ b/core/java/android/os/Build.java
 @@ -46,6 +46,7 @@ import dalvik.system.VMRuntime;
@@ -219,7 +219,7 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..9e0d0976f33347a5b465508a171ce74d
  
          String[] names = new String[] {
                  Partition.PARTITION_NAME_BOOTIMAGE,
-@@ -1961,9 +1966,55 @@ public class Build {
+@@ -1961,9 +1966,67 @@ public class Build {
       * null (if, for instance, the radio is not currently on).
       */
      public static String getRadioVersion() {
@@ -244,9 +244,8 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..9e0d0976f33347a5b465508a171ce74d
 +     * process acts on (TYPE, TAGS, IS_DEBUGGABLE, the VERSION SDK levels, release and codename,
 +     * the ABIs, the attestation properties) keeps its value.
 +     *
-+     * <p>The fields are static finals computed in zygote; they are set the way zygote itself
-+     * reloads them for an app compat property override (ReloadBuildJavaConstants), here by
-+     * reflection, which ART allows for android.os.Build and Build.VERSION on this release.
++     * <p>The fields are static finals computed in zygote. JNI updates them through the same
++     * write-protected field path as zygote's ReloadBuildJavaConstants.
 +     *
 +     * @hide
 +     */
@@ -264,13 +263,26 @@ index 25912a0a53436489a76a8a327c2a85e9a0301909..9e0d0976f33347a5b465508a171ce74d
 +    private static void lujarchSet(Class<?> owner, String name, Object value) {
 +        try {
 +            final Field field = owner.getDeclaredField(name);
-+            field.setAccessible(true);
-+            field.set(null, value);
++            final Class<?> type = field.getType();
++            if (type == String.class) {
++                nativeLujarchSet(owner, name, "Ljava/lang/String;", value, 0);
++            } else if (type == boolean.class) {
++                nativeLujarchSet(owner, name, "Z", null, (Boolean) value ? 1 : 0);
++            } else if (type == int.class) {
++                nativeLujarchSet(owner, name, "I", null, (Integer) value);
++            } else if (type == long.class) {
++                nativeLujarchSet(owner, name, "J", null, (Long) value);
++            } else {
++                throw new IllegalArgumentException("Unsupported build field type: " + type);
++            }
 +        } catch (ReflectiveOperationException | RuntimeException e) {
 +            Slog.w(TAG, "lujarch_device_info: " + owner.getSimpleName() + "." + name
-+                    + " not hidden", e);
++                    + " not updated", e);
 +        }
 +    }
++
++    private static native void nativeLujarchSet(Class<?> owner, String name, String signature,
++            Object referenceValue, long primitiveValue);
 +
      @UnsupportedAppUsage
      private static String getString(String property) {
@@ -544,6 +556,106 @@ index 1c6371e732e5a8d19f6694b9ff7cedcdf9ccd5cd..2b6fb672607f9cab7e1919a02bd23dab
      /**
       * Returns an HTTP user agent of the form
       * "Dalvik/1.1.0 (Linux; U; Android Eclair Build/MAIN)".
+diff --git a/core/jni/Android.bp b/core/jni/Android.bp
+index 7b9844f7df73bfd6722f36f7bd82a2f8f11b4153..93b059bd8e2ffd87afd2ffd86396052bff94c33a 100644
+--- a/core/jni/Android.bp
++++ b/core/jni/Android.bp
+@@ -84,6 +84,7 @@ cc_defaults_for_libandroid_runtime {
+         "android_media_ImageReader.cpp",
+         "android_media_PublicFormatUtils.cpp",
+         "android_media_Utils.cpp",
++        "android_os_Build.cpp",
+         "android_os_SystemClock.cpp",
+         "android_os_SystemProperties.cpp",
+         "android_text_AndroidCharacter.cpp",
+diff --git a/core/jni/AndroidRuntime.cpp b/core/jni/AndroidRuntime.cpp
+index ce5fcef5d1c61422a775f215703dd661db3b9252..d5b814d5381f83b70176c122fbdaf87aa74ecef8 100644
+--- a/core/jni/AndroidRuntime.cpp
++++ b/core/jni/AndroidRuntime.cpp
+@@ -161,6 +161,7 @@ extern int register_android_os_PerformanceHintManager(JNIEnv* env);
+ extern int register_android_os_SELinux(JNIEnv* env);
+ extern int register_android_os_storage_StorageManager(JNIEnv* env);
+ extern int register_android_os_SystemProperties(JNIEnv *env);
++extern int register_android_os_Build(JNIEnv* env);
+ extern int register_android_os_SystemClock(JNIEnv* env);
+ extern int register_android_os_Trace(JNIEnv* env);
+ extern int register_android_os_FileObserver(JNIEnv *env);
+@@ -1579,6 +1580,7 @@ static const RegJNIRec gRegJNI[] = {
+         REG_JNI(register_android_view_KeyCharacterMap),
+         REG_JNI(register_android_os_Process),
+         REG_JNI(register_android_os_SystemProperties),
++        REG_JNI(register_android_os_Build),
+         REG_JNI(register_android_os_Binder),
+         REG_JNI(register_android_os_Parcel),
+         REG_JNI(register_android_os_PerformanceHintManager),
+diff --git a/core/jni/android_os_Build.cpp b/core/jni/android_os_Build.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..31cfaf4027cc90b5f0f22d1928132712e97da092
+--- /dev/null
++++ b/core/jni/android_os_Build.cpp
+@@ -0,0 +1,62 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <nativehelper/JNIHelp.h>
++#include <nativehelper/ScopedUtfChars.h>
++
++#include "core_jni_helpers.h"
++
++namespace android {
++
++static void nativeLujarchSet(JNIEnv* env, jclass, jclass owner, jstring name,
++                             jstring signature, jobject referenceValue, jlong primitiveValue) {
++    ScopedUtfChars fieldName(env, name);
++    if (fieldName.c_str() == nullptr) return;
++    ScopedUtfChars fieldSignature(env, signature);
++    if (fieldSignature.c_str() == nullptr) return;
++    jfieldID field = env->GetStaticFieldID(owner, fieldName.c_str(), fieldSignature.c_str());
++    if (field == nullptr) return;
++
++    // ART permits JNI writes to Build's write-protected constants; reflection rejects them.
++    switch (fieldSignature.c_str()[0]) {
++        case 'L':
++            env->SetStaticObjectField(owner, field, referenceValue);
++            break;
++        case 'Z':
++            env->SetStaticBooleanField(owner, field, static_cast<jboolean>(primitiveValue));
++            break;
++        case 'I':
++            env->SetStaticIntField(owner, field, static_cast<jint>(primitiveValue));
++            break;
++        case 'J':
++            env->SetStaticLongField(owner, field, primitiveValue);
++            break;
++        default:
++            jniThrowException(env, "java/lang/IllegalArgumentException", "Unsupported build field");
++    }
++}
++
++static const JNINativeMethod gMethods[] = {
++        {"nativeLujarchSet",
++         "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;J)V",
++         reinterpret_cast<void*>(nativeLujarchSet)},
++};
++
++int register_android_os_Build(JNIEnv* env) {
++    return RegisterMethodsOrDie(env, "android/os/Build", gMethods, NELEM(gMethods));
++}
++
++} // namespace android
 diff --git a/services/core/java/com/android/server/BatteryService.java b/services/core/java/com/android/server/BatteryService.java
 index 0256c33cee64e3a94c85e154de9334ae05b95237..4fd590528ae82352c18e51f4c4097792490a690b 100644
 --- a/services/core/java/com/android/server/BatteryService.java
