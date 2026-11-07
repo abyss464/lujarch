@@ -1,0 +1,28 @@
+// Copyright (C) 2026 The Lujarch Project
+// SPDX-License-Identifier: Apache-2.0
+
+android_library {
+    name: "LujarchIntegritySettings",
+    srcs: ["src/settings/**/*.kt"],
+    manifest: "src/settings/AndroidManifest.xml",
+    resource_dirs: ["src/settings/res"],
+    platform_apis: true,
+    static_libs: [
+        "LujarchSettingsPages",
+    ],
+    libs: ["LujarchSettingsContribution"],
+}
+
+prebuilt_etc {
+    name: "lujarch-integrity.rc",
+    src: "src/init/lujarch-integrity.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-lujarch-integrity.xml",
+    src: "src/configs/privapp-permissions-lujarch-integrity.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="integrity_title">Play Integrity</string>
+    <string name="integrity_intro">通过 Google Play 服务中的设备完整性校验。导入密钥盒后，将使用所导入的证书链对硬件密钥认证证书进行签名。</string>
+    <string name="integrity_use">使用 Play Integrity</string>
+    <string name="integrity_keybox_category">密钥盒</string>
+    <string name="integrity_keybox_status">密钥盒</string>
+    <string name="integrity_keybox_not_imported">未导入（仅设备配置）</string>
+    <string name="integrity_keybox_imported"><xliff:g id="algorithms" example="EC, RSA">%1$s</xliff:g>（<xliff:g id="count" example="3">%2$d</xliff:g> 个证书）</string>
+    <string name="integrity_import_keybox">导入密钥盒</string>
+    <string name="integrity_import_keybox_summary">选择 keybox.xml 文件</string>
+    <string name="integrity_remove_keybox">移除密钥盒</string>
+    <string name="integrity_remove_keybox_message">移除已导入的密钥盒并仅使用设备配置？</string>
+    <string name="integrity_remove_action">移除</string>
+    <string name="integrity_error_load">无法加载 Play Integrity 状态</string>
+    <string name="integrity_error_import">无法导入密钥盒</string>
+    <string name="integrity_error_remove">无法移除密钥盒</string>
+    <string name="integrity_error_invalid_keybox">所选文件不是包含有效 EC 或 RSA 密钥的 keybox.xml。</string>
+    <string name="integrity_search_screen">安全与隐私 &gt; Play Integrity</string>
+    <string name="integrity_search_keywords">play integrity, keybox, 密钥盒, 完整性, 认证, 谷歌</string>
+</resources>

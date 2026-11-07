@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <privapp-permissions package="org.lujarch.settings">
+        <permission name="android.permission.LUJARCH_INTEGRITY" />
+    </privapp-permissions>
+</permissions>

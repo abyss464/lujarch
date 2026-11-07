@@ -1,0 +1,5 @@
+[enabled]
+table = "global"
+type = "bool"
+default = true
+item = "INT-1"

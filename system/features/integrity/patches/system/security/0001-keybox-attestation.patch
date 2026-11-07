@@ -1,0 +1,533 @@
+diff --git a/keystore2/src/crypto/Android.bp b/keystore2/src/crypto/Android.bp
+index 76f46e3c16d08ad1b6bec59ab1c921d84e7d19a1..ff28a3bcd976ffd8dd37627336c065ea11e64b8d 100644
+--- a/keystore2/src/crypto/Android.bp
++++ b/keystore2/src/crypto/Android.bp
+@@ -86,6 +86,7 @@ rust_bindgen {
+         "--allowlist-function=PBKDF2",
+         "--allowlist-function=extractSubjectFromCertificate",
+         "--allowlist-function=hmacSha256",
++        "--allowlist-function=lujarchSignAttestationChain",
+         "--allowlist-function=randomBytes",
+         "--allowlist-type=EC_KEY",
+         "--allowlist-type=EC_POINT",
+diff --git a/keystore2/src/crypto/crypto.cpp b/keystore2/src/crypto/crypto.cpp
+index 9230240a845987329ec709b2171bf06d6e93dd03..e304e32b8ddecf6e66ead9cbd6aafddf82115006 100644
+--- a/keystore2/src/crypto/crypto.cpp
++++ b/keystore2/src/crypto/crypto.cpp
+@@ -29,7 +29,18 @@
+ #include <openssl/hmac.h>
+ #include <openssl/rand.h>
+ #include <openssl/x509.h>
+-
++#include <openssl/bio.h>
++#include <openssl/bytestring.h>
++#include <openssl/mem.h>
++#include <openssl/nid.h>
++#include <openssl/obj.h>
++#include <openssl/pem.h>
++
++#include <algorithm>
++#include <cctype>
++#include <cstdio>
++#include <cstring>
++#include <string>
+ #include <vector>
+ 
+ // Copied from system/security/keystore/blob.h.
+@@ -319,3 +330,376 @@ int extractSubjectFromCertificate(const uint8_t* cert_buf, size_t cert_len, uint
+     uint8_t* tmp = subject_buf;
+     return i2d_X509_NAME(subject, &tmp);
+ }
++
++namespace {
++
++constexpr const char* kLujarchKeyboxPath = "/data/lujarch/integrity/keybox.xml";
++constexpr const char* kKeyMintAttestationOid = "1.3.6.1.4.1.11129.2.1.17";
++constexpr size_t kMaxKeyboxBytes = 256 * 1024;
++constexpr CBS_ASN1_TAG kRootOfTrustTag =
++        CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 704;
++
++const uint8_t kDefaultVerifiedBootKey[32] = {
++    0x6c, 0x75, 0x6a, 0x61, 0x72, 0x63, 0x68, 0x2d,
++    0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x64,
++    0x2d, 0x62, 0x6f, 0x6f, 0x74, 0x2d, 0x6b, 0x65,
++    0x79, 0x2d, 0x73, 0x68, 0x61, 0x32, 0x35, 0x36,
++};
++
++const uint8_t kDefaultVerifiedBootHash[32] = {
++    0x6c, 0x75, 0x6a, 0x61, 0x72, 0x63, 0x68, 0x2d,
++    0x76, 0x62, 0x6d, 0x65, 0x74, 0x61, 0x2d, 0x64,
++    0x69, 0x67, 0x65, 0x73, 0x74, 0x2d, 0x76, 0x65,
++    0x72, 0x69, 0x66, 0x69, 0x65, 0x64, 0x2d, 0x31,
++};
++
++bool isNonZero32(const CBS& cbs) {
++    if (CBS_len(&cbs) != 32) {
++        return false;
++    }
++    const uint8_t* data = CBS_data(&cbs);
++    for (size_t i = 0; i < 32; ++i) {
++        if (data[i] != 0) {
++            return true;
++        }
++    }
++    return false;
++}
++
++bool copyAuthorizationListWithVerifiedRot(CBS* auth_in, CBB* parent_cbb) {
++    CBB auth_cbb;
++    if (!CBB_add_asn1(parent_cbb, &auth_cbb, CBS_ASN1_SEQUENCE)) {
++        return false;
++    }
++    while (CBS_len(auth_in) > 0) {
++        CBS elem;
++        CBS_ASN1_TAG tag = 0;
++        size_t header_len = 0;
++        if (!CBS_get_any_asn1_element(auth_in, &elem, &tag, &header_len)) {
++            return false;
++        }
++        if (tag == kRootOfTrustTag) {
++            const uint8_t* vbk_ptr = kDefaultVerifiedBootKey;
++            const uint8_t* vbh_ptr = kDefaultVerifiedBootHash;
++
++            CBS rot_body = elem;
++            if (CBS_skip(&rot_body, header_len)) {
++                CBS rot_seq;
++                if (CBS_get_asn1(&rot_body, &rot_seq, CBS_ASN1_SEQUENCE)) {
++                    CBS vbk;
++                    if (CBS_get_asn1(&rot_seq, &vbk, CBS_ASN1_OCTETSTRING) && isNonZero32(vbk)) {
++                        vbk_ptr = CBS_data(&vbk);
++                    }
++                    CBS unused;
++                    CBS_ASN1_TAG unused_tag = 0;
++                    if (CBS_get_any_asn1_element(&rot_seq, &unused, &unused_tag, nullptr) &&
++                        CBS_get_any_asn1_element(&rot_seq, &unused, &unused_tag, nullptr)) {
++                        CBS vbh;
++                        if (CBS_len(&rot_seq) > 0 &&
++                            CBS_get_asn1(&rot_seq, &vbh, CBS_ASN1_OCTETSTRING) &&
++                            isNonZero32(vbh)) {
++                            vbh_ptr = CBS_data(&vbh);
++                        }
++                    }
++                }
++            }
++
++            CBB rot_tag_cbb, rot_seq_cbb, enum_cbb;
++            if (!CBB_add_asn1(&auth_cbb, &rot_tag_cbb, kRootOfTrustTag) ||
++                !CBB_add_asn1(&rot_tag_cbb, &rot_seq_cbb, CBS_ASN1_SEQUENCE) ||
++                !CBB_add_asn1_octet_string(&rot_seq_cbb, vbk_ptr, 32) ||
++                !CBB_add_asn1_bool(&rot_seq_cbb, 1) ||
++                !CBB_add_asn1(&rot_seq_cbb, &enum_cbb, CBS_ASN1_ENUMERATED) ||
++                !CBB_add_u8(&enum_cbb, 0) ||
++                !CBB_add_asn1_octet_string(&rot_seq_cbb, vbh_ptr, 32) ||
++                !CBB_flush(&auth_cbb)) {
++                return false;
++            }
++        } else {
++            if (!CBB_add_bytes(&auth_cbb, CBS_data(&elem), CBS_len(&elem))) {
++                return false;
++            }
++        }
++    }
++    return CBB_flush(parent_cbb);
++}
++
++bool patchKeyDescriptionExtension(X509* leaf) {
++    bssl::UniquePtr<ASN1_OBJECT> oid(OBJ_txt2obj(kKeyMintAttestationOid, 1));
++    if (!oid) {
++        return false;
++    }
++    int idx = X509_get_ext_by_OBJ(leaf, oid.get(), -1);
++    if (idx < 0) {
++        return true;
++    }
++    X509_EXTENSION* ext = X509_get_ext(leaf, idx);
++    if (!ext) {
++        return false;
++    }
++    const ASN1_OCTET_STRING* ext_data = X509_EXTENSION_get_data(ext);
++    if (!ext_data || ext_data->length <= 0) {
++        return false;
++    }
++
++    CBS outer, seq;
++    CBS_init(&outer, ASN1_STRING_get0_data(ext_data), static_cast<size_t>(ext_data->length));
++    if (!CBS_get_asn1(&outer, &seq, CBS_ASN1_SEQUENCE)) {
++        return false;
++    }
++
++    bssl::ScopedCBB cbb;
++    CBB out_seq;
++    if (!CBB_init(cbb.get(), static_cast<size_t>(ext_data->length) + 64) ||
++        !CBB_add_asn1(cbb.get(), &out_seq, CBS_ASN1_SEQUENCE)) {
++        return false;
++    }
++
++    // Copy the 6 header fields of KeyDescription verbatim.
++    for (int i = 0; i < 6; ++i) {
++        CBS elem;
++        CBS_ASN1_TAG tag = 0;
++        if (!CBS_get_any_asn1_element(&seq, &elem, &tag, nullptr) ||
++            !CBB_add_bytes(&out_seq, CBS_data(&elem), CBS_len(&elem))) {
++            return false;
++        }
++    }
++
++    CBS sw_enforced, tee_enforced;
++    if (!CBS_get_asn1(&seq, &sw_enforced, CBS_ASN1_SEQUENCE) ||
++        !CBS_get_asn1(&seq, &tee_enforced, CBS_ASN1_SEQUENCE)) {
++        return false;
++    }
++    if (!copyAuthorizationListWithVerifiedRot(&sw_enforced, &out_seq) ||
++        !copyAuthorizationListWithVerifiedRot(&tee_enforced, &out_seq)) {
++        return false;
++    }
++    while (CBS_len(&seq) > 0) {
++        CBS rest;
++        CBS_ASN1_TAG tag = 0;
++        if (!CBS_get_any_asn1_element(&seq, &rest, &tag, nullptr) ||
++            !CBB_add_bytes(&out_seq, CBS_data(&rest), CBS_len(&rest))) {
++            return false;
++        }
++    }
++    if (!CBB_flush(cbb.get())) {
++        return false;
++    }
++
++    bssl::UniquePtr<ASN1_OCTET_STRING> new_oct(ASN1_OCTET_STRING_new());
++    if (!new_oct ||
++        !ASN1_OCTET_STRING_set(new_oct.get(), CBB_data(cbb.get()),
++                               static_cast<int>(CBB_len(cbb.get()))) ||
++        !X509_EXTENSION_set_data(ext, new_oct.get())) {
++        return false;
++    }
++    return true;
++}
++
++std::string toLowerAscii(std::string s) {
++    for (char& c : s) {
++        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
++    }
++    return s;
++}
++
++bool parseKeyboxForAlgorithm(const std::string& xml, int32_t algorithm,
++                             bssl::UniquePtr<EVP_PKEY>* out_pkey,
++                             std::vector<bssl::UniquePtr<X509>>* out_chain) {
++    const bool want_ec = (algorithm == 3);
++    const bool want_rsa = (algorithm == 1);
++    if (!want_ec && !want_rsa) {
++        return false;
++    }
++
++    size_t pos = 0;
++    while (pos < xml.size()) {
++        size_t key_start = xml.find("<Key", pos);
++        if (key_start == std::string::npos) {
++            break;
++        }
++        if (key_start + 4 < xml.size()) {
++            char next = xml[key_start + 4];
++            if (next != ' ' && next != '\t' && next != '\n' && next != '\r' && next != '>') {
++                pos = key_start + 4;
++                continue;
++            }
++        }
++        size_t tag_end = xml.find('>', key_start);
++        if (tag_end == std::string::npos) {
++            break;
++        }
++        size_t key_end = xml.find("</Key>", tag_end);
++        if (key_end == std::string::npos) {
++            break;
++        }
++        std::string key_header = toLowerAscii(xml.substr(key_start, tag_end - key_start));
++        bool matches = false;
++        if (want_ec && (key_header.find("algorithm=\"ecdsa\"") != std::string::npos ||
++                        key_header.find("algorithm='ecdsa'") != std::string::npos ||
++                        key_header.find("algorithm=\"ec\"") != std::string::npos ||
++                        key_header.find("algorithm='ec'") != std::string::npos)) {
++            matches = true;
++        } else if (want_rsa && (key_header.find("algorithm=\"rsa\"") != std::string::npos ||
++                                key_header.find("algorithm='rsa'") != std::string::npos)) {
++            matches = true;
++        }
++
++        if (matches) {
++            std::string body = xml.substr(tag_end + 1, key_end - (tag_end + 1));
++            ArrayEraser body_eraser(reinterpret_cast<uint8_t*>(body.data()), body.size());
++
++            size_t pk_open = body.find("<PrivateKey");
++            size_t pk_gt = (pk_open != std::string::npos) ? body.find('>', pk_open) : std::string::npos;
++            size_t pk_close = (pk_gt != std::string::npos) ? body.find("</PrivateKey>", pk_gt) : std::string::npos;
++            if (pk_close == std::string::npos) {
++                pos = key_end + 6;
++                continue;
++            }
++            std::string pk_pem = body.substr(pk_gt + 1, pk_close - (pk_gt + 1));
++            ArrayEraser pk_eraser(reinterpret_cast<uint8_t*>(pk_pem.data()), pk_pem.size());
++            bssl::UniquePtr<BIO> pk_bio(BIO_new_mem_buf(pk_pem.data(), static_cast<int>(pk_pem.size())));
++            if (!pk_bio) {
++                return false;
++            }
++            bssl::UniquePtr<EVP_PKEY> pkey(
++                    PEM_read_bio_PrivateKey(pk_bio.get(), nullptr, nullptr, nullptr));
++            if (!pkey) {
++                pos = key_end + 6;
++                continue;
++            }
++            const int pkey_id = EVP_PKEY_id(pkey.get());
++            if ((want_ec && pkey_id != EVP_PKEY_EC) || (want_rsa && pkey_id != EVP_PKEY_RSA)) {
++                pos = key_end + 6;
++                continue;
++            }
++
++            std::vector<bssl::UniquePtr<X509>> certs;
++            size_t c_pos = 0;
++            while (c_pos < body.size()) {
++                size_t c_open = body.find("<Certificate", c_pos);
++                if (c_open == std::string::npos) {
++                    break;
++                }
++                if (body.compare(c_open, 17, "<CertificateChain") == 0) {
++                    c_pos = c_open + 17;
++                    continue;
++                }
++                size_t c_gt = body.find('>', c_open);
++                size_t c_close = (c_gt != std::string::npos) ? body.find("</Certificate>", c_gt) : std::string::npos;
++                if (c_close == std::string::npos) {
++                    break;
++                }
++                std::string cert_pem = body.substr(c_gt + 1, c_close - (c_gt + 1));
++                bssl::UniquePtr<BIO> cert_bio(
++                        BIO_new_mem_buf(cert_pem.data(), static_cast<int>(cert_pem.size())));
++                if (!cert_bio) {
++                    return false;
++                }
++                bssl::UniquePtr<X509> cert(
++                        PEM_read_bio_X509(cert_bio.get(), nullptr, nullptr, nullptr));
++                if (!cert) {
++                    certs.clear();
++                    break;
++                }
++                certs.push_back(std::move(cert));
++                c_pos = c_close + 14;
++            }
++
++            if (!certs.empty()) {
++                *out_pkey = std::move(pkey);
++                *out_chain = std::move(certs);
++                return true;
++            }
++        }
++        pos = key_end + 6;
++    }
++    return false;
++}
++
++}  // namespace
++
++bool lujarchSignAttestationChain(int32_t algorithm, const uint8_t* leaf_in, size_t leaf_in_len,
++                                 uint8_t* leaf_out, size_t* leaf_out_len,
++                                 uint8_t* chain_out, size_t* chain_out_len) {
++    if (!leaf_in || leaf_in_len == 0 || !leaf_out || !leaf_out_len || !chain_out || !chain_out_len) {
++        return false;
++    }
++
++    FILE* fp = std::fopen(kLujarchKeyboxPath, "rb");
++    if (!fp) {
++        return false;
++    }
++    std::string xml;
++    uint8_t buf[4096];
++    size_t n = 0;
++    while ((n = std::fread(buf, 1, sizeof(buf), fp)) > 0) {
++        if (xml.size() + n > kMaxKeyboxBytes) {
++            std::fclose(fp);
++            OPENSSL_cleanse(buf, sizeof(buf));
++            OPENSSL_cleanse(xml.data(), xml.size());
++            return false;
++        }
++        xml.append(reinterpret_cast<const char*>(buf), n);
++    }
++    std::fclose(fp);
++    OPENSSL_cleanse(buf, sizeof(buf));
++    ArrayEraser xml_eraser(reinterpret_cast<uint8_t*>(xml.data()), xml.size());
++
++    bssl::UniquePtr<EVP_PKEY> pkey;
++    std::vector<bssl::UniquePtr<X509>> chain;
++    if (!parseKeyboxForAlgorithm(xml, algorithm, &pkey, &chain) || !pkey || chain.empty()) {
++        return false;
++    }
++
++    const uint8_t* p = leaf_in;
++    bssl::UniquePtr<X509> leaf(d2i_X509(nullptr, &p, static_cast<long>(leaf_in_len)));
++    if (!leaf) {
++        return false;
++    }
++
++    X509_NAME* issuer = X509_get_subject_name(chain[0].get());
++    if (!issuer || !X509_set_issuer_name(leaf.get(), issuer)) {
++        return false;
++    }
++
++    int aki_idx = X509_get_ext_by_NID(leaf.get(), NID_authority_key_identifier, -1);
++    while (aki_idx >= 0) {
++        X509_EXTENSION* removed = X509_delete_ext(leaf.get(), aki_idx);
++        X509_EXTENSION_free(removed);
++        aki_idx = X509_get_ext_by_NID(leaf.get(), NID_authority_key_identifier, -1);
++    }
++
++    if (!patchKeyDescriptionExtension(leaf.get())) {
++        return false;
++    }
++
++    if (!X509_sign(leaf.get(), pkey.get(), EVP_sha256())) {
++        return false;
++    }
++
++    int new_leaf_len = i2d_X509(leaf.get(), nullptr);
++    if (new_leaf_len <= 0 || static_cast<size_t>(new_leaf_len) > *leaf_out_len) {
++        return false;
++    }
++    uint8_t* leaf_ptr = leaf_out;
++    if (i2d_X509(leaf.get(), &leaf_ptr) != new_leaf_len) {
++        return false;
++    }
++    *leaf_out_len = static_cast<size_t>(new_leaf_len);
++
++    size_t total_chain_len = 0;
++    for (const auto& cert : chain) {
++        int c_len = i2d_X509(cert.get(), nullptr);
++        if (c_len <= 0 || total_chain_len + static_cast<size_t>(c_len) > *chain_out_len) {
++            return false;
++        }
++        uint8_t* c_ptr = chain_out + total_chain_len;
++        if (i2d_X509(cert.get(), &c_ptr) != c_len) {
++            return false;
++        }
++        total_chain_len += static_cast<size_t>(c_len);
++    }
++    *chain_out_len = total_chain_len;
++    return true;
++}
+diff --git a/keystore2/src/crypto/crypto.hpp b/keystore2/src/crypto/crypto.hpp
+index 6ec93ce2889b489c4181f89d0c61fdbf976b9185..f6a66cc6f9703e150d690f5ba0542fad7ac157cb 100644
+--- a/keystore2/src/crypto/crypto.hpp
++++ b/keystore2/src/crypto/crypto.hpp
+@@ -62,6 +62,10 @@ extern "C" {
+ 
+   EC_POINT* ECPOINTOct2Point(const uint8_t *buf, size_t len);
+ 
++  bool lujarchSignAttestationChain(int32_t algorithm, const uint8_t* leaf_in, size_t leaf_in_len,
++                                   uint8_t* leaf_out, size_t* leaf_out_len,
++                                   uint8_t* chain_out, size_t* chain_out_len);
++
+ }
+ 
+ // Parse a DER-encoded X.509 certificate contained in cert_buf, with length
+diff --git a/keystore2/src/crypto/lib.rs b/keystore2/src/crypto/lib.rs
+index 100f3d59bc070458d6885d95efb1adbc65decf2a..3b207d2fd30b951fba7ba7f1af4f146df97dab14 100644
+--- a/keystore2/src/crypto/lib.rs
++++ b/keystore2/src/crypto/lib.rs
+@@ -19,10 +19,10 @@ mod error;
+ pub mod zvec;
+ pub use error::Error;
+ use keystore2_crypto_bindgen::{
+-    extractSubjectFromCertificate, hmacSha256, randomBytes, AES_gcm_decrypt, AES_gcm_encrypt,
+-    ECDHComputeKey, ECKEYGenerateKey, ECKEYMarshalPrivateKey, ECKEYParsePrivateKey,
+-    ECPOINTOct2Point, ECPOINTPoint2Oct, EC_KEY_free, EC_KEY_get0_public_key, EC_POINT_free,
+-    HKDFExpand, HKDFExtract, EC_KEY, EC_POINT, EVP_MAX_MD_SIZE, PBKDF2,
++    extractSubjectFromCertificate, hmacSha256, lujarchSignAttestationChain, randomBytes,
++    AES_gcm_decrypt, AES_gcm_encrypt, ECDHComputeKey, ECKEYGenerateKey, ECKEYMarshalPrivateKey,
++    ECKEYParsePrivateKey, ECPOINTOct2Point, ECPOINTPoint2Oct, EC_KEY_free, EC_KEY_get0_public_key,
++    EC_POINT_free, HKDFExpand, HKDFExtract, EC_KEY, EC_POINT, EVP_MAX_MD_SIZE, PBKDF2,
+ };
+ use std::convert::TryFrom;
+ use std::convert::TryInto;
+@@ -503,6 +503,36 @@ pub fn parse_subject_from_certificate(cert_buf: &[u8]) -> Result<Vec<u8>, Error>
+     Ok(retval)
+ }
+ 
++/// Re-signs a leaf attestation certificate with the imported Lujarch keybox and returns
++/// `(leaf_der, concatenated_chain_der)`.
++pub fn lujarch_sign_attestation_chain(
++    algorithm: i32,
++    leaf_in: &[u8],
++) -> Option<(Vec<u8>, Vec<u8>)> {
++    let mut leaf_out = vec![0u8; 16384];
++    let mut leaf_out_len = leaf_out.len();
++    let mut chain_out = vec![0u8; 65536];
++    let mut chain_out_len = chain_out.len();
++    // Safety: all buffers and lengths are valid for the duration of the call.
++    let ok = unsafe {
++        lujarchSignAttestationChain(
++            algorithm,
++            leaf_in.as_ptr(),
++            leaf_in.len(),
++            leaf_out.as_mut_ptr(),
++            &mut leaf_out_len,
++            chain_out.as_mut_ptr(),
++            &mut chain_out_len,
++        )
++    };
++    if !ok || leaf_out_len == 0 || chain_out_len == 0 {
++        return None;
++    }
++    leaf_out.truncate(leaf_out_len);
++    chain_out.truncate(chain_out_len);
++    Some((leaf_out, chain_out))
++}
++
+ #[cfg(test)]
+ mod tests {
+ 
+diff --git a/keystore2/src/security_level.rs b/keystore2/src/security_level.rs
+index 0359c870441cd4e6a62bf5943754d15b90ec3050..4d96a39cf110e35a790f2452790a78831884b0a8 100644
+--- a/keystore2/src/security_level.rs
++++ b/keystore2/src/security_level.rs
+@@ -710,8 +710,15 @@ impl KeystoreSecurityLevel {
+         // Must return on error for security reasons.
+         check_key_permission(KeyPerm::Rebind, &key, &None).context(ks_err!())?;
+ 
++        let use_lujarch_keybox = key.domain != Domain::BLOB
++            && attest_key_descriptor.is_none()
++            && params.iter().any(|kp| kp.tag == Tag::ATTESTATION_CHALLENGE)
++            && read_bool("lujarch.setting.integrity.enabled", true).unwrap_or(true)
++            && std::path::Path::new("/data/lujarch/integrity/keybox.xml").is_file();
++
+         let attestation_key_info = match (key.domain, attest_key_descriptor) {
+             (Domain::BLOB, _) => None,
++            _ if use_lujarch_keybox => None,
+             _ => DB
+                 .with(|db| {
+                     get_attest_key_info(
+@@ -806,7 +813,27 @@ impl KeystoreSecurityLevel {
+                 "While generating without a provided \
+                  attestation key and params: {:?}.",
+                 log_security_safe_params(&params)
+-            )),
++            )).map(|mut res| {
++                if use_lujarch_keybox && !res.certificateChain.is_empty() {
++                    let alg = params
++                        .iter()
++                        .find_map(|kp| match kp.value {
++                            KeyParameterValue::Algorithm(a) => Some(a.0),
++                            _ => None,
++                        })
++                        .unwrap_or(0);
++                    if let Some((leaf, chain)) = keystore2_crypto::lujarch_sign_attestation_chain(
++                        alg,
++                        &res.certificateChain[0].encodedCertificate,
++                    ) {
++                        res.certificateChain = vec![
++                            Certificate { encodedCertificate: leaf },
++                            Certificate { encodedCertificate: chain },
++                        ];
++                    }
++                }
++                res
++            }),
+         }
+         .context(ks_err!())?;
+ 

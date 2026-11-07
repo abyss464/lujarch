@@ -1,0 +1,52 @@
+diff --git a/res/values-ja/lujarch_integrity_strings.xml b/res/values-ja/lujarch_integrity_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..021cababe4cdf07eb91c976efb93cc306c191453
+--- /dev/null
++++ b/res/values-ja/lujarch_integrity_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_integrity_title">Play Integrity</string>
++    <string name="lujarch_integrity_summary">デバイス プロファイルとキーボックス証明</string>
++</resources>
+diff --git a/res/values-zh-rCN/lujarch_integrity_strings.xml b/res/values-zh-rCN/lujarch_integrity_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..26c74b2ff24d6d1d31581597dfbf955ccff11a49
+--- /dev/null
++++ b/res/values-zh-rCN/lujarch_integrity_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_integrity_title">Play Integrity</string>
++    <string name="lujarch_integrity_summary">设备配置与密钥盒认证</string>
++</resources>
+diff --git a/res/values/lujarch_integrity_strings.xml b/res/values/lujarch_integrity_strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ec74ee147ef1a6125c40990aafeaa07d2aab805f
+--- /dev/null
++++ b/res/values/lujarch_integrity_strings.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="lujarch_integrity_title">Play Integrity</string>
++    <string name="lujarch_integrity_summary">Device profile and keybox attestation</string>
++</resources>
+diff --git a/res/xml/safety_center_main_page.xml b/res/xml/safety_center_main_page.xml
+index 5c4956ef4b9bdd89c36a8a9bdf936140e788b389..0e3b68fcc5b371c5cb6e135f1cd1e97571912de2 100644
+--- a/res/xml/safety_center_main_page.xml
++++ b/res/xml/safety_center_main_page.xml
+@@ -54,6 +54,14 @@
+             android:title="@string/system_and_updates_subpage_title"
+             android:fragment="com.android.settings.safetycenter.ui.SystemAndUpdatesSubpageFragment"
+             settings:controller="com.android.settings.safetycenter.ui.SubpagePreferenceController"/>
++
++        <Preference
++            android:key="lujarch_integrity"
++            android:title="@string/lujarch_integrity_title"
++            android:summary="@string/lujarch_integrity_summary"
++            settings:searchable="false">
++            <intent android:action="org.lujarch.integrity.action.INTEGRITY" />
++        </Preference>
+     </PreferenceCategory>
+     <PreferenceCategory
+         android:key="privacy_category"

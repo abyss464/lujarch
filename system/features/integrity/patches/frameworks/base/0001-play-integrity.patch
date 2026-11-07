@@ -1,0 +1,714 @@
+diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
+index 96c578b4af4b5df0dcd1b5c93ba4e81d235b6543..d9f12d049123c7b6a50295e0c5381f4291e72610 100644
+--- a/core/java/android/app/ActivityThread.java
++++ b/core/java/android/app/ActivityThread.java
+@@ -8005,6 +8005,9 @@ public final class ActivityThread extends ClientTransactionHandler
+             Slog.i(TAG, "lujarch_phone_info: mcc and mnc hidden for " + packageName
+                     + " (mode " + phoneMode + ")");
+         }
++        if (com.android.internal.app.LujarchIntegrity.bindProcess(data.processName)) {
++            return;
++        }
+         final int deviceMode = LujarchInfo.decide(context, LujarchInfo.DEVICE, uid, packageName,
+                 null);
+         if (deviceMode != AppOpsManager.MODE_ALLOWED) {
+diff --git a/core/java/android/os/Build.java b/core/java/android/os/Build.java
+index 9e0d0976f33347a5b465508a171ce74dff8607f3..d9ad30b740779afc457b5d63036ac6c768107fcb 100644
+--- a/core/java/android/os/Build.java
++++ b/core/java/android/os/Build.java
+@@ -2004,6 +2004,36 @@ public class Build {
+         lujarchSet(VERSION.class, "INCREMENTAL", UNKNOWN);
+     }
+ 
++    /**
++     * Sets certified device profile fields in DroidGuard ({@code com.google.android.gms.unstable})
++     * when Play Integrity is enabled (INT-1).
++     *
++     * @hide
++     */
++    public static void lujarchSpoofPlayIntegrity() {
++        sLujarchIdentityHidden = false;
++        lujarchSet(Build.class, "MANUFACTURER", "Google");
++        lujarchSet(Build.class, "BRAND", "google");
++        lujarchSet(Build.class, "PRODUCT", "caiman");
++        lujarchSet(Build.class, "DEVICE", "caiman");
++        lujarchSet(Build.class, "MODEL", "Pixel 9 Pro");
++        lujarchSet(Build.class, "HARDWARE", "caiman");
++        lujarchSet(Build.class, "BOARD", "caiman");
++        lujarchSet(Build.class, "ID", "BP1A.250505.005");
++        lujarchSet(Build.class, "DISPLAY", "BP1A.250505.005");
++        lujarchSet(Build.class, "FINGERPRINT",
++                "google/caiman/caiman:15/BP1A.250505.005/13277524:user/release-keys");
++        lujarchSet(Build.class, "TYPE", "user");
++        lujarchSet(Build.class, "TAGS", "release-keys");
++        lujarchSet(Build.class, "IS_DEBUGGABLE", false);
++        lujarchSet(Build.class, "IS_EMULATOR", false);
++        lujarchSet(VERSION.class, "INCREMENTAL", "13277524");
++        lujarchSet(VERSION.class, "RELEASE", "15");
++        lujarchSet(VERSION.class, "SECURITY_PATCH", "2025-05-05");
++        lujarchSet(VERSION.class, "DEVICE_INITIAL_SDK_INT",
++                com.android.internal.app.LujarchIntegrity.hasKeybox() ? 33 : 25);
++    }
++
+     private static void lujarchSet(Class<?> owner, String name, Object value) {
+         try {
+             final Field field = owner.getDeclaredField(name);
+diff --git a/core/java/android/os/SystemProperties.java b/core/java/android/os/SystemProperties.java
+index 18b207a42f75e1f5c54464b11c09dd20c1365882..9332b52c5d5dc3f2b477f40b18837f2039fac334 100644
+--- a/core/java/android/os/SystemProperties.java
++++ b/core/java/android/os/SystemProperties.java
+@@ -148,6 +148,8 @@ public class SystemProperties {
+     @SystemApi
+     public static String get(@NonNull String key) {
+         if (TRACK_KEY_ACCESS) onKeyAccess(key);
++        String spoofed = com.android.internal.app.LujarchIntegrity.spoofProperty(key);
++        if (spoofed != null) return spoofed;
+         return native_get(key);
+     }
+ 
+@@ -164,6 +166,8 @@ public class SystemProperties {
+     @SystemApi
+     public static String get(@NonNull String key, @Nullable String def) {
+         if (TRACK_KEY_ACCESS) onKeyAccess(key);
++        String spoofed = com.android.internal.app.LujarchIntegrity.spoofProperty(key);
++        if (spoofed != null) return spoofed;
+         return native_get(key, def);
+     }
+ 
+@@ -179,6 +183,14 @@ public class SystemProperties {
+     @SystemApi
+     public static int getInt(@NonNull String key, int def) {
+         if (TRACK_KEY_ACCESS) onKeyAccess(key);
++        String spoofed = com.android.internal.app.LujarchIntegrity.spoofProperty(key);
++        if (spoofed != null) {
++            try {
++                return Integer.parseInt(spoofed);
++            } catch (NumberFormatException ignored) {
++                return def;
++            }
++        }
+         return native_get_int(key, def);
+     }
+ 
+@@ -194,6 +206,14 @@ public class SystemProperties {
+     @SystemApi
+     public static long getLong(@NonNull String key, long def) {
+         if (TRACK_KEY_ACCESS) onKeyAccess(key);
++        String spoofed = com.android.internal.app.LujarchIntegrity.spoofProperty(key);
++        if (spoofed != null) {
++            try {
++                return Long.parseLong(spoofed);
++            } catch (NumberFormatException ignored) {
++                return def;
++            }
++        }
+         return native_get_long(key, def);
+     }
+ 
+@@ -214,6 +234,11 @@ public class SystemProperties {
+     @SystemApi
+     public static boolean getBoolean(@NonNull String key, boolean def) {
+         if (TRACK_KEY_ACCESS) onKeyAccess(key);
++        String spoofed = com.android.internal.app.LujarchIntegrity.spoofProperty(key);
++        if (spoofed != null) {
++            return "1".equals(spoofed) || "true".equals(spoofed) || "y".equals(spoofed)
++                    || "yes".equals(spoofed) || "on".equals(spoofed);
++        }
+         return native_get_boolean(key, def);
+     }
+ 
+diff --git a/core/java/com/android/internal/app/ILujarchIntegrity.aidl b/core/java/com/android/internal/app/ILujarchIntegrity.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..67551d9ed2567cca7936c924bd6f7f4c2a7a3116
+--- /dev/null
++++ b/core/java/com/android/internal/app/ILujarchIntegrity.aidl
+@@ -0,0 +1,10 @@
++package com.android.internal.app;
++
++import com.android.internal.app.LujarchIntegrityStatus;
++
++/** @hide */
++interface ILujarchIntegrity {
++    LujarchIntegrityStatus getStatus();
++    boolean setKeybox(String xml);
++    void clearKeybox();
++}
+diff --git a/core/java/com/android/internal/app/LujarchIntegrity.java b/core/java/com/android/internal/app/LujarchIntegrity.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..9ed5a10b6d6f39f80aeb10f3138a614b0071cf3b
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchIntegrity.java
+@@ -0,0 +1,204 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.app;
++
++import android.os.Build;
++import android.os.IBinder;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.os.SystemProperties;
++
++/**
++ * Play Integrity device profile spoofing and keybox management (INT-1).
++ *
++ * @hide
++ */
++public final class LujarchIntegrity {
++    public static final String SERVICE_NAME = "lujarch_integrity";
++    public static final String PROP_ENABLED = "lujarch.setting.integrity.enabled";
++    public static final String PROP_KEYBOX = "lujarch.setting.integrity.keybox";
++
++    private static final String PROCESS_GMS_UNSTABLE = "com.google.android.gms.unstable";
++    private static final String FINGERPRINT =
++            "google/caiman/caiman:15/BP1A.250505.005/13277524:user/release-keys";
++    private static final String SECURITY_PATCH = "2025-05-05";
++
++    private static volatile boolean sIsGmsUnstable;
++    private static final ThreadLocal<Boolean> sInPropLookup =
++            ThreadLocal.withInitial(() -> Boolean.FALSE);
++
++    private LujarchIntegrity() {}
++
++    public static boolean isEnabled() {
++        return SystemProperties.getBoolean(PROP_ENABLED, true);
++    }
++
++    public static boolean hasKeybox() {
++        return SystemProperties.getBoolean(PROP_KEYBOX, false);
++    }
++
++    /**
++     * Called from {@link android.app.ActivityThread#handleBindApplication} before app code runs.
++     * Returns true when this process is DroidGuard ({@code com.google.android.gms.unstable}) and
++     * Play Integrity spoofing is active.
++     */
++    public static boolean bindProcess(String processName) {
++        if (!PROCESS_GMS_UNSTABLE.equals(processName)) {
++            return false;
++        }
++        sIsGmsUnstable = true;
++        if (!isEnabled()) {
++            return false;
++        }
++        Build.lujarchSpoofPlayIntegrity();
++        return true;
++    }
++
++    public static boolean isSpoofingProcess() {
++        return sIsGmsUnstable && isEnabled();
++    }
++
++    /**
++     * When Play Integrity is enabled and no hardware keybox is imported, block hardware key
++     * attestation in DroidGuard so it falls back to device profile evaluation instead of reading
++     * the bootloader state from the hardware TEE.
++     */
++    public static boolean shouldBlockHardwareAttestation() {
++        return sIsGmsUnstable && isEnabled() && !hasKeybox();
++    }
++
++    /**
++     * Returns a spoofed system property value for DroidGuard, or {@code null} to use the real
++     * property value.
++     */
++    public static String spoofProperty(String key) {
++        if (!sIsGmsUnstable || key == null || sInPropLookup.get()) {
++            return null;
++        }
++        sInPropLookup.set(Boolean.TRUE);
++        try {
++            if (!SystemProperties.getBoolean(PROP_ENABLED, true)) {
++                return null;
++            }
++            switch (key) {
++                case "ro.boot.vbmeta.device_state":
++                    return "locked";
++                case "ro.boot.verifiedbootstate":
++                case "vendor.boot.verifiedbootstate":
++                    return "green";
++                case "ro.boot.flash.locked":
++                    return "1";
++                case "ro.boot.veritymode":
++                    return "enforcing";
++                case "ro.boot.warranty_bit":
++                case "ro.warranty_bit":
++                case "ro.debuggable":
++                    return "0";
++                case "ro.secure":
++                    return "1";
++                case "ro.build.type":
++                case "ro.system.build.type":
++                case "ro.product.build.type":
++                case "ro.vendor.build.type":
++                case "ro.odm.build.type":
++                    return "user";
++                case "ro.build.tags":
++                case "ro.build.keys":
++                case "ro.system.build.tags":
++                case "ro.product.build.tags":
++                case "ro.vendor.build.tags":
++                case "ro.odm.build.tags":
++                    return "release-keys";
++                case "ro.product.first_api_level":
++                    return SystemProperties.getBoolean(PROP_KEYBOX, false) ? "33" : "25";
++                case "ro.build.version.security_patch":
++                case "ro.vendor.build.security_patch":
++                    return SECURITY_PATCH;
++                case "ro.build.fingerprint":
++                case "ro.system.build.fingerprint":
++                case "ro.product.build.fingerprint":
++                case "ro.vendor.build.fingerprint":
++                case "ro.bootimage.build.fingerprint":
++                    return FINGERPRINT;
++                case "ro.product.manufacturer":
++                case "ro.product.system.manufacturer":
++                case "ro.product.vendor.manufacturer":
++                    return "Google";
++                case "ro.product.brand":
++                case "ro.product.system.brand":
++                case "ro.product.vendor.brand":
++                    return "google";
++                case "ro.product.name":
++                case "ro.product.system.name":
++                case "ro.product.vendor.name":
++                case "ro.product.device":
++                case "ro.product.system.device":
++                case "ro.product.vendor.device":
++                    return "caiman";
++                case "ro.product.model":
++                case "ro.product.system.model":
++                case "ro.product.vendor.model":
++                    return "Pixel 9 Pro";
++                default:
++                    return null;
++            }
++        } finally {
++            sInPropLookup.set(Boolean.FALSE);
++        }
++    }
++
++    private static ILujarchIntegrity getService() {
++        final IBinder b = ServiceManager.getService(SERVICE_NAME);
++        return b != null ? ILujarchIntegrity.Stub.asInterface(b) : null;
++    }
++
++    public static LujarchIntegrityStatus getStatus() {
++        final ILujarchIntegrity service = getService();
++        if (service == null) {
++            throw new IllegalStateException("lujarch_integrity service unavailable");
++        }
++        try {
++            return service.getStatus();
++        } catch (RemoteException e) {
++            throw e.rethrowFromSystemServer();
++        }
++    }
++
++    public static boolean setKeybox(String xml) {
++        final ILujarchIntegrity service = getService();
++        if (service == null) {
++            throw new IllegalStateException("lujarch_integrity service unavailable");
++        }
++        try {
++            return service.setKeybox(xml);
++        } catch (RemoteException e) {
++            throw e.rethrowFromSystemServer();
++        }
++    }
++
++    public static void clearKeybox() {
++        final ILujarchIntegrity service = getService();
++        if (service == null) {
++            throw new IllegalStateException("lujarch_integrity service unavailable");
++        }
++        try {
++            service.clearKeybox();
++        } catch (RemoteException e) {
++            throw e.rethrowFromSystemServer();
++        }
++    }
++}
+diff --git a/core/java/com/android/internal/app/LujarchIntegrityStatus.aidl b/core/java/com/android/internal/app/LujarchIntegrityStatus.aidl
+new file mode 100644
+index 0000000000000000000000000000000000000000..722d33f77c8c26a44de10d40424dcc35548eada3
+--- /dev/null
++++ b/core/java/com/android/internal/app/LujarchIntegrityStatus.aidl
+@@ -0,0 +1,9 @@
++package com.android.internal.app;
++
++/** @hide */
++parcelable LujarchIntegrityStatus {
++    boolean hasKeybox;
++    boolean hasEcKey;
++    boolean hasRsaKey;
++    int certificateCount;
++}
+diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
+index 45f2cda30fd76c7cc49b396dfa039d45476b7b5b..5b38831254cf9d701052e5956ea524aaa128c861 100644
+--- a/core/res/AndroidManifest.xml
++++ b/core/res/AndroidManifest.xml
+@@ -7132,6 +7132,11 @@
+     <permission android:name="android.permission.LUJARCH_STORAGE"
+         android:protectionLevel="signature|privileged" />
+ 
++    <!-- @hide Allows an application to manage Play Integrity keybox attestation
++         (Lujarch's Play Integrity): Settings. -->
++    <permission android:name="android.permission.LUJARCH_INTEGRITY"
++        android:protectionLevel="signature|privileged" />
++
+     <!-- Allows an application to delete packages.
+          <p>Not for use by third-party applications.
+          <p>Starting in {@link android.os.Build.VERSION_CODES#N}, user confirmation is requested
+diff --git a/keystore/java/android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.java b/keystore/java/android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.java
+index bee82bd1256a1a4c837039a4ef616fc360d4f54c..585aa7416fb1ff74e3428118013b969816e7f5ff 100644
+--- a/keystore/java/android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.java
++++ b/keystore/java/android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.java
+@@ -784,6 +784,10 @@ public abstract class AndroidKeyStoreKeyPairGeneratorSpi extends KeyPairGenerato
+         if (mKeyStore == null || mSpec == null) {
+             throw new IllegalStateException("Not initialized");
+         }
++        if (mSpec.getAttestationChallenge() != null
++                && com.android.internal.app.LujarchIntegrity.shouldBlockHardwareAttestation()) {
++            throw new ProviderException("Attestation not supported");
++        }
+ 
+         final @SecurityLevel int securityLevel =
+                 mSpec.isStrongBoxBacked()
+diff --git a/services/core/java/com/android/server/security/LujarchIntegrityService.java b/services/core/java/com/android/server/security/LujarchIntegrityService.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..51aae97fff9d923ad7129fdb57440fcf384b7a2f
+--- /dev/null
++++ b/services/core/java/com/android/server/security/LujarchIntegrityService.java
+@@ -0,0 +1,296 @@
++/*
++ * Copyright (C) 2026 The Lujarch Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.security;
++
++import android.Manifest;
++import android.content.Context;
++import android.os.FileUtils;
++import android.os.SystemProperties;
++import android.util.AtomicFile;
++import android.util.Slog;
++import android.util.Xml;
++
++import com.android.internal.app.ILujarchIntegrity;
++import com.android.internal.app.LujarchIntegrity;
++import com.android.internal.app.LujarchIntegrityStatus;
++import com.android.server.SystemService;
++
++import org.xmlpull.v1.XmlPullParser;
++
++import java.io.ByteArrayInputStream;
++import java.io.File;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.io.StringReader;
++import java.nio.charset.StandardCharsets;
++import java.security.cert.CertificateFactory;
++import java.util.Base64;
++
++/**
++ * Manages the imported {@code keybox.xml} for Play Integrity hardware attestation (INT-1).
++ *
++ * @hide
++ */
++public final class LujarchIntegrityService extends ILujarchIntegrity.Stub {
++    private static final String TAG = "LujarchIntegrity";
++    private static final File KEYBOX_FILE = new File("/data/lujarch/integrity/keybox.xml");
++    private static final int MAX_XML_LENGTH = 256 * 1024;
++
++    private final Context mContext;
++    private final Object mLock = new Object();
++    private final AtomicFile mAtomicFile = new AtomicFile(KEYBOX_FILE);
++    private LujarchIntegrityStatus mStatus = emptyStatus();
++
++    public static final class Lifecycle extends SystemService {
++        private LujarchIntegrityService mService;
++
++        public Lifecycle(Context context) {
++            super(context);
++        }
++
++        @Override
++        public void onStart() {
++            mService = new LujarchIntegrityService(getContext());
++            publishBinderService(LujarchIntegrity.SERVICE_NAME, mService);
++        }
++    }
++
++    public LujarchIntegrityService(Context context) {
++        mContext = context;
++        synchronized (mLock) {
++            loadExistingLocked();
++        }
++    }
++
++    @Override
++    public LujarchIntegrityStatus getStatus() {
++        mContext.enforceCallingOrSelfPermission(
++                Manifest.permission.LUJARCH_INTEGRITY, "getStatus");
++        synchronized (mLock) {
++            if (mStatus.hasKeybox && !KEYBOX_FILE.isFile()) {
++                mStatus = emptyStatus();
++            }
++            return copyStatus(mStatus);
++        }
++    }
++
++    @Override
++    public boolean setKeybox(String xml) {
++        mContext.enforceCallingOrSelfPermission(
++                Manifest.permission.LUJARCH_INTEGRITY, "setKeybox");
++        if (xml == null || xml.isEmpty() || xml.length() > MAX_XML_LENGTH) {
++            return false;
++        }
++        final LujarchIntegrityStatus parsed = validateKeyboxXml(xml);
++        if (parsed == null || !parsed.hasKeybox) {
++            return false;
++        }
++        synchronized (mLock) {
++            final File parent = KEYBOX_FILE.getParentFile();
++            if (parent != null && !parent.exists()) {
++                parent.mkdirs();
++            }
++            FileOutputStream out = null;
++            try {
++                out = mAtomicFile.startWrite();
++                out.write(xml.getBytes(StandardCharsets.UTF_8));
++                mAtomicFile.finishWrite(out);
++                KEYBOX_FILE.setReadable(true, false);
++                mStatus = parsed;
++                SystemProperties.set(LujarchIntegrity.PROP_KEYBOX, "1");
++                Slog.i(TAG, "Imported keybox (EC=" + parsed.hasEcKey
++                        + ", RSA=" + parsed.hasRsaKey
++                        + ", certs=" + parsed.certificateCount + ")");
++                return true;
++            } catch (IOException e) {
++                if (out != null) {
++                    mAtomicFile.failWrite(out);
++                }
++                Slog.e(TAG, "Failed to write keybox", e);
++                return false;
++            }
++        }
++    }
++
++    @Override
++    public void clearKeybox() {
++        mContext.enforceCallingOrSelfPermission(
++                Manifest.permission.LUJARCH_INTEGRITY, "clearKeybox");
++        synchronized (mLock) {
++            mAtomicFile.delete();
++            mStatus = emptyStatus();
++            SystemProperties.set(LujarchIntegrity.PROP_KEYBOX, "0");
++            Slog.i(TAG, "Cleared keybox");
++        }
++    }
++
++    private void loadExistingLocked() {
++        if (!KEYBOX_FILE.isFile()) {
++            mStatus = emptyStatus();
++            SystemProperties.set(LujarchIntegrity.PROP_KEYBOX, "0");
++            return;
++        }
++        try {
++            final byte[] bytes = mAtomicFile.readFully();
++            final String xml = new String(bytes, StandardCharsets.UTF_8);
++            final LujarchIntegrityStatus parsed = validateKeyboxXml(xml);
++            if (parsed != null && parsed.hasKeybox) {
++                KEYBOX_FILE.setReadable(true, false);
++                mStatus = parsed;
++                SystemProperties.set(LujarchIntegrity.PROP_KEYBOX, "1");
++                return;
++            }
++        } catch (IOException e) {
++            Slog.w(TAG, "Failed to read existing keybox", e);
++        }
++        mStatus = emptyStatus();
++        SystemProperties.set(LujarchIntegrity.PROP_KEYBOX, "0");
++    }
++
++    private static LujarchIntegrityStatus validateKeyboxXml(String xml) {
++        try {
++            final CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
++            final XmlPullParser parser = Xml.newPullParser();
++            parser.setInput(new StringReader(xml));
++
++            boolean hasEc = false;
++            boolean hasRsa = false;
++            int totalCerts = 0;
++
++            String currentAlgo = null;
++            boolean hasPrivateKey = false;
++            int chainCerts = 0;
++            String currentTag = null;
++            final StringBuilder textBuf = new StringBuilder();
++
++            int event = parser.getEventType();
++            while (event != XmlPullParser.END_DOCUMENT) {
++                if (event == XmlPullParser.START_TAG) {
++                    final String name = parser.getName();
++                    if ("Key".equals(name)) {
++                        currentAlgo = parser.getAttributeValue(null, "algorithm");
++                        hasPrivateKey = false;
++                        chainCerts = 0;
++                    } else if ("PrivateKey".equals(name) || "Certificate".equals(name)) {
++                        currentTag = name;
++                        textBuf.setLength(0);
++                    }
++                } else if (event == XmlPullParser.TEXT) {
++                    if (currentTag != null) {
++                        textBuf.append(parser.getText());
++                    }
++                } else if (event == XmlPullParser.END_TAG) {
++                    final String name = parser.getName();
++                    if ("PrivateKey".equals(name) && "PrivateKey".equals(currentTag)) {
++                        if (!isValidPemPrivateKey(textBuf.toString())) {
++                            return null;
++                        }
++                        hasPrivateKey = true;
++                        currentTag = null;
++                    } else if ("Certificate".equals(name) && "Certificate".equals(currentTag)) {
++                        if (!isValidPemCertificate(certFactory, textBuf.toString())) {
++                            return null;
++                        }
++                        chainCerts++;
++                        currentTag = null;
++                    } else if ("Key".equals(name)) {
++                        if (hasPrivateKey && chainCerts > 0 && currentAlgo != null) {
++                            final String algo = currentAlgo.trim().toLowerCase();
++                            if ("ecdsa".equals(algo) || "ec".equals(algo)) {
++                                hasEc = true;
++                                totalCerts += chainCerts;
++                            } else if ("rsa".equals(algo)) {
++                                hasRsa = true;
++                                totalCerts += chainCerts;
++                            }
++                        }
++                        currentAlgo = null;
++                    }
++                }
++                event = parser.next();
++            }
++
++            if (!hasEc && !hasRsa) {
++                return null;
++            }
++            final LujarchIntegrityStatus status = new LujarchIntegrityStatus();
++            status.hasKeybox = true;
++            status.hasEcKey = hasEc;
++            status.hasRsaKey = hasRsa;
++            status.certificateCount = totalCerts;
++            return status;
++        } catch (Exception e) {
++            return null;
++        }
++    }
++
++    private static boolean isValidPemPrivateKey(String pem) {
++        if (pem == null) return false;
++        final String trimmed = pem.trim();
++        if (!trimmed.contains("-----BEGIN ") || !trimmed.contains("PRIVATE KEY-----")
++                || !trimmed.contains("-----END ")) {
++            return false;
++        }
++        final StringBuilder b64 = new StringBuilder();
++        for (String line : trimmed.split("\\r?\\n")) {
++            final String s = line.trim();
++            if (!s.isEmpty() && !s.startsWith("-----")) {
++                b64.append(s);
++            }
++        }
++        if (b64.length() < 32) return false;
++        try {
++            final byte[] der = Base64.getDecoder().decode(b64.toString());
++            return der.length > 16 && der[0] == 0x30;
++        } catch (IllegalArgumentException e) {
++            return false;
++        }
++    }
++
++    private static boolean isValidPemCertificate(CertificateFactory cf, String pem) {
++        if (pem == null) return false;
++        final String trimmed = pem.trim();
++        if (!trimmed.contains("-----BEGIN CERTIFICATE-----")
++                || !trimmed.contains("-----END CERTIFICATE-----")) {
++            return false;
++        }
++        try {
++            return cf.generateCertificate(
++                    new ByteArrayInputStream(trimmed.getBytes(StandardCharsets.UTF_8))) != null;
++        } catch (Exception e) {
++            return false;
++        }
++    }
++
++    private static LujarchIntegrityStatus emptyStatus() {
++        final LujarchIntegrityStatus s = new LujarchIntegrityStatus();
++        s.hasKeybox = false;
++        s.hasEcKey = false;
++        s.hasRsaKey = false;
++        s.certificateCount = 0;
++        return s;
++    }
++
++    private static LujarchIntegrityStatus copyStatus(LujarchIntegrityStatus src) {
++        final LujarchIntegrityStatus s = new LujarchIntegrityStatus();
++        s.hasKeybox = src.hasKeybox;
++        s.hasEcKey = src.hasEcKey;
++        s.hasRsaKey = src.hasRsaKey;
++        s.certificateCount = src.certificateCount;
++        return s;
++    }
++}
+diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
+index badec749a326184cefa5c55dc9a494b3da504b04..eb678bb8cd5ee3bb8a2b82ace25b731f9226dbb8 100644
+--- a/services/java/com/android/server/SystemServer.java
++++ b/services/java/com/android/server/SystemServer.java
+@@ -1974,6 +1974,16 @@ public final class SystemServer implements Dumpable {
+                 }
+                 t.traceEnd();
+ 
++                // Lujarch: Play Integrity device profile and keybox attestation (INT-1).
++                t.traceBegin("StartLujarchIntegrityService");
++                try {
++                    mSystemServiceManager.startService(
++                            com.android.server.security.LujarchIntegrityService.Lifecycle.class);
++                } catch (Throwable e) {
++                    reportWtf("starting LujarchIntegrityService", e);
++                }
++                t.traceEnd();
++
+                 if (android.app.privatecompute.flags.Flags.enablePccFrameworkSupport()) {
+                     t.traceBegin("StartFileService");
+                     try {

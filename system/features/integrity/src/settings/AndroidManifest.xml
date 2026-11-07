@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lujarch.integrity.settings">
+
+    <uses-permission android:name="android.permission.LUJARCH_INTEGRITY" />
+
+    <application>
+        <meta-data
+            android:name="org.lujarch.settings.contribution.integrity"
+            android:value="org.lujarch.integrity.settings.IntegrityContribution" />
+
+        <activity
+            android:name="org.lujarch.integrity.settings.IntegrityActivity"
+            android:exported="true"
+            android:label="@string/integrity_title">
+            <intent-filter>
+                <action android:name="org.lujarch.integrity.action.INTEGRITY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

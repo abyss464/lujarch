@@ -53,7 +53,10 @@ import android.provider.CalendarContract;
 import android.provider.DocumentsContract;
 import android.provider.ContactsContract;
 import android.provider.Settings;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.telephony.TelephonyManager;
+import android.util.Base64;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -64,6 +67,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TimeZone;
@@ -510,6 +517,26 @@ public class Probe extends Activity {
                 Intent i = new Intent(c, Login.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 c.startActivity(i);
                 return "opened";
+            }
+            case "attest": {
+                KeyPairGenerator kpg = KeyPairGenerator.getInstance(
+                        KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
+                kpg.initialize(new KeyGenParameterSpec.Builder(
+                        "probe_attest", KeyProperties.PURPOSE_SIGN)
+                        .setDigests(KeyProperties.DIGEST_SHA256)
+                        .setAttestationChallenge("lujarch-probe".getBytes())
+                        .build());
+                kpg.generateKeyPair();
+                KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
+                ks.load(null);
+                Certificate[] chain = ks.getCertificateChain("probe_attest");
+                X509Certificate leaf = (X509Certificate) chain[0];
+                X509Certificate ca = (X509Certificate) chain[1];
+                leaf.verify(ca.getPublicKey());
+                return "len=" + chain.length
+                        + " issuer=" + leaf.getIssuerX500Principal().getName()
+                        + " ca=" + ca.getSubjectX500Principal().getName()
+                        + " leaf=" + Base64.encodeToString(leaf.getEncoded(), Base64.NO_WRAP);
             }
             case "clear": {
                 new File(c.getFilesDir(), "results.jsonl").delete();

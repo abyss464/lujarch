@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="integrity_title">Play Integrity</string>
+    <string name="integrity_intro">Passes device integrity checks in Google Play services. Importing a keybox signs hardware key attestation certificates with your own certificate chain.</string>
+    <string name="integrity_use">Use Play Integrity</string>
+    <string name="integrity_keybox_category">Keybox</string>
+    <string name="integrity_keybox_status">Keybox</string>
+    <string name="integrity_keybox_not_imported">Not imported (device profile only)</string>
+    <string name="integrity_keybox_imported"><xliff:g id="algorithms" example="EC, RSA">%1$s</xliff:g> (<xliff:g id="count" example="3">%2$d</xliff:g> certificates)</string>
+    <string name="integrity_import_keybox">Import keybox</string>
+    <string name="integrity_import_keybox_summary">Select a keybox.xml file</string>
+    <string name="integrity_remove_keybox">Remove keybox</string>
+    <string name="integrity_remove_keybox_message">Remove the imported keybox and use device profile only?</string>
+    <string name="integrity_remove_action">Remove</string>
+    <string name="integrity_error_load">Couldn\'t load Play Integrity status</string>
+    <string name="integrity_error_import">Couldn\'t import keybox</string>
+    <string name="integrity_error_remove">Couldn\'t remove keybox</string>
+    <string name="integrity_error_invalid_keybox">The selected file is not a valid keybox.xml with EC or RSA key material.</string>
+    <string name="integrity_search_screen">Security &amp; privacy &gt; Play Integrity</string>
+    <string name="integrity_search_keywords">play integrity, keybox, attestation, droidguard, google, safety</string>
+</resources>

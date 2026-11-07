@@ -254,3 +254,8 @@ digit (Lujarch チャネル, Wi-Fi ネットワーク); none next to Japanese pu
 | Show running | 显示“运行中” | 「実行中」を表示 |
 | Show app state | 显示应用状态 | アプリの状態を表示 |
 | Show memory | 显示内存 | メモリを表示 |
+| Play Integrity | Play Integrity | Play Integrity |
+| Use Play Integrity | 使用 Play Integrity | Play Integrity を使用 |
+| Keybox | 密钥盒 | キーボックス |
+| Import keybox | 导入密钥盒 | キーボックスをインポート |
+| Remove keybox | 移除密钥盒 | キーボックスを削除 |

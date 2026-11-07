@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="integrity_title">Play Integrity</string>
+    <string name="integrity_intro">Google Play 開発者サービスでのデバイスの整合性チェックを通過します。キーボックスをインポートすると、インポートした証明書チェーンでハードウェア キー証明の証明書に署名します。</string>
+    <string name="integrity_use">Play Integrity を使用</string>
+    <string name="integrity_keybox_category">キーボックス</string>
+    <string name="integrity_keybox_status">キーボックス</string>
+    <string name="integrity_keybox_not_imported">未インポート（デバイス プロファイルのみ）</string>
+    <string name="integrity_keybox_imported"><xliff:g id="algorithms" example="EC, RSA">%1$s</xliff:g>（証明書 <xliff:g id="count" example="3">%2$d</xliff:g> 件）</string>
+    <string name="integrity_import_keybox">キーボックスをインポート</string>
+    <string name="integrity_import_keybox_summary">keybox.xml ファイルを選択</string>
+    <string name="integrity_remove_keybox">キーボックスを削除</string>
+    <string name="integrity_remove_keybox_message">インポートされたキーボックスを削除し、デバイス プロファイルのみを使用しますか？</string>
+    <string name="integrity_remove_action">削除</string>
+    <string name="integrity_error_load">Play Integrity の状態を読み込めませんでした</string>
+    <string name="integrity_error_import">キーボックスをインポートできませんでした</string>
+    <string name="integrity_error_remove">キーボックスを削除できませんでした</string>
+    <string name="integrity_error_invalid_keybox">選択したファイルは、有効な EC または RSA キーを含む keybox.xml ではありません。</string>
+    <string name="integrity_search_screen">セキュリティとプライバシー &gt; Play Integrity</string>
+    <string name="integrity_search_keywords">play integrity, keybox, キーボックス, 整合性, 証明</string>
+</resources>

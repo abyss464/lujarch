@@ -21,3 +21,4 @@ features/windows
 features/storage
 features/recorder
 features/installer
+features/integrity
